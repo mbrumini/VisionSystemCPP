@@ -65,7 +65,12 @@
     "recipeExported": "Ricetta esportata",
     "localizationRoiDrawing": "Disegna AOE localizzazione",
     "localizationRoiSaved": "AOE localizzazione salvata",
-    "localizationNotAvailable": "Localizzazione non disponibile per questa camera"
+    "localizationNotAvailable": "Localizzazione non disponibile per questa camera",
+    "localizationRoiMissing": "AOE localizzazione mancante",
+    "localizationFailed": "Localizzazione fallita",
+    "localizationNotFound": "Pezzo non trovato",
+    "localizationFound": "Pezzo trovato",
+    "imageMissing": "Immagine mancante"
   },
   "messages": {
     "noRecipes": "Nessuna ricetta disponibile."

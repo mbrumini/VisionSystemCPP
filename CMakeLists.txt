@@ -32,6 +32,8 @@ add_executable(VisionSystemCPP
     src/gui/ToolPanelWidget.cpp
     src/processing/ImageProcessor.h
     src/processing/ImageProcessor.cpp
+    src/processing/LocalizationProcessor.h
+    src/processing/LocalizationProcessor.cpp
     src/utils/Timer.h
 )
 

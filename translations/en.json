@@ -65,7 +65,12 @@
     "recipeExported": "Recipe exported",
     "localizationRoiDrawing": "Draw localization AOE",
     "localizationRoiSaved": "Localization AOE saved",
-    "localizationNotAvailable": "Localization is not available for this camera"
+    "localizationNotAvailable": "Localization is not available for this camera",
+    "localizationRoiMissing": "Localization AOE is missing",
+    "localizationFailed": "Localization failed",
+    "localizationNotFound": "Part not found",
+    "localizationFound": "Part found",
+    "imageMissing": "Image missing"
   },
   "messages": {
     "noRecipes": "No recipes available."

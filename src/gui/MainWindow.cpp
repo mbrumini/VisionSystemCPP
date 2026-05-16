@@ -2,6 +2,7 @@
 
 #include "gui/ToolCatalog.h"
 #include "gui/ToolPanelWidget.h"
+#include "processing/LocalizationProcessor.h"
 
 #include <QApplication>
 #include <QDateTime>
@@ -24,6 +25,9 @@
 #include <QSizePolicy>
 #include <QSplitter>
 #include <QVBoxLayout>
+
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
 
 namespace
 {
@@ -283,6 +287,7 @@ void MainWindow::rebuildUi()
   m_selectedCameraId.clear();
   m_selectedCamera = {};
   m_selectedPreview = {};
+  m_selectedImagePath.clear();
   buildUi();
   loadConfiguration();
 }
@@ -543,6 +548,7 @@ void MainWindow::selectCamera(const CameraConfig& camera)
 {
   m_selectedCameraId = camera.id;
   m_selectedCamera = camera;
+  m_selectedImagePath = firstImageInFolder(camera.folder);
   m_largeImage->setRoiDrawingEnabled(false);
   m_largeImage->clearRoi();
 
@@ -551,7 +557,7 @@ void MainWindow::selectCamera(const CameraConfig& camera)
     tile->setSelected(tile->camera().id == camera.id);
   }
 
-  m_selectedPreview = loadCameraPreview(camera);
+  m_selectedPreview = m_selectedImagePath.isEmpty() ? QPixmap() : QPixmap(m_selectedImagePath);
   m_largeTitle->setText(camera.displayName + " | " + camera.id);
 
   if (m_selectedPreview.isNull())
@@ -643,6 +649,12 @@ void MainWindow::showToolPanel(const CameraConfig& camera, const QString& toolId
         return;
       }
 
+      if (tool.id == "localization" && action.id == "testLocalization")
+      {
+        testLocalization(camera);
+        return;
+      }
+
       appendLog(trText("log.placeholder") + ": " + tool.label + " -> " + action.label);
     },
     m_toolsContainer);
@@ -666,6 +678,72 @@ void MainWindow::activateLocalizationRoiDrawing(const CameraConfig& camera)
 
   m_largeImage->setRoiDrawingEnabled(true);
   appendLog(trText("log.localizationRoiDrawing") + ": " + camera.id);
+}
+
+void MainWindow::testLocalization(const CameraConfig& camera)
+{
+  if (!isBwDimensionalCamera(camera))
+  {
+    appendLog(trText("log.localizationNotAvailable") + ": " + camera.id);
+    return;
+  }
+
+  if (camera.id != m_selectedCameraId)
+  {
+    return;
+  }
+
+  QRect roi;
+
+  if (!m_recipeManager.loadLocalizationRoi(camera.id, roi))
+  {
+    appendLog(trText("log.localizationRoiMissing") + ": " + camera.id);
+    return;
+  }
+
+  if (m_selectedImagePath.isEmpty())
+  {
+    appendLog(trText("log.imageMissing") + ": " + camera.id);
+    return;
+  }
+
+  const cv::Mat input = cv::imread(m_selectedImagePath.toStdString(), cv::IMREAD_COLOR);
+
+  if (input.empty())
+  {
+    appendLog(trText("log.imageMissing") + ": " + m_selectedImagePath);
+    return;
+  }
+
+  LocalizationProcessor processor;
+  const LocalizationResult result = processor.locateDarkObjectOnLightBackground(
+    input,
+    cv::Rect(roi.x(), roi.y(), roi.width(), roi.height()));
+
+  if (result.diagnosticImage.empty())
+  {
+    appendLog(trText("log.localizationFailed") + ": " + camera.id);
+    return;
+  }
+
+  m_selectedPreview = matToPixmap(result.diagnosticImage);
+  m_largeImage->setImage(m_selectedPreview);
+  m_largeImage->setRoi(roi);
+
+  if (!result.found)
+  {
+    appendLog(trText("log.localizationNotFound") + ": " + camera.id);
+    return;
+  }
+
+  appendLog(QString("%1: %2 cx=%3 cy=%4 area=%5 bg=%6 thr=%7")
+              .arg(trText("log.localizationFound"))
+              .arg(camera.id)
+              .arg(result.center.x, 0, 'f', 1)
+              .arg(result.center.y, 0, 'f', 1)
+              .arg(result.area, 0, 'f', 1)
+              .arg(result.backgroundLevel, 0, 'f', 1)
+              .arg(result.thresholdValue, 0, 'f', 1));
 }
 
 bool MainWindow::isBwDimensionalCamera(const CameraConfig& camera) const
@@ -725,6 +803,28 @@ QPixmap MainWindow::loadCameraPreview(const CameraConfig& camera) const
   }
 
   return QPixmap(imagePath);
+}
+
+QPixmap MainWindow::matToPixmap(const cv::Mat& image) const
+{
+  if (image.empty())
+  {
+    return {};
+  }
+
+  cv::Mat rgb;
+
+  if (image.channels() == 1)
+  {
+    cv::cvtColor(image, rgb, cv::COLOR_GRAY2RGB);
+  }
+  else
+  {
+    cv::cvtColor(image, rgb, cv::COLOR_BGR2RGB);
+  }
+
+  QImage qimage(rgb.data, rgb.cols, rgb.rows, static_cast<int>(rgb.step), QImage::Format_RGB888);
+  return QPixmap::fromImage(qimage.copy());
 }
 
 QString MainWindow::firstImageInFolder(const QString& folder) const

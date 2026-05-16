@@ -14,6 +14,8 @@
 #include <QVBoxLayout>
 #include <QVector>
 
+#include <opencv2/core/mat.hpp>
+
 class MainWindow : public QMainWindow
 {
 public:
@@ -42,12 +44,14 @@ private:
   void showCameraToolList(const CameraConfig& camera);
   void showToolPanel(const CameraConfig& camera, const QString& toolId);
   void activateLocalizationRoiDrawing(const CameraConfig& camera);
+  void testLocalization(const CameraConfig& camera);
   bool isBwDimensionalCamera(const CameraConfig& camera) const;
   void clearToolPanel();
   void appendLog(const QString& message);
   void updateLargePreview();
   QString trText(const QString& key) const;
   QPixmap loadCameraPreview(const CameraConfig& camera) const;
+  QPixmap matToPixmap(const cv::Mat& image) const;
   QString firstImageInFolder(const QString& folder) const;
 
   AppConfig m_config;
@@ -68,4 +72,5 @@ private:
   QString m_selectedCameraId;
   CameraConfig m_selectedCamera;
   QPixmap m_selectedPreview;
+  QString m_selectedImagePath;
 };

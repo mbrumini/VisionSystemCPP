@@ -299,6 +299,12 @@ Stato attuale:
 - il tool `Localizzazione` appare solo per profili con `imageMode=bw` e `inspectionTypes` contenente `dimensional`;
 - dal pannello `Localizzazione` il comando `AOE ricerca` abilita il drag sull'immagine grande;
 - al rilascio del mouse la ROI viene salvata in ricetta camera.
+- il comando `Test localizzazione` usa OpenCV per:
+  - campionare lo sfondo negli angoli della ROI;
+  - calcolare soglia = sfondo * 0.5;
+  - trovare il contorno scuro principale;
+  - calcolare centro di massa;
+  - mostrare immagine diagnostica con ROI, contorno, bounding box e centro.
 
 ## 9. Mappa Rapida Dei File
 
@@ -316,6 +322,7 @@ Stato attuale:
 | `src/camera/ICamera.h` | Interfaccia camera |
 | `src/camera/FileCamera.*` | Camera simulata da cartella immagini |
 | `src/processing/ImageProcessor.*` | Processing OpenCV iniziale |
+| `src/processing/LocalizationProcessor.*` | Localizzazione BW: soglia, contorno e centro di massa |
 | `src/utils/Timer.h` | Misura tempi ciclo |
 | `config/cameras.json` | Camere, profili, tool GUI |
 | `config/app_settings.json` | Impostazioni applicazione, inclusa ricetta attiva |
