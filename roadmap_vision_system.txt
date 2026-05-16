@@ -51,6 +51,25 @@ Primo algoritmo utile
 - Stampare misure base: area, bounding rect, centro.
 - Preparare un risultato OK/NOK provvisorio.
 
+Priorita' per camere BW
+- Prima delle misure dimensionali vere serve localizzare il pezzo.
+- La localizzazione deve trovare il pezzo nell'immagine, calcolare il centro di massa e definire gli assi X/Y del pezzo.
+- Le misure successive devono potersi appoggiare a questo sistema di riferimento, non solo alle coordinate pixel assolute.
+- Il tool GUI previsto sara' "Localizzazione", ma prima di renderlo operativo bisogna definire bene ricette, configurazioni e salvataggio dei tool per ogni camera.
+
+Ricette e configurazioni tool
+- Definire una directory `recipes/` separata dal codice sorgente.
+- Ogni ricetta deve descrivere il setup operativo della macchina o del prodotto.
+- Ogni camera deve avere una propria configurazione tool dentro la ricetta.
+- Le impostazioni dei tool non devono essere hardcoded nel codice: soglie, ROI, parametri di localizzazione, tolleranze e tool attivi devono essere salvati in file configurabili.
+- Prevedere una ricetta attiva selezionabile dal programma.
+- Separare la configurazione hardware/sorgente camera (`config/cameras.json`) dalla configurazione di processo/prodotto (`recipes/...`).
+- Il JSON delle camere dice quali camere esistono e quale profilo generale usano; la ricetta dice come ispezionare il prodotto su ciascuna camera.
+- Prima implementazione suggerita:
+  - `recipes/default/recipe.json` per metadati ricetta;
+  - `recipes/default/cameras/CAM01.json` ... `CAM16.json` per tool e parametri specifici camera;
+  - eventuale `recipes/default/assets/` per immagini di riferimento, maschere, template o modelli.
+
 Architettura desiderata
 Camera 1: ICamera -> FrameQueue -> ImageProcessor -> Result -> Logger/Output
 Camera 2: ICamera -> FrameQueue -> ImageProcessor -> Result -> Logger/Output
