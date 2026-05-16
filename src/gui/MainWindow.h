@@ -21,6 +21,9 @@ private:
   void showGridView();
   void selectCamera(const CameraConfig& camera);
   void updateControlPanel(const CameraConfig* camera);
+  void showCameraToolList(const CameraConfig& camera);
+  void showToolPanel(const CameraConfig& camera, const QString& toolId);
+  void clearToolPanel();
   void appendLog(const QString& message);
   QPixmap loadCameraPreview(const CameraConfig& camera) const;
   QString firstImageInFolder(const QString& folder) const;

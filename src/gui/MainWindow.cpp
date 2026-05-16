@@ -1,5 +1,8 @@
 #include "MainWindow.h"
 
+#include "gui/ToolCatalog.h"
+#include "gui/ToolPanelWidget.h"
+
 #include <QApplication>
 #include <QDateTime>
 #include <QDir>
@@ -21,28 +24,6 @@ QString projectPath(const QString& relativePath)
   return QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath(relativePath);
 }
 
-QString toolLabel(const QString& toolId)
-{
-  static const QHash<QString, QString> labels = {
-    {"measurements", "Misure"},
-    {"threshold", "Soglia"},
-    {"calibration", "Calibrazione"},
-    {"roi", "ROI"},
-    {"saveSample", "Salva campione"},
-    {"dimensions", "Dimensioni"},
-    {"tolerances", "Tolleranze"},
-    {"surfaceDefects", "Difetti superficie"},
-    {"lighting", "Illuminazione"},
-    {"contrast", "Contrasto"},
-    {"defectMap", "Mappa difetti"},
-    {"aiModel", "Modello AI"},
-    {"confidence", "Confidenza"},
-    {"classes", "Classi"},
-    {"datasetCapture", "Cattura dataset"}
-  };
-
-  return labels.value(toolId, toolId);
-}
 }
 
 MainWindow::MainWindow(QWidget* parent)
@@ -173,6 +154,8 @@ void MainWindow::buildUi()
     "QTextEdit{background:#111820;border:1px solid #313b46;border-radius:5px;color:#d7dee6;}"
     "#largeTitle{font-size:20px;font-weight:700;color:#f4f7fb;}"
     "#panelStatus{font-size:17px;font-weight:700;color:#f4f7fb;}"
+    "#toolPanelTitle{font-size:15px;font-weight:700;color:#f4f7fb;}"
+    "#toolPanelNote{color:#9aa4ad;}"
   );
 }
 
@@ -260,15 +243,7 @@ void MainWindow::selectCamera(const CameraConfig& camera)
 
 void MainWindow::updateControlPanel(const CameraConfig* camera)
 {
-  while (QLayoutItem* item = m_toolsLayout->takeAt(0))
-  {
-    if (QWidget* widget = item->widget())
-    {
-      widget->deleteLater();
-    }
-
-    delete item;
-  }
+  clearToolPanel();
 
   if (!camera)
   {
@@ -287,16 +262,57 @@ void MainWindow::updateControlPanel(const CameraConfig* camera)
       .arg(camera->profile.inspectionTypes.join(", "))
       .arg(camera->folder));
 
-  for (const QString& tool : camera->profile.guiTools)
+  showCameraToolList(*camera);
+}
+
+void MainWindow::showCameraToolList(const CameraConfig& camera)
+{
+  clearToolPanel();
+
+  for (const QString& tool : camera.profile.guiTools)
   {
-    auto* button = new QPushButton(toolLabel(tool), m_toolsContainer);
-    connect(button, &QPushButton::clicked, this, [this, tool]() {
-      appendLog("Tool selezionato: " + toolLabel(tool));
+    auto* button = new QPushButton(ToolCatalog::label(tool), m_toolsContainer);
+    connect(button, &QPushButton::clicked, this, [this, camera, tool]() {
+      showToolPanel(camera, tool);
     });
     m_toolsLayout->addWidget(button);
   }
 
   m_toolsLayout->addStretch(1);
+}
+
+void MainWindow::showToolPanel(const CameraConfig& camera, const QString& toolId)
+{
+  clearToolPanel();
+
+  const ToolDefinition tool = ToolCatalog::tool(toolId);
+  auto* panel = new ToolPanelWidget(
+    tool,
+    QString("Camera %1").arg(camera.slot),
+    [this, camera]() {
+      showCameraToolList(camera);
+      appendLog("Ritorno ai tool camera: " + camera.id);
+    },
+    [this, tool](const ToolActionDefinition& action) {
+      appendLog("Placeholder: " + tool.label + " -> " + action.label);
+    },
+    m_toolsContainer);
+
+  m_toolsLayout->addWidget(panel);
+  appendLog("Pannello tool: " + tool.label);
+}
+
+void MainWindow::clearToolPanel()
+{
+  while (QLayoutItem* item = m_toolsLayout->takeAt(0))
+  {
+    if (QWidget* widget = item->widget())
+    {
+      widget->deleteLater();
+    }
+
+    delete item;
+  }
 }
 
 void MainWindow::appendLog(const QString& message)

@@ -20,6 +20,10 @@ add_executable(VisionSystemCPP
     src/gui/CameraTileWidget.cpp
     src/gui/MainWindow.h
     src/gui/MainWindow.cpp
+    src/gui/ToolCatalog.h
+    src/gui/ToolCatalog.cpp
+    src/gui/ToolPanelWidget.h
+    src/gui/ToolPanelWidget.cpp
     src/processing/ImageProcessor.h
     src/processing/ImageProcessor.cpp
     src/utils/Timer.h
