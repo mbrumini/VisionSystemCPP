@@ -102,12 +102,30 @@ Il profilo di controllo deve indicare anche i tool GUI da mostrare quando la cam
 GUI prevista
 - tecnologia principale: Qt 6 Widgets;
 - finestra fullscreen;
+- barra superiore/menu operativo con accesso a ricette, configurazioni, lingua e funzioni generali;
 - area immagini a sinistra;
 - pannello comandi a destra;
 - griglia miniature o camera selezionata grande;
 - click su miniatura per selezionare camera;
 - pannello destro con comandi generali e tool dedicati alla camera selezionata.
 - GUI anticipata come strumento di sviluppo e collaudo.
+
+Traduzioni e testi GUI
+- Non lasciare i testi della GUI sparsi e hardcoded nei widget quando diventano stabili.
+- Prevedere file JSON dedicati alle traduzioni, per esempio `translations/it.json`, `translations/en.json`, `translations/de.json`.
+- I widget devono usare chiavi testo stabili, non stringhe ripetute in molti punti.
+- Il cambio lingua deve essere disponibile dalla GUI, idealmente nel menu in alto.
+- La lingua selezionata deve essere salvata nella configurazione utente o di sistema.
+- Prima fase accettabile: testi hardcoded solo per prototipo rapido.
+- Seconda fase: introdurre `TranslationManager` o componente equivalente che carica JSON e fornisce le stringhe ai widget.
+- Anche i nomi dei tool e dei placeholder devono passare dal sistema traduzioni quando iniziano a essere definitivi.
+
+Menu superiore previsto
+- Ricette: seleziona ricetta attiva, crea/duplica/importa/esporta ricetta.
+- Configurazioni: camere, percorsi, parametri sistema, diagnostica.
+- Lingua: selezione lingua GUI.
+- Sistema: start/stop/reset, reload configurazione, uscita controllata.
+- Il menu superiore deve convivere con il pannello destro: il pannello destro resta operativo sulla camera selezionata, il menu superiore gestisce funzioni globali.
 
 Regola pratica
 Prima rendere chiaro e misurabile il flusso con immagini da cartella. Solo dopo passare alle camere reali.
