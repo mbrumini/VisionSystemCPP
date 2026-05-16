@@ -19,11 +19,29 @@ struct SurfaceBlob
   std::vector<cv::Point> contour;
 };
 
+struct SurfaceLocalizationReference
+{
+  bool found = false;
+  std::string method;
+  cv::Point2d center;
+  double radius = 0.0;
+  double angleRadians = 0.0;
+  double score = 0.0;
+  double meanError = 0.0;
+  int inputPoints = 0;
+  int usedPoints = 0;
+  cv::Point2d xAxisStart;
+  cv::Point2d xAxisEnd;
+  cv::Point2d yAxisStart;
+  cv::Point2d yAxisEnd;
+};
+
 struct SurfaceDefectResult
 {
   bool processed = false;
   double totalArea = 0.0;
   std::vector<SurfaceBlob> blobs;
+  SurfaceLocalizationReference localization;
   cv::Mat diagnosticImage;
 };
 
@@ -77,6 +95,29 @@ struct SurfaceAnnulusThresholdConfig
   int innerRadius = 0;
   SurfaceThresholdSettings threshold;
   int edgeSensitivity = 60;
+  double edgeFitMaxError = 8.0;
+};
+
+struct SurfaceShapeMatchConfig
+{
+  cv::Rect searchRoi;
+  std::vector<cv::Point> modelContour;
+  int edgeSensitivity = 60;
+  double maxShapeDistance = 0.25;
+  double minContourArea = 50.0;
+  double minAreaRatio = 0.20;
+  double maxAreaRatio = 5.00;
+};
+
+struct SurfaceTemplateMatchConfig
+{
+  cv::Rect searchRoi;
+  cv::Mat modelImage;
+  int edgeSensitivity = 60;
+  double minScore = 0.45;
+  double angleStartDegrees = -180.0;
+  double angleEndDegrees = 180.0;
+  double angleStepDegrees = 5.0;
 };
 
 class SurfaceDefectProcessor
@@ -101,5 +142,21 @@ public:
   SurfaceDefectResult locateAnnulusByEdge(
     const cv::Mat& input,
     const SurfaceAnnulusThresholdConfig& config,
+    const std::vector<cv::Rect>& exclusionRects = {}) const;
+
+  SurfaceDefectResult locateByEdgePca(
+    const cv::Mat& input,
+    const cv::Rect& searchRoi,
+    const std::vector<cv::Rect>& exclusionRects = {},
+    int edgeSensitivity = 60) const;
+
+  SurfaceDefectResult locateByShapeMatching(
+    const cv::Mat& input,
+    const SurfaceShapeMatchConfig& config,
+    const std::vector<cv::Rect>& exclusionRects = {}) const;
+
+  SurfaceDefectResult locateByTemplateMatching(
+    const cv::Mat& input,
+    const SurfaceTemplateMatchConfig& config,
     const std::vector<cv::Rect>& exclusionRects = {}) const;
 };

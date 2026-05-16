@@ -15,7 +15,7 @@ const QVector<StrategyTemplate>& strategies()
   static const QVector<StrategyTemplate> result = {
     {"threshold", "strategies.threshold", "strategyNotes.threshold", true},
     {"edge", "strategies.edge", "strategyNotes.edge", true},
-    {"edgePca", "strategies.edgePca", "strategyNotes.edgePca", false},
+    {"edgePca", "strategies.edgePca", "strategyNotes.edgePca", true},
     {"model", "strategies.model", "strategyNotes.model", false},
     {"aiYolo", "strategies.aiYolo", "strategyNotes.aiYolo", false}
   };

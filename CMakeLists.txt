@@ -26,6 +26,8 @@ add_executable(VisionSystemCPP
     src/gui/ImageViewWidget.cpp
     src/gui/MainWindow.h
     src/gui/MainWindow.cpp
+    src/gui/SurfaceLocalizationPanelWidget.h
+    src/gui/SurfaceLocalizationPanelWidget.cpp
     src/gui/SurfaceLocalizationStrategies.h
     src/gui/SurfaceLocalizationStrategies.cpp
     src/gui/ToolCatalog.h
@@ -34,13 +36,21 @@ add_executable(VisionSystemCPP
     src/gui/ToolPanelWidget.cpp
     src/processing/ImageProcessor.h
     src/processing/ImageProcessor.cpp
+    src/processing/CircleFit.h
+    src/processing/CircleFit.cpp
     src/processing/LocalizationProcessor.h
     src/processing/LocalizationProcessor.cpp
     src/processing/SurfaceDefectProcessor.h
     src/processing/SurfaceDefectProcessor.cpp
     src/processing/SurfaceEdgeStrategy.h
     src/processing/SurfaceEdgeStrategy.cpp
+    src/processing/SurfaceModelStrategy.h
+    src/processing/SurfaceModelStrategy.cpp
+    src/processing/SurfaceModelTrainer.h
+    src/processing/SurfaceModelTrainer.cpp
     src/processing/SurfaceProcessingUtils.h
+    src/processing/SurfacePcaStrategy.h
+    src/processing/SurfacePcaStrategy.cpp
     src/processing/SurfaceThresholdStrategy.h
     src/processing/SurfaceThresholdStrategy.cpp
     src/processing/SurfaceTwoCirclesStrategy.h

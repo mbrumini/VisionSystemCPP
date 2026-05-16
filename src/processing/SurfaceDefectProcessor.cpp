@@ -1,6 +1,8 @@
 #include "SurfaceDefectProcessor.h"
 
 #include "processing/SurfaceEdgeStrategy.h"
+#include "processing/SurfaceModelStrategy.h"
+#include "processing/SurfacePcaStrategy.h"
 #include "processing/SurfaceThresholdStrategy.h"
 #include "processing/SurfaceTwoCirclesStrategy.h"
 
@@ -35,4 +37,29 @@ SurfaceDefectResult SurfaceDefectProcessor::locateAnnulusByEdge(
   const std::vector<cv::Rect>& exclusionRects) const
 {
   return SurfaceEdgeStrategy().locateAnnulus(input, config, exclusionRects);
+}
+
+SurfaceDefectResult SurfaceDefectProcessor::locateByEdgePca(
+  const cv::Mat& input,
+  const cv::Rect& searchRoi,
+  const std::vector<cv::Rect>& exclusionRects,
+  int edgeSensitivity) const
+{
+  return SurfacePcaStrategy().locateByEdgePca(input, searchRoi, exclusionRects, edgeSensitivity);
+}
+
+SurfaceDefectResult SurfaceDefectProcessor::locateByShapeMatching(
+  const cv::Mat& input,
+  const SurfaceShapeMatchConfig& config,
+  const std::vector<cv::Rect>& exclusionRects) const
+{
+  return SurfaceModelStrategy().locateByShapeMatching(input, config, exclusionRects);
+}
+
+SurfaceDefectResult SurfaceDefectProcessor::locateByTemplateMatching(
+  const cv::Mat& input,
+  const SurfaceTemplateMatchConfig& config,
+  const std::vector<cv::Rect>& exclusionRects) const
+{
+  return SurfaceModelStrategy().locateByTemplateMatching(input, config, exclusionRects);
 }

@@ -1,11 +1,12 @@
 ﻿#include "MainWindow.h"
 
+#include "gui/SurfaceLocalizationPanelWidget.h"
 #include "gui/SurfaceLocalizationStrategies.h"
 #include "gui/ToolCatalog.h"
 #include "gui/ToolPanelWidget.h"
+#include "processing/SurfaceModelTrainer.h"
 
 #include <QApplication>
-#include <QComboBox>
 #include <QDateTime>
 #include <QDir>
 #include <QFileInfo>
@@ -273,6 +274,40 @@ void MainWindow::buildUi()
                 .arg(rect.width())
                 .arg(rect.height()));
   });
+  m_largeImage->setExclusionRectsChangedHandler([this](const QVector<QRect>& rects) {
+    if (m_selectedCameraId.isEmpty())
+    {
+      return;
+    }
+
+    QString error;
+
+    if (m_activeDrawingRecipe == ActiveDrawingRecipe::SurfaceDefects)
+    {
+      if (!m_recipeManager.saveSurfaceDefectExclusionRects(m_selectedCameraId, rects, &error))
+      {
+        appendLog(error);
+        return;
+      }
+
+      appendLog(QString("%1: %2 (%3)")
+                  .arg(trText("log.surfaceExclusionsUpdated"))
+                  .arg(m_selectedCameraId)
+                  .arg(rects.size()));
+      return;
+    }
+
+    if (!m_recipeManager.saveLocalizationExclusionRects(m_selectedCameraId, rects, &error))
+    {
+      appendLog(error);
+      return;
+    }
+
+    appendLog(QString("%1: %2 (%3)")
+                .arg(trText("log.localizationExclusionsUpdated"))
+                .arg(m_selectedCameraId)
+                .arg(rects.size()));
+  });
   m_largeImage->setCircleChangedHandler([this](bool outerCircle, const ImageCircle& circle) {
     if (m_selectedCameraId.isEmpty())
     {
@@ -482,8 +517,8 @@ void MainWindow::buildUi()
   auto* panel = new QWidget(panelScrollArea);
   panel->setMinimumWidth(340);
   auto* panelLayout = new QVBoxLayout(panel);
-  panelLayout->setContentsMargins(14, 14, 14, 14);
-  panelLayout->setSpacing(12);
+  panelLayout->setContentsMargins(10, 10, 10, 10);
+  panelLayout->setSpacing(8);
 
   m_systemStatus = new QLabel(trText("status.systemReady"), panel);
   m_systemStatus->setObjectName("panelStatus");
@@ -512,9 +547,9 @@ void MainWindow::buildUi()
 
   setStyleSheet(
     "QMainWindow,QWidget{background:#0f1419;color:#eef2f6;font-family:'Segoe UI';font-size:13px;}"
-    "QGroupBox{border:1px solid #313b46;border-radius:6px;margin-top:10px;padding:10px 8px 8px 8px;font-weight:600;}"
+    "QGroupBox{border:1px solid #313b46;border-radius:6px;margin-top:8px;padding:8px 7px 7px 7px;font-weight:600;}"
     "QGroupBox::title{subcontrol-origin:margin;left:8px;padding:0 4px;color:#cdd6df;}"
-    "QPushButton{background:#24313d;border:1px solid #3b4652;border-radius:5px;padding:8px;color:#f5f7fa;}"
+    "QPushButton{background:#24313d;border:1px solid #3b4652;border-radius:5px;padding:6px;color:#f5f7fa;}"
     "QPushButton:hover{background:#2e3d4b;}"
     "QTextEdit{background:#111820;border:1px solid #313b46;border-radius:5px;color:#d7dee6;}"
     "#largeTitle{font-size:20px;font-weight:700;color:#f4f7fb;}"
@@ -1185,13 +1220,237 @@ void MainWindow::showSurfaceLocalizationStrategyPanel(const CameraConfig& camera
     return;
   }
 
+  if (strategyId == "edgePca")
+  {
+    QString error;
+    if (!m_recipeManager.saveSurfaceLocalizationMethod(camera.id, strategyId, &error))
+    {
+      appendLog(error);
+      return;
+    }
+
+    clearToolPanel();
+
+    const SurfaceAnnulusLocalizationConfig annulus = m_recipeManager.loadSurfaceAnnulusLocalization(camera.id);
+    const SurfaceLocalizationStrategyDefinition strategy = SurfaceLocalizationStrategies::strategy(strategyId, m_translations);
+    auto* panel = new QWidget(m_toolsContainer);
+    auto* layout = new QVBoxLayout(panel);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(6);
+
+    auto* title = new QLabel(strategy.label + " | " + QString("%1 %2").arg(trText("labels.camera")).arg(camera.slot), panel);
+    title->setObjectName("toolPanelTitle");
+    title->setWordWrap(true);
+    layout->addWidget(title);
+
+    auto* note = new QLabel(strategy.note, panel);
+    note->setObjectName("toolPanelNote");
+    note->setWordWrap(true);
+    layout->addWidget(note);
+
+    auto* buttons = new QWidget(panel);
+    auto* buttonsLayout = new QGridLayout(buttons);
+    buttonsLayout->setContentsMargins(0, 0, 0, 0);
+    buttonsLayout->setSpacing(6);
+
+    auto* roiButton = new QPushButton(trText("actions.surfaceSearchRoi"), buttons);
+    auto* maskButton = new QPushButton(trText("actions.surfaceAddExclusion"), buttons);
+    auto* clearButton = new QPushButton(trText("actions.surfaceClearExclusions"), buttons);
+    auto* testButton = new QPushButton(trText("actions.testStrategy"), buttons);
+    for (QPushButton* button : {roiButton, maskButton, clearButton, testButton})
+    {
+      button->setMinimumHeight(34);
+    }
+    connect(roiButton, &QPushButton::clicked, this, [this, camera]() { activateSurfaceDefectRoiDrawing(camera); });
+    connect(maskButton, &QPushButton::clicked, this, [this, camera]() { activateSurfaceDefectExclusionDrawing(camera); });
+    connect(clearButton, &QPushButton::clicked, this, [this, camera]() { clearSurfaceDefectExclusions(camera); });
+    connect(testButton, &QPushButton::clicked, this, [this, camera]() { testSurfaceEdgePcaLocalization(camera); });
+    buttonsLayout->addWidget(roiButton, 0, 0);
+    buttonsLayout->addWidget(maskButton, 0, 1);
+    buttonsLayout->addWidget(clearButton, 1, 0);
+    buttonsLayout->addWidget(testButton, 1, 1);
+    layout->addWidget(buttons);
+
+    auto* sensitivityBox = new QGroupBox(trText("labels.edgeSensitivity"), panel);
+    auto* sensitivityLayout = new QGridLayout(sensitivityBox);
+    sensitivityLayout->setContentsMargins(8, 10, 8, 8);
+    auto* sensitivityValue = new QLabel(QString::number(annulus.edgeSensitivity), sensitivityBox);
+    sensitivityValue->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    auto* sensitivitySlider = new QSlider(Qt::Horizontal, sensitivityBox);
+    sensitivitySlider->setRange(1, 255);
+    sensitivitySlider->setValue(annulus.edgeSensitivity);
+    sensitivityLayout->addWidget(sensitivityValue, 0, 1);
+    sensitivityLayout->addWidget(sensitivitySlider, 1, 0, 1, 2);
+    connect(sensitivitySlider, &QSlider::valueChanged, this, [this, camera, sensitivityValue](int value) {
+      sensitivityValue->setText(QString::number(value));
+      QString error;
+      if (!m_recipeManager.saveSurfaceEdgeSensitivity(camera.id, value, &error))
+      {
+        appendLog(error);
+        return;
+      }
+      testSurfaceEdgePcaLocalization(camera);
+    });
+    layout->addWidget(sensitivityBox);
+
+    auto* backButton = new QPushButton(trText("commands.backToCameraTools"), panel);
+    connect(backButton, &QPushButton::clicked, this, [this, camera]() {
+      showCameraToolList(camera);
+      appendLog(trText("log.backToCameraTools") + ": " + camera.id);
+    });
+    layout->addWidget(backButton);
+    layout->addStretch(1);
+
+    m_toolsLayout->addWidget(panel);
+    appendLog(trText("log.toolPanel") + ": " + strategy.label);
+    testSurfaceEdgePcaLocalization(camera);
+    return;
+  }
+
+  if (strategyId == "model")
+  {
+    QString error;
+    if (!m_recipeManager.saveSurfaceLocalizationMethod(camera.id, strategyId, &error))
+    {
+      appendLog(error);
+      return;
+    }
+
+    clearToolPanel();
+
+    const SurfaceLocalizationStrategyDefinition strategy = SurfaceLocalizationStrategies::strategy(strategyId, m_translations);
+    auto* panel = new QWidget(m_toolsContainer);
+    auto* layout = new QVBoxLayout(panel);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(6);
+
+    auto* title = new QLabel(strategy.label + " | " + QString("%1 %2").arg(trText("labels.camera")).arg(camera.slot), panel);
+    title->setObjectName("toolPanelTitle");
+    title->setWordWrap(true);
+    layout->addWidget(title);
+
+    auto* note = new QLabel(strategy.note, panel);
+    note->setObjectName("toolPanelNote");
+    note->setWordWrap(true);
+    layout->addWidget(note);
+
+    auto* buttons = new QWidget(panel);
+    auto* buttonsLayout = new QGridLayout(buttons);
+    buttonsLayout->setContentsMargins(0, 0, 0, 0);
+    buttonsLayout->setSpacing(6);
+
+    auto* roiButton = new QPushButton(trText("actions.surfaceSearchRoi"), buttons);
+    auto* previewButton = new QPushButton(trText("actions.previewModel"), buttons);
+    auto* acquireButton = new QPushButton(trText("actions.acquireModel"), buttons);
+    auto* shapeButton = new QPushButton(trText("actions.testShapeModel"), buttons);
+    auto* templateButton = new QPushButton(trText("actions.testTemplateModel"), buttons);
+    for (QPushButton* button : {roiButton, previewButton, acquireButton, shapeButton, templateButton})
+    {
+      button->setMinimumHeight(34);
+    }
+    connect(roiButton, &QPushButton::clicked, this, [this, camera]() { activateSurfaceDefectRoiDrawing(camera); });
+    connect(previewButton, &QPushButton::clicked, this, [this, camera]() { previewSurfaceModel(camera); });
+    connect(acquireButton, &QPushButton::clicked, this, [this, camera]() { acquireSurfaceModel(camera); });
+    connect(shapeButton, &QPushButton::clicked, this, [this, camera]() { testSurfaceShapeModel(camera); });
+    connect(templateButton, &QPushButton::clicked, this, [this, camera]() { testSurfaceTemplateModel(camera); });
+    buttonsLayout->addWidget(roiButton, 0, 0);
+    buttonsLayout->addWidget(previewButton, 0, 1);
+    buttonsLayout->addWidget(acquireButton, 1, 0);
+    buttonsLayout->addWidget(shapeButton, 1, 1);
+    buttonsLayout->addWidget(templateButton, 2, 0, 1, 2);
+    layout->addWidget(buttons);
+
+    SurfaceModelConfig model = m_recipeManager.loadSurfaceModel(camera.id);
+    auto* modelBox = new QGroupBox(trText("groups.strategyControls"), panel);
+    auto* modelLayout = new QGridLayout(modelBox);
+    modelLayout->setContentsMargins(8, 10, 8, 8);
+    modelLayout->setHorizontalSpacing(8);
+    modelLayout->setVerticalSpacing(4);
+
+    auto addSlider = [this, camera, modelLayout](const QString& labelText, int row, int minValue, int maxValue, int value, std::function<void(int)> handler, double displayScale = 1.0) {
+      auto* label = new QLabel(labelText, modelLayout->parentWidget());
+      auto* valueLabel = new QLabel(QString::number(value * displayScale, 'f', displayScale == 1.0 ? 0 : 2), modelLayout->parentWidget());
+      valueLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+      auto* slider = new QSlider(Qt::Horizontal, modelLayout->parentWidget());
+      slider->setRange(minValue, maxValue);
+      slider->setValue(value);
+      modelLayout->addWidget(label, row, 0);
+      modelLayout->addWidget(valueLabel, row, 1);
+      modelLayout->addWidget(slider, row + 1, 0, 1, 2);
+      connect(slider, &QSlider::valueChanged, this, [valueLabel, handler, displayScale](int sliderValue) {
+        valueLabel->setText(QString::number(sliderValue * displayScale, 'f', displayScale == 1.0 ? 0 : 2));
+        handler(sliderValue);
+      });
+    };
+
+    addSlider(trText("labels.edgeSensitivity"), 0, 1, 255, model.edgeSensitivity, [this, camera](int value) {
+      QString error;
+      if (!m_recipeManager.saveSurfaceModelEdgeSensitivity(camera.id, value, &error))
+      {
+        appendLog(error);
+      }
+      previewSurfaceModel(camera);
+    });
+    addSlider(trText("labels.modelMaxShapeDistance"), 2, 1, 500, static_cast<int>(model.maxShapeDistance * 100.0), [this, camera](int value) {
+      QString error;
+      if (!m_recipeManager.saveSurfaceModelMaxShapeDistance(camera.id, value / 100.0, &error))
+      {
+        appendLog(error);
+      }
+    }, 0.01);
+    addSlider(trText("labels.modelMinTemplateScore"), 4, 0, 100, static_cast<int>(model.minTemplateScore * 100.0), [this, camera](int value) {
+      QString error;
+      if (!m_recipeManager.saveSurfaceModelMinTemplateScore(camera.id, value / 100.0, &error))
+      {
+        appendLog(error);
+      }
+    }, 0.01);
+    addSlider(trText("labels.modelAngleStart"), 6, -180, 180, static_cast<int>(model.angleStartDegrees), [this, camera](int value) {
+      const SurfaceModelConfig current = m_recipeManager.loadSurfaceModel(camera.id);
+      QString error;
+      if (!m_recipeManager.saveSurfaceModelAngleRange(camera.id, value, current.angleEndDegrees, current.angleStepDegrees, &error))
+      {
+        appendLog(error);
+      }
+    });
+    addSlider(trText("labels.modelAngleEnd"), 8, -180, 180, static_cast<int>(model.angleEndDegrees), [this, camera](int value) {
+      const SurfaceModelConfig current = m_recipeManager.loadSurfaceModel(camera.id);
+      QString error;
+      if (!m_recipeManager.saveSurfaceModelAngleRange(camera.id, current.angleStartDegrees, value, current.angleStepDegrees, &error))
+      {
+        appendLog(error);
+      }
+    });
+    addSlider(trText("labels.modelAngleStep"), 10, 1, 45, static_cast<int>(model.angleStepDegrees), [this, camera](int value) {
+      const SurfaceModelConfig current = m_recipeManager.loadSurfaceModel(camera.id);
+      QString error;
+      if (!m_recipeManager.saveSurfaceModelAngleRange(camera.id, current.angleStartDegrees, current.angleEndDegrees, value, &error))
+      {
+        appendLog(error);
+      }
+    });
+    layout->addWidget(modelBox);
+
+    auto* backButton = new QPushButton(trText("commands.backToCameraTools"), panel);
+    connect(backButton, &QPushButton::clicked, this, [this, camera]() {
+      showCameraToolList(camera);
+      appendLog(trText("log.backToCameraTools") + ": " + camera.id);
+    });
+    layout->addWidget(backButton);
+    layout->addStretch(1);
+
+    m_toolsLayout->addWidget(panel);
+    appendLog(trText("log.toolPanel") + ": " + strategy.label);
+    return;
+  }
+
   clearToolPanel();
 
   const SurfaceLocalizationStrategyDefinition strategy = SurfaceLocalizationStrategies::strategy(strategyId, m_translations);
   auto* panel = new QWidget(m_toolsContainer);
   auto* layout = new QVBoxLayout(panel);
   layout->setContentsMargins(0, 0, 0, 0);
-  layout->setSpacing(8);
+  layout->setSpacing(6);
 
   auto* title = new QLabel(strategy.label + " | " + QString("%1 %2").arg(trText("labels.camera")).arg(camera.slot), panel);
   title->setObjectName("toolPanelTitle");
@@ -1227,195 +1486,40 @@ void MainWindow::showSurfaceLocalizationPanel(const CameraConfig& camera)
 {
   clearToolPanel();
 
-  auto* panel = new QWidget(m_toolsContainer);
-  auto* layout = new QVBoxLayout(panel);
-  layout->setContentsMargins(0, 0, 0, 0);
-  layout->setSpacing(8);
-
-  auto* title = new QLabel(ToolCatalog::label("surfaceLocalization", m_translations) + " | " + QString("%1 %2").arg(trText("labels.camera")).arg(camera.slot), panel);
-  title->setObjectName("toolPanelTitle");
-  title->setWordWrap(true);
-  layout->addWidget(title);
-
-  auto* drawingBox = new QGroupBox(trText("labels.circleDrawing"), panel);
-  auto* drawingLayout = new QHBoxLayout(drawingBox);
-  drawingLayout->setContentsMargins(8, 12, 8, 8);
-  drawingLayout->setSpacing(8);
-
-  auto* centerRadiusButton = new QPushButton(trText("labels.circleDrawingCenterRadius"), drawingBox);
-  centerRadiusButton->setCheckable(true);
-  centerRadiusButton->setChecked(true);
-  centerRadiusButton->setMinimumHeight(38);
-  auto* threePointButton = new QPushButton(trText("labels.circleDrawingThreePoints"), drawingBox);
-  threePointButton->setCheckable(true);
-  threePointButton->setMinimumHeight(38);
-  connect(centerRadiusButton, &QPushButton::clicked, this, [centerRadiusButton, threePointButton]() {
-    centerRadiusButton->setChecked(true);
-    threePointButton->setChecked(false);
-  });
-  connect(threePointButton, &QPushButton::clicked, this, [this, camera, centerRadiusButton, threePointButton]() {
-    centerRadiusButton->setChecked(false);
-    threePointButton->setChecked(true);
-    activateSurfaceThreePointCircleDrawing(camera, SurfaceCircleTarget::None);
-  });
-  drawingLayout->addWidget(centerRadiusButton);
-  drawingLayout->addWidget(threePointButton);
-  layout->addWidget(drawingBox);
-
-  auto* buttons = new QWidget(panel);
-  auto* buttonsLayout = new QGridLayout(buttons);
-  buttonsLayout->setContentsMargins(0, 0, 0, 0);
-  buttonsLayout->setSpacing(8);
-
-  const QVector<QPair<QString, std::function<void()>>> actions = {
-    {trText("actions.surfaceOuterCircle"), [this, camera, threePointButton]() {
-      if (threePointButton->isChecked())
-      {
-        activateSurfaceThreePointCircleDrawing(camera, SurfaceCircleTarget::None);
-        return;
-      }
-
-      activateSurfaceOuterCircleDrawing(camera);
-    }},
-    {trText("actions.surfaceInnerCircle"), [this, camera, threePointButton]() {
-      if (threePointButton->isChecked())
-      {
-        activateSurfaceThreePointCircleDrawing(camera, SurfaceCircleTarget::None);
-        return;
-      }
-
-      activateSurfaceInnerCircleDrawing(camera);
-    }},
-    {trText("actions.surfaceEdgeCircle"), [this, camera, threePointButton]() {
-      if (threePointButton->isChecked())
-      {
-        activateSurfaceThreePointCircleDrawing(camera, SurfaceCircleTarget::None);
-        return;
-      }
-
-      activateSurfaceEdgeCircleCenterRadiusDrawing(camera);
-    }},
-    {trText("actions.surfaceAddExclusion"), [this, camera]() { activateSurfaceDefectExclusionDrawing(camera); }},
-    {trText("actions.surfaceClearExclusions"), [this, camera]() { clearSurfaceDefectExclusions(camera); }}
-  };
-
-  for (int i = 0; i < actions.size(); ++i)
-  {
-    auto* button = new QPushButton(actions[i].first, buttons);
-    button->setMinimumHeight(40);
-    button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    connect(button, &QPushButton::clicked, this, actions[i].second);
-    buttonsLayout->addWidget(button, i / 2, i % 2);
-  }
-
-  buttons->setMinimumHeight(144);
-  layout->addWidget(buttons);
-  layout->addSpacing(10);
-
   const SurfaceAnnulusLocalizationConfig annulus = m_recipeManager.loadSurfaceAnnulusLocalization(camera.id);
-  auto* methodBox = new QGroupBox(trText("labels.localizationMethod"), panel);
-  auto* methodLayout = new QVBoxLayout(methodBox);
-  methodLayout->setContentsMargins(8, 12, 8, 8);
-  methodLayout->setSpacing(8);
 
-  auto* methodCombo = new QComboBox(methodBox);
-  methodCombo->addItem(trText("labels.methodThreshold"), "threshold");
-  methodCombo->addItem(trText("labels.methodEdge"), "edge");
-  const int methodIndex = methodCombo->findData(annulus.method);
-  methodCombo->setCurrentIndex(methodIndex >= 0 ? methodIndex : 0);
-  methodLayout->addWidget(methodCombo);
-
-  auto* parameterTitle = new QLabel(methodCombo->currentData().toString() == "edge" ? trText("labels.edgeSensitivity") : trText("labels.threshold"), methodBox);
-  parameterTitle->setObjectName("toolPanelNote");
-  methodLayout->addWidget(parameterTitle);
-
-  auto* parameterLabel = new QLabel(QString::number(methodCombo->currentData().toString() == "edge" ? annulus.edgeSensitivity : annulus.thresholdMax), methodBox);
-  parameterLabel->setAlignment(Qt::AlignCenter);
-  parameterLabel->setObjectName("toolPanelNote");
-  methodLayout->addWidget(parameterLabel);
-
-  auto* parameterSlider = new QSlider(Qt::Horizontal, methodBox);
-  parameterSlider->setRange(0, 255);
-  parameterSlider->setValue(methodCombo->currentData().toString() == "edge" ? annulus.edgeSensitivity : annulus.thresholdMax);
-  parameterSlider->setMinimumHeight(28);
-  methodLayout->addWidget(parameterSlider);
-
-  auto* edgeBandBox = new QGroupBox(trText("labels.edgeBand"), methodBox);
-  auto* edgeBandLayout = new QGridLayout(edgeBandBox);
-  edgeBandLayout->setContentsMargins(8, 12, 8, 8);
-  edgeBandLayout->setSpacing(6);
-
-  auto* innerBandTitle = new QLabel(trText("labels.edgeBandInner"), edgeBandBox);
-  auto* innerBandValue = new QLabel(QString::number(annulus.edgeBandInner), edgeBandBox);
-  auto* innerBandSlider = new QSlider(Qt::Horizontal, edgeBandBox);
-  innerBandSlider->setRange(1, 200);
-  innerBandSlider->setValue(annulus.edgeBandInner);
-
-  auto* outerBandTitle = new QLabel(trText("labels.edgeBandOuter"), edgeBandBox);
-  auto* outerBandValue = new QLabel(QString::number(annulus.edgeBandOuter), edgeBandBox);
-  auto* outerBandSlider = new QSlider(Qt::Horizontal, edgeBandBox);
-  outerBandSlider->setRange(1, 200);
-  outerBandSlider->setValue(annulus.edgeBandOuter);
-
-  edgeBandLayout->addWidget(innerBandTitle, 0, 0);
-  edgeBandLayout->addWidget(innerBandValue, 0, 1);
-  edgeBandLayout->addWidget(innerBandSlider, 1, 0, 1, 2);
-  edgeBandLayout->addWidget(outerBandTitle, 2, 0);
-  edgeBandLayout->addWidget(outerBandValue, 2, 1);
-  edgeBandLayout->addWidget(outerBandSlider, 3, 0, 1, 2);
-  edgeBandBox->setVisible(methodCombo->currentData().toString() == "edge");
-  methodLayout->addWidget(edgeBandBox);
-
-  connect(methodCombo, &QComboBox::currentIndexChanged, this, [this, camera, methodCombo, parameterTitle, parameterLabel, parameterSlider, edgeBandBox](int) {
-    const QString method = methodCombo->currentData().toString();
-    const SurfaceAnnulusLocalizationConfig current = m_recipeManager.loadSurfaceAnnulusLocalization(camera.id);
-    const int value = method == "edge" ? current.edgeSensitivity : current.thresholdMax;
-    parameterTitle->setText(method == "edge" ? trText("labels.edgeSensitivity") : trText("labels.threshold"));
-    parameterLabel->setText(QString::number(value));
-    parameterSlider->blockSignals(true);
-    parameterSlider->setValue(value);
-    parameterSlider->blockSignals(false);
-    edgeBandBox->setVisible(method == "edge");
-    saveSurfaceMethodAndPreview(camera, method);
-  });
-  connect(parameterSlider, &QSlider::valueChanged, this, [this, camera, methodCombo, parameterLabel](int value) {
-    parameterLabel->setText(QString::number(value));
-    const QString method = methodCombo->currentData().toString();
-
-    if (method == "edge")
-    {
-      saveSurfaceEdgeAndPreview(camera, value);
-      return;
-    }
-
-    saveSurfaceThresholdAndPreview(camera, value);
-  });
-  connect(innerBandSlider, &QSlider::valueChanged, this, [this, camera, innerBandValue, outerBandSlider](int value) {
-    innerBandValue->setText(QString::number(value));
-    saveSurfaceEdgeBandAndPreview(camera, value, outerBandSlider->value());
-  });
-  connect(outerBandSlider, &QSlider::valueChanged, this, [this, camera, outerBandValue, innerBandSlider](int value) {
-    outerBandValue->setText(QString::number(value));
-    saveSurfaceEdgeBandAndPreview(camera, innerBandSlider->value(), value);
-  });
-  layout->addWidget(methodBox);
-  layout->addSpacing(6);
-
-  auto* note = new QLabel(trText("labels.surfaceLocalizationNote"), panel);
-  note->setWordWrap(true);
-  note->setObjectName("toolPanelNote");
-  layout->addWidget(note);
-
-  auto* backButton = new QPushButton(trText("commands.backToCameraTools"), panel);
-  connect(backButton, &QPushButton::clicked, this, [this, camera]() {
+  SurfaceLocalizationPanelWidget::Handlers handlers;
+  handlers.drawOuterCircle = [this, camera]() { activateSurfaceOuterCircleDrawing(camera); };
+  handlers.drawInnerCircle = [this, camera]() { activateSurfaceInnerCircleDrawing(camera); };
+  handlers.drawEdgeCircle = [this, camera]() { activateSurfaceEdgeCircleCenterRadiusDrawing(camera); };
+  handlers.drawThreePointCircle = [this, camera]() { activateSurfaceThreePointCircleDrawing(camera, SurfaceCircleTarget::None); };
+  handlers.addExclusion = [this, camera]() { activateSurfaceDefectExclusionDrawing(camera); };
+  handlers.clearExclusions = [this, camera]() { clearSurfaceDefectExclusions(camera); };
+  handlers.methodChanged = [this, camera](const QString& method) { saveSurfaceMethodAndPreview(camera, method); };
+  handlers.thresholdChanged = [this, camera](int value) { saveSurfaceThresholdAndPreview(camera, value); };
+  handlers.edgeSensitivityChanged = [this, camera](int value) { saveSurfaceEdgeAndPreview(camera, value); };
+  handlers.edgeBandChanged = [this, camera](int innerWidth, int outerWidth) { saveSurfaceEdgeBandAndPreview(camera, innerWidth, outerWidth); };
+  handlers.edgeFitMaxErrorChanged = [this, camera](int value) { saveSurfaceEdgeFitMaxErrorAndPreview(camera, value); };
+  handlers.back = [this, camera]() {
     showCameraToolList(camera);
     appendLog(trText("log.backToCameraTools") + ": " + camera.id);
-  });
-  layout->addWidget(backButton);
-  layout->addStretch(1);
+  };
+
+  auto* panel = new SurfaceLocalizationPanelWidget(
+    ToolCatalog::label("surfaceLocalization", m_translations) + " | " + QString("%1 %2").arg(trText("labels.camera")).arg(camera.slot),
+    annulus,
+    m_translations,
+    handlers,
+    m_toolsContainer);
 
   m_toolsLayout->addWidget(panel);
   appendLog(trText("log.toolPanel") + ": " + ToolCatalog::label("surfaceLocalization", m_translations));
+
+  if ((annulus.method == "edge" && annulus.hasEdgeCircle && annulus.edgeRadius > annulus.edgeBandInner) ||
+      (annulus.method != "edge" && annulus.hasOuterCircle && annulus.hasInnerCircle && annulus.outerRadius > annulus.innerRadius))
+  {
+    testSurfaceAnnulusLocalization(camera);
+  }
 }
 
 void MainWindow::activateLocalizationRoiDrawing(const CameraConfig& camera)
@@ -1526,6 +1630,7 @@ void MainWindow::clearSurfaceDefectExclusions(const CameraConfig& camera)
 
   m_largeImage->clearExclusionRects();
   m_largeImage->clearCircles();
+  m_lastSurfaceLocalizationResults.remove(camera.id);
   m_selectedPreview = loadCameraPreview(camera);
   m_largeImage->setImage(m_selectedPreview);
   appendLog(trText("log.surfaceGeometryCleared") + ": " + camera.id);
@@ -1728,6 +1833,35 @@ void MainWindow::saveSurfaceEdgeBandAndPreview(const CameraConfig& camera, int i
   }
 }
 
+void MainWindow::saveSurfaceEdgeFitMaxErrorAndPreview(const CameraConfig& camera, int maxError)
+{
+  if (!isGrayscaleLocalizationCamera(camera))
+  {
+    appendLog(trText("log.surfaceNotAvailable") + ": " + camera.id);
+    return;
+  }
+
+  if (camera.id != m_selectedCameraId)
+  {
+    return;
+  }
+
+  QString error;
+  if (!m_recipeManager.saveSurfaceEdgeFitMaxError(camera.id, maxError, &error))
+  {
+    appendLog(error);
+    return;
+  }
+
+  const SurfaceAnnulusLocalizationConfig annulus = m_recipeManager.loadSurfaceAnnulusLocalization(camera.id);
+  showStoredSurfaceLocalizationGeometry(camera, annulus);
+
+  if (annulus.hasEdgeCircle && annulus.edgeRadius > annulus.edgeBandInner)
+  {
+    testSurfaceAnnulusLocalization(camera);
+  }
+}
+
 void MainWindow::saveSurfaceMethodAndPreview(const CameraConfig& camera, const QString& method)
 {
   if (!isGrayscaleLocalizationCamera(camera))
@@ -1856,6 +1990,7 @@ void MainWindow::testSurfaceAnnulusLocalization(const CameraConfig& camera)
   processorConfig.threshold.minValue = annulus.thresholdMin;
   processorConfig.threshold.maxValue = annulus.thresholdMax;
   processorConfig.edgeSensitivity = annulus.edgeSensitivity;
+  processorConfig.edgeFitMaxError = annulus.edgeFitMaxError;
 
   SurfaceDefectProcessor processor;
   const QVector<QRect> exclusionRects = m_recipeManager.loadSurfaceDefectExclusionRects(camera.id);
@@ -1881,6 +2016,7 @@ void MainWindow::testSurfaceAnnulusLocalization(const CameraConfig& camera)
 
   if (result.blobs.empty())
   {
+    m_lastSurfaceLocalizationResults.remove(camera.id);
     appendLog(QString("%1: %2 min=%3 max=%4")
                 .arg(trText("log.surfaceNotFound"))
                 .arg(camera.id)
@@ -1890,11 +2026,22 @@ void MainWindow::testSurfaceAnnulusLocalization(const CameraConfig& camera)
   }
 
   const SurfaceBlob& mainBlob = result.blobs.front();
-  appendLog(QString("%1: %2 cx=%3 cy=%4 area=%5 blobs=%6 min=%7 max=%8")
+  if (result.localization.found)
+  {
+    m_lastSurfaceLocalizationResults.insert(camera.id, result.localization);
+  }
+  else
+  {
+    m_lastSurfaceLocalizationResults.remove(camera.id);
+  }
+
+  appendLog(QString("%1: %2 cx=%3 cy=%4 r=%5 score=%6 area=%7 blobs=%8 min=%9 max=%10")
               .arg(trText("log.surfaceFound"))
               .arg(camera.id)
-              .arg(mainBlob.center.x, 0, 'f', 1)
-              .arg(mainBlob.center.y, 0, 'f', 1)
+              .arg(result.localization.found ? result.localization.center.x : mainBlob.center.x, 0, 'f', 1)
+              .arg(result.localization.found ? result.localization.center.y : mainBlob.center.y, 0, 'f', 1)
+              .arg(result.localization.radius, 0, 'f', 1)
+              .arg(result.localization.score, 0, 'f', 2)
               .arg(mainBlob.area, 0, 'f', 1)
               .arg(result.blobs.size())
               .arg(annulus.thresholdMin)
@@ -2046,6 +2193,299 @@ void MainWindow::testSurfaceLocalizationStrategy(const CameraConfig& camera)
               .arg(result.origin.x, 0, 'f', 1)
               .arg(result.origin.y, 0, 'f', 1)
               .arg(result.features.size()));
+}
+
+void MainWindow::testSurfaceEdgePcaLocalization(const CameraConfig& camera)
+{
+  if (!isGrayscaleLocalizationCamera(camera))
+  {
+    appendLog(trText("log.surfaceNotAvailable") + ": " + camera.id);
+    return;
+  }
+
+  if (camera.id != m_selectedCameraId)
+  {
+    return;
+  }
+
+  QRect roi;
+  if (!m_recipeManager.loadSurfaceDefectRoi(camera.id, roi))
+  {
+    appendLog(trText("log.surfaceRoiMissing") + ": " + camera.id);
+    return;
+  }
+
+  if (m_selectedImagePath.isEmpty())
+  {
+    appendLog(trText("log.imageMissing") + ": " + camera.id);
+    return;
+  }
+
+  const cv::Mat input = cv::imread(m_selectedImagePath.toStdString(), cv::IMREAD_COLOR);
+  if (input.empty())
+  {
+    appendLog(trText("log.imageMissing") + ": " + m_selectedImagePath);
+    return;
+  }
+
+  const SurfaceAnnulusLocalizationConfig annulus = m_recipeManager.loadSurfaceAnnulusLocalization(camera.id);
+  SurfaceDefectProcessor processor;
+  const QVector<QRect> exclusionRects = m_recipeManager.loadSurfaceDefectExclusionRects(camera.id);
+  const SurfaceDefectResult result = processor.locateByEdgePca(
+    input,
+    cv::Rect(roi.x(), roi.y(), roi.width(), roi.height()),
+    toCvRects(exclusionRects),
+    annulus.edgeSensitivity);
+
+  if (!result.processed || result.diagnosticImage.empty())
+  {
+    m_lastSurfaceLocalizationResults.remove(camera.id);
+    appendLog(trText("log.surfaceFailed") + ": " + camera.id);
+    return;
+  }
+
+  m_selectedPreview = matToPixmap(result.diagnosticImage);
+  m_largeImage->setImage(m_selectedPreview);
+  m_largeImage->setRoi(roi);
+  m_largeImage->setExclusionRects(exclusionRects);
+  m_largeImage->clearCircles();
+
+  if (!result.localization.found)
+  {
+    m_lastSurfaceLocalizationResults.remove(camera.id);
+    appendLog(trText("log.surfaceStrategyNotFound") + ": " + camera.id);
+    return;
+  }
+
+  m_lastSurfaceLocalizationResults.insert(camera.id, result.localization);
+  appendLog(QString("%1: %2 cx=%3 cy=%4 angle=%5 points=%6 score=%7")
+              .arg(trText("log.surfaceStrategyFound"))
+              .arg(camera.id)
+              .arg(result.localization.center.x, 0, 'f', 1)
+              .arg(result.localization.center.y, 0, 'f', 1)
+              .arg(result.localization.angleRadians * 180.0 / CV_PI, 0, 'f', 1)
+              .arg(result.localization.usedPoints)
+              .arg(result.localization.score, 0, 'f', 2));
+}
+
+void MainWindow::acquireSurfaceModel(const CameraConfig& camera)
+{
+  if (!isGrayscaleLocalizationCamera(camera) || camera.id != m_selectedCameraId)
+  {
+    return;
+  }
+
+  QRect roi;
+  if (!m_recipeManager.loadSurfaceDefectRoi(camera.id, roi))
+  {
+    appendLog(trText("log.surfaceRoiMissing") + ": " + camera.id);
+    return;
+  }
+
+  const cv::Mat input = cv::imread(m_selectedImagePath.toStdString(), cv::IMREAD_COLOR);
+  if (input.empty())
+  {
+    appendLog(trText("log.imageMissing") + ": " + m_selectedImagePath);
+    return;
+  }
+
+  const SurfaceModelConfig current = m_recipeManager.loadSurfaceModel(camera.id);
+  const QVector<QRect> exclusionRects = m_recipeManager.loadSurfaceDefectExclusionRects(camera.id);
+  SurfaceModelTrainer trainer;
+  const SurfaceModelTrainingResult training = trainer.trainFromRoi(
+    input,
+    cv::Rect(roi.x(), roi.y(), roi.width(), roi.height()),
+    toCvRects(exclusionRects),
+    current.edgeSensitivity);
+
+  if (!training.trained || training.templateImage.empty() || training.contour.empty())
+  {
+    appendLog(trText("log.surfaceStrategyNotFound") + ": " + camera.id);
+    return;
+  }
+
+  const QString templatePath = m_recipeManager.surfaceModelTemplateImagePath(camera.id);
+  QDir().mkpath(QFileInfo(templatePath).dir().absolutePath());
+  if (!cv::imwrite(templatePath.toStdString(), training.templateImage))
+  {
+    appendLog("Impossibile salvare template modello: " + templatePath);
+    return;
+  }
+
+  QVector<QPoint> contour;
+  contour.reserve(static_cast<int>(training.contour.size()));
+  for (const cv::Point& point : training.contour)
+  {
+    contour.append(QPoint(point.x, point.y));
+  }
+
+  QString error;
+  if (!m_recipeManager.saveSurfaceModel(camera.id, roi, contour, templatePath, &error))
+  {
+    appendLog(error);
+    return;
+  }
+
+  m_selectedPreview = matToPixmap(training.diagnosticImage);
+  m_largeImage->setImage(m_selectedPreview);
+  m_largeImage->setRoi(roi);
+  m_largeImage->setExclusionRects(exclusionRects);
+  appendLog(QString("%1: %2 points=%3").arg(trText("actions.acquireModel")).arg(camera.id).arg(contour.size()));
+}
+
+void MainWindow::previewSurfaceModel(const CameraConfig& camera)
+{
+  if (!isGrayscaleLocalizationCamera(camera) || camera.id != m_selectedCameraId)
+  {
+    return;
+  }
+
+  QRect roi;
+  if (!m_recipeManager.loadSurfaceDefectRoi(camera.id, roi))
+  {
+    appendLog(trText("log.surfaceRoiMissing") + ": " + camera.id);
+    return;
+  }
+
+  const cv::Mat input = cv::imread(m_selectedImagePath.toStdString(), cv::IMREAD_COLOR);
+  if (input.empty())
+  {
+    appendLog(trText("log.imageMissing") + ": " + m_selectedImagePath);
+    return;
+  }
+
+  const SurfaceModelConfig current = m_recipeManager.loadSurfaceModel(camera.id);
+  const QVector<QRect> exclusionRects = m_recipeManager.loadSurfaceDefectExclusionRects(camera.id);
+  SurfaceModelTrainer trainer;
+  const SurfaceModelTrainingResult training = trainer.trainFromRoi(
+    input,
+    cv::Rect(roi.x(), roi.y(), roi.width(), roi.height()),
+    toCvRects(exclusionRects),
+    current.edgeSensitivity);
+
+  if (training.diagnosticImage.empty())
+  {
+    appendLog(trText("log.surfaceStrategyNotFound") + ": " + camera.id);
+    return;
+  }
+
+  m_selectedPreview = matToPixmap(training.diagnosticImage);
+  m_largeImage->setImage(m_selectedPreview);
+  m_largeImage->setRoi(roi);
+  m_largeImage->setExclusionRects(exclusionRects);
+  appendLog(QString("%1: %2 points=%3")
+              .arg(trText("actions.previewModel"))
+              .arg(camera.id)
+              .arg(training.contour.size()));
+}
+
+void MainWindow::testSurfaceShapeModel(const CameraConfig& camera)
+{
+  if (!isGrayscaleLocalizationCamera(camera) || camera.id != m_selectedCameraId)
+  {
+    return;
+  }
+
+  const SurfaceModelConfig model = m_recipeManager.loadSurfaceModel(camera.id);
+  if (!model.hasModel)
+  {
+    appendLog(trText("log.surfaceStrategyMissing") + ": " + camera.id);
+    return;
+  }
+
+  const cv::Mat input = cv::imread(m_selectedImagePath.toStdString(), cv::IMREAD_COLOR);
+  if (input.empty())
+  {
+    appendLog(trText("log.imageMissing") + ": " + m_selectedImagePath);
+    return;
+  }
+
+  SurfaceShapeMatchConfig config;
+  config.searchRoi = cv::Rect(model.searchRoi.x(), model.searchRoi.y(), model.searchRoi.width(), model.searchRoi.height());
+  config.edgeSensitivity = model.edgeSensitivity;
+  config.maxShapeDistance = model.maxShapeDistance;
+  for (const QPoint& point : model.contour)
+  {
+    config.modelContour.emplace_back(point.x(), point.y());
+  }
+
+  SurfaceDefectProcessor processor;
+  const QVector<QRect> exclusionRects = m_recipeManager.loadSurfaceDefectExclusionRects(camera.id);
+  const SurfaceDefectResult result = processor.locateByShapeMatching(input, config, toCvRects(exclusionRects));
+  if (!result.processed || result.diagnosticImage.empty() || !result.localization.found)
+  {
+    m_lastSurfaceLocalizationResults.remove(camera.id);
+    appendLog(trText("log.surfaceStrategyNotFound") + ": " + camera.id);
+    return;
+  }
+
+  m_lastSurfaceLocalizationResults.insert(camera.id, result.localization);
+  m_selectedPreview = matToPixmap(result.diagnosticImage);
+  m_largeImage->setImage(m_selectedPreview);
+  m_largeImage->setRoi(model.searchRoi);
+  m_largeImage->setExclusionRects(exclusionRects);
+  appendLog(QString("%1: %2 shape cx=%3 cy=%4 angle=%5 score=%6")
+              .arg(trText("log.surfaceStrategyFound"))
+              .arg(camera.id)
+              .arg(result.localization.center.x, 0, 'f', 1)
+              .arg(result.localization.center.y, 0, 'f', 1)
+              .arg(result.localization.angleRadians * 180.0 / CV_PI, 0, 'f', 1)
+              .arg(result.localization.score, 0, 'f', 2));
+}
+
+void MainWindow::testSurfaceTemplateModel(const CameraConfig& camera)
+{
+  if (!isGrayscaleLocalizationCamera(camera) || camera.id != m_selectedCameraId)
+  {
+    return;
+  }
+
+  const SurfaceModelConfig model = m_recipeManager.loadSurfaceModel(camera.id);
+  if (!model.hasModel)
+  {
+    appendLog(trText("log.surfaceStrategyMissing") + ": " + camera.id);
+    return;
+  }
+
+  const cv::Mat input = cv::imread(m_selectedImagePath.toStdString(), cv::IMREAD_COLOR);
+  const cv::Mat modelImage = cv::imread(model.templateImagePath.toStdString(), cv::IMREAD_COLOR);
+  if (input.empty() || modelImage.empty())
+  {
+    appendLog(trText("log.imageMissing") + ": " + camera.id);
+    return;
+  }
+
+  SurfaceTemplateMatchConfig config;
+  config.searchRoi = cv::Rect(model.searchRoi.x(), model.searchRoi.y(), model.searchRoi.width(), model.searchRoi.height());
+  config.modelImage = modelImage;
+  config.edgeSensitivity = model.edgeSensitivity;
+  config.minScore = model.minTemplateScore;
+  config.angleStartDegrees = model.angleStartDegrees;
+  config.angleEndDegrees = model.angleEndDegrees;
+  config.angleStepDegrees = model.angleStepDegrees;
+
+  SurfaceDefectProcessor processor;
+  const QVector<QRect> exclusionRects = m_recipeManager.loadSurfaceDefectExclusionRects(camera.id);
+  const SurfaceDefectResult result = processor.locateByTemplateMatching(input, config, toCvRects(exclusionRects));
+  if (!result.processed || result.diagnosticImage.empty() || !result.localization.found)
+  {
+    m_lastSurfaceLocalizationResults.remove(camera.id);
+    appendLog(trText("log.surfaceStrategyNotFound") + ": " + camera.id);
+    return;
+  }
+
+  m_lastSurfaceLocalizationResults.insert(camera.id, result.localization);
+  m_selectedPreview = matToPixmap(result.diagnosticImage);
+  m_largeImage->setImage(m_selectedPreview);
+  m_largeImage->setRoi(model.searchRoi);
+  m_largeImage->setExclusionRects(exclusionRects);
+  appendLog(QString("%1: %2 template cx=%3 cy=%4 angle=%5 score=%6")
+              .arg(trText("log.surfaceStrategyFound"))
+              .arg(camera.id)
+              .arg(result.localization.center.x, 0, 'f', 1)
+              .arg(result.localization.center.y, 0, 'f', 1)
+              .arg(result.localization.angleRadians * 180.0 / CV_PI, 0, 'f', 1)
+              .arg(result.localization.score, 0, 'f', 2));
 }
 
 void MainWindow::testLocalization(const CameraConfig& camera)

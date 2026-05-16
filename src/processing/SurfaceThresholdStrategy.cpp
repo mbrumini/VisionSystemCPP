@@ -2,6 +2,8 @@
 
 #include "processing/SurfaceProcessingUtils.h"
 
+#include <cmath>
+
 SurfaceDefectResult SurfaceThresholdStrategy::detectInRoi(
   const cv::Mat& input,
   const cv::Rect& searchRoi,
@@ -100,6 +102,17 @@ SurfaceDefectResult SurfaceThresholdStrategy::detectInRoi(
 
   sortSurfaceBlobsByArea(result);
   drawSurfaceBlobs(result.diagnosticImage, result.blobs);
+  if (!result.blobs.empty())
+  {
+    const SurfaceBlob& mainBlob = result.blobs.front();
+    result.localization.found = true;
+    result.localization.method = "threshold_blob_center";
+    result.localization.center = mainBlob.center;
+    result.localization.radius = mainBlob.area > 0.0 ? std::sqrt(mainBlob.area / CV_PI) : 0.0;
+    result.localization.score = 1.0;
+    result.localization.inputPoints = static_cast<int>(mainBlob.contour.size());
+    result.localization.usedPoints = result.localization.inputPoints;
+  }
 
   result.processed = true;
   return result;
@@ -187,6 +200,17 @@ SurfaceDefectResult SurfaceThresholdStrategy::locateAnnulus(
 
   sortSurfaceBlobsByArea(result);
   drawSurfaceBlobs(result.diagnosticImage, result.blobs);
+  if (!result.blobs.empty())
+  {
+    const SurfaceBlob& mainBlob = result.blobs.front();
+    result.localization.found = true;
+    result.localization.method = "threshold_annulus_center";
+    result.localization.center = mainBlob.center;
+    result.localization.radius = mainBlob.area > 0.0 ? std::sqrt(mainBlob.area / CV_PI) : 0.0;
+    result.localization.score = 1.0;
+    result.localization.inputPoints = static_cast<int>(mainBlob.contour.size());
+    result.localization.usedPoints = result.localization.inputPoints;
+  }
 
   result.processed = true;
   return result;

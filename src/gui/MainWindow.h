@@ -65,6 +65,11 @@ private:
   void clearSurfaceDefectExclusions(const CameraConfig& camera);
   void testSurfaceLocalization(const CameraConfig& camera);
   void testSurfaceLocalizationStrategy(const CameraConfig& camera);
+  void testSurfaceEdgePcaLocalization(const CameraConfig& camera);
+  void previewSurfaceModel(const CameraConfig& camera);
+  void acquireSurfaceModel(const CameraConfig& camera);
+  void testSurfaceShapeModel(const CameraConfig& camera);
+  void testSurfaceTemplateModel(const CameraConfig& camera);
   void activateSurfaceOuterCircleDrawing(const CameraConfig& camera);
   void activateSurfaceInnerCircleDrawing(const CameraConfig& camera);
   void activateSurfaceEdgeCircleCenterRadiusDrawing(const CameraConfig& camera);
@@ -73,6 +78,7 @@ private:
   void saveSurfaceThresholdAndPreview(const CameraConfig& camera, int thresholdValue);
   void saveSurfaceEdgeAndPreview(const CameraConfig& camera, int sensitivity);
   void saveSurfaceEdgeBandAndPreview(const CameraConfig& camera, int innerWidth, int outerWidth);
+  void saveSurfaceEdgeFitMaxErrorAndPreview(const CameraConfig& camera, int maxError);
   void saveSurfaceMethodAndPreview(const CameraConfig& camera, const QString& method);
   void testSurfaceAnnulusLocalization(const CameraConfig& camera);
   void showStoredSurfaceLocalizationGeometry(const CameraConfig& camera, const SurfaceAnnulusLocalizationConfig& annulus);
@@ -106,6 +112,7 @@ private:
   QPixmap m_selectedPreview;
   QString m_selectedImagePath;
   QHash<QString, LocalizationResult> m_lastLocalizationResults;
+  QHash<QString, SurfaceLocalizationReference> m_lastSurfaceLocalizationResults;
 
   enum class ActiveDrawingRecipe
   {

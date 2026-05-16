@@ -54,6 +54,21 @@ struct SurfaceAnnulusLocalizationConfig
   int edgeSensitivity = 60;
   int edgeBandInner = 20;
   int edgeBandOuter = 20;
+  int edgeFitMaxError = 8;
+};
+
+struct SurfaceModelConfig
+{
+  bool hasModel = false;
+  QRect searchRoi;
+  QVector<QPoint> contour;
+  QString templateImagePath;
+  int edgeSensitivity = 60;
+  double maxShapeDistance = 0.25;
+  double minTemplateScore = 0.45;
+  double angleStartDegrees = -180.0;
+  double angleEndDegrees = 180.0;
+  double angleStepDegrees = 5.0;
 };
 
 class RecipeManager
@@ -78,12 +93,14 @@ public:
   QVector<QRect> loadLocalizationExclusionRects(const QString& cameraId) const;
   bool saveLocalizationRoi(const QString& cameraId, const QRect& roi, QString* errorMessage = nullptr) const;
   bool addLocalizationExclusionRect(const QString& cameraId, const QRect& rect, QString* errorMessage = nullptr) const;
+  bool saveLocalizationExclusionRects(const QString& cameraId, const QVector<QRect>& rects, QString* errorMessage = nullptr) const;
   bool clearLocalizationExclusionRects(const QString& cameraId, QString* errorMessage = nullptr) const;
   bool loadSurfaceDefectRoi(const QString& cameraId, QRect& roi) const;
   SurfaceDefectSettings loadSurfaceDefectSettings(const QString& cameraId) const;
   QVector<QRect> loadSurfaceDefectExclusionRects(const QString& cameraId) const;
   bool saveSurfaceDefectRoi(const QString& cameraId, const QRect& roi, QString* errorMessage = nullptr) const;
   bool addSurfaceDefectExclusionRect(const QString& cameraId, const QRect& rect, QString* errorMessage = nullptr) const;
+  bool saveSurfaceDefectExclusionRects(const QString& cameraId, const QVector<QRect>& rects, QString* errorMessage = nullptr) const;
   bool clearSurfaceDefectExclusionRects(const QString& cameraId, QString* errorMessage = nullptr) const;
   bool clearSurfaceLocalizationGeometry(const QString& cameraId, QString* errorMessage = nullptr) const;
   SurfaceLocalizationStrategyConfig loadSurfaceLocalizationStrategy(const QString& cameraId) const;
@@ -94,6 +111,14 @@ public:
   bool saveSurfaceEdgeCircle(const QString& cameraId, const QPoint& center, int radius, QString* errorMessage = nullptr) const;
   bool saveSurfaceEdgeSensitivity(const QString& cameraId, int sensitivity, QString* errorMessage = nullptr) const;
   bool saveSurfaceEdgeBand(const QString& cameraId, int innerWidth, int outerWidth, QString* errorMessage = nullptr) const;
+  bool saveSurfaceEdgeFitMaxError(const QString& cameraId, int maxError, QString* errorMessage = nullptr) const;
+  SurfaceModelConfig loadSurfaceModel(const QString& cameraId) const;
+  bool saveSurfaceModel(const QString& cameraId, const QRect& searchRoi, const QVector<QPoint>& contour, const QString& templateImagePath, QString* errorMessage = nullptr) const;
+  bool saveSurfaceModelEdgeSensitivity(const QString& cameraId, int sensitivity, QString* errorMessage = nullptr) const;
+  bool saveSurfaceModelMaxShapeDistance(const QString& cameraId, double distance, QString* errorMessage = nullptr) const;
+  bool saveSurfaceModelMinTemplateScore(const QString& cameraId, double score, QString* errorMessage = nullptr) const;
+  bool saveSurfaceModelAngleRange(const QString& cameraId, double startDegrees, double endDegrees, double stepDegrees, QString* errorMessage = nullptr) const;
+  QString surfaceModelTemplateImagePath(const QString& cameraId) const;
 
 private:
   static bool copyDirectory(const QString& sourceDirectory, const QString& destinationDirectory, QString* errorMessage);

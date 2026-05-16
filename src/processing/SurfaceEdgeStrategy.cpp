@@ -1,5 +1,6 @@
 #include "SurfaceEdgeStrategy.h"
 
+#include "processing/CircleFit.h"
 #include "processing/SurfaceProcessingUtils.h"
 
 SurfaceDefectResult SurfaceEdgeStrategy::locateAnnulus(
@@ -66,27 +67,61 @@ SurfaceDefectResult SurfaceEdgeStrategy::locateAnnulus(
   cv::circle(result.diagnosticImage, config.center, config.outerRadius, cv::Scalar(0, 255, 0), 2);
   cv::circle(result.diagnosticImage, config.center, config.innerRadius, cv::Scalar(0, 165, 255), 2);
 
-  for (std::vector<cv::Point>& contour : contours)
+  std::vector<cv::Point> edgePixels;
+  cv::findNonZero(edgeMask, edgePixels);
+
+  for (const std::vector<cv::Point>& contour : contours)
   {
-    const double area = cv::contourArea(contour);
-
-    if (area <= 0.0)
-    {
-      continue;
-    }
-
-    const cv::Moments moments = cv::moments(contour);
-    SurfaceBlob blob;
-    blob.area = area;
-    blob.center = moments.m00 == 0.0 ? cv::Point2d() : cv::Point2d(moments.m10 / moments.m00, moments.m01 / moments.m00);
-    blob.boundingRect = cv::boundingRect(contour);
-    blob.contour = contour;
-    result.totalArea += area;
-    result.blobs.push_back(blob);
+    cv::drawContours(result.diagnosticImage, std::vector<std::vector<cv::Point>>{contour}, 0, cv::Scalar(0, 255, 0), 2);
   }
 
-  sortSurfaceBlobsByArea(result);
-  drawSurfaceBlobs(result.diagnosticImage, result.blobs);
+  if (!edgePixels.empty())
+  {
+    const cv::Moments moments = cv::moments(edgeMask, true);
+    const cv::Point2d massCenter = moments.m00 == 0.0
+      ? cv::Point2d(config.center)
+      : cv::Point2d(moments.m10 / moments.m00, moments.m01 / moments.m00);
+    CircleFitSettings fitSettings;
+    fitSettings.maxRadialError = config.edgeFitMaxError;
+    const CircleFitResult fit = CircleFit::fit(edgePixels, fitSettings);
+
+    SurfaceBlob mergedBlob;
+    mergedBlob.area = static_cast<double>(edgePixels.size());
+    mergedBlob.center = fit.found ? fit.center : massCenter;
+    mergedBlob.boundingRect = cv::boundingRect(edgePixels);
+
+    const std::vector<cv::Point>& contourPoints = fit.found && !fit.inliers.empty() ? fit.inliers : edgePixels;
+    if (contourPoints.size() >= 3)
+    {
+      cv::convexHull(contourPoints, mergedBlob.contour);
+    }
+
+    result.totalArea = mergedBlob.area;
+    result.blobs.push_back(mergedBlob);
+    cv::rectangle(result.diagnosticImage, mergedBlob.boundingRect, cv::Scalar(255, 0, 0), 2);
+    if (fit.found)
+    {
+      cv::circle(result.diagnosticImage, surfacePoint(fit.center), static_cast<int>(std::round(fit.radius)), cv::Scalar(255, 255, 0), 1);
+      result.localization.found = true;
+      result.localization.method = "edge_circle_fit";
+      result.localization.center = fit.center;
+      result.localization.radius = fit.radius;
+      result.localization.meanError = fit.meanError;
+      result.localization.inputPoints = fit.inputPoints;
+      result.localization.usedPoints = fit.usedPoints;
+      result.localization.score = fit.inputPoints <= 0 ? 0.0 : static_cast<double>(fit.usedPoints) / static_cast<double>(fit.inputPoints);
+    }
+    else
+    {
+      result.localization.found = true;
+      result.localization.method = "edge_mass_center";
+      result.localization.center = massCenter;
+      result.localization.inputPoints = static_cast<int>(edgePixels.size());
+      result.localization.usedPoints = static_cast<int>(edgePixels.size());
+      result.localization.score = 1.0;
+    }
+    drawSurfaceCenterOfMass(result.diagnosticImage, mergedBlob.center);
+  }
 
   result.processed = true;
   return result;

@@ -1,5 +1,6 @@
 #include "ImageViewWidget.h"
 
+#include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPainter>
 #include <cmath>
@@ -9,6 +10,7 @@ ImageViewWidget::ImageViewWidget(QWidget* parent)
 {
   setMinimumSize(320, 240);
   setMouseTracking(true);
+  setFocusPolicy(Qt::StrongFocus);
 }
 
 void ImageViewWidget::setImage(const QPixmap& image)
@@ -43,6 +45,7 @@ void ImageViewWidget::clearRoi()
 void ImageViewWidget::setExclusionRects(const QVector<QRect>& imageRects)
 {
   m_exclusionRects.clear();
+  m_selectedExclusionIndex = -1;
 
   for (const QRect& rect : imageRects)
   {
@@ -60,6 +63,7 @@ void ImageViewWidget::setExclusionRects(const QVector<QRect>& imageRects)
 void ImageViewWidget::clearExclusionRects()
 {
   m_exclusionRects.clear();
+  m_selectedExclusionIndex = -1;
   update();
 }
 
@@ -89,6 +93,9 @@ void ImageViewWidget::setRoiDrawingEnabled(bool enabled)
   m_drawingMode = enabled ? DrawingMode::Roi : DrawingMode::None;
   setCursor(enabled ? Qt::CrossCursor : Qt::ArrowCursor);
   m_dragging = false;
+  m_movingExclusion = false;
+  m_resizingExclusion = false;
+  m_selectedExclusionIndex = -1;
   m_threePointCirclePoints.clear();
   update();
 }
@@ -98,6 +105,8 @@ void ImageViewWidget::setExclusionDrawingEnabled(bool enabled)
   m_drawingMode = enabled ? DrawingMode::Exclusion : DrawingMode::None;
   setCursor(enabled ? Qt::CrossCursor : Qt::ArrowCursor);
   m_dragging = false;
+  m_movingExclusion = false;
+  m_resizingExclusion = false;
   m_threePointCirclePoints.clear();
   update();
 }
@@ -107,6 +116,9 @@ void ImageViewWidget::setOuterCircleDrawingEnabled(bool enabled)
   m_drawingMode = enabled ? DrawingMode::OuterCircle : DrawingMode::None;
   setCursor(enabled ? Qt::CrossCursor : Qt::ArrowCursor);
   m_dragging = false;
+  m_movingExclusion = false;
+  m_resizingExclusion = false;
+  m_selectedExclusionIndex = -1;
   m_threePointCirclePoints.clear();
   update();
 }
@@ -116,6 +128,9 @@ void ImageViewWidget::setInnerCircleDrawingEnabled(bool enabled)
   m_drawingMode = enabled ? DrawingMode::InnerCircle : DrawingMode::None;
   setCursor(enabled ? Qt::CrossCursor : Qt::ArrowCursor);
   m_dragging = false;
+  m_movingExclusion = false;
+  m_resizingExclusion = false;
+  m_selectedExclusionIndex = -1;
   m_threePointCirclePoints.clear();
   update();
 }
@@ -125,6 +140,9 @@ void ImageViewWidget::setThreePointCircleDrawingEnabled(bool enabled)
   m_drawingMode = enabled ? DrawingMode::ThreePointCircle : DrawingMode::None;
   setCursor(enabled ? Qt::CrossCursor : Qt::ArrowCursor);
   m_dragging = false;
+  m_movingExclusion = false;
+  m_resizingExclusion = false;
+  m_selectedExclusionIndex = -1;
   m_threePointCirclePoints.clear();
   update();
 }
@@ -137,6 +155,11 @@ void ImageViewWidget::setRoiChangedHandler(std::function<void(const QRect&)> han
 void ImageViewWidget::setExclusionRectAddedHandler(std::function<void(const QRect&)> handler)
 {
   m_exclusionRectAddedHandler = std::move(handler);
+}
+
+void ImageViewWidget::setExclusionRectsChangedHandler(std::function<void(const QVector<QRect>&)> handler)
+{
+  m_exclusionRectsChangedHandler = std::move(handler);
 }
 
 void ImageViewWidget::setCircleChangedHandler(std::function<void(bool, const ImageCircle&)> handler)
@@ -181,9 +204,33 @@ void ImageViewWidget::paintEvent(QPaintEvent* event)
   painter.setPen(exclusionPen);
   painter.setBrush(QColor(255, 59, 48, 55));
 
-  for (const QRect& rect : m_exclusionRects)
+  for (int i = 0; i < m_exclusionRects.size(); ++i)
   {
-    painter.drawRect(imageRectToWidgetRect(rect));
+    const QRect widgetRect = imageRectToWidgetRect(m_exclusionRects[i]);
+    painter.drawRect(widgetRect);
+
+    if (i == m_selectedExclusionIndex)
+    {
+      QPen selectedPen(QColor("#ffffff"));
+      selectedPen.setWidth(1);
+      selectedPen.setStyle(Qt::DashLine);
+      painter.setPen(selectedPen);
+      painter.setBrush(Qt::NoBrush);
+      painter.drawRect(widgetRect.adjusted(-3, -3, 3, 3));
+      painter.setBrush(QColor("#ffffff"));
+      const QVector<QPoint> handles = {
+        widgetRect.topLeft(),
+        widgetRect.topRight(),
+        widgetRect.bottomLeft(),
+        widgetRect.bottomRight()
+      };
+      for (const QPoint& handle : handles)
+      {
+        painter.drawRect(QRect(handle - QPoint(3, 3), QSize(6, 6)));
+      }
+      painter.setPen(exclusionPen);
+      painter.setBrush(QColor(255, 59, 48, 55));
+    }
   }
 
   QPen outerCirclePen(QColor("#35c46a"));
@@ -212,7 +259,7 @@ void ImageViewWidget::paintEvent(QPaintEvent* event)
     }
   }
 
-  if (m_dragging)
+  if (m_dragging && !m_movingExclusion)
   {
     if (m_drawingMode == DrawingMode::OuterCircle || m_drawingMode == DrawingMode::InnerCircle)
     {
@@ -230,6 +277,31 @@ void ImageViewWidget::paintEvent(QPaintEvent* event)
   }
 }
 
+void ImageViewWidget::keyPressEvent(QKeyEvent* event)
+{
+  if ((event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace) &&
+      m_selectedExclusionIndex >= 0 &&
+      m_selectedExclusionIndex < m_exclusionRects.size())
+  {
+    m_exclusionRects.removeAt(m_selectedExclusionIndex);
+    m_selectedExclusionIndex = -1;
+    m_movingExclusion = false;
+    m_resizingExclusion = false;
+    m_activeExclusionHandle = ExclusionHandle::None;
+    m_dragging = false;
+
+    if (m_exclusionRectsChangedHandler)
+    {
+      m_exclusionRectsChangedHandler(m_exclusionRects);
+    }
+
+    update();
+    return;
+  }
+
+  QWidget::keyPressEvent(event);
+}
+
 void ImageViewWidget::mousePressEvent(QMouseEvent* event)
 {
   if (m_drawingMode == DrawingMode::None || event->button() != Qt::LeftButton || m_image.isNull())
@@ -241,6 +313,40 @@ void ImageViewWidget::mousePressEvent(QMouseEvent* event)
   if (!imageDrawRect().contains(event->pos()))
   {
     return;
+  }
+
+  setFocus();
+
+  if (m_drawingMode == DrawingMode::Exclusion)
+  {
+    ExclusionHandle handle = ExclusionHandle::None;
+    const int handleIndex = exclusionHandleAt(event->pos(), handle);
+
+    if (handleIndex >= 0)
+    {
+      m_selectedExclusionIndex = handleIndex;
+      m_activeExclusionHandle = handle;
+      m_resizingExclusion = true;
+      m_dragging = true;
+      m_moveStartImageRect = m_exclusionRects[handleIndex];
+      update();
+      return;
+    }
+
+    const int hitIndex = exclusionRectAt(event->pos());
+    if (hitIndex >= 0)
+    {
+      m_selectedExclusionIndex = hitIndex;
+      m_movingExclusion = true;
+      m_dragging = true;
+      m_moveStartImagePoint = widgetToImage(event->pos());
+      m_moveStartImageRect = m_exclusionRects[hitIndex];
+      update();
+      return;
+    }
+
+    m_selectedExclusionIndex = -1;
+    m_activeExclusionHandle = ExclusionHandle::None;
   }
 
   if (m_drawingMode == DrawingMode::ThreePointCircle)
@@ -283,6 +389,52 @@ void ImageViewWidget::mouseMoveEvent(QMouseEvent* event)
     return;
   }
 
+  if (m_movingExclusion &&
+      m_selectedExclusionIndex >= 0 &&
+      m_selectedExclusionIndex < m_exclusionRects.size())
+  {
+    const QPoint currentImagePoint = widgetToImage(event->pos());
+    const QPoint delta = currentImagePoint - m_moveStartImagePoint;
+    QRect moved = m_moveStartImageRect.translated(delta);
+    m_exclusionRects[m_selectedExclusionIndex] = clampImageRectToImage(moved);
+    update();
+    return;
+  }
+
+  if (m_resizingExclusion &&
+      m_selectedExclusionIndex >= 0 &&
+      m_selectedExclusionIndex < m_exclusionRects.size())
+  {
+    const QPoint currentImagePoint = widgetToImage(event->pos());
+    QRect resized = m_moveStartImageRect;
+
+    if (m_activeExclusionHandle == ExclusionHandle::TopLeft)
+    {
+      resized.setTopLeft(currentImagePoint);
+    }
+    else if (m_activeExclusionHandle == ExclusionHandle::TopRight)
+    {
+      resized.setTopRight(currentImagePoint);
+    }
+    else if (m_activeExclusionHandle == ExclusionHandle::BottomLeft)
+    {
+      resized.setBottomLeft(currentImagePoint);
+    }
+    else if (m_activeExclusionHandle == ExclusionHandle::BottomRight)
+    {
+      resized.setBottomRight(currentImagePoint);
+    }
+
+    resized = clampImageRectToImage(resized);
+    if (resized.width() > 2 && resized.height() > 2)
+    {
+      m_exclusionRects[m_selectedExclusionIndex] = resized;
+    }
+
+    update();
+    return;
+  }
+
   m_dragEnd = event->pos();
   update();
 }
@@ -297,6 +449,21 @@ void ImageViewWidget::mouseReleaseEvent(QMouseEvent* event)
 
   m_dragging = false;
   m_dragEnd = event->pos();
+
+  if (m_movingExclusion || m_resizingExclusion)
+  {
+    m_movingExclusion = false;
+    m_resizingExclusion = false;
+    m_activeExclusionHandle = ExclusionHandle::None;
+
+    if (m_exclusionRectsChangedHandler)
+    {
+      m_exclusionRectsChangedHandler(m_exclusionRects);
+    }
+
+    update();
+    return;
+  }
 
   if (m_drawingMode == DrawingMode::OuterCircle || m_drawingMode == DrawingMode::InnerCircle)
   {
@@ -363,6 +530,7 @@ void ImageViewWidget::mouseReleaseEvent(QMouseEvent* event)
     else if (m_drawingMode == DrawingMode::Exclusion)
     {
       m_exclusionRects.append(imageRoi.normalized());
+      m_selectedExclusionIndex = m_exclusionRects.size() - 1;
 
       if (m_exclusionRectAddedHandler)
       {
@@ -467,4 +635,61 @@ QPoint ImageViewWidget::imagePointToWidget(const QPoint& imagePoint) const
   return QPoint(
     drawRect.x() + static_cast<int>(imagePoint.x() * scaleX),
     drawRect.y() + static_cast<int>(imagePoint.y() * scaleY));
+}
+
+int ImageViewWidget::exclusionRectAt(const QPoint& widgetPoint) const
+{
+  for (int i = m_exclusionRects.size() - 1; i >= 0; --i)
+  {
+    const QRect widgetRect = imageRectToWidgetRect(m_exclusionRects[i]).adjusted(-5, -5, 5, 5);
+
+    if (widgetRect.contains(widgetPoint))
+    {
+      return i;
+    }
+  }
+
+  return -1;
+}
+
+int ImageViewWidget::exclusionHandleAt(const QPoint& widgetPoint, ExclusionHandle& handle) const
+{
+  handle = ExclusionHandle::None;
+
+  for (int i = m_exclusionRects.size() - 1; i >= 0; --i)
+  {
+    const QRect widgetRect = imageRectToWidgetRect(m_exclusionRects[i]);
+    const QVector<QPair<ExclusionHandle, QPoint>> handles = {
+      {ExclusionHandle::TopLeft, widgetRect.topLeft()},
+      {ExclusionHandle::TopRight, widgetRect.topRight()},
+      {ExclusionHandle::BottomLeft, widgetRect.bottomLeft()},
+      {ExclusionHandle::BottomRight, widgetRect.bottomRight()}
+    };
+
+    for (const auto& item : handles)
+    {
+      if (QRect(item.second - QPoint(6, 6), QSize(12, 12)).contains(widgetPoint))
+      {
+        handle = item.first;
+        return i;
+      }
+    }
+  }
+
+  return -1;
+}
+
+QRect ImageViewWidget::clampImageRectToImage(const QRect& imageRect) const
+{
+  if (m_image.isNull())
+  {
+    return imageRect.normalized();
+  }
+
+  const QRect normalized = imageRect.normalized();
+  const int maxX = qMax(0, m_image.width() - normalized.width());
+  const int maxY = qMax(0, m_image.height() - normalized.height());
+  const int x = qBound(0, normalized.x(), maxX);
+  const int y = qBound(0, normalized.y(), maxY);
+  return QRect(x, y, normalized.width(), normalized.height());
 }
