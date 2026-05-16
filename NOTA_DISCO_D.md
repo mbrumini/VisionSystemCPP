@@ -29,3 +29,19 @@ Per applicare le variabili utente:
 ```
 
 Dopo l'esecuzione, aprire un nuovo terminale.
+
+## Esecuzione GUI Qt
+
+L'eseguibile in `build\Release` non va lanciato direttamente da doppio click se il `PATH` non contiene Qt, perche' Windows non trova DLL come `Qt6Widgets.dll`.
+
+Per creare una cartella avviabile da Explorer:
+
+```powershell
+.\deploy_release.ps1
+```
+
+Poi lanciare:
+
+```text
+D:\dev\VisionSystemCPP\deploy\Release\VisionSystemCPP.exe
+```

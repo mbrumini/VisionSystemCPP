@@ -1,6 +1,7 @@
 # Build outputs
 build/
 out/
+deploy/
 
 # Visual Studio
 .vs/
