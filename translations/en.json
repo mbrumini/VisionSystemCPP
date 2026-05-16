@@ -3,6 +3,7 @@
     "recipes": "Recipes",
     "selectRecipe": "Select recipe",
     "newRecipe": "New recipe",
+    "duplicateRecipe": "Duplicate recipe",
     "importRecipe": "Import recipe",
     "exportRecipe": "Export recipe",
     "configurations": "Configurations",
@@ -45,6 +46,8 @@
     "mode": "Mode",
     "inspections": "Inspections",
     "source": "Source",
+    "recipe": "Recipe",
+    "recipeName": "Recipe name",
     "max": "max",
     "placeholderNote": "Placeholder: these buttons will be connected to operating functions."
   },
@@ -58,9 +61,14 @@
     "windowMode": "Window mode",
     "backToCameraTools": "Back to camera tools",
     "toolPanel": "Tool panel",
+    "activeRecipe": "Active recipe",
+    "recipeExported": "Recipe exported",
     "localizationRoiDrawing": "Draw localization AOE",
     "localizationRoiSaved": "Localization AOE saved",
     "localizationNotAvailable": "Localization is not available for this camera"
+  },
+  "messages": {
+    "noRecipes": "No recipes available."
   },
   "tools": {
     "localization": "Localization",

@@ -12,8 +12,12 @@
 #include <QHBoxLayout>
 #include <QJsonDocument>
 #include <QLabel>
+#include <QFileDialog>
+#include <QInputDialog>
+#include <QLineEdit>
 #include <QMenu>
 #include <QMenuBar>
+#include <QMessageBox>
 #include <QPushButton>
 #include <QResizeEvent>
 #include <QScrollArea>
@@ -33,6 +37,8 @@ QString projectPath(const QString& relativePath)
 MainWindow::MainWindow(QWidget* parent)
   : QMainWindow(parent)
 {
+  m_recipeManager.setRecipeId(RecipeManager::loadActiveRecipeId());
+
   QString error;
   if (!m_translations.loadLanguage("it", &error))
   {
@@ -229,18 +235,11 @@ void MainWindow::buildMenu()
   menuBar()->clear();
 
   QMenu* recipesMenu = menuBar()->addMenu(trText("menu.recipes"));
-  recipesMenu->addAction(trText("menu.selectRecipe"), this, [this]() {
-    appendLog(trText("log.placeholder") + ": " + trText("menu.selectRecipe"));
-  });
-  recipesMenu->addAction(trText("menu.newRecipe"), this, [this]() {
-    appendLog(trText("log.placeholder") + ": " + trText("menu.newRecipe"));
-  });
-  recipesMenu->addAction(trText("menu.importRecipe"), this, [this]() {
-    appendLog(trText("log.placeholder") + ": " + trText("menu.importRecipe"));
-  });
-  recipesMenu->addAction(trText("menu.exportRecipe"), this, [this]() {
-    appendLog(trText("log.placeholder") + ": " + trText("menu.exportRecipe"));
-  });
+  recipesMenu->addAction(trText("menu.selectRecipe"), this, [this]() { selectRecipe(); });
+  recipesMenu->addAction(trText("menu.newRecipe"), this, [this]() { createRecipe(); });
+  recipesMenu->addAction(trText("menu.duplicateRecipe"), this, [this]() { duplicateRecipe(); });
+  recipesMenu->addAction(trText("menu.importRecipe"), this, [this]() { importRecipe(); });
+  recipesMenu->addAction(trText("menu.exportRecipe"), this, [this]() { exportRecipe(); });
 
   QMenu* configMenu = menuBar()->addMenu(trText("menu.configurations"));
   configMenu->addAction(trText("menu.cameras"), this, [this]() {
@@ -315,6 +314,170 @@ void MainWindow::toggleFullScreen()
   }
 
   updateLargePreview();
+}
+
+void MainWindow::selectRecipe()
+{
+  const QStringList recipes = RecipeManager::availableRecipes();
+
+  if (recipes.isEmpty())
+  {
+    QMessageBox::information(this, trText("menu.recipes"), trText("messages.noRecipes"));
+    return;
+  }
+
+  bool ok = false;
+  const QString selectedRecipe = QInputDialog::getItem(
+    this,
+    trText("menu.selectRecipe"),
+    trText("labels.recipe"),
+    recipes,
+    qMax(0, recipes.indexOf(m_recipeManager.recipeId())),
+    false,
+    &ok);
+
+  if (!ok || selectedRecipe.isEmpty())
+  {
+    return;
+  }
+
+  setActiveRecipe(selectedRecipe);
+}
+
+void MainWindow::createRecipe()
+{
+  bool ok = false;
+  const QString recipeName = QInputDialog::getText(
+    this,
+    trText("menu.newRecipe"),
+    trText("labels.recipeName"),
+    QLineEdit::Normal,
+    "",
+    &ok);
+
+  if (!ok)
+  {
+    return;
+  }
+
+  const QString recipeId = RecipeManager::normalizeRecipeId(recipeName);
+  QString error;
+
+  if (!RecipeManager::createRecipe(recipeId, &error))
+  {
+    QMessageBox::warning(this, trText("menu.newRecipe"), error);
+    return;
+  }
+
+  setActiveRecipe(recipeId);
+}
+
+void MainWindow::duplicateRecipe()
+{
+  bool ok = false;
+  const QString recipeName = QInputDialog::getText(
+    this,
+    trText("menu.duplicateRecipe"),
+    trText("labels.recipeName"),
+    QLineEdit::Normal,
+    m_recipeManager.recipeId() + "_copy",
+    &ok);
+
+  if (!ok)
+  {
+    return;
+  }
+
+  const QString recipeId = RecipeManager::normalizeRecipeId(recipeName);
+  QString error;
+
+  if (!RecipeManager::duplicateRecipe(m_recipeManager.recipeId(), recipeId, &error))
+  {
+    QMessageBox::warning(this, trText("menu.duplicateRecipe"), error);
+    return;
+  }
+
+  setActiveRecipe(recipeId);
+}
+
+void MainWindow::importRecipe()
+{
+  const QString sourceDirectory = QFileDialog::getExistingDirectory(
+    this,
+    trText("menu.importRecipe"),
+    RecipeManager::recipesRootPath());
+
+  if (sourceDirectory.isEmpty())
+  {
+    return;
+  }
+
+  QString importedRecipeId;
+  QString error;
+
+  if (!RecipeManager::importRecipeDirectory(sourceDirectory, &importedRecipeId, &error))
+  {
+    QMessageBox::warning(this, trText("menu.importRecipe"), error);
+    return;
+  }
+
+  setActiveRecipe(importedRecipeId);
+}
+
+void MainWindow::exportRecipe()
+{
+  const QString destinationDirectory = QFileDialog::getExistingDirectory(
+    this,
+    trText("menu.exportRecipe"),
+    RecipeManager::recipesRootPath());
+
+  if (destinationDirectory.isEmpty())
+  {
+    return;
+  }
+
+  QString error;
+
+  if (!RecipeManager::exportRecipeDirectory(m_recipeManager.recipeId(), destinationDirectory, &error))
+  {
+    QMessageBox::warning(this, trText("menu.exportRecipe"), error);
+    return;
+  }
+
+  appendLog(trText("log.recipeExported") + ": " + m_recipeManager.recipeId());
+}
+
+void MainWindow::setActiveRecipe(const QString& recipeId)
+{
+  m_recipeManager.setRecipeId(recipeId);
+  QString error;
+
+  if (!RecipeManager::saveActiveRecipeId(m_recipeManager.recipeId(), &error))
+  {
+    appendLog(error);
+  }
+
+  appendLog(trText("log.activeRecipe") + ": " + m_recipeManager.recipeId());
+  refreshSelectedCameraRecipeData();
+}
+
+void MainWindow::refreshSelectedCameraRecipeData()
+{
+  if (m_selectedCameraId.isEmpty() || !m_largeImage)
+  {
+    return;
+  }
+
+  QRect roi;
+
+  if (m_recipeManager.loadLocalizationRoi(m_selectedCameraId, roi))
+  {
+    m_largeImage->setRoi(roi);
+  }
+  else
+  {
+    m_largeImage->clearRoi();
+  }
 }
 
 void MainWindow::loadConfiguration()

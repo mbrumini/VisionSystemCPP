@@ -28,6 +28,13 @@ private:
   void rebuildUi();
   void changeLanguage(const QString& languageCode);
   void toggleFullScreen();
+  void selectRecipe();
+  void createRecipe();
+  void duplicateRecipe();
+  void importRecipe();
+  void exportRecipe();
+  void setActiveRecipe(const QString& recipeId);
+  void refreshSelectedCameraRecipeData();
   void loadConfiguration();
   void showGridView();
   void selectCamera(const CameraConfig& camera);

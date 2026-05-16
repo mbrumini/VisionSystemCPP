@@ -15,5 +15,7 @@
 
 - [x] Creare struttura iniziale `recipes/default/`.
 - [x] Salvare tool camera in `recipes/default/cameras/CAMxx.json`.
-- [ ] Aggiungere selezione ricetta dal menu superiore.
-- [ ] Aggiungere creazione/duplicazione/import/export ricetta.
+- [x] Aggiungere selezione ricetta dal menu superiore.
+- [x] Aggiungere creazione/duplicazione/import/export ricetta come cartella.
+- [x] Salvare ricetta attiva in `config/app_settings.json`.
+- [ ] Aggiungere export/import in formato archivio zip.

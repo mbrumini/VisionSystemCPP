@@ -138,6 +138,20 @@ Prima funzione gestita:
 - salvataggio in `recipes/default/cameras/CAMxx.json`;
 - coordinate salvate in pixel dell'immagine originale, non in coordinate schermo.
 
+Gestione ricette dal menu:
+
+- `Ricette -> Seleziona ricetta`: cambia ricetta attiva;
+- `Ricette -> Nuova ricetta`: crea una nuova cartella sotto `recipes/`;
+- `Ricette -> Duplica ricetta`: copia la ricetta attiva in una nuova ricetta;
+- `Ricette -> Importa ricetta`: importa una directory ricetta esterna;
+- `Ricette -> Esporta ricetta`: esporta la ricetta attiva come cartella.
+
+La ricetta attiva viene salvata in:
+
+```text
+config/app_settings.json
+```
+
 ## 5. GUI Principale
 
 File:
@@ -304,5 +318,6 @@ Stato attuale:
 | `src/processing/ImageProcessor.*` | Processing OpenCV iniziale |
 | `src/utils/Timer.h` | Misura tempi ciclo |
 | `config/cameras.json` | Camere, profili, tool GUI |
+| `config/app_settings.json` | Impostazioni applicazione, inclusa ricetta attiva |
 | `translations/*.json` | Testi GUI traducibili |
 | `deploy_release.ps1` | Copia DLL Qt e traduzioni accanto agli exe |

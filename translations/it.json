@@ -3,6 +3,7 @@
     "recipes": "Ricette",
     "selectRecipe": "Seleziona ricetta",
     "newRecipe": "Nuova ricetta",
+    "duplicateRecipe": "Duplica ricetta",
     "importRecipe": "Importa ricetta",
     "exportRecipe": "Esporta ricetta",
     "configurations": "Configurazioni",
@@ -45,6 +46,8 @@
     "mode": "Modalita'",
     "inspections": "Controlli",
     "source": "Sorgente",
+    "recipe": "Ricetta",
+    "recipeName": "Nome ricetta",
     "max": "su massimo",
     "placeholderNote": "Placeholder: questi pulsanti verranno collegati alle funzioni operative."
   },
@@ -58,9 +61,14 @@
     "windowMode": "Modalita' finestra",
     "backToCameraTools": "Ritorno ai tool camera",
     "toolPanel": "Pannello tool",
+    "activeRecipe": "Ricetta attiva",
+    "recipeExported": "Ricetta esportata",
     "localizationRoiDrawing": "Disegna AOE localizzazione",
     "localizationRoiSaved": "AOE localizzazione salvata",
     "localizationNotAvailable": "Localizzazione non disponibile per questa camera"
+  },
+  "messages": {
+    "noRecipes": "Nessuna ricetta disponibile."
   },
   "tools": {
     "localization": "Localizzazione",
