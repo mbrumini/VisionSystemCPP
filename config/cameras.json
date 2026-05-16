@@ -183,7 +183,8 @@
                                                       "inspectionTypes":  [
                                                                               "dimensional"
                                                                           ],
-                                                      "guiTools":  [
+                                                     "guiTools":  [
+                                                                       "localization",
                                                                        "dimensions",
                                                                        "threshold",
                                                                        "calibration",
@@ -274,6 +275,7 @@
                                                                              "dimensional"
                                                                          ],
                                                      "guiTools":  [
+                                                                      "localization",
                                                                       "dimensions",
                                                                       "threshold",
                                                                       "calibration",

@@ -27,6 +27,11 @@ ToolTemplate makeTool(const QString& id, const QString& textKey, const QVector<T
 const QHash<QString, ToolTemplate>& tools()
 {
   static const QHash<QString, ToolTemplate> catalog = {
+    {"localization", makeTool("localization", "tools.localization", {
+      {"searchRoi", "actions.searchRoi"},
+      {"testLocalization", "actions.testLocalization"},
+      {"clearRoi", "actions.clearRoi"}
+    })},
     {"measurements", makeTool("measurements", "tools.measurements", {
       {"diameter", "actions.diameter"},
       {"length", "actions.length"},

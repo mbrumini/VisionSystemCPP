@@ -13,6 +13,8 @@ add_executable(VisionSystemCPP
     src/main.cpp
     src/config/AppConfig.h
     src/config/AppConfig.cpp
+    src/config/RecipeManager.h
+    src/config/RecipeManager.cpp
     src/config/TranslationManager.h
     src/config/TranslationManager.cpp
     src/camera/ICamera.h
@@ -20,6 +22,8 @@ add_executable(VisionSystemCPP
     src/camera/FileCamera.cpp
     src/gui/CameraTileWidget.h
     src/gui/CameraTileWidget.cpp
+    src/gui/ImageViewWidget.h
+    src/gui/ImageViewWidget.cpp
     src/gui/MainWindow.h
     src/gui/MainWindow.cpp
     src/gui/ToolCatalog.h

@@ -120,6 +120,8 @@ Codice:
 
 - `src/config/AppConfig.h`
 - `src/config/AppConfig.cpp`
+- `src/config/RecipeManager.h`
+- `src/config/RecipeManager.cpp`
 
 Responsabilita':
 
@@ -127,6 +129,14 @@ Responsabilita':
 - creare `CameraConfig`;
 - filtrare le camere attive con `activeCameras()`;
 - associare ogni camera al suo `ProcessingProfile`.
+
+`RecipeManager` gestisce i dati di processo salvati nella ricetta attiva.
+
+Prima funzione gestita:
+
+- ROI/AOE di localizzazione per camera;
+- salvataggio in `recipes/default/cameras/CAMxx.json`;
+- coordinate salvate in pixel dell'immagine originale, non in coordinate schermo.
 
 ## 5. GUI Principale
 
@@ -137,6 +147,8 @@ File:
 - `src/gui/MainWindow.cpp`
 - `src/gui/CameraTileWidget.h`
 - `src/gui/CameraTileWidget.cpp`
+- `src/gui/ImageViewWidget.h`
+- `src/gui/ImageViewWidget.cpp`
 
 `main.cpp` crea `QApplication`, apre `MainWindow` e usa `showMaximized()`.
 
@@ -163,6 +175,14 @@ Il menu `Sistema` contiene anche il comando `Fullscreen / finestra`, che alterna
 - profilo;
 - badge numerico in basso a destra;
 - stato selezionato/non selezionato.
+
+`ImageViewWidget` gestisce l'immagine grande:
+
+- disegno immagine scalata;
+- conversione coordinate mouse/widget in coordinate immagine originale;
+- overlay ROI;
+- drag mouse per disegnare AOE/ROI;
+- callback quando la ROI cambia.
 
 Nota layout:
 
@@ -260,15 +280,23 @@ Per camere BW, il primo tool operativo importante sara':
 - assi X/Y del pezzo;
 - sistema di riferimento per le misure successive.
 
+Stato attuale:
+
+- il tool `Localizzazione` appare solo per profili con `imageMode=bw` e `inspectionTypes` contenente `dimensional`;
+- dal pannello `Localizzazione` il comando `AOE ricerca` abilita il drag sull'immagine grande;
+- al rilascio del mouse la ROI viene salvata in ricetta camera.
+
 ## 9. Mappa Rapida Dei File
 
 | File | Responsabilita' |
 | --- | --- |
 | `src/main.cpp` | Avvio applicazione Qt |
 | `src/config/AppConfig.*` | Caricamento configurazione camere |
+| `src/config/RecipeManager.*` | Lettura/scrittura dati ricetta |
 | `src/config/TranslationManager.*` | Caricamento testi da JSON |
 | `src/gui/MainWindow.*` | Finestra principale, menu, layout e coordinamento |
 | `src/gui/CameraTileWidget.*` | Miniatura camera |
+| `src/gui/ImageViewWidget.*` | Immagine grande, overlay e coordinate mouse/immagine |
 | `src/gui/ToolCatalog.*` | Definizione ID tool/azioni |
 | `src/gui/ToolPanelWidget.*` | Pannelli placeholder dei tool |
 | `src/camera/ICamera.h` | Interfaccia camera |

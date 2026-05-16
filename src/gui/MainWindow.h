@@ -1,8 +1,10 @@
 #pragma once
 
 #include "config/AppConfig.h"
+#include "config/RecipeManager.h"
 #include "config/TranslationManager.h"
 #include "gui/CameraTileWidget.h"
+#include "gui/ImageViewWidget.h"
 
 #include <QGridLayout>
 #include <QLabel>
@@ -32,6 +34,8 @@ private:
   void updateControlPanel(const CameraConfig* camera);
   void showCameraToolList(const CameraConfig& camera);
   void showToolPanel(const CameraConfig& camera, const QString& toolId);
+  void activateLocalizationRoiDrawing(const CameraConfig& camera);
+  bool isBwDimensionalCamera(const CameraConfig& camera) const;
   void clearToolPanel();
   void appendLog(const QString& message);
   void updateLargePreview();
@@ -40,13 +44,14 @@ private:
   QString firstImageInFolder(const QString& folder) const;
 
   AppConfig m_config;
+  RecipeManager m_recipeManager;
   TranslationManager m_translations;
   QVector<CameraTileWidget*> m_tiles;
   QStackedWidget* m_imageStack = nullptr;
   QWidget* m_gridPage = nullptr;
   QWidget* m_gridContent = nullptr;
   QGridLayout* m_gridLayout = nullptr;
-  QLabel* m_largeImage = nullptr;
+  ImageViewWidget* m_largeImage = nullptr;
   QLabel* m_largeTitle = nullptr;
   QLabel* m_systemStatus = nullptr;
   QLabel* m_cameraDetails = nullptr;
@@ -54,5 +59,6 @@ private:
   QVBoxLayout* m_toolsLayout = nullptr;
   QTextEdit* m_log = nullptr;
   QString m_selectedCameraId;
+  CameraConfig m_selectedCamera;
   QPixmap m_selectedPreview;
 };

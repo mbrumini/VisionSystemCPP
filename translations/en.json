@@ -57,9 +57,13 @@
     "cameraSelected": "Camera selected",
     "windowMode": "Window mode",
     "backToCameraTools": "Back to camera tools",
-    "toolPanel": "Tool panel"
+    "toolPanel": "Tool panel",
+    "localizationRoiDrawing": "Draw localization AOE",
+    "localizationRoiSaved": "Localization AOE saved",
+    "localizationNotAvailable": "Localization is not available for this camera"
   },
   "tools": {
+    "localization": "Localization",
     "measurements": "Measurements",
     "dimensions": "Dimensions",
     "threshold": "Threshold",
@@ -77,6 +81,8 @@
     "datasetCapture": "Dataset capture"
   },
   "actions": {
+    "searchRoi": "Search AOE",
+    "testLocalization": "Test localization",
     "diameter": "Diameter",
     "length": "Length",
     "radius": "Radius",

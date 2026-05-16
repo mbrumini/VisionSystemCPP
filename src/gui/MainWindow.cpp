@@ -95,11 +95,31 @@ void MainWindow::buildUi()
 
   m_largeTitle = new QLabel(trText("labels.noCameraSelected"), largePage);
   m_largeTitle->setObjectName("largeTitle");
-  m_largeImage = new QLabel(largePage);
-  m_largeImage->setAlignment(Qt::AlignCenter);
+  m_largeImage = new ImageViewWidget(largePage);
   m_largeImage->setStyleSheet("background:#101418;color:#9aa4ad;");
   m_largeImage->setMinimumSize(320, 240);
   m_largeImage->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  m_largeImage->setRoiChangedHandler([this](const QRect& roi) {
+    if (m_selectedCameraId.isEmpty())
+    {
+      return;
+    }
+
+    QString error;
+    if (!m_recipeManager.saveLocalizationRoi(m_selectedCameraId, roi, &error))
+    {
+      appendLog(error);
+      return;
+    }
+
+    appendLog(QString("%1: %2 x=%3 y=%4 w=%5 h=%6")
+                .arg(trText("log.localizationRoiSaved"))
+                .arg(m_selectedCameraId)
+                .arg(roi.x())
+                .arg(roi.y())
+                .arg(roi.width())
+                .arg(roi.height()));
+  });
 
   largeLayout->addWidget(m_largeTitle);
   largeLayout->addWidget(m_largeImage, 1);
@@ -262,6 +282,7 @@ void MainWindow::rebuildUi()
 
   m_tiles.clear();
   m_selectedCameraId.clear();
+  m_selectedCamera = {};
   m_selectedPreview = {};
   buildUi();
   loadConfiguration();
@@ -358,6 +379,9 @@ void MainWindow::showGridView()
 void MainWindow::selectCamera(const CameraConfig& camera)
 {
   m_selectedCameraId = camera.id;
+  m_selectedCamera = camera;
+  m_largeImage->setRoiDrawingEnabled(false);
+  m_largeImage->clearRoi();
 
   for (CameraTileWidget* tile : m_tiles)
   {
@@ -369,13 +393,18 @@ void MainWindow::selectCamera(const CameraConfig& camera)
 
   if (m_selectedPreview.isNull())
   {
-    m_largeImage->setText(trText("labels.noImage"));
-    m_largeImage->setPixmap({});
+    m_largeImage->clearImage();
   }
   else
   {
-    m_largeImage->setText("");
+    m_largeImage->setImage(m_selectedPreview);
     updateLargePreview();
+  }
+
+  QRect savedRoi;
+  if (m_recipeManager.loadLocalizationRoi(camera.id, savedRoi))
+  {
+    m_largeImage->setRoi(savedRoi);
   }
 
   m_imageStack->setCurrentIndex(1);
@@ -444,13 +473,42 @@ void MainWindow::showToolPanel(const CameraConfig& camera, const QString& toolId
       showCameraToolList(camera);
       appendLog(trText("log.backToCameraTools") + ": " + camera.id);
     },
-    [this, tool](const ToolActionDefinition& action) {
+    [this, camera, tool](const ToolActionDefinition& action) {
+      if (tool.id == "localization" && action.id == "searchRoi")
+      {
+        activateLocalizationRoiDrawing(camera);
+        return;
+      }
+
       appendLog(trText("log.placeholder") + ": " + tool.label + " -> " + action.label);
     },
     m_toolsContainer);
 
   m_toolsLayout->addWidget(panel);
   appendLog(trText("log.toolPanel") + ": " + tool.label);
+}
+
+void MainWindow::activateLocalizationRoiDrawing(const CameraConfig& camera)
+{
+  if (!isBwDimensionalCamera(camera))
+  {
+    appendLog(trText("log.localizationNotAvailable") + ": " + camera.id);
+    return;
+  }
+
+  if (camera.id != m_selectedCameraId)
+  {
+    return;
+  }
+
+  m_largeImage->setRoiDrawingEnabled(true);
+  appendLog(trText("log.localizationRoiDrawing") + ": " + camera.id);
+}
+
+bool MainWindow::isBwDimensionalCamera(const CameraConfig& camera) const
+{
+  return camera.profile.imageMode == "bw" &&
+    camera.profile.inspectionTypes.contains("dimensional");
 }
 
 void MainWindow::clearToolPanel()
@@ -486,7 +544,7 @@ void MainWindow::updateLargePreview()
     return;
   }
 
-  m_largeImage->setPixmap(m_selectedPreview.scaled(targetSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+  m_largeImage->setImage(m_selectedPreview);
 }
 
 QString MainWindow::trText(const QString& key) const

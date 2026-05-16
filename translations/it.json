@@ -57,9 +57,13 @@
     "cameraSelected": "Camera selezionata",
     "windowMode": "Modalita' finestra",
     "backToCameraTools": "Ritorno ai tool camera",
-    "toolPanel": "Pannello tool"
+    "toolPanel": "Pannello tool",
+    "localizationRoiDrawing": "Disegna AOE localizzazione",
+    "localizationRoiSaved": "AOE localizzazione salvata",
+    "localizationNotAvailable": "Localizzazione non disponibile per questa camera"
   },
   "tools": {
+    "localization": "Localizzazione",
     "measurements": "Misure",
     "dimensions": "Dimensioni",
     "threshold": "Soglia",
@@ -77,6 +81,8 @@
     "datasetCapture": "Cattura dataset"
   },
   "actions": {
+    "searchRoi": "AOE ricerca",
+    "testLocalization": "Test localizzazione",
     "diameter": "Diametro",
     "length": "Lunghezza",
     "radius": "Raggio",
