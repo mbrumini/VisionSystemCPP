@@ -1,0 +1,26 @@
+{
+    "cameraId": "CAM11",
+    "tools": {
+        "surfaceLocalization": {
+            "annulus": {
+                "outerCircle": {
+                    "centerX": 1279,
+                    "centerY": 686,
+                    "radius": 306
+                }
+            },
+            "edge": {
+                "sensitivity": 162
+            },
+            "enabled": true,
+            "exclusionRects": [
+            ],
+            "method": "edge",
+            "threshold": {
+                "max": 134,
+                "min": 0,
+                "value": 134
+            }
+        }
+    }
+}

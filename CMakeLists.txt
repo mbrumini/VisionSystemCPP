@@ -26,6 +26,8 @@ add_executable(VisionSystemCPP
     src/gui/ImageViewWidget.cpp
     src/gui/MainWindow.h
     src/gui/MainWindow.cpp
+    src/gui/SurfaceLocalizationStrategies.h
+    src/gui/SurfaceLocalizationStrategies.cpp
     src/gui/ToolCatalog.h
     src/gui/ToolCatalog.cpp
     src/gui/ToolPanelWidget.h
@@ -34,6 +36,15 @@ add_executable(VisionSystemCPP
     src/processing/ImageProcessor.cpp
     src/processing/LocalizationProcessor.h
     src/processing/LocalizationProcessor.cpp
+    src/processing/SurfaceDefectProcessor.h
+    src/processing/SurfaceDefectProcessor.cpp
+    src/processing/SurfaceEdgeStrategy.h
+    src/processing/SurfaceEdgeStrategy.cpp
+    src/processing/SurfaceProcessingUtils.h
+    src/processing/SurfaceThresholdStrategy.h
+    src/processing/SurfaceThresholdStrategy.cpp
+    src/processing/SurfaceTwoCirclesStrategy.h
+    src/processing/SurfaceTwoCirclesStrategy.cpp
     src/utils/Timer.h
 )
 
@@ -48,4 +59,10 @@ target_include_directories(VisionSystemCPP PRIVATE
 
 target_compile_definitions(VisionSystemCPP PRIVATE
     PROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+)
+
+add_custom_command(TARGET VisionSystemCPP POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/translations"
+        "$<TARGET_FILE_DIR:VisionSystemCPP>/translations"
 )

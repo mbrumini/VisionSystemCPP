@@ -171,6 +171,7 @@
                                                                        "measurement"
                                                                    ],
                                                "guiTools":  [
+                                                                "surfaceLocalization",
                                                                 "measurements",
                                                                 "threshold",
                                                                 "calibration",
@@ -183,7 +184,7 @@
                                                       "inspectionTypes":  [
                                                                               "dimensional"
                                                                           ],
-                                                     "guiTools":  [
+                                                      "guiTools":  [
                                                                        "localization",
                                                                        "dimensions",
                                                                        "threshold",
@@ -199,6 +200,7 @@
                                                                                      "measurement"
                                                                                  ],
                                                              "guiTools":  [
+                                                                              "surfaceLocalization",
                                                                               "measurements",
                                                                               "threshold",
                                                                               "calibration",
@@ -213,6 +215,7 @@
                                                                                  "surface"
                                                                              ],
                                                          "guiTools":  [
+                                                                          "surfaceLocalization",
                                                                           "surfaceDefects",
                                                                           "lighting",
                                                                           "contrast",
@@ -243,6 +246,7 @@
                                                                                                 "ai"
                                                                                             ],
                                                                         "guiTools":  [
+                                                                                         "surfaceLocalization",
                                                                                          "surfaceDefects",
                                                                                          "measurements",
                                                                                          "aiModel",
@@ -256,12 +260,13 @@
                                                                                      ]
                                                                     },
                                "profile_cam01":  {
-                                                     "imageMode":  "grayscale",
+                                                     "imageMode":  "bw",
                                                      "inspectionTypes":  [
-                                                                             "measurement"
+                                                                             "dimensional"
                                                                          ],
                                                      "guiTools":  [
-                                                                      "measurements",
+                                                                      "localization",
+                                                                      "dimensions",
                                                                       "threshold",
                                                                       "calibration",
                                                                       "roi",
@@ -290,6 +295,7 @@
                                                                              "surface"
                                                                          ],
                                                      "guiTools":  [
+                                                                      "surfaceLocalization",
                                                                       "surfaceDefects",
                                                                       "lighting",
                                                                       "contrast",
@@ -320,6 +326,7 @@
                                                                              "ai"
                                                                          ],
                                                      "guiTools":  [
+                                                                      "surfaceLocalization",
                                                                       "surfaceDefects",
                                                                       "measurements",
                                                                       "aiModel",
@@ -338,6 +345,7 @@
                                                                              "measurement"
                                                                          ],
                                                      "guiTools":  [
+                                                                      "surfaceLocalization",
                                                                       "measurements",
                                                                       "threshold",
                                                                       "calibration",
@@ -347,12 +355,13 @@
                                                                   ]
                                                  },
                                "profile_cam07":  {
-                                                     "imageMode":  "grayscale",
+                                                     "imageMode":  "bw",
                                                      "inspectionTypes":  [
-                                                                             "measurement"
+                                                                             "dimensional"
                                                                          ],
                                                      "guiTools":  [
-                                                                      "measurements",
+                                                                      "localization",
+                                                                      "dimensions",
                                                                       "threshold",
                                                                       "calibration",
                                                                       "roi",
@@ -366,6 +375,7 @@
                                                                              "measurement"
                                                                          ],
                                                      "guiTools":  [
+                                                                      "surfaceLocalization",
                                                                       "measurements",
                                                                       "threshold",
                                                                       "calibration",
@@ -380,6 +390,7 @@
                                                                              "measurement"
                                                                          ],
                                                      "guiTools":  [
+                                                                      "surfaceLocalization",
                                                                       "measurements",
                                                                       "threshold",
                                                                       "calibration",
@@ -394,6 +405,7 @@
                                                                              "measurement"
                                                                          ],
                                                      "guiTools":  [
+                                                                      "surfaceLocalization",
                                                                       "measurements",
                                                                       "threshold",
                                                                       "calibration",
@@ -408,6 +420,7 @@
                                                                              "measurement"
                                                                          ],
                                                      "guiTools":  [
+                                                                      "surfaceLocalization",
                                                                       "measurements",
                                                                       "threshold",
                                                                       "calibration",
@@ -422,6 +435,7 @@
                                                                              "measurement"
                                                                          ],
                                                      "guiTools":  [
+                                                                      "surfaceLocalization",
                                                                       "measurements",
                                                                       "threshold",
                                                                       "calibration",
@@ -436,6 +450,7 @@
                                                                              "measurement"
                                                                          ],
                                                      "guiTools":  [
+                                                                      "surfaceLocalization",
                                                                       "measurements",
                                                                       "threshold",
                                                                       "calibration",
@@ -450,6 +465,7 @@
                                                                              "measurement"
                                                                          ],
                                                      "guiTools":  [
+                                                                      "surfaceLocalization",
                                                                       "measurements",
                                                                       "threshold",
                                                                       "calibration",
@@ -464,6 +480,7 @@
                                                                              "measurement"
                                                                          ],
                                                      "guiTools":  [
+                                                                      "surfaceLocalization",
                                                                       "measurements",
                                                                       "threshold",
                                                                       "calibration",
@@ -478,6 +495,7 @@
                                                                              "measurement"
                                                                          ],
                                                      "guiTools":  [
+                                                                      "surfaceLocalization",
                                                                       "measurements",
                                                                       "threshold",
                                                                       "calibration",

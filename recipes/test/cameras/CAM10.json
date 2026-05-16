@@ -1,0 +1,38 @@
+{
+    "cameraId": "CAM10",
+    "tools": {
+        "surfaceLocalization": {
+            "annulus": {
+                "innerCircle": {
+                    "centerX": 1332,
+                    "centerY": 667,
+                    "radius": 282
+                },
+                "outerCircle": {
+                    "centerX": 1332,
+                    "centerY": 667,
+                    "radius": 322
+                }
+            },
+            "edge": {
+                "band": {
+                    "inner": 23,
+                    "outer": 32
+                },
+                "circle": {
+                    "centerX": 1332,
+                    "centerY": 667,
+                    "radius": 302
+                },
+                "sensitivity": 222
+            },
+            "enabled": true,
+            "method": "edge",
+            "threshold": {
+                "max": 80,
+                "min": 0,
+                "value": 80
+            }
+        }
+    }
+}

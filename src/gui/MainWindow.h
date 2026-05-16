@@ -5,8 +5,11 @@
 #include "config/TranslationManager.h"
 #include "gui/CameraTileWidget.h"
 #include "gui/ImageViewWidget.h"
+#include "processing/LocalizationProcessor.h"
+#include "processing/SurfaceDefectProcessor.h"
 
 #include <QGridLayout>
+#include <QHash>
 #include <QLabel>
 #include <QMainWindow>
 #include <QStackedWidget>
@@ -25,6 +28,14 @@ protected:
   void resizeEvent(QResizeEvent* event) override;
 
 private:
+  enum class SurfaceCircleTarget
+  {
+    None,
+    Outer,
+    Inner,
+    Edge
+  };
+
   void buildUi();
   void buildMenu();
   void rebuildUi();
@@ -43,9 +54,30 @@ private:
   void updateControlPanel(const CameraConfig* camera);
   void showCameraToolList(const CameraConfig& camera);
   void showToolPanel(const CameraConfig& camera, const QString& toolId);
+  void showSurfaceLocalizationPanel(const CameraConfig& camera);
+  void showSurfaceLocalizationStrategyPanel(const CameraConfig& camera, const QString& strategyId);
   void activateLocalizationRoiDrawing(const CameraConfig& camera);
+  void activateLocalizationExclusionDrawing(const CameraConfig& camera);
+  void clearLocalizationExclusions(const CameraConfig& camera);
   void testLocalization(const CameraConfig& camera);
+  void activateSurfaceDefectRoiDrawing(const CameraConfig& camera);
+  void activateSurfaceDefectExclusionDrawing(const CameraConfig& camera);
+  void clearSurfaceDefectExclusions(const CameraConfig& camera);
+  void testSurfaceLocalization(const CameraConfig& camera);
+  void testSurfaceLocalizationStrategy(const CameraConfig& camera);
+  void activateSurfaceOuterCircleDrawing(const CameraConfig& camera);
+  void activateSurfaceInnerCircleDrawing(const CameraConfig& camera);
+  void activateSurfaceEdgeCircleCenterRadiusDrawing(const CameraConfig& camera);
+  void activateSurfaceEdgeCircleDrawing(const CameraConfig& camera);
+  void activateSurfaceThreePointCircleDrawing(const CameraConfig& camera, SurfaceCircleTarget target);
+  void saveSurfaceThresholdAndPreview(const CameraConfig& camera, int thresholdValue);
+  void saveSurfaceEdgeAndPreview(const CameraConfig& camera, int sensitivity);
+  void saveSurfaceEdgeBandAndPreview(const CameraConfig& camera, int innerWidth, int outerWidth);
+  void saveSurfaceMethodAndPreview(const CameraConfig& camera, const QString& method);
+  void testSurfaceAnnulusLocalization(const CameraConfig& camera);
+  void showStoredSurfaceLocalizationGeometry(const CameraConfig& camera, const SurfaceAnnulusLocalizationConfig& annulus);
   bool isBwDimensionalCamera(const CameraConfig& camera) const;
+  bool isGrayscaleLocalizationCamera(const CameraConfig& camera) const;
   void clearToolPanel();
   void appendLog(const QString& message);
   void updateLargePreview();
@@ -73,4 +105,16 @@ private:
   CameraConfig m_selectedCamera;
   QPixmap m_selectedPreview;
   QString m_selectedImagePath;
+  QHash<QString, LocalizationResult> m_lastLocalizationResults;
+
+  enum class ActiveDrawingRecipe
+  {
+    None,
+    Localization,
+    SurfaceDefects
+  };
+
+  ActiveDrawingRecipe m_activeDrawingRecipe = ActiveDrawingRecipe::None;
+
+  SurfaceCircleTarget m_surfaceCircleTarget = SurfaceCircleTarget::None;
 };

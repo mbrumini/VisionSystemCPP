@@ -29,6 +29,8 @@ const QHash<QString, ToolTemplate>& tools()
   static const QHash<QString, ToolTemplate> catalog = {
     {"localization", makeTool("localization", "tools.localization", {
       {"searchRoi", "actions.searchRoi"},
+      {"addExclusion", "actions.addExclusion"},
+      {"clearExclusions", "actions.clearExclusions"},
       {"testLocalization", "actions.testLocalization"},
       {"clearRoi", "actions.clearRoi"}
     })},
@@ -82,6 +84,12 @@ const QHash<QString, ToolTemplate>& tools()
       {"minTolerance", "actions.minTolerance"},
       {"maxTolerance", "actions.maxTolerance"},
       {"okNokRule", "actions.okNokRule"}
+    })},
+    {"surfaceLocalization", makeTool("surfaceLocalization", "tools.surfaceLocalization", {
+      {"surfaceOuterCircle", "actions.surfaceOuterCircle"},
+      {"surfaceInnerCircle", "actions.surfaceInnerCircle"},
+      {"surfaceAddExclusion", "actions.surfaceAddExclusion"},
+      {"surfaceClearExclusions", "actions.surfaceClearExclusions"}
     })},
     {"surfaceDefects", makeTool("surfaceDefects", "tools.surfaceDefects", {
       {"scratch", "actions.scratch"},

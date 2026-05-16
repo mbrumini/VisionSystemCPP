@@ -5,6 +5,39 @@
 #include <QString>
 #include <QVBoxLayout>
 
+namespace
+{
+QString cameraRoleText(const CameraConfig& camera)
+{
+  const bool hasAi = camera.profile.inspectionTypes.contains("ai");
+  const bool hasNonAiInspection = camera.profile.inspectionTypes.contains("measurement") ||
+    camera.profile.inspectionTypes.contains("surface") ||
+    camera.profile.inspectionTypes.contains("dimensional");
+
+  if (camera.profile.imageMode == "bw")
+  {
+    return "BN misurazioni";
+  }
+
+  if (hasAi && hasNonAiInspection)
+  {
+    return "Scala grigi + AI";
+  }
+
+  if (hasAi)
+  {
+    return "AI";
+  }
+
+  if (camera.profile.imageMode == "grayscale")
+  {
+    return "Scala grigi";
+  }
+
+  return camera.profile.imageMode;
+}
+}
+
 CameraTileWidget::CameraTileWidget(const CameraConfig& camera, QWidget* parent)
   : QFrame(parent), m_camera(camera)
 {
@@ -29,7 +62,7 @@ CameraTileWidget::CameraTileWidget(const CameraConfig& camera, QWidget* parent)
   m_titleLabel = new QLabel(camera.displayName + "  " + camera.id, this);
   m_titleLabel->setObjectName("tileTitle");
 
-  m_statusLabel = new QLabel(camera.profile.imageMode + " | " + camera.processingProfileId, this);
+  m_statusLabel = new QLabel(cameraRoleText(camera), this);
   m_statusLabel->setObjectName("tileStatus");
 
   auto* layout = new QVBoxLayout(this);

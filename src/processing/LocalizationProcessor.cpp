@@ -2,6 +2,7 @@
 
 #include <opencv2/imgproc.hpp>
 #include <algorithm>
+#include <cmath>
 
 namespace
 {
@@ -14,11 +15,17 @@ cv::Rect cornerRect(int x, int y, int size)
 {
   return cv::Rect(x, y, size, size);
 }
+
+cv::Point toPoint(const cv::Point2d& point)
+{
+  return cv::Point(static_cast<int>(std::round(point.x)), static_cast<int>(std::round(point.y)));
+}
 }
 
 LocalizationResult LocalizationProcessor::locateDarkObjectOnLightBackground(
   const cv::Mat& input,
   const cv::Rect& searchRoi,
+  const std::vector<cv::Rect>& exclusionRects,
   double thresholdFactor,
   double thresholdOffset) const
 {
@@ -53,6 +60,22 @@ LocalizationResult LocalizationProcessor::locateDarkObjectOnLightBackground(
 
   cv::Mat mask;
   cv::threshold(grayRoi, mask, result.thresholdValue, 255, cv::THRESH_BINARY_INV);
+
+  for (const cv::Rect& exclusionRect : exclusionRects)
+  {
+    const cv::Rect clampedExclusion = clampRect(exclusionRect, gray.size());
+    const cv::Rect localExclusion(
+      clampedExclusion.x - roi.x,
+      clampedExclusion.y - roi.y,
+      clampedExclusion.width,
+      clampedExclusion.height);
+    const cv::Rect maskExclusion = clampRect(localExclusion, mask.size());
+
+    if (!maskExclusion.empty())
+    {
+      mask(maskExclusion).setTo(0);
+    }
+  }
 
   cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
   cv::morphologyEx(mask, mask, cv::MORPH_OPEN, kernel);
@@ -110,22 +133,40 @@ LocalizationResult LocalizationProcessor::locateDarkObjectOnLightBackground(
   result.area = bestArea;
   result.center = cv::Point2d(moments.m10 / moments.m00, moments.m01 / moments.m00);
   result.boundingRect = cv::boundingRect(contour);
+  result.contour = contour;
+  result.angleRadians = 0.5 * std::atan2(2.0 * moments.mu11, moments.mu20 - moments.mu02);
+
+  const double axisLength = std::max(40.0, std::max(result.boundingRect.width, result.boundingRect.height) * 0.35);
+  const cv::Point2d xDirection(std::cos(result.angleRadians), std::sin(result.angleRadians));
+  const cv::Point2d yDirection(-xDirection.y, xDirection.x);
+  result.xAxisStart = result.center - xDirection * axisLength;
+  result.xAxisEnd = result.center + xDirection * axisLength;
+  result.yAxisStart = result.center - yDirection * axisLength;
+  result.yAxisEnd = result.center + yDirection * axisLength;
 
   cv::drawContours(result.diagnosticImage, std::vector<std::vector<cv::Point>>{contour}, 0, cv::Scalar(0, 255, 0), 2);
   cv::rectangle(result.diagnosticImage, result.boundingRect, cv::Scalar(255, 0, 0), 2);
   cv::circle(result.diagnosticImage, result.center, 8, cv::Scalar(0, 0, 255), -1);
-  cv::line(
+  cv::arrowedLine(
     result.diagnosticImage,
-    cv::Point(static_cast<int>(result.center.x - 35), static_cast<int>(result.center.y)),
-    cv::Point(static_cast<int>(result.center.x + 35), static_cast<int>(result.center.y)),
+    toPoint(result.xAxisStart),
+    toPoint(result.xAxisEnd),
     cv::Scalar(0, 0, 255),
-    2);
-  cv::line(
+    2,
+    cv::LINE_AA,
+    0,
+    0.12);
+  cv::arrowedLine(
     result.diagnosticImage,
-    cv::Point(static_cast<int>(result.center.x), static_cast<int>(result.center.y - 35)),
-    cv::Point(static_cast<int>(result.center.x), static_cast<int>(result.center.y + 35)),
-    cv::Scalar(0, 0, 255),
-    2);
+    toPoint(result.yAxisStart),
+    toPoint(result.yAxisEnd),
+    cv::Scalar(255, 0, 255),
+    2,
+    cv::LINE_AA,
+    0,
+    0.12);
+  cv::putText(result.diagnosticImage, "X", toPoint(result.xAxisEnd), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 255), 2);
+  cv::putText(result.diagnosticImage, "Y", toPoint(result.yAxisEnd), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(255, 0, 255), 2);
 
   return result;
 }

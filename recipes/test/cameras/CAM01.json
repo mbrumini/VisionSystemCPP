@@ -1,21 +1,19 @@
 {
-    "cameraId": "CAM02",
+    "cameraId": "CAM01",
     "tools": {
         "localization": {
             "enabled": true,
             "method": "bw_dark_on_light",
             "searchRoi": {
-                "height": 855,
-                "width": 886,
-                "x": 531,
-                "y": 293
+                "height": 101,
+                "width": 100,
+                "x": 148,
+                "y": 166
             },
             "threshold": {
                 "factor": 0.5,
                 "offset": 0
-            },
-            "exclusionRects": [
-            ]
+            }
         }
     }
 }

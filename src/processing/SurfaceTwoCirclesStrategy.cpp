@@ -1,0 +1,138 @@
+#include "SurfaceTwoCirclesStrategy.h"
+
+#include "processing/SurfaceProcessingUtils.h"
+#include "processing/SurfaceThresholdStrategy.h"
+
+namespace
+{
+const SurfaceCircleFeatureResult* findFeature(
+  const std::vector<SurfaceCircleFeatureResult>& features,
+  const std::string& id)
+{
+  for (const SurfaceCircleFeatureResult& feature : features)
+  {
+    if (feature.id == id)
+    {
+      return &feature;
+    }
+  }
+
+  return nullptr;
+}
+}
+
+SurfaceStrategyResult SurfaceTwoCirclesStrategy::locate(
+  const cv::Mat& input,
+  const SurfaceTwoCirclesStrategyConfig& config,
+  const std::vector<cv::Rect>& exclusionRects) const
+{
+  SurfaceStrategyResult result;
+  result.strategyName = "two_circles_axis";
+
+  if (input.empty() || config.features.size() < 2)
+  {
+    return result;
+  }
+
+  if (input.channels() == 1)
+  {
+    cv::cvtColor(input, result.diagnosticImage, cv::COLOR_GRAY2BGR);
+  }
+  else
+  {
+    input.copyTo(result.diagnosticImage);
+  }
+
+  SurfaceThresholdStrategy thresholdStrategy;
+
+  for (const SurfaceCircleFeatureConfig& featureConfig : config.features)
+  {
+    const SurfaceDefectResult featureMask = thresholdStrategy.detectInRoi(
+      input,
+      featureConfig.searchRoi,
+      exclusionRects,
+      featureConfig.threshold);
+
+    SurfaceCircleFeatureResult feature;
+    feature.id = featureConfig.id;
+    feature.polarity = featureConfig.polarity;
+
+    cv::rectangle(result.diagnosticImage, featureConfig.searchRoi, cv::Scalar(0, 255, 255), 2);
+
+    if (!featureMask.blobs.empty())
+    {
+      const SurfaceBlob& blob = featureMask.blobs.front();
+      feature.found = true;
+      feature.area = blob.area;
+      feature.radius = std::sqrt(blob.area / CV_PI);
+      feature.center = blob.center;
+      feature.boundingRect = blob.boundingRect;
+      feature.contour = blob.contour;
+
+      if (featureConfig.expectedRadiusMin > 0.0 && feature.radius < featureConfig.expectedRadiusMin)
+      {
+        feature.found = false;
+      }
+
+      if (featureConfig.expectedRadiusMax > 0.0 && feature.radius > featureConfig.expectedRadiusMax)
+      {
+        feature.found = false;
+      }
+    }
+
+    if (feature.found)
+    {
+      cv::drawContours(result.diagnosticImage, std::vector<std::vector<cv::Point>>{feature.contour}, 0, cv::Scalar(0, 255, 0), 2);
+      cv::rectangle(result.diagnosticImage, feature.boundingRect, cv::Scalar(255, 0, 0), 2);
+      drawSurfaceCenterOfMass(result.diagnosticImage, feature.center);
+      cv::putText(result.diagnosticImage, feature.id, surfacePoint(feature.center + cv::Point2d(8, -8)), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 0, 255), 2);
+    }
+    else
+    {
+      cv::putText(result.diagnosticImage, feature.id + "?", featureConfig.searchRoi.tl(), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 0, 255), 2);
+    }
+
+    result.features.push_back(feature);
+  }
+
+  const std::string fromId = config.xAxisFromFeatureId.empty() ? config.features[0].id : config.xAxisFromFeatureId;
+  const std::string toId = config.xAxisToFeatureId.empty() ? config.features[1].id : config.xAxisToFeatureId;
+  const SurfaceCircleFeatureResult* fromFeature = findFeature(result.features, fromId);
+  const SurfaceCircleFeatureResult* toFeature = findFeature(result.features, toId);
+
+  if (!fromFeature || !toFeature || !fromFeature->found || !toFeature->found)
+  {
+    return result;
+  }
+
+  const cv::Point2d axisVector = toFeature->center - fromFeature->center;
+  const double length = std::sqrt(axisVector.x * axisVector.x + axisVector.y * axisVector.y);
+
+  if (length <= 0.0)
+  {
+    return result;
+  }
+
+  const cv::Point2d xDirection(axisVector.x / length, axisVector.y / length);
+  const cv::Point2d yDirection(-xDirection.y, xDirection.x);
+
+  const SurfaceCircleFeatureResult* originFeature = findFeature(result.features, config.originFeatureId);
+  result.origin = originFeature && originFeature->found
+    ? originFeature->center
+    : (fromFeature->center + toFeature->center) * 0.5;
+
+  const double axisLength = std::max(60.0, length * 0.25);
+  result.xAxisStart = result.origin - xDirection * axisLength;
+  result.xAxisEnd = result.origin + xDirection * axisLength;
+  result.yAxisStart = result.origin - yDirection * axisLength;
+  result.yAxisEnd = result.origin + yDirection * axisLength;
+  result.found = true;
+
+  cv::arrowedLine(result.diagnosticImage, surfacePoint(result.xAxisStart), surfacePoint(result.xAxisEnd), cv::Scalar(0, 0, 255), 2, cv::LINE_AA, 0, 0.12);
+  cv::arrowedLine(result.diagnosticImage, surfacePoint(result.yAxisStart), surfacePoint(result.yAxisEnd), cv::Scalar(255, 0, 255), 2, cv::LINE_AA, 0, 0.12);
+  cv::circle(result.diagnosticImage, result.origin, 8, cv::Scalar(0, 255, 255), -1);
+  cv::putText(result.diagnosticImage, "X", surfacePoint(result.xAxisEnd), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 255), 2);
+  cv::putText(result.diagnosticImage, "Y", surfacePoint(result.yAxisEnd), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(255, 0, 255), 2);
+
+  return result;
+}

@@ -1,0 +1,40 @@
+{
+    "cameraId": "CAM12",
+    "tools": {
+        "surfaceLocalization": {
+            "annulus": {
+                "innerCircle": {
+                    "centerX": 1279,
+                    "centerY": 687,
+                    "radius": 286
+                },
+                "outerCircle": {
+                    "centerX": 1279,
+                    "centerY": 687,
+                    "radius": 326
+                }
+            },
+            "edge": {
+                "band": {
+                    "inner": 50,
+                    "outer": 48
+                },
+                "circle": {
+                    "centerX": 1279,
+                    "centerY": 687,
+                    "radius": 306
+                },
+                "sensitivity": 95
+            },
+            "enabled": true,
+            "exclusionRects": [
+            ],
+            "method": "edge",
+            "threshold": {
+                "max": 80,
+                "min": 0,
+                "value": 80
+            }
+        }
+    }
+}

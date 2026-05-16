@@ -10,7 +10,8 @@
 6. Traduzioni
 7. Catalogo tool e pannelli placeholder
 8. Ricette e prossimi passi
-9. Mappa rapida dei file
+9. Stato fatto
+10. Mappa rapida dei file
 
 ## 1. Scopo del progetto
 
@@ -137,6 +138,10 @@ Prima funzione gestita:
 - ROI/AOE di localizzazione per camera;
 - salvataggio in `recipes/default/cameras/CAMxx.json`;
 - coordinate salvate in pixel dell'immagine originale, non in coordinate schermo.
+- parametri localizzazione `threshold.factor` e `threshold.offset`, usati per calcolare:
+  `soglia = sfondo * factor + offset`.
+- rettangoli `exclusionRects` in coordinate immagine originale per mascherare aree
+  che disturbano la localizzazione.
 
 Gestione ricette dal menu:
 
@@ -173,9 +178,18 @@ File:
 - griglia miniature;
 - vista camera selezionata;
 - pannello destro;
-- comandi generali;
-- log eventi;
 - tool dinamici della camera.
+
+Layout pannello destro:
+
+- in vista griglia/main mostra i comandi generali: `Start`, `Stop`, `Reset errori`,
+  `Reload config`, `Esci`;
+- quando una camera e' selezionata mostra solo camera selezionata, pulsante
+  `Vista griglia`, strategie disponibili e tool camera;
+- `Start`/`Stop` restano anche nel menu `Sistema`;
+- il box `Log eventi` non e' piu' visibile nel pannello destro. Le chiamate
+  `appendLog()` restano nel codice come diagnostica interna e sono no-op se il
+  widget log non esiste.
 
 Il menu `Sistema` contiene anche il comando `Fullscreen / finestra`, che alterna tra:
 
@@ -196,7 +210,10 @@ Il menu `Sistema` contiene anche il comando `Fullscreen / finestra`, che alterna
 - conversione coordinate mouse/widget in coordinate immagine originale;
 - overlay ROI;
 - drag mouse per disegnare AOE/ROI;
-- callback quando la ROI cambia.
+- rettangoli rossi di esclusione;
+- cerchi su immagine;
+- acquisizione cerchio a 3 punti;
+- callback quando ROI, esclusioni o cerchi cambiano.
 
 Nota layout:
 
@@ -294,19 +311,143 @@ Per camere BW, il primo tool operativo importante sara':
 - assi X/Y del pezzo;
 - sistema di riferimento per le misure successive.
 
+Per camere grayscale con controllo superficie, la localizzazione dimensionale non viene
+usata. Il tool separato `Localizzazione grigi` gestisce invece:
+
+- AOE superficie;
+- rettangoli di esclusione;
+- test soglia grayscale;
+- contorno principale e centro di massa.
+
+Le strategie di localizzazione grigi sono elencate nel pannello destro quando una
+camera grayscale e' selezionata:
+
+- `Soglia`: implementata;
+- `Bordo`: implementata;
+- `Bordo + PCA`: pianificata;
+- `Modello`: pianificata;
+- `AI YOLO`: pianificata.
+
+Il catalogo GUI delle strategie e' separato in:
+
+- `src/gui/SurfaceLocalizationStrategies.h`
+- `src/gui/SurfaceLocalizationStrategies.cpp`
+
+Le strategie OpenCV attuali sono separate in:
+
+- `SurfaceThresholdStrategy.*`: soglia in ROI e corona;
+- `SurfaceEdgeStrategy.*`: bordo Canny in corona/fascia;
+- `SurfaceTwoCirclesStrategy.*`: strategia due feature circolari e assi;
+- `SurfaceProcessingUtils.h`: helper comuni per rettangoli, marker centro massa,
+  ordinamento blob e disegno diagnostico.
+
+`SurfaceDefectProcessor.*` resta come facciata compatibile con il resto della GUI:
+riceve le chiamate esistenti e delega alle strategie specifiche.
+
 Stato attuale:
 
 - il tool `Localizzazione` appare solo per profili con `imageMode=bw` e `inspectionTypes` contenente `dimensional`;
 - dal pannello `Localizzazione` il comando `AOE ricerca` abilita il drag sull'immagine grande;
 - al rilascio del mouse la ROI viene salvata in ricetta camera.
+- dal pannello `Localizzazione` il comando `Aggiungi esclusione` abilita il drag di
+  rettangoli rossi, salvati in `exclusionRects`.
+- `Cancella esclusioni` svuota tutte le esclusioni della camera selezionata.
 - il comando `Test localizzazione` usa OpenCV per:
   - campionare lo sfondo negli angoli della ROI;
-  - calcolare soglia = sfondo * 0.5;
+  - calcolare soglia da `threshold.factor` e `threshold.offset` salvati in ricetta;
+  - azzerare nella maschera binaria le aree definite da `exclusionRects`;
   - trovare il contorno scuro principale;
-  - calcolare centro di massa;
-  - mostrare immagine diagnostica con ROI, contorno, bounding box e centro.
+  - calcolare centro di massa, bounding box, contorno e orientamento;
+  - salvare il risultato in una struttura `LocalizationResult`;
+  - mostrare immagine diagnostica con ROI, contorno, bounding box, centro e assi X/Y orientati.
 
-## 9. Mappa Rapida Dei File
+Per profili `grayscale` con `inspectionTypes` contenente `surface`, il tool
+`Localizzazione grigi` espone comandi separati:
+
+- `AOE superficie`: salva `tools.surfaceLocalization.searchRoi`;
+- `Aggiungi esclusione`: salva rettangoli in `tools.surfaceLocalization.exclusionRects`;
+- `Cancella esclusioni`: svuota le esclusioni superficiali;
+- metodo `threshold`: usa una corona esterno/interno a centro comune e
+  `tools.surfaceLocalization.threshold.value` per creare una maschera grayscale;
+- metodo `edge`: usa una guida bordo ricavata da 3 click e una fascia
+  `tools.surfaceLocalization.edge.band.inner/outer` per cercare contorni Canny
+  quando pezzo e sfondo sono troppo simili per la soglia.
+
+Entrambi i metodi applicano le esclusioni rosse prima di cercare il contorno
+principale, bounding box e centro di massa. Il centro di massa e' disegnato con
+croce gialla bordata di nero piu' punto rosso.
+
+Disegno cerchi:
+
+- `Centro + raggio`: l'operatore clicca/trascina per impostare un cerchio;
+- `3 punti`: l'operatore clicca tre punti, il sistema calcola la guida e crea
+  automaticamente la corona interna/esterna usando la fascia configurata;
+- in `Bordo`, la guida non e' il bordo trovato: serve solo a definire dove cercare
+  il bordo reale.
+
+La localizzazione superficie supporta anche la prima strategia configurabile:
+`two_circles_axis`.
+
+Esempio ricetta:
+
+```json
+"surfaceLocalization": {
+  "method": "grayscale_threshold",
+  "strategy": {
+    "name": "two_circles_axis",
+    "origin": "midpoint",
+    "xAxis": {
+      "from": "circle_a",
+      "to": "circle_b"
+    },
+    "features": [
+      {
+        "id": "circle_a",
+        "type": "circle",
+        "polarity": "NB",
+        "searchRoi": { "x": 1000, "y": 360, "width": 220, "height": 220 },
+        "threshold": { "min": 0, "max": 80 },
+        "expectedRadius": { "min": 20, "max": 80 }
+      },
+      {
+        "id": "circle_b",
+        "type": "circle",
+        "polarity": "NB",
+        "searchRoi": { "x": 1330, "y": 360, "width": 220, "height": 220 },
+        "threshold": { "min": 0, "max": 80 },
+        "expectedRadius": { "min": 20, "max": 80 }
+      }
+    ]
+  }
+}
+```
+
+La strategia cerca il contorno principale dentro ogni ROI feature, valida il raggio
+atteso quando configurato, calcola i centri di massa dei due cerchi e costruisce
+l'asse X dal feature `from` al feature `to`. L'origine puo' essere `midpoint` o
+l'ID di una feature.
+
+## 9. Stato Fatto
+
+Stato funzionale consolidato:
+
+- GUI Qt con 16 miniature e vista camera grande;
+- menu superiore con ricette, lingua e sistema;
+- traduzioni JSON copiate accanto all'eseguibile in post-build;
+- ricette come cartelle, con selezione/creazione/duplicazione/import/export;
+- camere classificate come BN misurazioni, Scala grigi, AI, Scala grigi + AI;
+- localizzazione BW dimensionale con ROI, soglia factor/offset, esclusioni,
+  contorno, centro massa, orientamento e assi X/Y;
+- localizzazione grigi con strategie `Soglia` e `Bordo`;
+- maschere rosse che escludono aree disturbanti;
+- disegno cerchi con `Centro + raggio` o `3 punti`;
+- cancellazione maschere/cerchi per localizzazione grigi;
+- centro di massa evidenziato con croce;
+- pannello destro pulito: comandi generali solo in main/griglia, strategie/tool
+  quando una camera e' selezionata;
+- catalogo strategie GUI e strategie OpenCV separati in file dedicati.
+
+## 10. Mappa Rapida Dei File
 
 | File | Responsabilita' |
 | --- | --- |
@@ -317,12 +458,18 @@ Stato attuale:
 | `src/gui/MainWindow.*` | Finestra principale, menu, layout e coordinamento |
 | `src/gui/CameraTileWidget.*` | Miniatura camera |
 | `src/gui/ImageViewWidget.*` | Immagine grande, overlay e coordinate mouse/immagine |
+| `src/gui/SurfaceLocalizationStrategies.*` | Catalogo strategie localizzazione grigi |
 | `src/gui/ToolCatalog.*` | Definizione ID tool/azioni |
 | `src/gui/ToolPanelWidget.*` | Pannelli placeholder dei tool |
 | `src/camera/ICamera.h` | Interfaccia camera |
 | `src/camera/FileCamera.*` | Camera simulata da cartella immagini |
 | `src/processing/ImageProcessor.*` | Processing OpenCV iniziale |
 | `src/processing/LocalizationProcessor.*` | Localizzazione BW: soglia, contorno e centro di massa |
+| `src/processing/SurfaceDefectProcessor.*` | Facciata compatibile per strategie superficie |
+| `src/processing/SurfaceThresholdStrategy.*` | Strategia grigi a soglia |
+| `src/processing/SurfaceEdgeStrategy.*` | Strategia grigi a bordo/Canny |
+| `src/processing/SurfaceTwoCirclesStrategy.*` | Strategia due cerchi/assi |
+| `src/processing/SurfaceProcessingUtils.h` | Helper comuni strategie superficie |
 | `src/utils/Timer.h` | Misura tempi ciclo |
 | `config/cameras.json` | Camere, profili, tool GUI |
 | `config/app_settings.json` | Impostazioni applicazione, inclusa ricetta attiva |

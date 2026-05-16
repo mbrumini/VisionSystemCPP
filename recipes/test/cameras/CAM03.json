@@ -1,0 +1,84 @@
+{
+    "cameraId": "CAM03",
+    "tools": {
+        "surfaceLocalization": {
+            "annulus": {
+                "innerCircle": {
+                    "centerX": 1327,
+                    "centerY": 689,
+                    "radius": 245
+                },
+                "outerCircle": {
+                    "centerX": 1327,
+                    "centerY": 689,
+                    "radius": 371
+                }
+            },
+            "edge": {
+                "sensitivity": 203
+            },
+            "enabled": true,
+            "exclusionRects": [
+            ],
+            "method": "edge",
+            "searchRoi": {
+                "height": 761,
+                "width": 753,
+                "x": 962,
+                "y": 316
+            },
+            "strategy": {
+                "features": [
+                    {
+                        "expectedRadius": {
+                            "max": 80,
+                            "min": 20
+                        },
+                        "id": "circle_a",
+                        "polarity": "NB",
+                        "searchRoi": {
+                            "height": 220,
+                            "width": 220,
+                            "x": 1000,
+                            "y": 360
+                        },
+                        "threshold": {
+                            "max": 80,
+                            "min": 0
+                        },
+                        "type": "circle"
+                    },
+                    {
+                        "expectedRadius": {
+                            "max": 80,
+                            "min": 20
+                        },
+                        "id": "circle_b",
+                        "polarity": "NB",
+                        "searchRoi": {
+                            "height": 220,
+                            "width": 220,
+                            "x": 1330,
+                            "y": 360
+                        },
+                        "threshold": {
+                            "max": 80,
+                            "min": 0
+                        },
+                        "type": "circle"
+                    }
+                ],
+                "name": "two_circles_axis",
+                "origin": "midpoint",
+                "xAxis": {
+                    "from": "circle_a",
+                    "to": "circle_b"
+                }
+            },
+            "threshold": {
+                "max": 112,
+                "min": 0
+            }
+        }
+    }
+}

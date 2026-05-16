@@ -1,0 +1,45 @@
+{
+    "cameraId": "CAM05",
+    "tools": {
+        "surfaceLocalization": {
+            "annulus": {
+                "innerCircle": {
+                    "centerX": 976,
+                    "centerY": 719,
+                    "radius": 227
+                },
+                "outerCircle": {
+                    "centerX": 976,
+                    "centerY": 719,
+                    "radius": 441
+                }
+            },
+            "enabled": true,
+            "exclusionRects": [
+                {
+                    "height": 49,
+                    "width": 102,
+                    "x": 1261,
+                    "y": 909
+                },
+                {
+                    "height": 56,
+                    "width": 100,
+                    "x": 575,
+                    "y": 886
+                }
+            ],
+            "method": "grayscale_annulus_threshold",
+            "searchRoi": {
+                "height": 862,
+                "width": 911,
+                "x": 515,
+                "y": 272
+            },
+            "threshold": {
+                "max": 172,
+                "min": 0
+            }
+        }
+    }
+}

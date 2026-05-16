@@ -1,9 +1,17 @@
 #pragma once
 
 #include <QPixmap>
+#include <QPoint>
 #include <QRect>
 #include <QWidget>
+#include <QVector>
 #include <functional>
+
+struct ImageCircle
+{
+  QPoint center;
+  int radius = 0;
+};
 
 class ImageViewWidget : public QWidget
 {
@@ -14,8 +22,19 @@ public:
   void clearImage();
   void setRoi(const QRect& imageRoi);
   void clearRoi();
+  void setExclusionRects(const QVector<QRect>& imageRects);
+  void clearExclusionRects();
+  void setCircles(const QVector<ImageCircle>& imageCircles);
+  void clearCircles();
   void setRoiDrawingEnabled(bool enabled);
+  void setExclusionDrawingEnabled(bool enabled);
+  void setOuterCircleDrawingEnabled(bool enabled);
+  void setInnerCircleDrawingEnabled(bool enabled);
+  void setThreePointCircleDrawingEnabled(bool enabled);
   void setRoiChangedHandler(std::function<void(const QRect&)> handler);
+  void setExclusionRectAddedHandler(std::function<void(const QRect&)> handler);
+  void setCircleChangedHandler(std::function<void(bool, const ImageCircle&)> handler);
+  void setThreePointCircleHandler(std::function<void(const QVector<QPoint>&)> handler);
 
 protected:
   void paintEvent(QPaintEvent* event) override;
@@ -28,13 +47,31 @@ private:
   QPoint widgetToImage(const QPoint& widgetPoint) const;
   QRect widgetRectToImageRect(const QRect& widgetRect) const;
   QRect imageRectToWidgetRect(const QRect& imageRect) const;
+  QRect imageCircleToWidgetRect(const ImageCircle& circle) const;
+  QPoint imagePointToWidget(const QPoint& imagePoint) const;
+
+  enum class DrawingMode
+  {
+    None,
+    Roi,
+    Exclusion,
+    OuterCircle,
+    InnerCircle,
+    ThreePointCircle
+  };
 
   QPixmap m_image;
   QRect m_roi;
+  QVector<QRect> m_exclusionRects;
+  QVector<ImageCircle> m_circles;
   bool m_hasRoi = false;
-  bool m_roiDrawingEnabled = false;
+  DrawingMode m_drawingMode = DrawingMode::None;
   bool m_dragging = false;
   QPoint m_dragStart;
   QPoint m_dragEnd;
+  QVector<QPoint> m_threePointCirclePoints;
   std::function<void(const QRect&)> m_roiChangedHandler;
+  std::function<void(const QRect&)> m_exclusionRectAddedHandler;
+  std::function<void(bool, const ImageCircle&)> m_circleChangedHandler;
+  std::function<void(const QVector<QPoint>&)> m_threePointCircleHandler;
 };

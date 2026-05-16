@@ -2,6 +2,7 @@
 
 #include <QMouseEvent>
 #include <QPainter>
+#include <cmath>
 
 ImageViewWidget::ImageViewWidget(QWidget* parent)
   : QWidget(parent)
@@ -20,6 +21,8 @@ void ImageViewWidget::clearImage()
 {
   m_image = {};
   m_hasRoi = false;
+  m_exclusionRects.clear();
+  m_circles.clear();
   update();
 }
 
@@ -37,16 +40,113 @@ void ImageViewWidget::clearRoi()
   update();
 }
 
+void ImageViewWidget::setExclusionRects(const QVector<QRect>& imageRects)
+{
+  m_exclusionRects.clear();
+
+  for (const QRect& rect : imageRects)
+  {
+    const QRect normalized = rect.normalized();
+
+    if (normalized.isValid())
+    {
+      m_exclusionRects.append(normalized);
+    }
+  }
+
+  update();
+}
+
+void ImageViewWidget::clearExclusionRects()
+{
+  m_exclusionRects.clear();
+  update();
+}
+
+void ImageViewWidget::setCircles(const QVector<ImageCircle>& imageCircles)
+{
+  m_circles.clear();
+
+  for (const ImageCircle& circle : imageCircles)
+  {
+    if (circle.radius > 0)
+    {
+      m_circles.append(circle);
+    }
+  }
+
+  update();
+}
+
+void ImageViewWidget::clearCircles()
+{
+  m_circles.clear();
+  update();
+}
+
 void ImageViewWidget::setRoiDrawingEnabled(bool enabled)
 {
-  m_roiDrawingEnabled = enabled;
+  m_drawingMode = enabled ? DrawingMode::Roi : DrawingMode::None;
+  setCursor(enabled ? Qt::CrossCursor : Qt::ArrowCursor);
   m_dragging = false;
+  m_threePointCirclePoints.clear();
+  update();
+}
+
+void ImageViewWidget::setExclusionDrawingEnabled(bool enabled)
+{
+  m_drawingMode = enabled ? DrawingMode::Exclusion : DrawingMode::None;
+  setCursor(enabled ? Qt::CrossCursor : Qt::ArrowCursor);
+  m_dragging = false;
+  m_threePointCirclePoints.clear();
+  update();
+}
+
+void ImageViewWidget::setOuterCircleDrawingEnabled(bool enabled)
+{
+  m_drawingMode = enabled ? DrawingMode::OuterCircle : DrawingMode::None;
+  setCursor(enabled ? Qt::CrossCursor : Qt::ArrowCursor);
+  m_dragging = false;
+  m_threePointCirclePoints.clear();
+  update();
+}
+
+void ImageViewWidget::setInnerCircleDrawingEnabled(bool enabled)
+{
+  m_drawingMode = enabled ? DrawingMode::InnerCircle : DrawingMode::None;
+  setCursor(enabled ? Qt::CrossCursor : Qt::ArrowCursor);
+  m_dragging = false;
+  m_threePointCirclePoints.clear();
+  update();
+}
+
+void ImageViewWidget::setThreePointCircleDrawingEnabled(bool enabled)
+{
+  m_drawingMode = enabled ? DrawingMode::ThreePointCircle : DrawingMode::None;
+  setCursor(enabled ? Qt::CrossCursor : Qt::ArrowCursor);
+  m_dragging = false;
+  m_threePointCirclePoints.clear();
   update();
 }
 
 void ImageViewWidget::setRoiChangedHandler(std::function<void(const QRect&)> handler)
 {
   m_roiChangedHandler = std::move(handler);
+}
+
+void ImageViewWidget::setExclusionRectAddedHandler(std::function<void(const QRect&)> handler)
+{
+  m_exclusionRectAddedHandler = std::move(handler);
+}
+
+void ImageViewWidget::setCircleChangedHandler(std::function<void(bool, const ImageCircle&)> handler)
+{
+  m_circleChangedHandler = std::move(handler);
+}
+
+void ImageViewWidget::setThreePointCircleHandler(std::function<void(const QVector<QPoint>&)> handler)
+{
+  m_threePointCircleHandler = std::move(handler);
 }
 
 void ImageViewWidget::paintEvent(QPaintEvent* event)
@@ -76,15 +176,63 @@ void ImageViewWidget::paintEvent(QPaintEvent* event)
     painter.drawRect(imageRectToWidgetRect(m_roi));
   }
 
+  QPen exclusionPen(QColor("#ff3b30"));
+  exclusionPen.setWidth(2);
+  painter.setPen(exclusionPen);
+  painter.setBrush(QColor(255, 59, 48, 55));
+
+  for (const QRect& rect : m_exclusionRects)
+  {
+    painter.drawRect(imageRectToWidgetRect(rect));
+  }
+
+  QPen outerCirclePen(QColor("#35c46a"));
+  outerCirclePen.setWidth(2);
+  QPen innerCirclePen(QColor("#ff9f0a"));
+  innerCirclePen.setWidth(2);
+
+  for (int i = 0; i < m_circles.size(); ++i)
+  {
+    painter.setPen(i == 0 ? outerCirclePen : innerCirclePen);
+    painter.setBrush(Qt::NoBrush);
+    painter.drawEllipse(imageCircleToWidgetRect(m_circles[i]));
+  }
+
+  if (!m_threePointCirclePoints.isEmpty())
+  {
+    QPen pointPen(QColor("#00d2ff"));
+    pointPen.setWidth(2);
+    painter.setPen(pointPen);
+    painter.setBrush(QColor("#00d2ff"));
+
+    for (const QPoint& imagePoint : m_threePointCirclePoints)
+    {
+      const QPoint widgetPoint = imagePointToWidget(imagePoint);
+      painter.drawEllipse(widgetPoint, 4, 4);
+    }
+  }
+
   if (m_dragging)
   {
-    painter.drawRect(QRect(m_dragStart, m_dragEnd).normalized());
+    if (m_drawingMode == DrawingMode::OuterCircle || m_drawingMode == DrawingMode::InnerCircle)
+    {
+      painter.setBrush(Qt::NoBrush);
+      painter.setPen(m_drawingMode == DrawingMode::OuterCircle ? outerCirclePen : innerCirclePen);
+      const int radius = static_cast<int>(std::hypot(m_dragEnd.x() - m_dragStart.x(), m_dragEnd.y() - m_dragStart.y()));
+      painter.drawEllipse(m_dragStart, radius, radius);
+    }
+    else
+    {
+      painter.setBrush(m_drawingMode == DrawingMode::Exclusion ? QColor(255, 59, 48, 55) : Qt::NoBrush);
+      painter.setPen(m_drawingMode == DrawingMode::Exclusion ? exclusionPen : roiPen);
+      painter.drawRect(QRect(m_dragStart, m_dragEnd).normalized());
+    }
   }
 }
 
 void ImageViewWidget::mousePressEvent(QMouseEvent* event)
 {
-  if (!m_roiDrawingEnabled || event->button() != Qt::LeftButton || m_image.isNull())
+  if (m_drawingMode == DrawingMode::None || event->button() != Qt::LeftButton || m_image.isNull())
   {
     QWidget::mousePressEvent(event);
     return;
@@ -95,8 +243,34 @@ void ImageViewWidget::mousePressEvent(QMouseEvent* event)
     return;
   }
 
+  if (m_drawingMode == DrawingMode::ThreePointCircle)
+  {
+    m_threePointCirclePoints.append(widgetToImage(event->pos()));
+
+    if (m_threePointCirclePoints.size() >= 3)
+    {
+      const QVector<QPoint> points = m_threePointCirclePoints;
+      m_threePointCirclePoints.clear();
+
+      if (m_threePointCircleHandler)
+      {
+        m_threePointCircleHandler(points);
+      }
+    }
+
+    update();
+    return;
+  }
+
   m_dragging = true;
-  m_dragStart = event->pos();
+  if (m_drawingMode == DrawingMode::InnerCircle && !m_circles.isEmpty())
+  {
+    m_dragStart = imagePointToWidget(m_circles[0].center);
+  }
+  else
+  {
+    m_dragStart = event->pos();
+  }
   m_dragEnd = event->pos();
   update();
 }
@@ -124,15 +298,76 @@ void ImageViewWidget::mouseReleaseEvent(QMouseEvent* event)
   m_dragging = false;
   m_dragEnd = event->pos();
 
+  if (m_drawingMode == DrawingMode::OuterCircle || m_drawingMode == DrawingMode::InnerCircle)
+  {
+    const bool isOuter = m_drawingMode == DrawingMode::OuterCircle;
+    const QPoint center = isOuter || m_circles.isEmpty() ? widgetToImage(m_dragStart) : m_circles[0].center;
+    const QPoint edge = widgetToImage(m_dragEnd);
+    const int radius = static_cast<int>(std::hypot(edge.x() - center.x(), edge.y() - center.y()));
+
+    if (radius > 2)
+    {
+      ImageCircle circle{center, radius};
+
+      if (isOuter)
+      {
+        if (m_circles.isEmpty())
+        {
+          m_circles.append(circle);
+        }
+        else
+        {
+          m_circles[0] = circle;
+        }
+      }
+      else
+      {
+        while (m_circles.size() < 1)
+        {
+          m_circles.append(circle);
+        }
+
+        if (m_circles.size() == 1)
+        {
+          m_circles.append(circle);
+        }
+        else
+        {
+          m_circles[1] = circle;
+        }
+      }
+
+      if (m_circleChangedHandler)
+      {
+        m_circleChangedHandler(isOuter, circle);
+      }
+    }
+
+    update();
+    return;
+  }
+
   const QRect imageRoi = widgetRectToImageRect(QRect(m_dragStart, m_dragEnd).normalized());
 
   if (imageRoi.width() > 2 && imageRoi.height() > 2)
   {
-    setRoi(imageRoi);
-
-    if (m_roiChangedHandler)
+    if (m_drawingMode == DrawingMode::Roi)
     {
-      m_roiChangedHandler(m_roi);
+      setRoi(imageRoi);
+
+      if (m_roiChangedHandler)
+      {
+        m_roiChangedHandler(m_roi);
+      }
+    }
+    else if (m_drawingMode == DrawingMode::Exclusion)
+    {
+      m_exclusionRects.append(imageRoi.normalized());
+
+      if (m_exclusionRectAddedHandler)
+      {
+        m_exclusionRectAddedHandler(imageRoi.normalized());
+      }
     }
   }
 
@@ -196,4 +431,40 @@ QRect ImageViewWidget::imageRectToWidgetRect(const QRect& imageRect) const
     static_cast<int>(imageRect.height() * scaleY));
 
   return QRect(topLeft, scaledSize);
+}
+
+QRect ImageViewWidget::imageCircleToWidgetRect(const ImageCircle& circle) const
+{
+  const QRect drawRect = imageDrawRect();
+
+  if (drawRect.isEmpty() || m_image.isNull())
+  {
+    return {};
+  }
+
+  const double scaleX = static_cast<double>(drawRect.width()) / m_image.width();
+  const double scaleY = static_cast<double>(drawRect.height()) / m_image.height();
+  const double scale = (scaleX + scaleY) * 0.5;
+  const QPoint center(
+    drawRect.x() + static_cast<int>(circle.center.x() * scaleX),
+    drawRect.y() + static_cast<int>(circle.center.y() * scaleY));
+  const int radius = static_cast<int>(circle.radius * scale);
+
+  return QRect(center.x() - radius, center.y() - radius, radius * 2, radius * 2);
+}
+
+QPoint ImageViewWidget::imagePointToWidget(const QPoint& imagePoint) const
+{
+  const QRect drawRect = imageDrawRect();
+
+  if (drawRect.isEmpty() || m_image.isNull())
+  {
+    return {};
+  }
+
+  const double scaleX = static_cast<double>(drawRect.width()) / m_image.width();
+  const double scaleY = static_cast<double>(drawRect.height()) / m_image.height();
+  return QPoint(
+    drawRect.x() + static_cast<int>(imagePoint.x() * scaleX),
+    drawRect.y() + static_cast<int>(imagePoint.y() * scaleY));
 }

@@ -1,0 +1,33 @@
+{
+    "cameraId": "CAM07",
+    "tools": {
+        "localization": {
+            "enabled": true,
+            "exclusionRects": [
+                {
+                    "height": 71,
+                    "width": 191,
+                    "x": 1265,
+                    "y": 908
+                },
+                {
+                    "height": 77,
+                    "width": 177,
+                    "x": 498,
+                    "y": 881
+                }
+            ],
+            "method": "bw_dark_on_light",
+            "searchRoi": {
+                "height": 846,
+                "width": 900,
+                "x": 535,
+                "y": 283
+            },
+            "threshold": {
+                "factor": 0.5,
+                "offset": 0
+            }
+        }
+    }
+}

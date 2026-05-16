@@ -1,0 +1,40 @@
+{
+    "cameraId": "CAM08",
+    "tools": {
+        "surfaceLocalization": {
+            "annulus": {
+                "innerCircle": {
+                    "centerX": 964,
+                    "centerY": 707,
+                    "radius": 308
+                },
+                "outerCircle": {
+                    "centerX": 964,
+                    "centerY": 707,
+                    "radius": 397
+                }
+            },
+            "edge": {
+                "band": {
+                    "inner": 69,
+                    "outer": 20
+                },
+                "circle": {
+                    "centerX": 964,
+                    "centerY": 707,
+                    "radius": 377
+                },
+                "sensitivity": 74
+            },
+            "enabled": true,
+            "exclusionRects": [
+            ],
+            "method": "threshold",
+            "threshold": {
+                "max": 133,
+                "min": 0,
+                "value": 133
+            }
+        }
+    }
+}
