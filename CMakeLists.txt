@@ -7,18 +7,32 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(OpenCV REQUIRED)
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
 add_executable(VisionSystemCPP
     src/main.cpp
+    src/config/AppConfig.h
+    src/config/AppConfig.cpp
     src/camera/ICamera.h
     src/camera/FileCamera.h
     src/camera/FileCamera.cpp
+    src/gui/CameraTileWidget.h
+    src/gui/CameraTileWidget.cpp
+    src/gui/MainWindow.h
+    src/gui/MainWindow.cpp
     src/processing/ImageProcessor.h
     src/processing/ImageProcessor.cpp
     src/utils/Timer.h
 )
 
-target_link_libraries(VisionSystemCPP PRIVATE ${OpenCV_LIBS})
+target_link_libraries(VisionSystemCPP PRIVATE
+    ${OpenCV_LIBS}
+    Qt6::Widgets
+)
+
+target_include_directories(VisionSystemCPP PRIVATE
+    src
+)
 
 target_compile_definitions(VisionSystemCPP PRIVATE
     PROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
