@@ -18,6 +18,9 @@
     "resetErrors": "Reset errors",
     "reloadConfig": "Reload config",
     "gridView": "Grid view",
+    "toggleFullScreen": "Fullscreen / window",
+    "fullScreen": "Fullscreen",
+    "maximized": "Maximized window",
     "exit": "Exit",
     "backToCameraTools": "Back to camera tools"
   },
@@ -52,6 +55,7 @@
     "configLoaded": "Configuration loaded",
     "gridView": "Grid view",
     "cameraSelected": "Camera selected",
+    "windowMode": "Window mode",
     "backToCameraTools": "Back to camera tools",
     "toolPanel": "Tool panel"
   },

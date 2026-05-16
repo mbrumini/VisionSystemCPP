@@ -151,6 +151,11 @@ File:
 - log eventi;
 - tool dinamici della camera.
 
+Il menu `Sistema` contiene anche il comando `Fullscreen / finestra`, che alterna tra:
+
+- `showFullScreen()`: copre anche la barra Windows, utile per uso macchina/HMI;
+- `showMaximized()`: comodo per sviluppo e debug.
+
 `CameraTileWidget` gestisce una miniatura camera:
 
 - immagine preview;

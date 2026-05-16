@@ -245,6 +245,7 @@ void MainWindow::buildMenu()
     appendLog(trText("log.command") + ": " + trText("commands.stop"));
   });
   systemMenu->addAction(trText("commands.reloadConfig"), this, [this]() { loadConfiguration(); });
+  systemMenu->addAction(trText("commands.toggleFullScreen"), this, [this]() { toggleFullScreen(); });
   systemMenu->addSeparator();
   systemMenu->addAction(trText("commands.exit"), qApp, &QApplication::quit);
 }
@@ -277,6 +278,22 @@ void MainWindow::changeLanguage(const QString& languageCode)
 
   rebuildUi();
   appendLog(trText("log.languageChanged") + ": " + languageCode);
+}
+
+void MainWindow::toggleFullScreen()
+{
+  if (isFullScreen())
+  {
+    showMaximized();
+    appendLog(trText("log.windowMode") + ": " + trText("commands.maximized"));
+  }
+  else
+  {
+    showFullScreen();
+    appendLog(trText("log.windowMode") + ": " + trText("commands.fullScreen"));
+  }
+
+  updateLargePreview();
 }
 
 void MainWindow::loadConfiguration()

@@ -25,6 +25,7 @@ private:
   void buildMenu();
   void rebuildUi();
   void changeLanguage(const QString& languageCode);
+  void toggleFullScreen();
   void loadConfiguration();
   void showGridView();
   void selectCamera(const CameraConfig& camera);
