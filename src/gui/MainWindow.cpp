@@ -15,6 +15,7 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QPushButton>
+#include <QResizeEvent>
 #include <QScrollArea>
 #include <QSizePolicy>
 #include <QSplitter>
@@ -40,6 +41,12 @@ MainWindow::MainWindow(QWidget* parent)
 
   buildUi();
   loadConfiguration();
+}
+
+void MainWindow::resizeEvent(QResizeEvent* event)
+{
+  QMainWindow::resizeEvent(event);
+  updateLargePreview();
 }
 
 void MainWindow::buildUi()
@@ -254,6 +261,7 @@ void MainWindow::rebuildUi()
 
   m_tiles.clear();
   m_selectedCameraId.clear();
+  m_selectedPreview = {};
   buildUi();
   loadConfiguration();
 }
@@ -339,19 +347,23 @@ void MainWindow::selectCamera(const CameraConfig& camera)
     tile->setSelected(tile->camera().id == camera.id);
   }
 
-  const QPixmap preview = loadCameraPreview(camera);
+  m_selectedPreview = loadCameraPreview(camera);
   m_largeTitle->setText(camera.displayName + " | " + camera.id);
 
-  if (preview.isNull())
+  if (m_selectedPreview.isNull())
   {
     m_largeImage->setText(trText("labels.noImage"));
+    m_largeImage->setPixmap({});
   }
   else
   {
-    m_largeImage->setPixmap(preview.scaled(m_largeImage->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    m_largeImage->setText("");
+    updateLargePreview();
   }
 
   m_imageStack->setCurrentIndex(1);
+  QApplication::processEvents();
+  updateLargePreview();
   updateControlPanel(&camera);
   appendLog(trText("log.cameraSelected") + ": " + camera.id);
 }
@@ -441,6 +453,23 @@ void MainWindow::appendLog(const QString& message)
 {
   const QString timestamp = QDateTime::currentDateTime().toString("HH:mm:ss");
   m_log->append(QString("[%1] %2").arg(timestamp, message));
+}
+
+void MainWindow::updateLargePreview()
+{
+  if (!m_largeImage || m_selectedPreview.isNull())
+  {
+    return;
+  }
+
+  const QSize targetSize = m_largeImage->contentsRect().size();
+
+  if (targetSize.isEmpty())
+  {
+    return;
+  }
+
+  m_largeImage->setPixmap(m_selectedPreview.scaled(targetSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 }
 
 QString MainWindow::trText(const QString& key) const

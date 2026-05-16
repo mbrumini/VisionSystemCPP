@@ -17,6 +17,9 @@ class MainWindow : public QMainWindow
 public:
   explicit MainWindow(QWidget* parent = nullptr);
 
+protected:
+  void resizeEvent(QResizeEvent* event) override;
+
 private:
   void buildUi();
   void buildMenu();
@@ -30,6 +33,7 @@ private:
   void showToolPanel(const CameraConfig& camera, const QString& toolId);
   void clearToolPanel();
   void appendLog(const QString& message);
+  void updateLargePreview();
   QString trText(const QString& key) const;
   QPixmap loadCameraPreview(const CameraConfig& camera) const;
   QString firstImageInFolder(const QString& folder) const;
@@ -49,4 +53,5 @@ private:
   QVBoxLayout* m_toolsLayout = nullptr;
   QTextEdit* m_log = nullptr;
   QString m_selectedCameraId;
+  QPixmap m_selectedPreview;
 };
