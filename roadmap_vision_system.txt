@@ -93,6 +93,12 @@ GUI prevista
 Regola pratica
 Prima rendere chiaro e misurabile il flusso con immagini da cartella. Solo dopo passare alle camere reali.
 
+Linee guida di manutenzione
+- Separare le variabili e i parametri condivisi in file dedicati, preferibilmente tramite configurazione JSON o classi di configurazione dedicate.
+- Evitare file sorgente enormi: ogni parte del programma deve stare in moduli/file specifici e manutenibili.
+- Dividere la GUI in widget dedicati, la configurazione in classi dedicate, la camera in astrazioni dedicate e il processing in componenti propri.
+- Usare variabili globali solo quando sono davvero necessarie; per valori fissi preferire costanti in header dedicati, per valori modificabili preferire configurazione esterna.
+
 SDK camere reali
 SDK preferito: Allied Vision Vimba X.
 Astrazione prevista: VimbaCamera implementa ICamera.
