@@ -4,6 +4,7 @@
 #include "config/TranslationManager.h"
 #include "gui/CameraTileWidget.h"
 
+#include <QGridLayout>
 #include <QLabel>
 #include <QMainWindow>
 #include <QStackedWidget>
@@ -38,6 +39,8 @@ private:
   QVector<CameraTileWidget*> m_tiles;
   QStackedWidget* m_imageStack = nullptr;
   QWidget* m_gridPage = nullptr;
+  QWidget* m_gridContent = nullptr;
+  QGridLayout* m_gridLayout = nullptr;
   QLabel* m_largeImage = nullptr;
   QLabel* m_largeTitle = nullptr;
   QLabel* m_systemStatus = nullptr;

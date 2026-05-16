@@ -1,6 +1,7 @@
 #include "CameraTileWidget.h"
 
 #include <QMouseEvent>
+#include <QSizePolicy>
 #include <QString>
 #include <QVBoxLayout>
 
@@ -10,11 +11,14 @@ CameraTileWidget::CameraTileWidget(const CameraConfig& camera, QWidget* parent)
   setObjectName("cameraTile");
   setFrameShape(QFrame::StyledPanel);
   setCursor(Qt::PointingHandCursor);
-  setMinimumSize(180, 130);
+  setMinimumSize(150, 112);
+  setMaximumHeight(190);
+  setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
 
   m_imageLabel = new QLabel(this);
   m_imageLabel->setAlignment(Qt::AlignCenter);
-  m_imageLabel->setMinimumHeight(90);
+  m_imageLabel->setMinimumHeight(72);
+  m_imageLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
   m_imageLabel->setStyleSheet("background:#101418;color:#9aa4ad;");
 
   m_numberBadge = new QLabel(QString::number(camera.slot), m_imageLabel);

@@ -16,6 +16,7 @@
 #include <QMenuBar>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QSizePolicy>
 #include <QSplitter>
 #include <QVBoxLayout>
 
@@ -58,14 +59,26 @@ void MainWindow::buildUi()
   m_imageStack = new QStackedWidget(splitter);
   m_gridPage = new QWidget(m_imageStack);
 
-  auto* gridWrapper = new QWidget(m_gridPage);
-  auto* gridLayout = new QGridLayout(gridWrapper);
-  gridLayout->setContentsMargins(12, 12, 12, 12);
-  gridLayout->setSpacing(10);
+  auto* gridScrollArea = new QScrollArea(m_gridPage);
+  gridScrollArea->setWidgetResizable(true);
+  gridScrollArea->setFrameShape(QFrame::NoFrame);
 
+  m_gridContent = new QWidget(gridScrollArea);
+  m_gridLayout = new QGridLayout(m_gridContent);
+  m_gridLayout->setContentsMargins(12, 12, 12, 12);
+  m_gridLayout->setSpacing(10);
+  m_gridLayout->setSizeConstraint(QLayout::SetMinAndMaxSize);
+
+  for (int i = 0; i < 4; ++i)
+  {
+    m_gridLayout->setColumnStretch(i, 1);
+    m_gridLayout->setRowStretch(i, 1);
+  }
+
+  gridScrollArea->setWidget(m_gridContent);
   auto* gridPageLayout = new QVBoxLayout(m_gridPage);
   gridPageLayout->setContentsMargins(0, 0, 0, 0);
-  gridPageLayout->addWidget(gridWrapper);
+  gridPageLayout->addWidget(gridScrollArea);
   m_imageStack->addWidget(m_gridPage);
 
   auto* largePage = new QWidget(m_imageStack);
@@ -78,15 +91,21 @@ void MainWindow::buildUi()
   m_largeImage = new QLabel(largePage);
   m_largeImage->setAlignment(Qt::AlignCenter);
   m_largeImage->setStyleSheet("background:#101418;color:#9aa4ad;");
-  m_largeImage->setMinimumSize(800, 600);
+  m_largeImage->setMinimumSize(320, 240);
+  m_largeImage->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
   largeLayout->addWidget(m_largeTitle);
   largeLayout->addWidget(m_largeImage, 1);
   m_imageStack->addWidget(largePage);
 
-  auto* panel = new QWidget(splitter);
+  auto* panelScrollArea = new QScrollArea(splitter);
+  panelScrollArea->setWidgetResizable(true);
+  panelScrollArea->setFrameShape(QFrame::NoFrame);
+  panelScrollArea->setMinimumWidth(340);
+  panelScrollArea->setMaximumWidth(460);
+
+  auto* panel = new QWidget(panelScrollArea);
   panel->setMinimumWidth(340);
-  panel->setMaximumWidth(460);
   auto* panelLayout = new QVBoxLayout(panel);
   panelLayout->setContentsMargins(14, 14, 14, 14);
   panelLayout->setSpacing(12);
@@ -154,9 +173,10 @@ void MainWindow::buildUi()
   m_log->setMinimumHeight(160);
   logLayout->addWidget(m_log);
   panelLayout->addWidget(logBox, 1);
+  panelScrollArea->setWidget(panel);
 
   splitter->addWidget(m_imageStack);
-  splitter->addWidget(panel);
+  splitter->addWidget(panelScrollArea);
   splitter->setStretchFactor(0, 3);
   splitter->setStretchFactor(1, 1);
 
@@ -263,10 +283,7 @@ void MainWindow::loadConfiguration()
     return;
   }
 
-  auto* gridWrapper = m_gridPage->layout()->itemAt(0)->widget();
-  auto* gridLayout = qobject_cast<QGridLayout*>(gridWrapper->layout());
-
-  while (QLayoutItem* item = gridLayout->takeAt(0))
+  while (QLayoutItem* item = m_gridLayout->takeAt(0))
   {
     if (QWidget* widget = item->widget())
     {
@@ -281,10 +298,10 @@ void MainWindow::loadConfiguration()
 
   for (int i = 0; i < cameras.size(); ++i)
   {
-    auto* tile = new CameraTileWidget(cameras[i], gridWrapper);
+    auto* tile = new CameraTileWidget(cameras[i], m_gridContent);
     tile->setPreview(loadCameraPreview(cameras[i]));
     tile->setClickHandler([this](const CameraConfig& camera) { selectCamera(camera); });
-    gridLayout->addWidget(tile, i / 4, i % 4);
+    m_gridLayout->addWidget(tile, i / 4, i % 4);
     m_tiles.append(tile);
   }
 
