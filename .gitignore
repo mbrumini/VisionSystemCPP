@@ -1,0 +1,28 @@
+# Build outputs
+build/
+out/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.VC.db
+*.VC.VC.opendb
+
+# CMake
+CMakeUserPresets.json
+
+# Logs
+*.log
+
+# Binaries and generated runtime files
+*.exe
+*.dll
+*.pdb
+*.ilk
+*.obj
+
+# OS/editor noise
+Thumbs.db
+.DS_Store
+.vscode/

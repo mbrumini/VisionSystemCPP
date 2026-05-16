@@ -1,0 +1,99 @@
+ROADMAP - VISION SYSTEM C++
+
+Obiettivo generale
+Costruire un sistema di visione industriale in C++ con OpenCV, partendo da immagini su disco ma progettando da subito l'ambiente per supportare X telecamere indipendenti.
+
+Vincolo principale
+Il sistema deve supportare piu' telecamere indipendenti tra loro.
+Ogni camera deve poter avere:
+- sorgente propria;
+- configurazione propria;
+- stato proprio;
+- acquisizione propria;
+- processing proprio;
+- risultati propri;
+- log e diagnostica propri.
+
+Una camera che si ferma, rallenta o va in errore non deve bloccare automaticamente le altre, deve però dare un allarme per un
+problema che non permette di continuare a lavorare.
+
+Numero camere
+Il numero di camere deve essere dinamico e letto da configurazione.
+Non fissare nel codice un numero rigido di camere.
+Prevedere solo un limite massimo di sicurezza, utile per evitare configurazioni errate o non sostenibili.
+Il file iniziale contiene 16 slot camera, da CAM01 a CAM16.
+Ogni slot ha exists ed enabled per distinguere camera assente, camera presente ma disabilitata e camera attiva.
+
+Stato attuale
+- Progetto C++20 configurato con CMake.
+- OpenCV collegato tramite vcpkg.
+- FileCamera legge immagini da data/images.
+- ImageProcessor esegue un primo processing minimale.
+- Timer misura il tempo ciclo.
+- Build Release funzionante.
+
+Prossimi passi brevi
+1. Definire CameraContext: nome camera, configurazione, stato, sorgente, posizione in macchina univoca, processing e statistiche.
+2. Aggiungere Frame con dati immagine, timestamp, indice frame e nome sorgente.
+3. Aggiungere FrameQueue per ogni camera.
+4. Separare acquisizione e processing per camera.
+5. Aggiungere Logger minimale con prefisso camera.
+6. Leggere configurazione multi-camera da config/cameras.json.
+7. Inserire prima GUI Qt di test per visualizzare camere, selezione e tool dedicati.
+
+Primo algoritmo utile
+- Caricare immagine campione.
+- Convertire in grayscale.
+- Applicare blur leggero se serve.
+- Applicare soglia o edge detection.
+- Trovare contorni.
+- Disegnare bounding box.
+- Stampare misure base: area, bounding rect, centro.
+- Preparare un risultato OK/NOK provvisorio.
+
+Architettura desiderata
+Camera 1: ICamera -> FrameQueue -> ImageProcessor -> Result -> Logger/Output
+Camera 2: ICamera -> FrameQueue -> ImageProcessor -> Result -> Logger/Output
+Camera X: ICamera -> FrameQueue -> ImageProcessor -> Result -> Logger/Output
+
+Ogni pipeline camera deve essere indipendente.
+
+In futuro
+- Thread separati per acquisizione e processing.
+- Interfaccia verso PLC.
+- Salvataggio immagini NOK.
+- Integrazione camere reali tramite Vimba X.
+
+Formato configurazione
+La configurazione principale sara' in JSON.
+File iniziale previsto: config/cameras.json.
+XML resta una possibilita' solo se richiesto da software esterni, standard aziendali o integrazioni specifiche.
+
+Profili di controllo
+Le camere devono supportare profili diversi:
+- BW dimensionali;
+- grayscale misurazione;
+- grayscale superficiali;
+- grayscale AI;
+- grayscale con combinazione di superficiali, misure e AI.
+
+Nel JSON il tipo sorgente camera resta separato dal profilo di controllo.
+Il profilo di controllo deve indicare anche i tool GUI da mostrare quando la camera e' selezionata.
+
+GUI prevista
+- tecnologia principale: Qt 6 Widgets;
+- finestra fullscreen;
+- area immagini a sinistra;
+- pannello comandi a destra;
+- griglia miniature o camera selezionata grande;
+- click su miniatura per selezionare camera;
+- pannello destro con comandi generali e tool dedicati alla camera selezionata.
+- GUI anticipata come strumento di sviluppo e collaudo.
+
+Regola pratica
+Prima rendere chiaro e misurabile il flusso con immagini da cartella. Solo dopo passare alle camere reali.
+
+SDK camere reali
+SDK preferito: Allied Vision Vimba X.
+Astrazione prevista: VimbaCamera implementa ICamera.
+Nel JSON il tipo sorgente sara' type=vimba per camere reali.

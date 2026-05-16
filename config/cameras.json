@@ -1,0 +1,472 @@
+﻿{
+    "system":  {
+                   "maxCameras":  16
+               },
+    "cameras":  [
+                    {
+                        "id":  "CAM01",
+                        "displayName":  "Camera 1",
+                        "exists":  true,
+                        "enabled":  true,
+                        "type":  "file",
+                        "folder":  "data/images/cam01",
+                        "processingProfile":  "profile_cam01"
+                    },
+                    {
+                        "id":  "CAM02",
+                        "displayName":  "Camera 2",
+                        "exists":  true,
+                        "enabled":  true,
+                        "type":  "file",
+                        "folder":  "data/images/cam02",
+                        "processingProfile":  "profile_cam02"
+                    },
+                    {
+                        "id":  "CAM03",
+                        "displayName":  "Camera 3",
+                        "exists":  true,
+                        "enabled":  true,
+                        "type":  "file",
+                        "folder":  "data/images/cam03",
+                        "processingProfile":  "profile_cam03"
+                    },
+                    {
+                        "id":  "CAM04",
+                        "displayName":  "Camera 4",
+                        "exists":  true,
+                        "enabled":  true,
+                        "type":  "file",
+                        "folder":  "data/images/cam04",
+                        "processingProfile":  "profile_cam04"
+                    },
+                    {
+                        "id":  "CAM05",
+                        "displayName":  "Camera 5",
+                        "exists":  true,
+                        "enabled":  true,
+                        "type":  "file",
+                        "folder":  "data/images/cam05",
+                        "processingProfile":  "profile_cam05"
+                    },
+                    {
+                        "id":  "CAM06",
+                        "displayName":  "Camera 6",
+                        "exists":  true,
+                        "enabled":  true,
+                        "type":  "file",
+                        "folder":  "data/images/cam06",
+                        "processingProfile":  "profile_cam06"
+                    },
+                    {
+                        "id":  "CAM07",
+                        "displayName":  "Camera 7",
+                        "exists":  true,
+                        "enabled":  true,
+                        "type":  "file",
+                        "folder":  "data/images/cam07",
+                        "processingProfile":  "profile_cam07"
+                    },
+                    {
+                        "id":  "CAM08",
+                        "displayName":  "Camera 8",
+                        "exists":  true,
+                        "enabled":  true,
+                        "type":  "file",
+                        "folder":  "data/images/cam08",
+                        "processingProfile":  "profile_cam08"
+                    },
+                    {
+                        "id":  "CAM09",
+                        "displayName":  "Camera 9",
+                        "exists":  true,
+                        "enabled":  true,
+                        "type":  "file",
+                        "folder":  "data/images/cam09",
+                        "processingProfile":  "profile_cam09"
+                    },
+                    {
+                        "id":  "CAM10",
+                        "displayName":  "Camera 10",
+                        "exists":  true,
+                        "enabled":  true,
+                        "type":  "file",
+                        "folder":  "data/images/cam10",
+                        "processingProfile":  "profile_cam10"
+                    },
+                    {
+                        "id":  "CAM11",
+                        "displayName":  "Camera 11",
+                        "exists":  true,
+                        "enabled":  true,
+                        "type":  "file",
+                        "folder":  "data/images/cam11",
+                        "processingProfile":  "profile_cam11"
+                    },
+                    {
+                        "id":  "CAM12",
+                        "displayName":  "Camera 12",
+                        "exists":  true,
+                        "enabled":  true,
+                        "type":  "file",
+                        "folder":  "data/images/cam12",
+                        "processingProfile":  "profile_cam12"
+                    },
+                    {
+                        "id":  "CAM13",
+                        "displayName":  "Camera 13",
+                        "exists":  true,
+                        "enabled":  true,
+                        "type":  "file",
+                        "folder":  "data/images/cam13",
+                        "processingProfile":  "profile_cam13"
+                    },
+                    {
+                        "id":  "CAM14",
+                        "displayName":  "Camera 14",
+                        "exists":  true,
+                        "enabled":  true,
+                        "type":  "file",
+                        "folder":  "data/images/cam14",
+                        "processingProfile":  "profile_cam14"
+                    },
+                    {
+                        "id":  "CAM15",
+                        "displayName":  "Camera 15",
+                        "exists":  true,
+                        "enabled":  true,
+                        "type":  "file",
+                        "folder":  "data/images/cam15",
+                        "processingProfile":  "profile_cam15"
+                    },
+                    {
+                        "id":  "CAM16",
+                        "displayName":  "Camera 16",
+                        "exists":  true,
+                        "enabled":  true,
+                        "type":  "file",
+                        "folder":  "data/images/cam16",
+                        "processingProfile":  "profile_cam16"
+                    }
+                ],
+    "processingProfiles":  {
+                               "default":  {
+                                               "imageMode":  "grayscale",
+                                               "inspectionTypes":  [
+                                                                       "measurement"
+                                                                   ],
+                                               "guiTools":  [
+                                                                "measurements",
+                                                                "threshold",
+                                                                "calibration",
+                                                                "roi",
+                                                                "saveSample"
+                                                            ]
+                                           },
+                               "bw_dimensional":  {
+                                                      "imageMode":  "bw",
+                                                      "inspectionTypes":  [
+                                                                              "dimensional"
+                                                                          ],
+                                                      "guiTools":  [
+                                                                       "dimensions",
+                                                                       "threshold",
+                                                                       "calibration",
+                                                                       "roi",
+                                                                       "tolerances",
+                                                                       "saveSample"
+                                                                   ]
+                                                  },
+                               "grayscale_measurement":  {
+                                                             "imageMode":  "grayscale",
+                                                             "inspectionTypes":  [
+                                                                                     "measurement"
+                                                                                 ],
+                                                             "guiTools":  [
+                                                                              "measurements",
+                                                                              "threshold",
+                                                                              "calibration",
+                                                                              "roi",
+                                                                              "tolerances",
+                                                                              "saveSample"
+                                                                          ]
+                                                         },
+                               "grayscale_surface":  {
+                                                         "imageMode":  "grayscale",
+                                                         "inspectionTypes":  [
+                                                                                 "surface"
+                                                                             ],
+                                                         "guiTools":  [
+                                                                          "surfaceDefects",
+                                                                          "lighting",
+                                                                          "contrast",
+                                                                          "roi",
+                                                                          "defectMap",
+                                                                          "saveSample"
+                                                                      ]
+                                                     },
+                               "grayscale_ai":  {
+                                                    "imageMode":  "grayscale",
+                                                    "inspectionTypes":  [
+                                                                            "ai"
+                                                                        ],
+                                                    "guiTools":  [
+                                                                     "aiModel",
+                                                                     "confidence",
+                                                                     "classes",
+                                                                     "roi",
+                                                                     "datasetCapture",
+                                                                     "saveSample"
+                                                                 ]
+                                                },
+                               "grayscale_surface_measurement_ai":  {
+                                                                        "imageMode":  "grayscale",
+                                                                        "inspectionTypes":  [
+                                                                                                "surface",
+                                                                                                "measurement",
+                                                                                                "ai"
+                                                                                            ],
+                                                                        "guiTools":  [
+                                                                                         "surfaceDefects",
+                                                                                         "measurements",
+                                                                                         "aiModel",
+                                                                                         "confidence",
+                                                                                         "threshold",
+                                                                                         "calibration",
+                                                                                         "roi",
+                                                                                         "tolerances",
+                                                                                         "datasetCapture",
+                                                                                         "saveSample"
+                                                                                     ]
+                                                                    },
+                               "profile_cam01":  {
+                                                     "imageMode":  "grayscale",
+                                                     "inspectionTypes":  [
+                                                                             "measurement"
+                                                                         ],
+                                                     "guiTools":  [
+                                                                      "measurements",
+                                                                      "threshold",
+                                                                      "calibration",
+                                                                      "roi",
+                                                                      "tolerances",
+                                                                      "saveSample"
+                                                                  ]
+                                                 },
+                               "profile_cam02":  {
+                                                     "imageMode":  "bw",
+                                                     "inspectionTypes":  [
+                                                                             "dimensional"
+                                                                         ],
+                                                     "guiTools":  [
+                                                                      "dimensions",
+                                                                      "threshold",
+                                                                      "calibration",
+                                                                      "roi",
+                                                                      "tolerances",
+                                                                      "saveSample"
+                                                                  ]
+                                                 },
+                               "profile_cam03":  {
+                                                     "imageMode":  "grayscale",
+                                                     "inspectionTypes":  [
+                                                                             "surface"
+                                                                         ],
+                                                     "guiTools":  [
+                                                                      "surfaceDefects",
+                                                                      "lighting",
+                                                                      "contrast",
+                                                                      "roi",
+                                                                      "defectMap",
+                                                                      "saveSample"
+                                                                  ]
+                                                 },
+                               "profile_cam04":  {
+                                                     "imageMode":  "grayscale",
+                                                     "inspectionTypes":  [
+                                                                             "ai"
+                                                                         ],
+                                                     "guiTools":  [
+                                                                      "aiModel",
+                                                                      "confidence",
+                                                                      "classes",
+                                                                      "roi",
+                                                                      "datasetCapture",
+                                                                      "saveSample"
+                                                                  ]
+                                                 },
+                               "profile_cam05":  {
+                                                     "imageMode":  "grayscale",
+                                                     "inspectionTypes":  [
+                                                                             "surface",
+                                                                             "measurement",
+                                                                             "ai"
+                                                                         ],
+                                                     "guiTools":  [
+                                                                      "surfaceDefects",
+                                                                      "measurements",
+                                                                      "aiModel",
+                                                                      "confidence",
+                                                                      "threshold",
+                                                                      "calibration",
+                                                                      "roi",
+                                                                      "tolerances",
+                                                                      "datasetCapture",
+                                                                      "saveSample"
+                                                                  ]
+                                                 },
+                               "profile_cam06":  {
+                                                     "imageMode":  "grayscale",
+                                                     "inspectionTypes":  [
+                                                                             "measurement"
+                                                                         ],
+                                                     "guiTools":  [
+                                                                      "measurements",
+                                                                      "threshold",
+                                                                      "calibration",
+                                                                      "roi",
+                                                                      "tolerances",
+                                                                      "saveSample"
+                                                                  ]
+                                                 },
+                               "profile_cam07":  {
+                                                     "imageMode":  "grayscale",
+                                                     "inspectionTypes":  [
+                                                                             "measurement"
+                                                                         ],
+                                                     "guiTools":  [
+                                                                      "measurements",
+                                                                      "threshold",
+                                                                      "calibration",
+                                                                      "roi",
+                                                                      "tolerances",
+                                                                      "saveSample"
+                                                                  ]
+                                                 },
+                               "profile_cam08":  {
+                                                     "imageMode":  "grayscale",
+                                                     "inspectionTypes":  [
+                                                                             "measurement"
+                                                                         ],
+                                                     "guiTools":  [
+                                                                      "measurements",
+                                                                      "threshold",
+                                                                      "calibration",
+                                                                      "roi",
+                                                                      "tolerances",
+                                                                      "saveSample"
+                                                                  ]
+                                                 },
+                               "profile_cam09":  {
+                                                     "imageMode":  "grayscale",
+                                                     "inspectionTypes":  [
+                                                                             "measurement"
+                                                                         ],
+                                                     "guiTools":  [
+                                                                      "measurements",
+                                                                      "threshold",
+                                                                      "calibration",
+                                                                      "roi",
+                                                                      "tolerances",
+                                                                      "saveSample"
+                                                                  ]
+                                                 },
+                               "profile_cam10":  {
+                                                     "imageMode":  "grayscale",
+                                                     "inspectionTypes":  [
+                                                                             "measurement"
+                                                                         ],
+                                                     "guiTools":  [
+                                                                      "measurements",
+                                                                      "threshold",
+                                                                      "calibration",
+                                                                      "roi",
+                                                                      "tolerances",
+                                                                      "saveSample"
+                                                                  ]
+                                                 },
+                               "profile_cam11":  {
+                                                     "imageMode":  "grayscale",
+                                                     "inspectionTypes":  [
+                                                                             "measurement"
+                                                                         ],
+                                                     "guiTools":  [
+                                                                      "measurements",
+                                                                      "threshold",
+                                                                      "calibration",
+                                                                      "roi",
+                                                                      "tolerances",
+                                                                      "saveSample"
+                                                                  ]
+                                                 },
+                               "profile_cam12":  {
+                                                     "imageMode":  "grayscale",
+                                                     "inspectionTypes":  [
+                                                                             "measurement"
+                                                                         ],
+                                                     "guiTools":  [
+                                                                      "measurements",
+                                                                      "threshold",
+                                                                      "calibration",
+                                                                      "roi",
+                                                                      "tolerances",
+                                                                      "saveSample"
+                                                                  ]
+                                                 },
+                               "profile_cam13":  {
+                                                     "imageMode":  "grayscale",
+                                                     "inspectionTypes":  [
+                                                                             "measurement"
+                                                                         ],
+                                                     "guiTools":  [
+                                                                      "measurements",
+                                                                      "threshold",
+                                                                      "calibration",
+                                                                      "roi",
+                                                                      "tolerances",
+                                                                      "saveSample"
+                                                                  ]
+                                                 },
+                               "profile_cam14":  {
+                                                     "imageMode":  "grayscale",
+                                                     "inspectionTypes":  [
+                                                                             "measurement"
+                                                                         ],
+                                                     "guiTools":  [
+                                                                      "measurements",
+                                                                      "threshold",
+                                                                      "calibration",
+                                                                      "roi",
+                                                                      "tolerances",
+                                                                      "saveSample"
+                                                                  ]
+                                                 },
+                               "profile_cam15":  {
+                                                     "imageMode":  "grayscale",
+                                                     "inspectionTypes":  [
+                                                                             "measurement"
+                                                                         ],
+                                                     "guiTools":  [
+                                                                      "measurements",
+                                                                      "threshold",
+                                                                      "calibration",
+                                                                      "roi",
+                                                                      "tolerances",
+                                                                      "saveSample"
+                                                                  ]
+                                                 },
+                               "profile_cam16":  {
+                                                     "imageMode":  "grayscale",
+                                                     "inspectionTypes":  [
+                                                                             "measurement"
+                                                                         ],
+                                                     "guiTools":  [
+                                                                      "measurements",
+                                                                      "threshold",
+                                                                      "calibration",
+                                                                      "roi",
+                                                                      "tolerances",
+                                                                      "saveSample"
+                                                                  ]
+                                                 }
+                           }
+}

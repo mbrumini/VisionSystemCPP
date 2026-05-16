@@ -1,0 +1,32 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "x64-release",
+      "displayName": "x64 Release",
+      "generator": "Visual Studio 17 2022",
+      "architecture": "x64",
+      "binaryDir": "${sourceDir}/build",
+      "environment": {
+        "PATH": "D:/Qt/6.10.3/msvc2022_64/bin;$penv{PATH}",
+        "TEMP": "D:/temp",
+        "TMP": "D:/temp",
+        "VCPKG_DEFAULT_BINARY_CACHE": "D:/dev/.cache/vcpkg/binary",
+        "VCPKG_DOWNLOADS": "D:/dev/.cache/vcpkg/downloads",
+        "NUGET_PACKAGES": "D:/dev/.cache/nuget/packages"
+      },
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "D:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "CMAKE_PREFIX_PATH": "D:/Qt/6.10.3/msvc2022_64",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "x64-release",
+      "configurePreset": "x64-release",
+      "configuration": "Release"
+    }
+  ]
+}

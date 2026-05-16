@@ -1,0 +1,58 @@
+GUI - SCELTA TECNOLOGICA
+
+Decisione
+La GUI principale sara' sviluppata con Qt 6 Widgets.
+
+Motivazione
+Qt 6 Widgets e' adatto a una applicazione desktop industriale vera:
+- finestra fullscreen;
+- layout stabile con area immagini e pannello comandi;
+- gestione click e selezione camera;
+- pannelli dinamici;
+- log e diagnostica;
+- finestre future di configurazione;
+- integrazione con C++ e OpenCV.
+
+Scelta principale
+- Framework GUI: Qt 6 Widgets.
+- Linguaggio: C++.
+- Rendering immagini: conversione cv::Mat -> QImage -> widget Qt.
+- Layout base: QMainWindow fullscreen.
+- Area sinistra: ImageAreaWidget.
+- Area destra: ControlPanelWidget.
+
+Struttura prevista
+MainWindow
+- ImageAreaWidget
+  - griglia miniature camera;
+  - vista camera selezionata grande.
+- ControlPanelWidget
+  - stato sistema;
+  - comandi generali;
+  - stato camera selezionata;
+  - tool dinamici da guiTools;
+  - log eventi.
+
+Relazione con JSON
+La GUI deve leggere la configurazione multi-camera.
+Quando una camera viene selezionata:
+1. leggere processingProfile della camera;
+2. leggere guiTools del profilo;
+3. mostrare nel pannello destro solo i tool previsti.
+
+Alternative valutate
+OpenCV HighGUI:
+- utile solo per test rapidi;
+- non adatto alla GUI principale.
+
+Dear ImGui:
+- valido per debug e tool tecnici;
+- possibile uso futuro per strumenti interni;
+- non scelto come GUI operatore principale.
+
+wxWidgets:
+- valido come framework C++ desktop;
+- non scelto perche' Qt e' piu' adatto a layout dinamici, immagini e applicazione industriale completa.
+
+Regola pratica
+La GUI viene anticipata nella roadmap perche' serve come strumento di sviluppo e collaudo, non solo come interfaccia finale.

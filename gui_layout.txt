@@ -1,0 +1,77 @@
+GUI - LAYOUT E COMPORTAMENTO
+
+Tecnologia scelta
+La GUI principale sara' sviluppata con Qt 6 Widgets.
+OpenCV HighGUI resta solo per test rapidi provvisori.
+
+Idea generale
+La GUI deve essere fullscreen.
+La finestra principale e' divisa in due aree:
+- area immagini a sinistra, circa 75%;
+- pannello comandi a destra, circa 25%.
+
+Area immagini
+L'area sinistra puo' lavorare in due modalita':
+- griglia miniature di tutte le camere esistenti/abilitate;
+- vista grande della camera selezionata.
+
+Immagini e ridimensionamento
+Le immagini reali arriveranno dalle telecamere e potranno essere grandi, da circa 3-4 MB fino a 50 MB o piu'.
+La GUI non deve usare sempre l'immagine originale a piena risoluzione.
+Per la griglia deve usare miniature.
+Per la camera selezionata deve usare una preview ridimensionata alla dimensione utile del widget.
+Il frame originale resta disponibile alla pipeline di processing e misura.
+
+Regola performance GUI
+Ridimensionare solo quando serve:
+- nuovo frame;
+- cambio dimensione area immagine;
+- cambio modalita' griglia/camera selezionata.
+
+Evitare resize e conversione cv::Mat -> QImage ad ogni repaint.
+
+Interazione principale
+- Click su una miniatura: seleziona la camera e la mostra grande.
+- Comando dedicato: ritorna alla griglia.
+- La camera selezionata determina i tool visibili nel pannello destro.
+
+Pannello destro
+Il pannello destro e' sempre visibile.
+Deve contenere:
+- stato sistema;
+- comandi generali;
+- dati della camera selezionata;
+- tool specifici della camera selezionata;
+- log eventi principali.
+
+Comandi generali
+Questi comandi non dipendono dalla camera selezionata:
+- start sistema;
+- stop sistema;
+- reset errori;
+- reload configurazione;
+- vista griglia;
+- uscita/chiusura controllata.
+
+Tool specifici camera
+I tool specifici non devono essere tutti sempre visibili.
+Devono dipendere dal processingProfile della camera selezionata.
+
+Esempio:
+- camera BW dimensionale: mostra tool dimensionali, soglia, calibrazione, ROI, tolleranze.
+- camera grayscale misurazione: mostra tool misure, soglia, calibrazione, ROI, tolleranze.
+- camera grayscale superficiale: mostra tool difetti superficiali, luce, contrasto, ROI, mappa difetti.
+- camera grayscale AI: mostra tool modello AI, confidenza, classi, ROI, cattura dataset.
+- camera combinata surface + measurement + ai: mostra solo i tool necessari a quei tre controlli.
+
+Relazione con JSON
+Ogni processingProfile in config/cameras.json contiene:
+- imageMode;
+- inspectionTypes;
+- guiTools.
+
+La GUI deve leggere guiTools per sapere quali strumenti mostrare nel pannello destro quando quella camera viene selezionata.
+
+Regola pratica
+Non mostrare strumenti inutili per la camera selezionata.
+La GUI deve aiutare l'operatore a vedere solo quello che serve per quel tipo di controllo.
