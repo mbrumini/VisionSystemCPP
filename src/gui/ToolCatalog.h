@@ -1,5 +1,7 @@
 #pragma once
 
+#include "config/TranslationManager.h"
+
 #include <QString>
 #include <QVector>
 
@@ -19,6 +21,6 @@ struct ToolDefinition
 class ToolCatalog
 {
 public:
-  static ToolDefinition tool(const QString& toolId);
-  static QString label(const QString& toolId);
+  static ToolDefinition tool(const QString& toolId, const TranslationManager& translations);
+  static QString label(const QString& toolId, const TranslationManager& translations);
 };

@@ -8,6 +8,8 @@
 ToolPanelWidget::ToolPanelWidget(
   const ToolDefinition& tool,
   const QString& cameraLabel,
+  const QString& noteText,
+  const QString& backText,
   std::function<void()> backHandler,
   std::function<void(const ToolActionDefinition&)> actionHandler,
   QWidget* parent)
@@ -43,12 +45,12 @@ ToolPanelWidget::ToolPanelWidget(
 
   layout->addWidget(actions);
 
-  auto* note = new QLabel("Placeholder: questi pulsanti verranno collegati alle funzioni operative.", this);
+  auto* note = new QLabel(noteText, this);
   note->setWordWrap(true);
   note->setObjectName("toolPanelNote");
   layout->addWidget(note);
 
-  auto* backButton = new QPushButton("Torna ai tool camera", this);
+  auto* backButton = new QPushButton(backText, this);
   QObject::connect(backButton, &QPushButton::clicked, this, [backHandler]() {
     if (backHandler)
     {

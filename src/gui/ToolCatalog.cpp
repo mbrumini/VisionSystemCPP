@@ -6,112 +6,125 @@ namespace
 {
 using ActionList = QVector<ToolActionDefinition>;
 
-ToolDefinition makeTool(const QString& id, const QString& label, const ActionList& actions)
+struct ToolActionTemplate
 {
-  return {id, label, actions};
+  QString id;
+  QString textKey;
+};
+
+struct ToolTemplate
+{
+  QString id;
+  QString textKey;
+  QVector<ToolActionTemplate> actions;
+};
+
+ToolTemplate makeTool(const QString& id, const QString& textKey, const QVector<ToolActionTemplate>& actions)
+{
+  return {id, textKey, actions};
 }
 
-const QHash<QString, ToolDefinition>& tools()
+const QHash<QString, ToolTemplate>& tools()
 {
-  static const QHash<QString, ToolDefinition> catalog = {
-    {"measurements", makeTool("measurements", "Misure", {
-      {"diameter", "Diametro"},
-      {"length", "Lunghezza"},
-      {"radius", "Raggio"},
-      {"distance", "Distanza"},
-      {"angle", "Angolo"},
-      {"center", "Centro"},
-      {"area", "Area"}
+  static const QHash<QString, ToolTemplate> catalog = {
+    {"measurements", makeTool("measurements", "tools.measurements", {
+      {"diameter", "actions.diameter"},
+      {"length", "actions.length"},
+      {"radius", "actions.radius"},
+      {"distance", "actions.distance"},
+      {"angle", "actions.angle"},
+      {"center", "actions.center"},
+      {"area", "actions.area"}
     })},
-    {"dimensions", makeTool("dimensions", "Dimensioni", {
-      {"outerDiameter", "Diametro esterno"},
-      {"innerDiameter", "Diametro interno"},
-      {"width", "Larghezza"},
-      {"height", "Altezza"},
-      {"length", "Lunghezza"},
-      {"radius", "Raggio"},
-      {"parallelism", "Parallelismo"}
+    {"dimensions", makeTool("dimensions", "tools.dimensions", {
+      {"outerDiameter", "actions.outerDiameter"},
+      {"innerDiameter", "actions.innerDiameter"},
+      {"width", "actions.width"},
+      {"height", "actions.height"},
+      {"length", "actions.length"},
+      {"radius", "actions.radius"},
+      {"parallelism", "actions.parallelism"}
     })},
-    {"threshold", makeTool("threshold", "Soglia", {
-      {"manualThreshold", "Soglia manuale"},
-      {"autoThreshold", "Soglia automatica"},
-      {"minValue", "Valore minimo"},
-      {"maxValue", "Valore massimo"},
-      {"invert", "Inverti BW"}
+    {"threshold", makeTool("threshold", "tools.threshold", {
+      {"manualThreshold", "actions.manualThreshold"},
+      {"autoThreshold", "actions.autoThreshold"},
+      {"minValue", "actions.minValue"},
+      {"maxValue", "actions.maxValue"},
+      {"invert", "actions.invert"}
     })},
-    {"calibration", makeTool("calibration", "Calibrazione", {
-      {"pixelSize", "Scala pixel/mm"},
-      {"referenceMeasure", "Quota riferimento"},
-      {"calibrationImage", "Immagine calibrazione"},
-      {"saveCalibration", "Salva calibrazione"}
+    {"calibration", makeTool("calibration", "tools.calibration", {
+      {"pixelSize", "actions.pixelSize"},
+      {"referenceMeasure", "actions.referenceMeasure"},
+      {"calibrationImage", "actions.calibrationImage"},
+      {"saveCalibration", "actions.saveCalibration"}
     })},
-    {"roi", makeTool("roi", "ROI", {
-      {"rectangle", "Rettangolo"},
-      {"circle", "Cerchio"},
-      {"polygon", "Poligono"},
-      {"move", "Sposta"},
-      {"resize", "Ridimensiona"},
-      {"clear", "Cancella ROI"}
+    {"roi", makeTool("roi", "tools.roi", {
+      {"rectangle", "actions.rectangle"},
+      {"circle", "actions.circle"},
+      {"polygon", "actions.polygon"},
+      {"move", "actions.move"},
+      {"resize", "actions.resize"},
+      {"clear", "actions.clearRoi"}
     })},
-    {"saveSample", makeTool("saveSample", "Salva campione", {
-      {"saveOk", "Salva OK"},
-      {"saveNok", "Salva NOK"},
-      {"saveRaw", "Salva originale"},
-      {"saveProcessed", "Salva processata"}
+    {"saveSample", makeTool("saveSample", "tools.saveSample", {
+      {"saveOk", "actions.saveOk"},
+      {"saveNok", "actions.saveNok"},
+      {"saveRaw", "actions.saveRaw"},
+      {"saveProcessed", "actions.saveProcessed"}
     })},
-    {"tolerances", makeTool("tolerances", "Tolleranze", {
-      {"nominal", "Nominale"},
-      {"minTolerance", "Tolleranza min"},
-      {"maxTolerance", "Tolleranza max"},
-      {"okNokRule", "Regola OK/NOK"}
+    {"tolerances", makeTool("tolerances", "tools.tolerances", {
+      {"nominal", "actions.nominal"},
+      {"minTolerance", "actions.minTolerance"},
+      {"maxTolerance", "actions.maxTolerance"},
+      {"okNokRule", "actions.okNokRule"}
     })},
-    {"surfaceDefects", makeTool("surfaceDefects", "Difetti superficie", {
-      {"scratch", "Graffi"},
-      {"spot", "Macchie"},
-      {"dent", "Ammaccature"},
-      {"blob", "Blob"},
-      {"minimumArea", "Area minima"}
+    {"surfaceDefects", makeTool("surfaceDefects", "tools.surfaceDefects", {
+      {"scratch", "actions.scratch"},
+      {"spot", "actions.spot"},
+      {"dent", "actions.dent"},
+      {"blob", "actions.blob"},
+      {"minimumArea", "actions.minimumArea"}
     })},
-    {"lighting", makeTool("lighting", "Illuminazione", {
-      {"brightness", "Luminosita'"},
-      {"uniformity", "Uniformita'"},
-      {"exposure", "Esposizione"},
-      {"gain", "Gain"}
+    {"lighting", makeTool("lighting", "tools.lighting", {
+      {"brightness", "actions.brightness"},
+      {"uniformity", "actions.uniformity"},
+      {"exposure", "actions.exposure"},
+      {"gain", "actions.gain"}
     })},
-    {"contrast", makeTool("contrast", "Contrasto", {
-      {"contrastLevel", "Livello contrasto"},
-      {"gamma", "Gamma"},
-      {"equalize", "Equalizza"},
-      {"clahe", "CLAHE"}
+    {"contrast", makeTool("contrast", "tools.contrast", {
+      {"contrastLevel", "actions.contrastLevel"},
+      {"gamma", "actions.gamma"},
+      {"equalize", "actions.equalize"},
+      {"clahe", "actions.clahe"}
     })},
-    {"defectMap", makeTool("defectMap", "Mappa difetti", {
-      {"heatMap", "Heat map"},
-      {"defectList", "Lista difetti"},
-      {"severity", "Severita'"},
-      {"exportMap", "Esporta mappa"}
+    {"defectMap", makeTool("defectMap", "tools.defectMap", {
+      {"heatMap", "actions.heatMap"},
+      {"defectList", "actions.defectList"},
+      {"severity", "actions.severity"},
+      {"exportMap", "actions.exportMap"}
     })},
-    {"aiModel", makeTool("aiModel", "Modello AI", {
-      {"selectModel", "Seleziona modello"},
-      {"loadModel", "Carica modello"},
-      {"classMap", "Mappa classi"},
-      {"runInference", "Test inferenza"}
+    {"aiModel", makeTool("aiModel", "tools.aiModel", {
+      {"selectModel", "actions.selectModel"},
+      {"loadModel", "actions.loadModel"},
+      {"classMap", "actions.classMap"},
+      {"runInference", "actions.runInference"}
     })},
-    {"confidence", makeTool("confidence", "Confidenza", {
-      {"minimumConfidence", "Confidenza minima"},
-      {"warningThreshold", "Soglia warning"},
-      {"rejectThreshold", "Soglia scarto"}
+    {"confidence", makeTool("confidence", "tools.confidence", {
+      {"minimumConfidence", "actions.minimumConfidence"},
+      {"warningThreshold", "actions.warningThreshold"},
+      {"rejectThreshold", "actions.rejectThreshold"}
     })},
-    {"classes", makeTool("classes", "Classi", {
-      {"okClass", "Classe OK"},
-      {"nokClass", "Classe NOK"},
-      {"ignoreClass", "Classi ignorate"},
-      {"classColors", "Colori classi"}
+    {"classes", makeTool("classes", "tools.classes", {
+      {"okClass", "actions.okClass"},
+      {"nokClass", "actions.nokClass"},
+      {"ignoreClass", "actions.ignoreClass"},
+      {"classColors", "actions.classColors"}
     })},
-    {"datasetCapture", makeTool("datasetCapture", "Cattura dataset", {
-      {"captureOk", "Cattura OK"},
-      {"captureNok", "Cattura NOK"},
-      {"captureUnknown", "Cattura incerti"},
-      {"openDatasetFolder", "Apri cartella dataset"}
+    {"datasetCapture", makeTool("datasetCapture", "tools.datasetCapture", {
+      {"captureOk", "actions.captureOk"},
+      {"captureNok", "actions.captureNok"},
+      {"captureUnknown", "actions.captureUnknown"},
+      {"openDatasetFolder", "actions.openDatasetFolder"}
     })}
   };
 
@@ -119,16 +132,25 @@ const QHash<QString, ToolDefinition>& tools()
 }
 }
 
-ToolDefinition ToolCatalog::tool(const QString& toolId)
+ToolDefinition ToolCatalog::tool(const QString& toolId, const TranslationManager& translations)
 {
-  const ToolDefinition fallback = makeTool(toolId, toolId, {
-    {"placeholder", "Placeholder"}
-  });
+  const ToolTemplate toolTemplate = tools().value(toolId, makeTool(toolId, toolId, {
+    {"placeholder", "actions.placeholder"}
+  }));
 
-  return tools().value(toolId, fallback);
+  ToolDefinition result;
+  result.id = toolTemplate.id;
+  result.label = translations.text(toolTemplate.textKey);
+
+  for (const ToolActionTemplate& actionTemplate : toolTemplate.actions)
+  {
+    result.actions.append({actionTemplate.id, translations.text(actionTemplate.textKey)});
+  }
+
+  return result;
 }
 
-QString ToolCatalog::label(const QString& toolId)
+QString ToolCatalog::label(const QString& toolId, const TranslationManager& translations)
 {
-  return tool(toolId).label;
+  return tool(toolId, translations).label;
 }

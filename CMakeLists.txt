@@ -13,6 +13,8 @@ add_executable(VisionSystemCPP
     src/main.cpp
     src/config/AppConfig.h
     src/config/AppConfig.cpp
+    src/config/TranslationManager.h
+    src/config/TranslationManager.cpp
     src/camera/ICamera.h
     src/camera/FileCamera.h
     src/camera/FileCamera.cpp

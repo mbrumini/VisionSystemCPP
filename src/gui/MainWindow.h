@@ -1,6 +1,7 @@
 #pragma once
 
 #include "config/AppConfig.h"
+#include "config/TranslationManager.h"
 #include "gui/CameraTileWidget.h"
 
 #include <QLabel>
@@ -17,6 +18,9 @@ public:
 
 private:
   void buildUi();
+  void buildMenu();
+  void rebuildUi();
+  void changeLanguage(const QString& languageCode);
   void loadConfiguration();
   void showGridView();
   void selectCamera(const CameraConfig& camera);
@@ -25,10 +29,12 @@ private:
   void showToolPanel(const CameraConfig& camera, const QString& toolId);
   void clearToolPanel();
   void appendLog(const QString& message);
+  QString trText(const QString& key) const;
   QPixmap loadCameraPreview(const CameraConfig& camera) const;
   QString firstImageInFolder(const QString& folder) const;
 
   AppConfig m_config;
+  TranslationManager m_translations;
   QVector<CameraTileWidget*> m_tiles;
   QStackedWidget* m_imageStack = nullptr;
   QWidget* m_gridPage = nullptr;

@@ -12,6 +12,8 @@
 #include <QHBoxLayout>
 #include <QJsonDocument>
 #include <QLabel>
+#include <QMenu>
+#include <QMenuBar>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QSplitter>
@@ -29,6 +31,12 @@ QString projectPath(const QString& relativePath)
 MainWindow::MainWindow(QWidget* parent)
   : QMainWindow(parent)
 {
+  QString error;
+  if (!m_translations.loadLanguage("it", &error))
+  {
+    m_translations.loadLanguage("en");
+  }
+
   buildUi();
   loadConfiguration();
 }
@@ -37,6 +45,7 @@ void MainWindow::buildUi()
 {
   setWindowTitle("VisionSystemCPP");
   resize(1600, 900);
+  buildMenu();
 
   auto* root = new QWidget(this);
   auto* rootLayout = new QHBoxLayout(root);
@@ -64,7 +73,7 @@ void MainWindow::buildUi()
   largeLayout->setContentsMargins(16, 16, 16, 16);
   largeLayout->setSpacing(10);
 
-  m_largeTitle = new QLabel("Nessuna camera selezionata", largePage);
+  m_largeTitle = new QLabel(trText("labels.noCameraSelected"), largePage);
   m_largeTitle->setObjectName("largeTitle");
   m_largeImage = new QLabel(largePage);
   m_largeImage->setAlignment(Qt::AlignCenter);
@@ -82,54 +91,63 @@ void MainWindow::buildUi()
   panelLayout->setContentsMargins(14, 14, 14, 14);
   panelLayout->setSpacing(12);
 
-  m_systemStatus = new QLabel("Sistema pronto", panel);
+  m_systemStatus = new QLabel(trText("status.systemReady"), panel);
   m_systemStatus->setObjectName("panelStatus");
   panelLayout->addWidget(m_systemStatus);
 
-  auto* commands = new QGroupBox("Comandi generali", panel);
+  auto* commands = new QGroupBox(trText("groups.generalCommands"), panel);
   auto* commandsLayout = new QGridLayout(commands);
-  const QStringList commandNames = {"Start", "Stop", "Reset errori", "Reload config", "Vista griglia", "Esci"};
+  const QVector<QPair<QString, QString>> commandsList = {
+    {"start", "commands.start"},
+    {"stop", "commands.stop"},
+    {"resetErrors", "commands.resetErrors"},
+    {"reloadConfig", "commands.reloadConfig"},
+    {"gridView", "commands.gridView"},
+    {"exit", "commands.exit"}
+  };
 
-  for (int i = 0; i < commandNames.size(); ++i)
+  for (int i = 0; i < commandsList.size(); ++i)
   {
-    auto* button = new QPushButton(commandNames[i], commands);
+    const QString commandId = commandsList[i].first;
+    const QString commandLabel = trText(commandsList[i].second);
+    auto* button = new QPushButton(commandLabel, commands);
     commandsLayout->addWidget(button, i / 2, i % 2);
 
-    if (commandNames[i] == "Vista griglia")
+    if (commandId == "gridView")
     {
       connect(button, &QPushButton::clicked, this, [this]() { showGridView(); });
     }
-    else if (commandNames[i] == "Reload config")
+    else if (commandId == "reloadConfig")
     {
       connect(button, &QPushButton::clicked, this, [this]() { loadConfiguration(); });
     }
-    else if (commandNames[i] == "Esci")
+    else if (commandId == "exit")
     {
       connect(button, &QPushButton::clicked, qApp, &QApplication::quit);
     }
     else
     {
-      connect(button, &QPushButton::clicked, this, [this, name = commandNames[i]]() {
-        appendLog("Comando: " + name);
+      connect(button, &QPushButton::clicked, this, [this, commandLabel]() {
+        appendLog(trText("log.command") + ": " + commandLabel);
       });
     }
   }
 
   panelLayout->addWidget(commands);
 
-  auto* cameraBox = new QGroupBox("Camera selezionata", panel);
+  auto* cameraBox = new QGroupBox(trText("groups.selectedCamera"), panel);
   auto* cameraLayout = new QVBoxLayout(cameraBox);
-  m_cameraDetails = new QLabel("Seleziona una miniatura", cameraBox);
+  m_cameraDetails = new QLabel(trText("labels.selectThumbnail"), cameraBox);
   m_cameraDetails->setWordWrap(true);
   cameraLayout->addWidget(m_cameraDetails);
   panelLayout->addWidget(cameraBox);
 
-  auto* toolsBox = new QGroupBox("Tool camera", panel);
+  auto* toolsBox = new QGroupBox(trText("groups.cameraTools"), panel);
   m_toolsLayout = new QVBoxLayout(toolsBox);
   m_toolsContainer = toolsBox;
   panelLayout->addWidget(toolsBox);
 
-  auto* logBox = new QGroupBox("Log eventi", panel);
+  auto* logBox = new QGroupBox(trText("groups.eventLog"), panel);
   auto* logLayout = new QVBoxLayout(logBox);
   m_log = new QTextEdit(logBox);
   m_log->setReadOnly(true);
@@ -159,6 +177,80 @@ void MainWindow::buildUi()
   );
 }
 
+void MainWindow::buildMenu()
+{
+  menuBar()->clear();
+
+  QMenu* recipesMenu = menuBar()->addMenu(trText("menu.recipes"));
+  recipesMenu->addAction(trText("menu.selectRecipe"), this, [this]() {
+    appendLog(trText("log.placeholder") + ": " + trText("menu.selectRecipe"));
+  });
+  recipesMenu->addAction(trText("menu.newRecipe"), this, [this]() {
+    appendLog(trText("log.placeholder") + ": " + trText("menu.newRecipe"));
+  });
+  recipesMenu->addAction(trText("menu.importRecipe"), this, [this]() {
+    appendLog(trText("log.placeholder") + ": " + trText("menu.importRecipe"));
+  });
+  recipesMenu->addAction(trText("menu.exportRecipe"), this, [this]() {
+    appendLog(trText("log.placeholder") + ": " + trText("menu.exportRecipe"));
+  });
+
+  QMenu* configMenu = menuBar()->addMenu(trText("menu.configurations"));
+  configMenu->addAction(trText("menu.cameras"), this, [this]() {
+    appendLog(trText("log.placeholder") + ": " + trText("menu.cameras"));
+  });
+  configMenu->addAction(trText("menu.paths"), this, [this]() {
+    appendLog(trText("log.placeholder") + ": " + trText("menu.paths"));
+  });
+  configMenu->addAction(trText("menu.diagnostics"), this, [this]() {
+    appendLog(trText("log.placeholder") + ": " + trText("menu.diagnostics"));
+  });
+
+  QMenu* languageMenu = menuBar()->addMenu(trText("menu.language"));
+  languageMenu->addAction("Italiano", this, [this]() { changeLanguage("it"); });
+  languageMenu->addAction("English", this, [this]() { changeLanguage("en"); });
+
+  QMenu* systemMenu = menuBar()->addMenu(trText("menu.system"));
+  systemMenu->addAction(trText("commands.start"), this, [this]() {
+    appendLog(trText("log.command") + ": " + trText("commands.start"));
+  });
+  systemMenu->addAction(trText("commands.stop"), this, [this]() {
+    appendLog(trText("log.command") + ": " + trText("commands.stop"));
+  });
+  systemMenu->addAction(trText("commands.reloadConfig"), this, [this]() { loadConfiguration(); });
+  systemMenu->addSeparator();
+  systemMenu->addAction(trText("commands.exit"), qApp, &QApplication::quit);
+}
+
+void MainWindow::rebuildUi()
+{
+  QWidget* oldCentralWidget = centralWidget();
+  setCentralWidget(nullptr);
+
+  if (oldCentralWidget)
+  {
+    oldCentralWidget->deleteLater();
+  }
+
+  m_tiles.clear();
+  m_selectedCameraId.clear();
+  buildUi();
+  loadConfiguration();
+}
+
+void MainWindow::changeLanguage(const QString& languageCode)
+{
+  QString error;
+  if (!m_translations.loadLanguage(languageCode, &error))
+  {
+    appendLog(error);
+    return;
+  }
+
+  rebuildUi();
+  appendLog(trText("log.languageChanged") + ": " + languageCode);
+}
+
 void MainWindow::loadConfiguration()
 {
   QString error;
@@ -166,7 +258,7 @@ void MainWindow::loadConfiguration()
 
   if (!m_config.load(configPath, &error))
   {
-    m_systemStatus->setText("Errore configurazione");
+    m_systemStatus->setText(trText("status.configError"));
     appendLog(error);
     return;
   }
@@ -196,9 +288,15 @@ void MainWindow::loadConfiguration()
     m_tiles.append(tile);
   }
 
-  m_systemStatus->setText(QString("Sistema pronto | %1 camere attive").arg(cameras.size()));
-  appendLog(QString("Configurazione caricata: %1 camere attive su massimo %2")
+  m_systemStatus->setText(QString("%1 | %2 %3")
+                            .arg(trText("status.systemReady"))
+                            .arg(cameras.size())
+                            .arg(trText("status.activeCameras")));
+  appendLog(QString("%1: %2 %3 %4 %5")
+              .arg(trText("log.configLoaded"))
               .arg(cameras.size())
+              .arg(trText("status.activeCameras"))
+              .arg(trText("labels.max"))
               .arg(m_config.maxCameras()));
 
   if (!cameras.isEmpty())
@@ -212,7 +310,7 @@ void MainWindow::loadConfiguration()
 void MainWindow::showGridView()
 {
   m_imageStack->setCurrentIndex(0);
-  appendLog("Vista griglia");
+  appendLog(trText("log.gridView"));
 }
 
 void MainWindow::selectCamera(const CameraConfig& camera)
@@ -229,7 +327,7 @@ void MainWindow::selectCamera(const CameraConfig& camera)
 
   if (preview.isNull())
   {
-    m_largeImage->setText("NO IMAGE");
+    m_largeImage->setText(trText("labels.noImage"));
   }
   else
   {
@@ -238,7 +336,7 @@ void MainWindow::selectCamera(const CameraConfig& camera)
 
   m_imageStack->setCurrentIndex(1);
   updateControlPanel(&camera);
-  appendLog("Camera selezionata: " + camera.id);
+  appendLog(trText("log.cameraSelected") + ": " + camera.id);
 }
 
 void MainWindow::updateControlPanel(const CameraConfig* camera)
@@ -247,19 +345,24 @@ void MainWindow::updateControlPanel(const CameraConfig* camera)
 
   if (!camera)
   {
-    m_cameraDetails->setText("Seleziona una miniatura");
-    m_toolsLayout->addWidget(new QLabel("Nessun tool selezionato", m_toolsContainer));
+    m_cameraDetails->setText(trText("labels.selectThumbnail"));
+    m_toolsLayout->addWidget(new QLabel(trText("labels.noToolSelected"), m_toolsContainer));
     m_toolsLayout->addStretch(1);
     return;
   }
 
   m_cameraDetails->setText(
-    QString("Camera %1 | %2\nProfilo: %3\nModalita': %4\nControlli: %5\nSorgente: %6")
+    QString("%1 %2 | %3\n%4: %5\n%6: %7\n%8: %9\n%10: %11")
+      .arg(trText("labels.camera"))
       .arg(camera->slot)
       .arg(camera->displayName)
+      .arg(trText("labels.profile"))
       .arg(camera->processingProfileId)
+      .arg(trText("labels.mode"))
       .arg(camera->profile.imageMode)
+      .arg(trText("labels.inspections"))
       .arg(camera->profile.inspectionTypes.join(", "))
+      .arg(trText("labels.source"))
       .arg(camera->folder));
 
   showCameraToolList(*camera);
@@ -271,7 +374,7 @@ void MainWindow::showCameraToolList(const CameraConfig& camera)
 
   for (const QString& tool : camera.profile.guiTools)
   {
-    auto* button = new QPushButton(ToolCatalog::label(tool), m_toolsContainer);
+    auto* button = new QPushButton(ToolCatalog::label(tool, m_translations), m_toolsContainer);
     connect(button, &QPushButton::clicked, this, [this, camera, tool]() {
       showToolPanel(camera, tool);
     });
@@ -285,21 +388,23 @@ void MainWindow::showToolPanel(const CameraConfig& camera, const QString& toolId
 {
   clearToolPanel();
 
-  const ToolDefinition tool = ToolCatalog::tool(toolId);
+  const ToolDefinition tool = ToolCatalog::tool(toolId, m_translations);
   auto* panel = new ToolPanelWidget(
     tool,
-    QString("Camera %1").arg(camera.slot),
+    QString("%1 %2").arg(trText("labels.camera")).arg(camera.slot),
+    trText("labels.placeholderNote"),
+    trText("commands.backToCameraTools"),
     [this, camera]() {
       showCameraToolList(camera);
-      appendLog("Ritorno ai tool camera: " + camera.id);
+      appendLog(trText("log.backToCameraTools") + ": " + camera.id);
     },
     [this, tool](const ToolActionDefinition& action) {
-      appendLog("Placeholder: " + tool.label + " -> " + action.label);
+      appendLog(trText("log.placeholder") + ": " + tool.label + " -> " + action.label);
     },
     m_toolsContainer);
 
   m_toolsLayout->addWidget(panel);
-  appendLog("Pannello tool: " + tool.label);
+  appendLog(trText("log.toolPanel") + ": " + tool.label);
 }
 
 void MainWindow::clearToolPanel()
@@ -319,6 +424,11 @@ void MainWindow::appendLog(const QString& message)
 {
   const QString timestamp = QDateTime::currentDateTime().toString("HH:mm:ss");
   m_log->append(QString("[%1] %2").arg(timestamp, message));
+}
+
+QString MainWindow::trText(const QString& key) const
+{
+  return m_translations.text(key);
 }
 
 QPixmap MainWindow::loadCameraPreview(const CameraConfig& camera) const
