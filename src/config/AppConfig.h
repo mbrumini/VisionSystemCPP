@@ -14,6 +14,7 @@ struct ProcessingProfile
 
 struct CameraConfig
 {
+  int slot = 0;
   QString id;
   QString displayName;
   bool exists = false;

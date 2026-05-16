@@ -4,6 +4,7 @@
                },
     "cameras":  [
                     {
+                        "slot":  1,
                         "id":  "CAM01",
                         "displayName":  "Camera 1",
                         "exists":  true,
@@ -13,6 +14,7 @@
                         "processingProfile":  "profile_cam01"
                     },
                     {
+                        "slot":  2,
                         "id":  "CAM02",
                         "displayName":  "Camera 2",
                         "exists":  true,
@@ -22,6 +24,7 @@
                         "processingProfile":  "profile_cam02"
                     },
                     {
+                        "slot":  3,
                         "id":  "CAM03",
                         "displayName":  "Camera 3",
                         "exists":  true,
@@ -31,6 +34,7 @@
                         "processingProfile":  "profile_cam03"
                     },
                     {
+                        "slot":  4,
                         "id":  "CAM04",
                         "displayName":  "Camera 4",
                         "exists":  true,
@@ -40,6 +44,7 @@
                         "processingProfile":  "profile_cam04"
                     },
                     {
+                        "slot":  5,
                         "id":  "CAM05",
                         "displayName":  "Camera 5",
                         "exists":  true,
@@ -49,6 +54,7 @@
                         "processingProfile":  "profile_cam05"
                     },
                     {
+                        "slot":  6,
                         "id":  "CAM06",
                         "displayName":  "Camera 6",
                         "exists":  true,
@@ -58,6 +64,7 @@
                         "processingProfile":  "profile_cam06"
                     },
                     {
+                        "slot":  7,
                         "id":  "CAM07",
                         "displayName":  "Camera 7",
                         "exists":  true,
@@ -67,6 +74,7 @@
                         "processingProfile":  "profile_cam07"
                     },
                     {
+                        "slot":  8,
                         "id":  "CAM08",
                         "displayName":  "Camera 8",
                         "exists":  true,
@@ -76,6 +84,7 @@
                         "processingProfile":  "profile_cam08"
                     },
                     {
+                        "slot":  9,
                         "id":  "CAM09",
                         "displayName":  "Camera 9",
                         "exists":  true,
@@ -85,6 +94,7 @@
                         "processingProfile":  "profile_cam09"
                     },
                     {
+                        "slot":  10,
                         "id":  "CAM10",
                         "displayName":  "Camera 10",
                         "exists":  true,
@@ -94,6 +104,7 @@
                         "processingProfile":  "profile_cam10"
                     },
                     {
+                        "slot":  11,
                         "id":  "CAM11",
                         "displayName":  "Camera 11",
                         "exists":  true,
@@ -103,6 +114,7 @@
                         "processingProfile":  "profile_cam11"
                     },
                     {
+                        "slot":  12,
                         "id":  "CAM12",
                         "displayName":  "Camera 12",
                         "exists":  true,
@@ -112,6 +124,7 @@
                         "processingProfile":  "profile_cam12"
                     },
                     {
+                        "slot":  13,
                         "id":  "CAM13",
                         "displayName":  "Camera 13",
                         "exists":  true,
@@ -121,6 +134,7 @@
                         "processingProfile":  "profile_cam13"
                     },
                     {
+                        "slot":  14,
                         "id":  "CAM14",
                         "displayName":  "Camera 14",
                         "exists":  true,
@@ -130,6 +144,7 @@
                         "processingProfile":  "profile_cam14"
                     },
                     {
+                        "slot":  15,
                         "id":  "CAM15",
                         "displayName":  "Camera 15",
                         "exists":  true,
@@ -139,6 +154,7 @@
                         "processingProfile":  "profile_cam15"
                     },
                     {
+                        "slot":  16,
                         "id":  "CAM16",
                         "displayName":  "Camera 16",
                         "exists":  true,

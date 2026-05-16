@@ -34,7 +34,7 @@ Dopo l'esecuzione, aprire un nuovo terminale.
 
 L'eseguibile in `build\Release` non va lanciato direttamente da doppio click se il `PATH` non contiene Qt, perche' Windows non trova DLL come `Qt6Widgets.dll`.
 
-Per creare una cartella avviabile da Explorer:
+Per copiare le DLL Qt accanto all'exe di build e creare anche una cartella avviabile da Explorer:
 
 ```powershell
 .\deploy_release.ps1
@@ -44,4 +44,10 @@ Poi lanciare:
 
 ```text
 D:\dev\VisionSystemCPP\deploy\Release\VisionSystemCPP.exe
+```
+
+Dopo lo script funziona anche:
+
+```text
+D:\dev\VisionSystemCPP\build\Release\VisionSystemCPP.exe
 ```

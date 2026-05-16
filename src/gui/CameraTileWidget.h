@@ -26,6 +26,7 @@ private:
 
   CameraConfig m_camera;
   QLabel* m_imageLabel = nullptr;
+  QLabel* m_numberBadge = nullptr;
   QLabel* m_titleLabel = nullptr;
   QLabel* m_statusLabel = nullptr;
   QPixmap m_preview;

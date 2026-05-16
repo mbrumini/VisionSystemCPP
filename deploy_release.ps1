@@ -3,6 +3,7 @@ $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $qtBin = "D:\Qt\6.10.3\msvc2022_64\bin"
 $buildExe = Join-Path $projectRoot "build\Release\VisionSystemCPP.exe"
+$buildDir = Split-Path -Parent $buildExe
 $deployDir = Join-Path $projectRoot "deploy\Release"
 $deployExe = Join-Path $deployDir "VisionSystemCPP.exe"
 
@@ -16,8 +17,16 @@ Copy-Item -Force -Path $buildExe -Destination $deployExe
 & (Join-Path $qtBin "windeployqt.exe") `
     --release `
     --compiler-runtime `
+    --dir $buildDir `
+    $buildExe
+
+& (Join-Path $qtBin "windeployqt.exe") `
+    --release `
+    --compiler-runtime `
     --dir $deployDir `
     $deployExe
 
 Write-Host "Deploy pronto:"
 Write-Host $deployExe
+Write-Host "Anche l'eseguibile di build ora ha le DLL Qt accanto:"
+Write-Host $buildExe

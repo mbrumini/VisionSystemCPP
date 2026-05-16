@@ -279,7 +279,8 @@ void MainWindow::updateControlPanel(const CameraConfig* camera)
   }
 
   m_cameraDetails->setText(
-    QString("%1\nProfilo: %2\nModalita': %3\nControlli: %4\nSorgente: %5")
+    QString("Camera %1 | %2\nProfilo: %3\nModalita': %4\nControlli: %5\nSorgente: %6")
+      .arg(camera->slot)
       .arg(camera->displayName)
       .arg(camera->processingProfileId)
       .arg(camera->profile.imageMode)

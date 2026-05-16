@@ -73,6 +73,7 @@ bool AppConfig::load(const QString& filePath, QString* errorMessage)
     const QJsonObject cameraObject = cameraValue.toObject();
 
     CameraConfig camera;
+    camera.slot = cameraObject.value("slot").toInt(m_cameras.size() + 1);
     camera.id = cameraObject.value("id").toString();
     camera.displayName = cameraObject.value("displayName").toString(camera.id);
     camera.exists = cameraObject.value("exists").toBool();

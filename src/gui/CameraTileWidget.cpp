@@ -1,6 +1,7 @@
 #include "CameraTileWidget.h"
 
 #include <QMouseEvent>
+#include <QString>
 #include <QVBoxLayout>
 
 CameraTileWidget::CameraTileWidget(const CameraConfig& camera, QWidget* parent)
@@ -15,6 +16,11 @@ CameraTileWidget::CameraTileWidget(const CameraConfig& camera, QWidget* parent)
   m_imageLabel->setAlignment(Qt::AlignCenter);
   m_imageLabel->setMinimumHeight(90);
   m_imageLabel->setStyleSheet("background:#101418;color:#9aa4ad;");
+
+  m_numberBadge = new QLabel(QString::number(camera.slot), m_imageLabel);
+  m_numberBadge->setAlignment(Qt::AlignCenter);
+  m_numberBadge->setMinimumSize(30, 24);
+  m_numberBadge->setStyleSheet("background:#f4f7fb;color:#101418;border-radius:4px;font-weight:700;");
 
   m_titleLabel = new QLabel(camera.displayName + "  " + camera.id, this);
   m_titleLabel->setObjectName("tileTitle");
@@ -87,8 +93,17 @@ void CameraTileWidget::updatePreview()
   if (m_preview.isNull())
   {
     m_imageLabel->setText("NO IMAGE");
-    return;
+  }
+  else
+  {
+    m_imageLabel->setText("");
+    m_imageLabel->setPixmap(m_preview.scaled(m_imageLabel->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
   }
 
-  m_imageLabel->setPixmap(m_preview.scaled(m_imageLabel->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+  m_numberBadge->adjustSize();
+  const int badgeWidth = qMax(m_numberBadge->width(), 30);
+  const int badgeHeight = qMax(m_numberBadge->height(), 24);
+  m_numberBadge->resize(badgeWidth, badgeHeight);
+  m_numberBadge->move(m_imageLabel->width() - badgeWidth - 8, m_imageLabel->height() - badgeHeight - 8);
+  m_numberBadge->raise();
 }
