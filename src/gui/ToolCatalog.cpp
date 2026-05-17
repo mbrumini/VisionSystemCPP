@@ -34,6 +34,14 @@ const QHash<QString, ToolTemplate>& tools()
       {"testLocalization", "actions.testLocalization"},
       {"clearRoi", "actions.clearRoi"}
     })},
+    {"geometries", makeTool("geometries", "tools.geometries", {
+      {"pointGeometry", "actions.pointGeometry"},
+      {"lineGeometry", "actions.lineGeometry"},
+      {"circleGeometry", "actions.circleGeometry"},
+      {"arcGeometry", "actions.arcGeometry"},
+      {"edgeGeometry", "actions.edgeGeometry"},
+      {"contourGeometry", "actions.contourGeometry"}
+    })},
     {"measurements", makeTool("measurements", "tools.measurements", {
       {"diameter", "actions.diameter"},
       {"length", "actions.length"},

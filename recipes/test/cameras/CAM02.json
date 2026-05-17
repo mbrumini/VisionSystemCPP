@@ -1,8 +1,15 @@
 {
     "cameraId": "CAM02",
     "tools": {
+        "geometries": {
+            "enabled": true,
+            "lines": [
+            ]
+        },
         "localization": {
             "enabled": true,
+            "exclusionRects": [
+            ],
             "method": "bw_dark_on_light",
             "searchRoi": {
                 "height": 855,
@@ -13,9 +20,7 @@
             "threshold": {
                 "factor": 0.5,
                 "offset": 0
-            },
-            "exclusionRects": [
-            ]
+            }
         }
     }
 }

@@ -3,6 +3,8 @@
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPolygonF>
+#include <algorithm>
 #include <cmath>
 
 ImageViewWidget::ImageViewWidget(QWidget* parent)
@@ -23,8 +25,12 @@ void ImageViewWidget::clearImage()
 {
   m_image = {};
   m_hasRoi = false;
+  m_hasGeometryArea = false;
   m_exclusionRects.clear();
   m_circles.clear();
+  m_geometryPoints.clear();
+  m_geometryLines.clear();
+  m_geometryOverlay.clear();
   update();
 }
 
@@ -88,6 +94,56 @@ void ImageViewWidget::clearCircles()
   update();
 }
 
+void ImageViewWidget::setGeometryArea(const ImageRotatedRect& imageArea)
+{
+  m_geometryArea = normalizedGeometryArea(imageArea);
+  m_hasGeometryArea = m_geometryArea.size.width() > 2.0 && m_geometryArea.size.height() > 2.0;
+  update();
+}
+
+void ImageViewWidget::clearGeometryArea()
+{
+  m_hasGeometryArea = false;
+  m_geometryArea = {};
+  update();
+}
+
+void ImageViewWidget::setGeometryPoints(const QVector<QPointF>& imagePoints)
+{
+  m_geometryPoints = imagePoints;
+  update();
+}
+
+void ImageViewWidget::clearGeometryPoints()
+{
+  m_geometryPoints.clear();
+  update();
+}
+
+void ImageViewWidget::setGeometryLines(const QVector<ImageLine>& imageLines)
+{
+  m_geometryLines = imageLines;
+  update();
+}
+
+void ImageViewWidget::clearGeometryLines()
+{
+  m_geometryLines.clear();
+  update();
+}
+
+void ImageViewWidget::setGeometryOverlay(const GeometryOverlay& overlay)
+{
+  m_geometryOverlay = overlay;
+  update();
+}
+
+void ImageViewWidget::clearGeometryOverlay()
+{
+  m_geometryOverlay.clear();
+  update();
+}
+
 void ImageViewWidget::setRoiDrawingEnabled(bool enabled)
 {
   m_drawingMode = enabled ? DrawingMode::Roi : DrawingMode::None;
@@ -95,7 +151,9 @@ void ImageViewWidget::setRoiDrawingEnabled(bool enabled)
   m_dragging = false;
   m_movingExclusion = false;
   m_resizingExclusion = false;
+  m_movingGeometryOverlayPoint = false;
   m_selectedExclusionIndex = -1;
+  m_selectedGeometryOverlayPointIndex = -1;
   m_threePointCirclePoints.clear();
   update();
 }
@@ -107,7 +165,71 @@ void ImageViewWidget::setExclusionDrawingEnabled(bool enabled)
   m_dragging = false;
   m_movingExclusion = false;
   m_resizingExclusion = false;
+  m_movingGeometryOverlayPoint = false;
   m_threePointCirclePoints.clear();
+  update();
+}
+
+void ImageViewWidget::setGeometryAreaEditingEnabled(bool enabled)
+{
+  m_drawingMode = enabled ? DrawingMode::GeometryArea : DrawingMode::None;
+  setCursor(enabled ? Qt::SizeAllCursor : Qt::ArrowCursor);
+  m_dragging = false;
+  m_movingExclusion = false;
+  m_resizingExclusion = false;
+  m_movingGeometryOverlayPoint = false;
+  m_selectedExclusionIndex = -1;
+  m_selectedGeometryOverlayPointIndex = -1;
+  m_activeGeometryAreaHandle = GeometryAreaHandle::None;
+  m_threePointCirclePoints.clear();
+  m_twoPointLinePoints.clear();
+  update();
+}
+
+void ImageViewWidget::setGeometryPointPickingEnabled(bool enabled)
+{
+  m_drawingMode = enabled ? DrawingMode::GeometryPointPick : DrawingMode::None;
+  setCursor(enabled ? Qt::CrossCursor : Qt::ArrowCursor);
+  m_dragging = false;
+  m_movingExclusion = false;
+  m_resizingExclusion = false;
+  m_movingGeometryOverlayPoint = false;
+  m_selectedExclusionIndex = -1;
+  m_selectedGeometryOverlayPointIndex = -1;
+  m_activeGeometryAreaHandle = GeometryAreaHandle::None;
+  m_threePointCirclePoints.clear();
+  m_twoPointLinePoints.clear();
+  update();
+}
+
+void ImageViewWidget::setGeometryOverlayPointEditingEnabled(bool enabled)
+{
+  m_drawingMode = enabled ? DrawingMode::GeometryOverlayPointEdit : DrawingMode::None;
+  setCursor(enabled ? Qt::OpenHandCursor : Qt::ArrowCursor);
+  m_dragging = false;
+  m_movingExclusion = false;
+  m_resizingExclusion = false;
+  m_movingGeometryOverlayPoint = false;
+  m_selectedExclusionIndex = -1;
+  m_selectedGeometryOverlayPointIndex = -1;
+  m_activeGeometryAreaHandle = GeometryAreaHandle::None;
+  m_threePointCirclePoints.clear();
+  m_twoPointLinePoints.clear();
+  update();
+}
+
+void ImageViewWidget::setTwoPointLineDrawingEnabled(bool enabled)
+{
+  m_drawingMode = enabled ? DrawingMode::TwoPointLine : DrawingMode::None;
+  setCursor(enabled ? Qt::CrossCursor : Qt::ArrowCursor);
+  m_dragging = false;
+  m_movingExclusion = false;
+  m_resizingExclusion = false;
+  m_movingGeometryOverlayPoint = false;
+  m_selectedExclusionIndex = -1;
+  m_selectedGeometryOverlayPointIndex = -1;
+  m_threePointCirclePoints.clear();
+  m_twoPointLinePoints.clear();
   update();
 }
 
@@ -170,6 +292,31 @@ void ImageViewWidget::setCircleChangedHandler(std::function<void(bool, const Ima
 void ImageViewWidget::setThreePointCircleHandler(std::function<void(const QVector<QPoint>&)> handler)
 {
   m_threePointCircleHandler = std::move(handler);
+}
+
+void ImageViewWidget::setGeometryAreaChangedHandler(std::function<void(const ImageRotatedRect&)> handler)
+{
+  m_geometryAreaChangedHandler = std::move(handler);
+}
+
+void ImageViewWidget::setGeometryPointPickedHandler(std::function<void(const QPointF&)> handler)
+{
+  m_geometryPointPickedHandler = std::move(handler);
+}
+
+void ImageViewWidget::setGeometryPointMovedHandler(std::function<void(const QPointF&)> handler)
+{
+  m_geometryPointMovedHandler = std::move(handler);
+}
+
+void ImageViewWidget::setGeometryOverlayPointMovedHandler(std::function<void(int, const QPointF&)> handler)
+{
+  m_geometryOverlayPointMovedHandler = std::move(handler);
+}
+
+void ImageViewWidget::setTwoPointLineHandler(std::function<void(const QVector<QPoint>&)> handler)
+{
+  m_twoPointLineHandler = std::move(handler);
 }
 
 void ImageViewWidget::paintEvent(QPaintEvent* event)
@@ -245,6 +392,101 @@ void ImageViewWidget::paintEvent(QPaintEvent* event)
     painter.drawEllipse(imageCircleToWidgetRect(m_circles[i]));
   }
 
+  QPen geometryAreaPen(QColor("#00d2ff"));
+  geometryAreaPen.setWidth(2);
+  QPen geometryLinePen(QColor("#ff4fd8"));
+  geometryLinePen.setWidth(3);
+
+  if (m_hasGeometryArea)
+  {
+    const QVector<QPointF> corners = geometryAreaWidgetCorners();
+    QPolygonF polygon;
+    for (const QPointF& corner : corners)
+    {
+      polygon << corner;
+    }
+
+    painter.setPen(geometryAreaPen);
+    painter.setBrush(QColor(0, 210, 255, 35));
+    painter.drawPolygon(polygon);
+
+    painter.setBrush(QColor("#00d2ff"));
+    for (const QPointF& corner : corners)
+    {
+      painter.drawRect(QRectF(corner - QPointF(4, 4), QSizeF(8, 8)));
+    }
+
+    const QPointF topCenter = (corners[0] + corners[1]) * 0.5;
+    const QPointF rotateHandle = geometryAreaWidgetRotateHandle();
+    painter.drawLine(topCenter, rotateHandle);
+    painter.setBrush(QColor("#ffffff"));
+    painter.drawEllipse(rotateHandle, 5, 5);
+  }
+
+  if (!m_geometryLines.isEmpty())
+  {
+    painter.setPen(geometryLinePen);
+    for (const ImageLine& line : m_geometryLines)
+    {
+      painter.drawLine(imagePointToWidget(line.start), imagePointToWidget(line.end));
+    }
+  }
+
+  if (!m_geometryPoints.isEmpty())
+  {
+    painter.setPen(QPen(QColor("#ffffff"), 2));
+    painter.setBrush(QColor("#ff4fd8"));
+    for (int i = 0; i < m_geometryPoints.size(); ++i)
+    {
+      const QPointF widgetPoint = imagePointToWidget(m_geometryPoints[i]);
+      painter.drawEllipse(widgetPoint, 6, 6);
+      painter.drawText(widgetPoint + QPointF(9, -9), QString::number(i + 1));
+    }
+  }
+
+  if (!m_geometryOverlay.empty())
+  {
+    for (const GeometryOverlayBand& band : m_geometryOverlay.bands)
+    {
+      const double angle = band.angleDegrees * 3.14159265358979323846 / 180.0;
+      const QPointF axisX(std::cos(angle), std::sin(angle));
+      const QPointF axisY(-std::sin(angle), std::cos(angle));
+      const double halfWidth = band.imageSize.width() * 0.5;
+      const double halfHeight = band.imageSize.height() * 0.5;
+      const QVector<QPointF> imageCorners = {
+        band.imageCenter - axisX * halfWidth - axisY * halfHeight,
+        band.imageCenter + axisX * halfWidth - axisY * halfHeight,
+        band.imageCenter + axisX * halfWidth + axisY * halfHeight,
+        band.imageCenter - axisX * halfWidth + axisY * halfHeight
+      };
+
+      QPolygonF polygon;
+      for (const QPointF& corner : imageCorners)
+      {
+        polygon << imagePointToWidget(corner);
+      }
+
+      painter.setPen(QPen(band.outlineColor, 2));
+      painter.setBrush(band.fillColor);
+      painter.drawPolygon(polygon);
+    }
+
+    for (const GeometryOverlayLine& line : m_geometryOverlay.lines)
+    {
+      painter.setPen(QPen(line.color, line.width));
+      painter.drawLine(imagePointToWidget(line.imageStart), imagePointToWidget(line.imageEnd));
+    }
+
+    for (const GeometryOverlayPoint& point : m_geometryOverlay.points)
+    {
+      const QPointF widgetPoint = imagePointToWidget(point.imagePoint);
+      painter.setPen(QPen(QColor("#ffffff"), 2));
+      painter.setBrush(point.color);
+      painter.drawEllipse(widgetPoint, 6, 6);
+      painter.drawText(widgetPoint + QPointF(9, -9), point.label);
+    }
+  }
+
   if (!m_threePointCirclePoints.isEmpty())
   {
     QPen pointPen(QColor("#00d2ff"));
@@ -259,7 +501,26 @@ void ImageViewWidget::paintEvent(QPaintEvent* event)
     }
   }
 
-  if (m_dragging && !m_movingExclusion)
+  if (!m_twoPointLinePoints.isEmpty())
+  {
+    QPen pointPen(QColor("#ff4fd8"));
+    pointPen.setWidth(2);
+    painter.setPen(pointPen);
+    painter.setBrush(QColor("#ff4fd8"));
+
+    for (const QPoint& imagePoint : m_twoPointLinePoints)
+    {
+      const QPoint widgetPoint = imagePointToWidget(imagePoint);
+      painter.drawEllipse(widgetPoint, 4, 4);
+    }
+
+    if (m_twoPointLinePoints.size() == 1)
+    {
+      painter.drawText(imagePointToWidget(m_twoPointLinePoints.first()) + QPoint(8, -8), "1");
+    }
+  }
+
+  if (m_dragging && !m_movingExclusion && !m_movingGeometryOverlayPoint)
   {
     if (m_drawingMode == DrawingMode::OuterCircle || m_drawingMode == DrawingMode::InnerCircle)
     {
@@ -349,6 +610,44 @@ void ImageViewWidget::mousePressEvent(QMouseEvent* event)
     m_activeExclusionHandle = ExclusionHandle::None;
   }
 
+  if (m_drawingMode == DrawingMode::GeometryArea && m_hasGeometryArea)
+  {
+    const GeometryAreaHandle handle = geometryAreaHandleAt(event->pos());
+    if (handle != GeometryAreaHandle::None)
+    {
+      m_activeGeometryAreaHandle = handle;
+      m_moveStartGeometryArea = m_geometryArea;
+      m_moveStartImagePoint = widgetToImage(event->pos());
+      m_dragging = true;
+      update();
+      return;
+    }
+  }
+
+  if (m_drawingMode == DrawingMode::GeometryPointPick)
+  {
+    if (m_geometryPointPickedHandler)
+    {
+      m_geometryPointPickedHandler(widgetToImageF(event->pos()));
+    }
+    update();
+    return;
+  }
+
+  if (m_drawingMode == DrawingMode::GeometryOverlayPointEdit)
+  {
+    const int pointIndex = geometryOverlayPointAt(event->pos());
+    if (pointIndex >= 0)
+    {
+      m_selectedGeometryOverlayPointIndex = pointIndex;
+      m_movingGeometryOverlayPoint = true;
+      m_dragging = true;
+      setCursor(Qt::ClosedHandCursor);
+      update();
+    }
+    return;
+  }
+
   if (m_drawingMode == DrawingMode::ThreePointCircle)
   {
     m_threePointCirclePoints.append(widgetToImage(event->pos()));
@@ -361,6 +660,25 @@ void ImageViewWidget::mousePressEvent(QMouseEvent* event)
       if (m_threePointCircleHandler)
       {
         m_threePointCircleHandler(points);
+      }
+    }
+
+    update();
+    return;
+  }
+
+  if (m_drawingMode == DrawingMode::TwoPointLine)
+  {
+    m_twoPointLinePoints.append(widgetToImage(event->pos()));
+
+    if (m_twoPointLinePoints.size() >= 2)
+    {
+      const QVector<QPoint> points = m_twoPointLinePoints;
+      m_twoPointLinePoints.clear();
+
+      if (m_twoPointLineHandler)
+      {
+        m_twoPointLineHandler(points);
       }
     }
 
@@ -383,9 +701,31 @@ void ImageViewWidget::mousePressEvent(QMouseEvent* event)
 
 void ImageViewWidget::mouseMoveEvent(QMouseEvent* event)
 {
+  if (m_drawingMode == DrawingMode::GeometryPointPick)
+  {
+    if (m_geometryPointMovedHandler && imageDrawRect().contains(event->pos()))
+    {
+      m_geometryPointMovedHandler(widgetToImageF(event->pos()));
+    }
+    QWidget::mouseMoveEvent(event);
+    return;
+  }
+
   if (!m_dragging)
   {
     QWidget::mouseMoveEvent(event);
+    return;
+  }
+
+  if (m_movingGeometryOverlayPoint &&
+      m_selectedGeometryOverlayPointIndex >= 0 &&
+      m_selectedGeometryOverlayPointIndex < m_geometryOverlay.points.size())
+  {
+    if (m_geometryOverlayPointMovedHandler && imageDrawRect().contains(event->pos()))
+    {
+      m_geometryOverlayPointMovedHandler(m_selectedGeometryOverlayPointIndex, widgetToImageF(event->pos()));
+    }
+    update();
     return;
   }
 
@@ -435,6 +775,39 @@ void ImageViewWidget::mouseMoveEvent(QMouseEvent* event)
     return;
   }
 
+  if (m_drawingMode == DrawingMode::GeometryArea &&
+      m_activeGeometryAreaHandle != GeometryAreaHandle::None &&
+      m_hasGeometryArea)
+  {
+    const QPointF currentImagePoint = widgetToImageF(event->pos());
+    const QPointF startImagePoint = QPointF(m_moveStartImagePoint);
+
+    if (m_activeGeometryAreaHandle == GeometryAreaHandle::Move)
+    {
+      const QPointF delta = currentImagePoint - startImagePoint;
+      m_geometryArea.center = m_moveStartGeometryArea.center + delta;
+    }
+    else if (m_activeGeometryAreaHandle == GeometryAreaHandle::Rotate)
+    {
+      const QPointF delta = currentImagePoint - m_moveStartGeometryArea.center;
+      m_geometryArea.angleDegrees = std::atan2(delta.y(), delta.x()) * 180.0 / 3.14159265358979323846 + 90.0;
+    }
+    else
+    {
+      const double angle = m_moveStartGeometryArea.angleDegrees * 3.14159265358979323846 / 180.0;
+      const QPointF axisX(std::cos(angle), std::sin(angle));
+      const QPointF axisY(-std::sin(angle), std::cos(angle));
+      const QPointF delta = currentImagePoint - m_moveStartGeometryArea.center;
+      const double projectionX = delta.x() * axisX.x() + delta.y() * axisX.y();
+      const double projectionY = delta.x() * axisY.x() + delta.y() * axisY.y();
+      m_geometryArea.size.setWidth(std::max(4.0, std::abs(projectionX) * 2.0));
+      m_geometryArea.size.setHeight(std::max(4.0, std::abs(projectionY) * 2.0));
+    }
+
+    update();
+    return;
+  }
+
   m_dragEnd = event->pos();
   update();
 }
@@ -459,6 +832,34 @@ void ImageViewWidget::mouseReleaseEvent(QMouseEvent* event)
     if (m_exclusionRectsChangedHandler)
     {
       m_exclusionRectsChangedHandler(m_exclusionRects);
+    }
+
+    update();
+    return;
+  }
+
+  if (m_movingGeometryOverlayPoint)
+  {
+    if (m_geometryOverlayPointMovedHandler && imageDrawRect().contains(event->pos()))
+    {
+      m_geometryOverlayPointMovedHandler(m_selectedGeometryOverlayPointIndex, widgetToImageF(event->pos()));
+    }
+
+    m_movingGeometryOverlayPoint = false;
+    m_selectedGeometryOverlayPointIndex = -1;
+    setCursor(Qt::OpenHandCursor);
+    update();
+    return;
+  }
+
+  if (m_drawingMode == DrawingMode::GeometryArea &&
+      m_activeGeometryAreaHandle != GeometryAreaHandle::None)
+  {
+    m_activeGeometryAreaHandle = GeometryAreaHandle::None;
+
+    if (m_geometryAreaChangedHandler)
+    {
+      m_geometryAreaChangedHandler(m_geometryArea);
     }
 
     update();
@@ -637,6 +1038,134 @@ QPoint ImageViewWidget::imagePointToWidget(const QPoint& imagePoint) const
     drawRect.y() + static_cast<int>(imagePoint.y() * scaleY));
 }
 
+QPointF ImageViewWidget::imagePointToWidget(const QPointF& imagePoint) const
+{
+  const QRect drawRect = imageDrawRect();
+
+  if (drawRect.isEmpty() || m_image.isNull())
+  {
+    return {};
+  }
+
+  const double scaleX = static_cast<double>(drawRect.width()) / m_image.width();
+  const double scaleY = static_cast<double>(drawRect.height()) / m_image.height();
+  return QPointF(
+    drawRect.x() + imagePoint.x() * scaleX,
+    drawRect.y() + imagePoint.y() * scaleY);
+}
+
+QPointF ImageViewWidget::widgetToImageF(const QPoint& widgetPoint) const
+{
+  const QRect drawRect = imageDrawRect();
+
+  if (drawRect.isEmpty() || m_image.isNull())
+  {
+    return {};
+  }
+
+  const double scaleX = static_cast<double>(m_image.width()) / drawRect.width();
+  const double scaleY = static_cast<double>(m_image.height()) / drawRect.height();
+  return QPointF(
+    qBound(0.0, (widgetPoint.x() - drawRect.x()) * scaleX, static_cast<double>(m_image.width() - 1)),
+    qBound(0.0, (widgetPoint.y() - drawRect.y()) * scaleY, static_cast<double>(m_image.height() - 1)));
+}
+
+QVector<QPointF> ImageViewWidget::geometryAreaCorners() const
+{
+  const double halfWidth = m_geometryArea.size.width() * 0.5;
+  const double halfHeight = m_geometryArea.size.height() * 0.5;
+  constexpr double pi = 3.14159265358979323846;
+  const double angle = m_geometryArea.angleDegrees * pi / 180.0;
+  const QPointF axisX(std::cos(angle), std::sin(angle));
+  const QPointF axisY(-std::sin(angle), std::cos(angle));
+
+  return {
+    m_geometryArea.center - axisX * halfWidth - axisY * halfHeight,
+    m_geometryArea.center + axisX * halfWidth - axisY * halfHeight,
+    m_geometryArea.center + axisX * halfWidth + axisY * halfHeight,
+    m_geometryArea.center - axisX * halfWidth + axisY * halfHeight
+  };
+}
+
+QVector<QPointF> ImageViewWidget::geometryAreaWidgetCorners() const
+{
+  QVector<QPointF> result;
+  for (const QPointF& corner : geometryAreaCorners())
+  {
+    result.append(imagePointToWidget(corner));
+  }
+  return result;
+}
+
+QPointF ImageViewWidget::geometryAreaWidgetRotateHandle() const
+{
+  const QVector<QPointF> corners = geometryAreaWidgetCorners();
+  if (corners.size() < 2)
+  {
+    return {};
+  }
+
+  const QPointF topCenter = (corners[0] + corners[1]) * 0.5;
+  const QPointF center = imagePointToWidget(m_geometryArea.center);
+  const QPointF direction = topCenter - center;
+  const double length = std::hypot(direction.x(), direction.y());
+  if (length <= 0.001)
+  {
+    return topCenter;
+  }
+
+  return topCenter + direction / length * 28.0;
+}
+
+ImageViewWidget::GeometryAreaHandle ImageViewWidget::geometryAreaHandleAt(const QPoint& widgetPoint) const
+{
+  if (!m_hasGeometryArea)
+  {
+    return GeometryAreaHandle::None;
+  }
+
+  const QVector<QPointF> corners = geometryAreaWidgetCorners();
+  const QVector<GeometryAreaHandle> handles = {
+    GeometryAreaHandle::TopLeft,
+    GeometryAreaHandle::TopRight,
+    GeometryAreaHandle::BottomRight,
+    GeometryAreaHandle::BottomLeft
+  };
+
+  for (int i = 0; i < corners.size() && i < handles.size(); ++i)
+  {
+    if (QRectF(corners[i] - QPointF(7, 7), QSizeF(14, 14)).contains(widgetPoint))
+    {
+      return handles[i];
+    }
+  }
+
+  if (QRectF(geometryAreaWidgetRotateHandle() - QPointF(8, 8), QSizeF(16, 16)).contains(widgetPoint))
+  {
+    return GeometryAreaHandle::Rotate;
+  }
+
+  return geometryAreaContains(widgetPoint) ? GeometryAreaHandle::Move : GeometryAreaHandle::None;
+}
+
+bool ImageViewWidget::geometryAreaContains(const QPoint& widgetPoint) const
+{
+  QPolygonF polygon;
+  for (const QPointF& corner : geometryAreaWidgetCorners())
+  {
+    polygon << corner;
+  }
+  return polygon.containsPoint(widgetPoint, Qt::OddEvenFill);
+}
+
+ImageRotatedRect ImageViewWidget::normalizedGeometryArea(const ImageRotatedRect& area) const
+{
+  ImageRotatedRect result = area;
+  result.size.setWidth(std::max(2.0, result.size.width()));
+  result.size.setHeight(std::max(2.0, result.size.height()));
+  return result;
+}
+
 int ImageViewWidget::exclusionRectAt(const QPoint& widgetPoint) const
 {
   for (int i = m_exclusionRects.size() - 1; i >= 0; --i)
@@ -673,6 +1202,20 @@ int ImageViewWidget::exclusionHandleAt(const QPoint& widgetPoint, ExclusionHandl
         handle = item.first;
         return i;
       }
+    }
+  }
+
+  return -1;
+}
+
+int ImageViewWidget::geometryOverlayPointAt(const QPoint& widgetPoint) const
+{
+  for (int i = m_geometryOverlay.points.size() - 1; i >= 0; --i)
+  {
+    const QPointF widgetHandle = imagePointToWidget(m_geometryOverlay.points[i].imagePoint);
+    if (QRectF(widgetHandle - QPointF(9, 9), QSizeF(18, 18)).contains(widgetPoint))
+    {
+      return i;
     }
   }
 

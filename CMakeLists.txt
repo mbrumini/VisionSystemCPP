@@ -34,12 +34,46 @@ add_executable(VisionSystemCPP
     src/gui/ToolCatalog.cpp
     src/gui/ToolPanelWidget.h
     src/gui/ToolPanelWidget.cpp
+    src/gui/geometry/GeometryOverlay.h
+    src/gui/geometry/GeometryOverlay.cpp
+    src/gui/geometry/LineGeometryEditor.h
+    src/gui/geometry/LineGeometryEditor.cpp
+    src/gui/geometry/LineGeometryMouseController.h
+    src/gui/geometry/LineGeometryMouseController.cpp
+    src/geometry/GeometryCommon.h
+    src/geometry/PointGeometry.h
+    src/geometry/PointGeometry.cpp
+    src/geometry/LineGeometry.h
+    src/geometry/LineGeometry.cpp
+    src/geometry/CircleGeometry.h
+    src/geometry/CircleGeometry.cpp
+    src/geometry/ArcGeometry.h
+    src/geometry/ArcGeometry.cpp
+    src/geometry/EdgeGeometry.h
+    src/geometry/EdgeGeometry.cpp
+    src/geometry/ContourGeometry.h
+    src/geometry/ContourGeometry.cpp
+    src/geometry/GeometrySet.h
+    src/geometry/GeometrySet.cpp
     src/processing/ImageProcessor.h
     src/processing/ImageProcessor.cpp
     src/processing/CircleFit.h
     src/processing/CircleFit.cpp
     src/processing/LocalizationProcessor.h
     src/processing/LocalizationProcessor.cpp
+    src/processing/geometry/GeometryDetectorCommon.h
+    src/processing/geometry/ThresholdMaskBuilder.h
+    src/processing/geometry/ThresholdMaskBuilder.cpp
+    src/processing/geometry/ThresholdCircleDetector.h
+    src/processing/geometry/ThresholdCircleDetector.cpp
+    src/processing/geometry/ThresholdLineDetector.h
+    src/processing/geometry/ThresholdLineDetector.cpp
+    src/processing/geometry/EdgePointFilters.h
+    src/processing/geometry/EdgePointFilters.cpp
+    src/processing/geometry/EdgePointDetector.h
+    src/processing/geometry/EdgePointDetector.cpp
+    src/processing/geometry/EdgeLineDetector.h
+    src/processing/geometry/EdgeLineDetector.cpp
     src/processing/SurfaceDefectProcessor.h
     src/processing/SurfaceDefectProcessor.cpp
     src/processing/SurfaceEdgeStrategy.h
@@ -55,6 +89,9 @@ add_executable(VisionSystemCPP
     src/processing/SurfaceThresholdStrategy.cpp
     src/processing/SurfaceTwoCirclesStrategy.h
     src/processing/SurfaceTwoCirclesStrategy.cpp
+    src/runtime/CameraRuntime.h
+    src/runtime/CameraRuntime.cpp
+    src/runtime/PartPose.h
     src/utils/Timer.h
 )
 

@@ -3,23 +3,49 @@
     "tools": {
         "surfaceLocalization": {
             "annulus": {
+                "innerCircle": {
+                    "centerX": 1276,
+                    "centerY": 684,
+                    "radius": 275
+                },
                 "outerCircle": {
-                    "centerX": 1279,
-                    "centerY": 686,
-                    "radius": 306
+                    "centerX": 1276,
+                    "centerY": 684,
+                    "radius": 336
                 }
             },
             "edge": {
-                "sensitivity": 162
+                "band": {
+                    "inner": 33,
+                    "outer": 28
+                },
+                "circle": {
+                    "centerX": 1276,
+                    "centerY": 684,
+                    "radius": 308
+                },
+                "sensitivity": 201
             },
             "enabled": true,
             "exclusionRects": [
+                {
+                    "height": 47,
+                    "width": 71,
+                    "x": 1492,
+                    "y": 855
+                },
+                {
+                    "height": 70,
+                    "width": 76,
+                    "x": 989,
+                    "y": 853
+                }
             ],
             "method": "edge",
             "threshold": {
-                "max": 134,
+                "max": 186,
                 "min": 0,
-                "value": 134
+                "value": 186
             }
         }
     }

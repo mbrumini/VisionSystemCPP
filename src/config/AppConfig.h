@@ -29,6 +29,12 @@ class AppConfig
 {
 public:
   bool load(const QString& filePath, QString* errorMessage = nullptr);
+  bool saveCameraSource(
+    const QString& filePath,
+    const QString& cameraId,
+    const QString& type,
+    const QString& folder,
+    QString* errorMessage = nullptr);
 
   int maxCameras() const;
   const QVector<CameraConfig>& cameras() const;

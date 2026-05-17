@@ -89,6 +89,86 @@ bool AppConfig::load(const QString& filePath, QString* errorMessage)
   return true;
 }
 
+bool AppConfig::saveCameraSource(
+  const QString& filePath,
+  const QString& cameraId,
+  const QString& type,
+  const QString& folder,
+  QString* errorMessage)
+{
+  QFile file(filePath);
+
+  if (!file.open(QIODevice::ReadOnly))
+  {
+    if (errorMessage)
+    {
+      *errorMessage = "Impossibile aprire configurazione: " + filePath;
+    }
+
+    return false;
+  }
+
+  QJsonParseError parseError;
+  QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &parseError);
+  file.close();
+
+  if (parseError.error != QJsonParseError::NoError || !document.isObject())
+  {
+    if (errorMessage)
+    {
+      *errorMessage = "JSON configurazione non valido: " + parseError.errorString();
+    }
+
+    return false;
+  }
+
+  QJsonObject root = document.object();
+  QJsonArray cameras = root.value("cameras").toArray();
+  bool found = false;
+
+  for (int i = 0; i < cameras.size(); ++i)
+  {
+    QJsonObject cameraObject = cameras[i].toObject();
+
+    if (cameraObject.value("id").toString() != cameraId)
+    {
+      continue;
+    }
+
+    cameraObject["type"] = type;
+    cameraObject["folder"] = folder;
+    cameras[i] = cameraObject;
+    found = true;
+    break;
+  }
+
+  if (!found)
+  {
+    if (errorMessage)
+    {
+      *errorMessage = "Camera non trovata in configurazione: " + cameraId;
+    }
+
+    return false;
+  }
+
+  root["cameras"] = cameras;
+  document.setObject(root);
+
+  if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate))
+  {
+    if (errorMessage)
+    {
+      *errorMessage = "Impossibile scrivere configurazione: " + filePath;
+    }
+
+    return false;
+  }
+
+  file.write(document.toJson(QJsonDocument::Indented));
+  return true;
+}
+
 int AppConfig::maxCameras() const
 {
   return m_maxCameras;

@@ -5,8 +5,12 @@
 #include "gui/ToolCatalog.h"
 #include "gui/ToolPanelWidget.h"
 #include "processing/SurfaceModelTrainer.h"
+#include "processing/geometry/EdgeLineDetector.h"
+#include "processing/geometry/EdgePointDetector.h"
 
 #include <QApplication>
+#include <QCheckBox>
+#include <QComboBox>
 #include <QDateTime>
 #include <QDir>
 #include <QFileInfo>
@@ -27,11 +31,13 @@
 #include <QSizePolicy>
 #include <QSlider>
 #include <QSplitter>
+#include <QSpinBox>
 #include <QVBoxLayout>
 
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 
+#include <algorithm>
 #include <cmath>
 #include <functional>
 #include <vector>
@@ -41,6 +47,16 @@ namespace
 QString projectPath(const QString& relativePath)
 {
   return QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath(relativePath);
+}
+
+QString resolveProjectPath(const QString& path)
+{
+  if (QFileInfo(path).isAbsolute())
+  {
+    return path;
+  }
+
+  return projectPath(path);
 }
 
 std::vector<cv::Rect> toCvRects(const QVector<QRect>& rects)
@@ -92,6 +108,96 @@ bool circleFromThreePoints(const QVector<QPoint>& points, ImageCircle& circle)
 
   circle = {center, radius};
   return true;
+}
+
+QString scanDirectionToRecipe(EdgeLineScanDirection direction)
+{
+  return direction == EdgeLineScanDirection::NormalNegative ? "normal_negative" : "normal_positive";
+}
+
+EdgeLineScanDirection scanDirectionFromRecipe(const QString& value)
+{
+  return value == "normal_negative" ? EdgeLineScanDirection::NormalNegative : EdgeLineScanDirection::NormalPositive;
+}
+
+QString transitionToRecipe(EdgeLineTransition transition)
+{
+  return transition == EdgeLineTransition::DarkToLight ? "dark_to_light" : "light_to_dark";
+}
+
+EdgeLineTransition transitionFromRecipe(const QString& value)
+{
+  return value == "dark_to_light" ? EdgeLineTransition::DarkToLight : EdgeLineTransition::LightToDark;
+}
+
+QString pickModeToRecipe(EdgeLinePickMode mode)
+{
+  if (mode == EdgeLinePickMode::Last)
+  {
+    return "last";
+  }
+
+  if (mode == EdgeLinePickMode::Best)
+  {
+    return "best";
+  }
+
+  return "first";
+}
+
+EdgeLinePickMode pickModeFromRecipe(const QString& value)
+{
+  if (value == "last")
+  {
+    return EdgeLinePickMode::Last;
+  }
+
+  if (value == "best")
+  {
+    return EdgeLinePickMode::Best;
+  }
+
+  return EdgeLinePickMode::First;
+}
+
+void drawCyanPointCross(cv::Mat& image, const cv::Point2d& point)
+{
+  const cv::Point center(static_cast<int>(std::round(point.x)), static_cast<int>(std::round(point.y)));
+  const int size = 8;
+  const cv::Scalar cyan(255, 255, 0);
+  cv::line(
+    image,
+    cv::Point(center.x - size, center.y - size),
+    cv::Point(center.x + size, center.y + size),
+    cyan,
+    2,
+    cv::LINE_AA);
+  cv::line(
+    image,
+    cv::Point(center.x - size, center.y + size),
+    cv::Point(center.x + size, center.y - size),
+    cyan,
+    2,
+    cv::LINE_AA);
+}
+
+void appendCyanPointCross(GeometryOverlay& overlay, const cv::Point2d& point)
+{
+  const QPointF center(point.x, point.y);
+  constexpr double size = 8.0;
+  const QColor cyan("#00d2ff");
+  overlay.lines.append({
+    QPointF(center.x() - size, center.y() - size),
+    QPointF(center.x() + size, center.y() + size),
+    cyan,
+    3
+  });
+  overlay.lines.append({
+    QPointF(center.x() - size, center.y() + size),
+    QPointF(center.x() + size, center.y() - size),
+    cyan,
+    3
+  });
 }
 
 SurfaceTwoCirclesStrategyConfig toProcessorStrategy(const SurfaceLocalizationStrategyConfig& recipeConfig)
@@ -149,6 +255,16 @@ void MainWindow::buildUi()
   setWindowTitle("VisionSystemCPP");
   resize(1600, 900);
   buildMenu();
+  if (!m_simulationTimer)
+  {
+    m_simulationTimer = new QTimer(this);
+    connect(m_simulationTimer, &QTimer::timeout, this, [this]() {
+      if (!m_selectedCameraId.isEmpty())
+      {
+        advanceCameraFrame(m_selectedCamera);
+      }
+    });
+  }
 
   auto* root = new QWidget(this);
   auto* rootLayout = new QHBoxLayout(root);
@@ -217,6 +333,12 @@ void MainWindow::buildUi()
                   .arg(roi.y())
                   .arg(roi.width())
                   .arg(roi.height()));
+      return;
+    }
+
+    if (m_activeDrawingRecipe == ActiveDrawingRecipe::Geometry)
+    {
+      deactivateImageDrawingTools();
       return;
     }
 
@@ -503,6 +625,124 @@ void MainWindow::buildUi()
                 .arg(circle.center.y())
                 .arg(circle.radius));
   });
+  m_largeImage->setTwoPointLineHandler([this](const QVector<QPoint>& points) {
+    if (m_selectedCameraId.isEmpty() ||
+        m_activeDrawingRecipe != ActiveDrawingRecipe::Geometry ||
+        m_geometryDrawingTarget != GeometryDrawingTarget::Line ||
+        points.size() < 2)
+    {
+      return;
+    }
+
+    const PartPose& pose = m_cameraRuntime[m_selectedCameraId].currentPose();
+    if (!pose.valid)
+    {
+      appendLog(trText("log.partPoseMissing") + ": " + m_selectedCameraId);
+      deactivateImageDrawingTools();
+      return;
+    }
+
+    GeometryLineRuntimeConfig& config = activeGeometryLineConfig(m_selectedCameraId);
+    config.partStart = imageToPart(pose, cv::Point2d(points[0].x(), points[0].y()));
+    config.partEnd = imageToPart(pose, cv::Point2d(points[1].x(), points[1].y()));
+    config.hasLine = true;
+
+    const cv::Point2d imageStart(points[0].x(), points[0].y());
+    const cv::Point2d imageEnd(points[1].x(), points[1].y());
+    const cv::Point2d center = (imageStart + imageEnd) * 0.5;
+    const double length = std::hypot(imageEnd.x - imageStart.x, imageEnd.y - imageStart.y);
+    const double angle = std::atan2(imageEnd.y - imageStart.y, imageEnd.x - imageStart.x) * 180.0 / CV_PI;
+    m_largeImage->setGeometryArea({
+      QPointF(center.x, center.y),
+      QSizeF(length, config.bandHalfWidth * 2.0),
+      angle
+    });
+    m_largeImage->setGeometryPoints({
+      QPointF(imageStart.x, imageStart.y),
+      QPointF(imageEnd.x, imageEnd.y)
+    });
+    m_largeImage->setGeometryLines({
+      {QPointF(imageStart.x, imageStart.y), QPointF(imageEnd.x, imageEnd.y)}
+    });
+    m_geometryDrawingTarget = GeometryDrawingTarget::Line;
+    m_largeImage->setGeometryAreaEditingEnabled(true);
+
+    testGeometryLine(m_selectedCamera);
+  });
+  m_largeImage->setGeometryPointPickedHandler([this](const QPointF& imagePoint) {
+    if (m_selectedCameraId.isEmpty() ||
+        m_activeDrawingRecipe != ActiveDrawingRecipe::Geometry)
+    {
+      return;
+    }
+
+    if (m_geometryDrawingTarget == GeometryDrawingTarget::Line)
+    {
+      handleGeometryLinePoint(m_selectedCamera, imagePoint);
+    }
+    else if (m_geometryDrawingTarget == GeometryDrawingTarget::Point)
+    {
+      handleGeometryPointGuidePoint(m_selectedCamera, imagePoint);
+    }
+  });
+  m_largeImage->setGeometryPointMovedHandler([this](const QPointF& imagePoint) {
+    if (m_selectedCameraId.isEmpty() ||
+        m_activeDrawingRecipe != ActiveDrawingRecipe::Geometry)
+    {
+      return;
+    }
+
+    if (m_geometryDrawingTarget == GeometryDrawingTarget::Line)
+    {
+      LineGeometryMouseController& controller = m_lineGeometryMouseControllers[m_selectedCameraId];
+      controller.handleMove(imagePoint);
+      updateGeometryLineOverlay(m_selectedCamera);
+    }
+    else if (m_geometryDrawingTarget == GeometryDrawingTarget::Point)
+    {
+      LineGeometryMouseController& controller = m_pointGeometryMouseControllers[m_selectedCameraId];
+      controller.handleMove(imagePoint);
+      updateGeometryPointOverlay(m_selectedCamera);
+    }
+  });
+  m_largeImage->setGeometryOverlayPointMovedHandler([this](int pointIndex, const QPointF& imagePoint) {
+    if (m_selectedCameraId.isEmpty())
+    {
+      return;
+    }
+
+    if (m_geometryDrawingTarget == GeometryDrawingTarget::Line)
+    {
+      handleGeometryLineHandleMoved(m_selectedCamera, pointIndex, imagePoint);
+    }
+    else if (m_geometryDrawingTarget == GeometryDrawingTarget::Point)
+    {
+      handleGeometryPointHandleMoved(m_selectedCamera, pointIndex, imagePoint);
+    }
+  });
+  m_largeImage->setGeometryAreaChangedHandler([this](const ImageRotatedRect& area) {
+    if (m_selectedCameraId.isEmpty() || m_geometryDrawingTarget != GeometryDrawingTarget::Line)
+    {
+      return;
+    }
+
+    const PartPose& pose = m_cameraRuntime[m_selectedCameraId].currentPose();
+    if (!pose.valid)
+    {
+      return;
+    }
+
+    const double angle = area.angleDegrees * CV_PI / 180.0;
+    const cv::Point2d axis(std::cos(angle), std::sin(angle));
+    const cv::Point2d center(area.center.x(), area.center.y());
+    GeometryLineRuntimeConfig& config = activeGeometryLineConfig(m_selectedCameraId);
+    config.partStart = imageToPart(pose, center - axis * (area.size.width() * 0.5));
+    config.partEnd = imageToPart(pose, center + axis * (area.size.width() * 0.5));
+    config.bandHalfWidth = std::max(2, static_cast<int>(std::round(area.size.height() * 0.5)));
+    config.hasLine = true;
+    testGeometryLine(m_selectedCamera);
+    showGeometryLinePanel(m_selectedCamera);
+  });
 
   largeLayout->addWidget(m_largeTitle);
   largeLayout->addWidget(m_largeImage, 1);
@@ -511,11 +751,11 @@ void MainWindow::buildUi()
   auto* panelScrollArea = new QScrollArea(splitter);
   panelScrollArea->setWidgetResizable(true);
   panelScrollArea->setFrameShape(QFrame::NoFrame);
-  panelScrollArea->setMinimumWidth(340);
-  panelScrollArea->setMaximumWidth(460);
+  panelScrollArea->setMinimumWidth(390);
+  panelScrollArea->setMaximumWidth(540);
 
   auto* panel = new QWidget(panelScrollArea);
-  panel->setMinimumWidth(340);
+  panel->setMinimumWidth(390);
   auto* panelLayout = new QVBoxLayout(panel);
   panelLayout->setContentsMargins(10, 10, 10, 10);
   panelLayout->setSpacing(8);
@@ -569,6 +809,14 @@ void MainWindow::buildMenu()
   recipesMenu->addAction(trText("menu.duplicateRecipe"), this, [this]() { duplicateRecipe(); });
   recipesMenu->addAction(trText("menu.importRecipe"), this, [this]() { importRecipe(); });
   recipesMenu->addAction(trText("menu.exportRecipe"), this, [this]() { exportRecipe(); });
+
+  QMenu* camerasMenu = menuBar()->addMenu(trText("menu.cameras"));
+  for (const CameraConfig& camera : m_config.activeCameras())
+  {
+    camerasMenu->addAction(QString("%1 | %2").arg(camera.id, camera.displayName), this, [this, camera]() {
+      configureCameraSource(camera);
+    });
+  }
 
   QMenu* configMenu = menuBar()->addMenu(trText("menu.configurations"));
   configMenu->addAction(trText("menu.cameras"), this, [this]() {
@@ -778,6 +1026,167 @@ void MainWindow::exportRecipe()
   appendLog(trText("log.recipeExported") + ": " + m_recipeManager.recipeId());
 }
 
+void MainWindow::configureCameraSource(const CameraConfig& camera)
+{
+  const QString currentFolder = camera.folder.isEmpty()
+    ? projectPath("data/images")
+    : resolvedCameraFolder(camera);
+  const QString selectedFolder = QFileDialog::getExistingDirectory(
+    this,
+    QString("%1 | %2").arg(trText("menu.cameras"), camera.id),
+    currentFolder);
+
+  if (selectedFolder.isEmpty())
+  {
+    return;
+  }
+
+  const QDir projectDirectory(QString::fromUtf8(PROJECT_SOURCE_DIR));
+  QString storedFolder = projectDirectory.relativeFilePath(selectedFolder);
+
+  if (storedFolder.startsWith(".."))
+  {
+    storedFolder = QDir::toNativeSeparators(selectedFolder);
+  }
+
+  QString error;
+  const QString configPath = projectPath("config/cameras.json");
+  if (!m_config.saveCameraSource(configPath, camera.id, "file", storedFolder, &error))
+  {
+    QMessageBox::warning(this, trText("menu.cameras"), error);
+    return;
+  }
+
+  m_cameraRuntime.erase(camera.id);
+  loadConfiguration();
+  appendLog(QString("%1: %2 -> %3").arg(trText("log.cameraSourceSaved"), camera.id, storedFolder));
+}
+
+void MainWindow::configureCameraSampleImage(const CameraConfig& camera)
+{
+  const QString currentFolder = camera.folder.isEmpty()
+    ? RecipeManager::recipesRootPath()
+    : resolvedCameraFolder(camera);
+  const QString selectedFile = QFileDialog::getOpenFileName(
+    this,
+    QString("%1 | %2").arg(trText("actions.assignSampleImage"), camera.id),
+    currentFolder,
+    "Images (*.bmp *.jpg *.jpeg *.png *.tif *.tiff)");
+
+  if (selectedFile.isEmpty())
+  {
+    return;
+  }
+
+  QString error;
+  if (!m_recipeManager.importCameraSampleImage(camera.id, selectedFile, &error))
+  {
+    QMessageBox::warning(this, trText("actions.assignSampleImage"), error);
+    return;
+  }
+
+  if (camera.id == m_selectedCameraId)
+  {
+    m_selectedImagePath = cameraSampleImagePath(camera);
+    m_cameraRuntime[camera.id].stop();
+    m_selectedPreview = QPixmap(m_selectedImagePath);
+    m_largeImage->setImage(m_selectedPreview);
+    showCameraSetupPanel(camera);
+  }
+
+  appendLog(QString("%1: %2").arg(trText("log.cameraSampleSaved"), camera.id));
+}
+
+void MainWindow::configureCameraTestImages(const CameraConfig& camera)
+{
+  const QString currentFolder = camera.folder.isEmpty()
+    ? RecipeManager::recipesRootPath()
+    : resolvedCameraFolder(camera);
+  const QString selectedFolder = QFileDialog::getExistingDirectory(
+    this,
+    QString("%1 | %2").arg(trText("actions.assignTestImages"), camera.id),
+    currentFolder);
+
+  if (selectedFolder.isEmpty())
+  {
+    return;
+  }
+
+  QString error;
+  if (!m_recipeManager.importCameraTestImages(camera.id, selectedFolder, &error))
+  {
+    QMessageBox::warning(this, trText("actions.assignTestImages"), error);
+    return;
+  }
+
+  if (camera.id == m_selectedCameraId)
+  {
+    m_cameraRuntime[camera.id].stop();
+    showCameraSetupPanel(camera);
+  }
+
+  appendLog(QString("%1: %2").arg(trText("log.cameraTestImagesSaved"), camera.id));
+}
+
+void MainWindow::acquireCameraSampleImage(const CameraConfig& camera)
+{
+  cv::Mat sample;
+  const auto runtimeIt = m_cameraRuntime.find(camera.id);
+  if (runtimeIt != m_cameraRuntime.end() && !runtimeIt->second.currentFrame().empty())
+  {
+    sample = runtimeIt->second.currentFrame().clone();
+  }
+  else
+  {
+    QString imageError;
+    sample = currentInputImage(camera, &imageError);
+    if (sample.empty())
+    {
+      appendLog(imageError);
+      return;
+    }
+  }
+
+  QString error;
+  if (!m_recipeManager.ensureCameraImageFolders(camera.id, &error))
+  {
+    QMessageBox::warning(this, trText("actions.acquireSampleImage"), error);
+    return;
+  }
+
+  const QString samplePath = QDir(m_recipeManager.cameraSampleImagesPath(camera.id)).filePath("sample.png");
+  if (!cv::imwrite(samplePath.toStdString(), sample))
+  {
+    QMessageBox::warning(
+      this,
+      trText("actions.acquireSampleImage"),
+      trText("log.cameraSampleAcquireFailed") + ": " + samplePath);
+    return;
+  }
+
+  if (camera.id == m_selectedCameraId)
+  {
+    m_selectedImagePath = samplePath;
+    m_selectedPreview = matToPixmap(sample);
+    m_largeImage->setImage(m_selectedPreview);
+    showCameraSetupPanel(camera);
+  }
+
+  appendLog(QString("%1: %2").arg(trText("log.cameraSampleAcquired"), camera.id));
+}
+
+void MainWindow::ensureRecipeCameraFolders()
+{
+  for (const CameraConfig& camera : m_config.activeCameras())
+  {
+    QString error;
+    if (!m_recipeManager.ensureCameraImageFolders(camera.id, &error))
+    {
+      appendLog(error);
+    }
+  }
+}
+
 void MainWindow::setActiveRecipe(const QString& recipeId)
 {
   m_recipeManager.setRecipeId(recipeId);
@@ -789,6 +1198,7 @@ void MainWindow::setActiveRecipe(const QString& recipeId)
   }
 
   appendLog(trText("log.activeRecipe") + ": " + m_recipeManager.recipeId());
+  ensureRecipeCameraFolders();
   refreshSelectedCameraRecipeData();
 }
 
@@ -858,6 +1268,8 @@ void MainWindow::loadConfiguration()
     return;
   }
 
+  buildMenu();
+
   while (QLayoutItem* item = m_gridLayout->takeAt(0))
   {
     if (QWidget* widget = item->widget())
@@ -870,6 +1282,7 @@ void MainWindow::loadConfiguration()
 
   m_tiles.clear();
   const QVector<CameraConfig> cameras = m_config.activeCameras();
+  ensureRecipeCameraFolders();
 
   for (int i = 0; i < cameras.size(); ++i)
   {
@@ -901,6 +1314,7 @@ void MainWindow::loadConfiguration()
 
 void MainWindow::showGridView()
 {
+  deactivateImageDrawingTools();
   m_imageStack->setCurrentIndex(0);
   m_selectedCameraId.clear();
   m_selectedCamera = {};
@@ -920,12 +1334,8 @@ void MainWindow::selectCamera(const CameraConfig& camera)
 {
   m_selectedCameraId = camera.id;
   m_selectedCamera = camera;
-  m_selectedImagePath = firstImageInFolder(camera.folder);
-  m_largeImage->setRoiDrawingEnabled(false);
-  m_largeImage->setExclusionDrawingEnabled(false);
-  m_largeImage->setOuterCircleDrawingEnabled(false);
-  m_largeImage->setInnerCircleDrawingEnabled(false);
-  m_activeDrawingRecipe = ActiveDrawingRecipe::None;
+  m_selectedImagePath = cameraSampleImagePath(camera);
+  deactivateImageDrawingTools();
   m_largeImage->clearRoi();
   m_largeImage->clearExclusionRects();
   m_largeImage->clearCircles();
@@ -935,7 +1345,15 @@ void MainWindow::selectCamera(const CameraConfig& camera)
     tile->setSelected(tile->camera().id == camera.id);
   }
 
-  m_selectedPreview = m_selectedImagePath.isEmpty() ? QPixmap() : QPixmap(m_selectedImagePath);
+  auto runtimeIt = m_cameraRuntime.find(camera.id);
+  if (runtimeIt != m_cameraRuntime.end() && !runtimeIt->second.currentFrame().empty())
+  {
+    m_selectedPreview = matToPixmap(runtimeIt->second.currentFrame());
+  }
+  else
+  {
+    m_selectedPreview = m_selectedImagePath.isEmpty() ? QPixmap() : QPixmap(m_selectedImagePath);
+  }
   m_largeTitle->setText(camera.displayName + " | " + camera.id);
 
   if (m_selectedPreview.isNull())
@@ -1048,14 +1466,40 @@ void MainWindow::updateControlPanel(const CameraConfig* camera)
   showCameraToolList(*camera);
 }
 
+void MainWindow::deactivateImageDrawingTools()
+{
+  if (!m_largeImage)
+  {
+    return;
+  }
+
+  m_largeImage->setRoiDrawingEnabled(false);
+  m_largeImage->setExclusionDrawingEnabled(false);
+  m_largeImage->setOuterCircleDrawingEnabled(false);
+  m_largeImage->setInnerCircleDrawingEnabled(false);
+  m_largeImage->setThreePointCircleDrawingEnabled(false);
+  m_largeImage->setGeometryPointPickingEnabled(false);
+  m_largeImage->setGeometryOverlayPointEditingEnabled(false);
+  m_largeImage->setTwoPointLineDrawingEnabled(false);
+  m_activeDrawingRecipe = ActiveDrawingRecipe::None;
+  m_surfaceCircleTarget = SurfaceCircleTarget::None;
+  m_geometryDrawingTarget = GeometryDrawingTarget::None;
+}
+
 void MainWindow::showCameraToolList(const CameraConfig& camera)
 {
+  deactivateImageDrawingTools();
   clearToolPanel();
 
   auto* gridButton = new QPushButton(trText("commands.gridView"), m_toolsContainer);
   gridButton->setMinimumHeight(38);
   connect(gridButton, &QPushButton::clicked, this, [this]() { showGridView(); });
   m_toolsLayout->addWidget(gridButton);
+
+  auto* setupButton = new QPushButton(trText("tools.setup"), m_toolsContainer);
+  setupButton->setMinimumHeight(38);
+  connect(setupButton, &QPushButton::clicked, this, [this, camera]() { showCameraSetupPanel(camera); });
+  m_toolsLayout->addWidget(setupButton);
 
   if (isGrayscaleLocalizationCamera(camera))
   {
@@ -1095,8 +1539,96 @@ void MainWindow::showCameraToolList(const CameraConfig& camera)
   m_toolsLayout->addStretch(1);
 }
 
+void MainWindow::showCameraSetupPanel(const CameraConfig& camera)
+{
+  deactivateImageDrawingTools();
+  clearToolPanel();
+
+  CameraRuntime& runtime = m_cameraRuntime[camera.id];
+
+  auto* panel = new QWidget(m_toolsContainer);
+  auto* layout = new QVBoxLayout(panel);
+  layout->setContentsMargins(0, 0, 0, 0);
+  layout->setSpacing(8);
+
+  auto* title = new QLabel(QString("%1 | %2").arg(trText("tools.setup"), camera.id), panel);
+  title->setObjectName("toolPanelTitle");
+  layout->addWidget(title);
+
+  auto* details = new QLabel(cameraSetupDetailsText(camera), panel);
+  details->setWordWrap(true);
+  m_setupDetails = details;
+  m_setupCameraId = camera.id;
+  layout->addWidget(details);
+
+  auto* intervalLabel = new QLabel(trText("labels.frameInterval"), panel);
+  layout->addWidget(intervalLabel);
+
+  auto* intervalSpin = new QSpinBox(panel);
+  intervalSpin->setRange(50, 10000);
+  intervalSpin->setSingleStep(50);
+  intervalSpin->setSuffix(" ms");
+  intervalSpin->setValue(runtime.intervalMs());
+  connect(intervalSpin, qOverload<int>(&QSpinBox::valueChanged), this, [this, camera](int value) {
+    CameraRuntime& runtime = m_cameraRuntime[camera.id];
+    runtime.setIntervalMs(value);
+    if (runtime.running() && camera.id == m_selectedCameraId)
+    {
+      m_simulationTimer->start(runtime.intervalMs());
+    }
+  });
+  layout->addWidget(intervalSpin);
+
+  auto* buttons = new QWidget(panel);
+  auto* buttonsLayout = new QGridLayout(buttons);
+  buttonsLayout->setContentsMargins(0, 0, 0, 0);
+  buttonsLayout->setSpacing(6);
+
+  auto* sampleButton = new QPushButton(trText("actions.assignSampleImage"), buttons);
+  auto* acquireSampleButton = new QPushButton(trText("actions.acquireSampleImage"), buttons);
+  auto* testImagesButton = new QPushButton(trText("actions.assignTestImages"), buttons);
+  auto* sourceButton = new QPushButton(trText("actions.assignImageFolder"), buttons);
+  auto* startButton = new QPushButton(trText("commands.start"), buttons);
+  auto* stopButton = new QPushButton(trText("commands.stop"), buttons);
+  auto* stepButton = new QPushButton(trText("actions.nextFrame"), buttons);
+  auto* backButton = new QPushButton(trText("commands.backToCameraTools"), buttons);
+
+  buttonsLayout->addWidget(acquireSampleButton, 0, 0, 1, 2);
+  buttonsLayout->addWidget(sampleButton, 1, 0);
+  buttonsLayout->addWidget(testImagesButton, 1, 1);
+  buttonsLayout->addWidget(sourceButton, 2, 0, 1, 2);
+  buttonsLayout->addWidget(startButton, 3, 0);
+  buttonsLayout->addWidget(stopButton, 3, 1);
+  buttonsLayout->addWidget(stepButton, 4, 0, 1, 2);
+  buttonsLayout->addWidget(backButton, 5, 0, 1, 2);
+  layout->addWidget(buttons);
+
+  connect(acquireSampleButton, &QPushButton::clicked, this, [this, camera]() { acquireCameraSampleImage(camera); });
+  connect(sampleButton, &QPushButton::clicked, this, [this, camera]() { configureCameraSampleImage(camera); });
+  connect(testImagesButton, &QPushButton::clicked, this, [this, camera]() { configureCameraTestImages(camera); });
+  connect(sourceButton, &QPushButton::clicked, this, [this, camera]() { configureCameraSource(camera); });
+  connect(startButton, &QPushButton::clicked, this, [this, camera]() { startCameraSimulation(camera); });
+  connect(stopButton, &QPushButton::clicked, this, [this, camera]() { stopCameraSimulation(camera); });
+  connect(stepButton, &QPushButton::clicked, this, [this, camera]() { stepCameraSimulation(camera); });
+  connect(backButton, &QPushButton::clicked, this, [this, camera]() {
+    stopCameraSimulation(camera);
+    showCameraToolList(camera);
+  });
+
+  layout->addStretch(1);
+  m_toolsLayout->addWidget(panel);
+}
+
 void MainWindow::showToolPanel(const CameraConfig& camera, const QString& toolId)
 {
+  deactivateImageDrawingTools();
+
+  if (toolId == "geometries")
+  {
+    showGeometryPanel(camera);
+    return;
+  }
+
   if (toolId == "surfaceLocalization")
   {
     showSurfaceLocalizationPanel(camera);
@@ -1140,6 +1672,12 @@ void MainWindow::showToolPanel(const CameraConfig& camera, const QString& toolId
       if (tool.id == "localization" && action.id == "testLocalization")
       {
         testLocalization(camera);
+        return;
+      }
+
+      if (tool.id == "geometries" && action.id == "lineGeometry")
+      {
+        activateGeometryLineDrawing(camera);
         return;
       }
 
@@ -1205,8 +1743,1409 @@ void MainWindow::showToolPanel(const CameraConfig& camera, const QString& toolId
   appendLog(trText("log.toolPanel") + ": " + tool.label);
 }
 
+void MainWindow::showGeometryPanel(const CameraConfig& camera)
+{
+  deactivateImageDrawingTools();
+  clearToolPanel();
+
+  auto* panel = new QWidget(m_toolsContainer);
+  auto* layout = new QVBoxLayout(panel);
+  layout->setContentsMargins(0, 0, 0, 0);
+  layout->setSpacing(8);
+
+  auto* title = new QLabel(QString("%1 | %2").arg(trText("tools.geometries"), camera.id), panel);
+  title->setObjectName("toolPanelTitle");
+  layout->addWidget(title);
+
+  auto* pointButton = new QPushButton(trText("actions.pointGeometry"), panel);
+  connect(pointButton, &QPushButton::clicked, this, [this, camera]() { showGeometryPointPanel(camera); });
+  layout->addWidget(pointButton);
+
+  auto* lineButton = new QPushButton(trText("actions.lineGeometry"), panel);
+  connect(lineButton, &QPushButton::clicked, this, [this, camera]() { showGeometryLinePanel(camera); });
+  layout->addWidget(lineButton);
+
+  auto* backButton = new QPushButton(trText("commands.backToCameraTools"), panel);
+  connect(backButton, &QPushButton::clicked, this, [this, camera]() { showCameraToolList(camera); });
+  layout->addWidget(backButton);
+  layout->addStretch(1);
+
+  m_toolsLayout->addWidget(panel);
+}
+
+void MainWindow::showGeometryPointPanel(const CameraConfig& camera)
+{
+  deactivateImageDrawingTools();
+  clearToolPanel();
+  refreshPoseForCurrentFrame(camera);
+  loadGeometryPointRecipe(camera);
+
+  GeometryPointRuntimeConfig& pointConfig = m_geometryPointConfigs[camera.id];
+  const PartPose& pose = m_cameraRuntime[camera.id].currentPose();
+
+  auto* panel = new QWidget(m_toolsContainer);
+  auto* layout = new QVBoxLayout(panel);
+  layout->setContentsMargins(0, 0, 0, 0);
+  layout->setSpacing(8);
+
+  auto* title = new QLabel(QString("%1 | %2").arg(trText("actions.pointGeometry"), camera.id), panel);
+  title->setObjectName("toolPanelTitle");
+  layout->addWidget(title);
+
+  auto* poseLabel = new QLabel(pose.valid ? trText("labels.partPose") : trText("log.partPoseMissing"), panel);
+  poseLabel->setObjectName("toolPanelNote");
+  poseLabel->setWordWrap(true);
+  layout->addWidget(poseLabel);
+
+  auto* form = new QWidget(panel);
+  auto* formLayout = new QGridLayout(form);
+  formLayout->setContentsMargins(0, 0, 0, 0);
+  formLayout->setHorizontalSpacing(8);
+  formLayout->setVerticalSpacing(6);
+
+  auto* edgeSensitivity = new QSpinBox(form);
+  edgeSensitivity->setRange(1, 255);
+  edgeSensitivity->setValue(pointConfig.edgeSensitivity);
+
+  auto* subpixelEdge = new QCheckBox(trText("labels.subpixelEdge"), form);
+  subpixelEdge->setChecked(pointConfig.useSubpixel);
+
+  auto* edgeTransition = new QComboBox(form);
+  edgeTransition->addItem(trText("labels.transitionLightToDark"), "light_to_dark");
+  edgeTransition->addItem(trText("labels.transitionDarkToLight"), "dark_to_light");
+  edgeTransition->setCurrentIndex(pointConfig.transition == EdgeLineTransition::DarkToLight ? 1 : 0);
+
+  auto* edgePickMode = new QComboBox(form);
+  edgePickMode->addItem(trText("labels.edgePickFirst"), "first");
+  edgePickMode->addItem(trText("labels.edgePickLast"), "last");
+  edgePickMode->addItem(trText("labels.edgePickBest"), "best");
+  edgePickMode->setCurrentIndex(static_cast<int>(pointConfig.pickMode));
+
+  int row = 0;
+  formLayout->addWidget(new QLabel(trText("labels.edgeSensitivity"), form), row, 0);
+  formLayout->addWidget(edgeSensitivity, row++, 1);
+  if (isBwDimensionalCamera(camera))
+  {
+    formLayout->addWidget(subpixelEdge, row++, 0, 1, 2);
+  }
+  formLayout->addWidget(new QLabel(trText("labels.edgeTransition"), form), row, 0);
+  formLayout->addWidget(edgeTransition, row++, 1);
+  formLayout->addWidget(new QLabel(trText("labels.edgePickMode"), form), row, 0);
+  formLayout->addWidget(edgePickMode, row++, 1);
+  layout->addWidget(form);
+
+  connect(edgeSensitivity, qOverload<int>(&QSpinBox::valueChanged), this, [this, camera](int value) {
+    m_geometryPointConfigs[camera.id].edgeSensitivity = value;
+    saveGeometryPointRecipe(camera);
+    testGeometryPoint(camera);
+  });
+  connect(subpixelEdge, &QCheckBox::toggled, this, [this, camera](bool checked) {
+    m_geometryPointConfigs[camera.id].useSubpixel = checked;
+    saveGeometryPointRecipe(camera);
+    testGeometryPoint(camera);
+  });
+  connect(edgeTransition, qOverload<int>(&QComboBox::currentIndexChanged), this, [this, camera](int index) {
+    m_geometryPointConfigs[camera.id].transition =
+      index == 1 ? EdgeLineTransition::DarkToLight : EdgeLineTransition::LightToDark;
+    saveGeometryPointRecipe(camera);
+    testGeometryPoint(camera);
+  });
+  connect(edgePickMode, qOverload<int>(&QComboBox::currentIndexChanged), this, [this, camera](int index) {
+    if (index == 1)
+    {
+      m_geometryPointConfigs[camera.id].pickMode = EdgeLinePickMode::Last;
+    }
+    else if (index == 2)
+    {
+      m_geometryPointConfigs[camera.id].pickMode = EdgeLinePickMode::Best;
+    }
+    else
+    {
+      m_geometryPointConfigs[camera.id].pickMode = EdgeLinePickMode::First;
+    }
+    saveGeometryPointRecipe(camera);
+    testGeometryPoint(camera);
+  });
+
+  auto* drawButton = new QPushButton(trText("actions.geometryPointScan"), panel);
+  auto* testButton = new QPushButton(trText("actions.testGeometry"), panel);
+  auto* backButton = new QPushButton(trText("commands.backToCameraTools"), panel);
+
+  connect(drawButton, &QPushButton::clicked, this, [this, camera]() { activateGeometryPointDrawing(camera); });
+  connect(testButton, &QPushButton::clicked, this, [this, camera]() { testGeometryPoint(camera); });
+  connect(backButton, &QPushButton::clicked, this, [this, camera]() { showGeometryPanel(camera); });
+
+  auto* buttons = new QWidget(panel);
+  auto* buttonsLayout = new QGridLayout(buttons);
+  buttonsLayout->setContentsMargins(0, 0, 0, 0);
+  buttonsLayout->setHorizontalSpacing(8);
+  buttonsLayout->setVerticalSpacing(8);
+  buttonsLayout->addWidget(drawButton, 0, 0);
+  buttonsLayout->addWidget(testButton, 0, 1);
+  buttonsLayout->addWidget(backButton, 1, 0, 1, 2);
+  layout->addWidget(buttons);
+  layout->addStretch(1);
+
+  if (pointConfig.hasGuide && pose.valid)
+  {
+    const cv::Point2d imageStart = partToImage(pose, pointConfig.partStart);
+    const cv::Point2d imageEnd = partToImage(pose, pointConfig.partEnd);
+    m_pointGeometryMouseControllers[camera.id].setLine(
+      QPointF(imageStart.x, imageStart.y),
+      QPointF(imageEnd.x, imageEnd.y),
+      3.0);
+    m_activeDrawingRecipe = ActiveDrawingRecipe::Geometry;
+    m_geometryDrawingTarget = GeometryDrawingTarget::Point;
+    m_largeImage->setGeometryOverlayPointEditingEnabled(true);
+    testGeometryPoint(camera);
+  }
+  else if (pointConfig.hasImageGuide)
+  {
+    m_pointGeometryMouseControllers[camera.id].setLine(
+      QPointF(pointConfig.imageStart.x, pointConfig.imageStart.y),
+      QPointF(pointConfig.imageEnd.x, pointConfig.imageEnd.y),
+      3.0);
+    m_activeDrawingRecipe = ActiveDrawingRecipe::Geometry;
+    m_geometryDrawingTarget = GeometryDrawingTarget::Point;
+    m_largeImage->setGeometryOverlayPointEditingEnabled(true);
+    testGeometryPoint(camera);
+  }
+
+  m_toolsLayout->addWidget(panel);
+}
+
+void MainWindow::showGeometryLinePanel(const CameraConfig& camera)
+{
+  deactivateImageDrawingTools();
+  clearToolPanel();
+  refreshPoseForCurrentFrame(camera);
+  loadGeometryLinesRecipe(camera);
+
+  QVector<GeometryLineRuntimeConfig>& lineConfigs = m_geometryLineConfigs[camera.id];
+  GeometryLineRuntimeConfig& lineConfig = activeGeometryLineConfig(camera.id);
+  const PartPose& pose = m_cameraRuntime[camera.id].currentPose();
+
+  auto* panel = new QWidget(m_toolsContainer);
+  auto* layout = new QVBoxLayout(panel);
+  layout->setContentsMargins(0, 0, 0, 0);
+  layout->setSpacing(8);
+
+  auto* title = new QLabel(QString("%1 | %2").arg(trText("actions.lineGeometry"), camera.id), panel);
+  title->setObjectName("toolPanelTitle");
+  layout->addWidget(title);
+
+  auto* poseLabel = new QLabel(pose.valid ? trText("labels.partPose") : trText("log.partPoseMissing"), panel);
+  poseLabel->setObjectName("toolPanelNote");
+  poseLabel->setWordWrap(true);
+  layout->addWidget(poseLabel);
+
+  auto* lineSelector = new QComboBox(panel);
+  for (int i = 0; i < lineConfigs.size(); ++i)
+  {
+    lineSelector->addItem(lineConfigs[i].id, i);
+  }
+  lineSelector->setCurrentIndex(qBound(0, m_activeGeometryLineIndexes.value(camera.id, 0), lineConfigs.size() - 1));
+  auto* newLineButton = new QPushButton(trText("actions.newGeometryLine"), panel);
+  layout->addWidget(new QLabel(trText("labels.geometryLine"), panel));
+  layout->addWidget(lineSelector);
+  layout->addWidget(newLineButton);
+
+  auto* bandHalfWidth = new QSpinBox(panel);
+  bandHalfWidth->setRange(2, 500);
+  bandHalfWidth->setValue(lineConfig.bandHalfWidth);
+  bandHalfWidth->setSuffix(" px");
+  auto* edgeSensitivity = new QSpinBox(panel);
+  edgeSensitivity->setRange(1, 255);
+  edgeSensitivity->setValue(lineConfig.edgeSensitivity);
+  auto* edgeCleanupDerivative = new QSpinBox(panel);
+  edgeCleanupDerivative->setRange(0, 100);
+  edgeCleanupDerivative->setValue(lineConfig.edgeCleanupDerivative);
+  edgeCleanupDerivative->setSuffix(" px");
+  auto* edgeStatisticalFilter = new QSpinBox(panel);
+  edgeStatisticalFilter->setRange(0, 100);
+  edgeStatisticalFilter->setValue(lineConfig.edgeStatisticalFilter);
+  edgeStatisticalFilter->setSuffix(" px");
+  auto* subpixelEdge = new QCheckBox(trText("labels.subpixelEdge"), panel);
+  subpixelEdge->setChecked(lineConfig.useSubpixel);
+  auto* scanDirection = new QComboBox(panel);
+  scanDirection->addItem(trText("labels.scanNormalPositive"), "normal_positive");
+  scanDirection->addItem(trText("labels.scanNormalNegative"), "normal_negative");
+  scanDirection->setCurrentIndex(lineConfig.scanDirection == EdgeLineScanDirection::NormalNegative ? 1 : 0);
+  auto* edgeTransition = new QComboBox(panel);
+  edgeTransition->addItem(trText("labels.transitionLightToDark"), "light_to_dark");
+  edgeTransition->addItem(trText("labels.transitionDarkToLight"), "dark_to_light");
+  edgeTransition->setCurrentIndex(lineConfig.transition == EdgeLineTransition::DarkToLight ? 1 : 0);
+  auto* edgePickMode = new QComboBox(panel);
+  edgePickMode->addItem(trText("labels.edgePickFirst"), "first");
+  edgePickMode->addItem(trText("labels.edgePickLast"), "last");
+  edgePickMode->addItem(trText("labels.edgePickBest"), "best");
+  edgePickMode->setCurrentIndex(static_cast<int>(lineConfig.pickMode));
+
+  layout->addWidget(new QLabel(trText("labels.geometryLineBand"), panel));
+  layout->addWidget(bandHalfWidth);
+  layout->addWidget(new QLabel(trText("labels.edgeSensitivity"), panel));
+  layout->addWidget(edgeSensitivity);
+  layout->addWidget(new QLabel(trText("labels.edgeCleanupDerivative"), panel));
+  layout->addWidget(edgeCleanupDerivative);
+  layout->addWidget(new QLabel(trText("labels.edgeStatisticalFilter"), panel));
+  layout->addWidget(edgeStatisticalFilter);
+  if (isBwDimensionalCamera(camera))
+  {
+    layout->addWidget(subpixelEdge);
+  }
+  layout->addWidget(new QLabel(trText("labels.scanDirection"), panel));
+  layout->addWidget(scanDirection);
+  layout->addWidget(new QLabel(trText("labels.edgeTransition"), panel));
+  layout->addWidget(edgeTransition);
+  layout->addWidget(new QLabel(trText("labels.edgePickMode"), panel));
+  layout->addWidget(edgePickMode);
+
+  connect(lineSelector, qOverload<int>(&QComboBox::currentIndexChanged), this, [this, camera](int index) {
+    if (index < 0)
+    {
+      return;
+    }
+
+    m_activeGeometryLineIndexes[camera.id] = index;
+    showGeometryLinePanel(camera);
+  });
+  connect(newLineButton, &QPushButton::clicked, this, [this, camera]() {
+    addGeometryLine(camera);
+    saveGeometryLinesRecipe(camera);
+    showGeometryLinePanel(camera);
+  });
+  connect(bandHalfWidth, qOverload<int>(&QSpinBox::valueChanged), this, [this, camera](int value) {
+    activeGeometryLineConfig(camera.id).bandHalfWidth = value;
+    m_lineGeometryMouseControllers[camera.id].setBandHalfWidth(value);
+    updateGeometryLineOverlay(camera);
+    saveGeometryLinesRecipe(camera);
+    testGeometryLine(camera);
+  });
+  connect(edgeSensitivity, qOverload<int>(&QSpinBox::valueChanged), this, [this, camera](int value) {
+    activeGeometryLineConfig(camera.id).edgeSensitivity = value;
+    saveGeometryLinesRecipe(camera);
+    testGeometryLine(camera);
+  });
+  connect(edgeCleanupDerivative, qOverload<int>(&QSpinBox::valueChanged), this, [this, camera](int value) {
+    activeGeometryLineConfig(camera.id).edgeCleanupDerivative = value;
+    saveGeometryLinesRecipe(camera);
+    testGeometryLine(camera);
+  });
+  connect(edgeStatisticalFilter, qOverload<int>(&QSpinBox::valueChanged), this, [this, camera](int value) {
+    activeGeometryLineConfig(camera.id).edgeStatisticalFilter = value;
+    saveGeometryLinesRecipe(camera);
+    testGeometryLine(camera);
+  });
+  connect(subpixelEdge, &QCheckBox::toggled, this, [this, camera](bool checked) {
+    activeGeometryLineConfig(camera.id).useSubpixel = checked;
+    saveGeometryLinesRecipe(camera);
+    testGeometryLine(camera);
+  });
+  connect(scanDirection, qOverload<int>(&QComboBox::currentIndexChanged), this, [this, camera](int index) {
+    activeGeometryLineConfig(camera.id).scanDirection =
+      index == 1 ? EdgeLineScanDirection::NormalNegative : EdgeLineScanDirection::NormalPositive;
+    saveGeometryLinesRecipe(camera);
+    testGeometryLine(camera);
+  });
+  connect(edgeTransition, qOverload<int>(&QComboBox::currentIndexChanged), this, [this, camera](int index) {
+    activeGeometryLineConfig(camera.id).transition =
+      index == 1 ? EdgeLineTransition::DarkToLight : EdgeLineTransition::LightToDark;
+    saveGeometryLinesRecipe(camera);
+    testGeometryLine(camera);
+  });
+  connect(edgePickMode, qOverload<int>(&QComboBox::currentIndexChanged), this, [this, camera](int index) {
+    if (index == 1)
+    {
+      activeGeometryLineConfig(camera.id).pickMode = EdgeLinePickMode::Last;
+    }
+    else if (index == 2)
+    {
+      activeGeometryLineConfig(camera.id).pickMode = EdgeLinePickMode::Best;
+    }
+    else
+    {
+      activeGeometryLineConfig(camera.id).pickMode = EdgeLinePickMode::First;
+    }
+    saveGeometryLinesRecipe(camera);
+    testGeometryLine(camera);
+  });
+
+  auto* roiButton = new QPushButton(trText("actions.geometryLinePoints"), panel);
+  auto* testButton = new QPushButton(trText("actions.testGeometry"), panel);
+  auto* backButton = new QPushButton(trText("commands.backToCameraTools"), panel);
+
+  connect(roiButton, &QPushButton::clicked, this, [this, camera]() { activateGeometryLineDrawing(camera); });
+  connect(testButton, &QPushButton::clicked, this, [this, camera]() { testGeometryLine(camera); });
+  connect(backButton, &QPushButton::clicked, this, [this, camera]() { showGeometryPanel(camera); });
+
+  auto* buttons = new QWidget(panel);
+  auto* buttonsLayout = new QGridLayout(buttons);
+  buttonsLayout->setContentsMargins(0, 0, 0, 0);
+  buttonsLayout->setHorizontalSpacing(8);
+  buttonsLayout->setVerticalSpacing(8);
+  buttonsLayout->addWidget(roiButton, 0, 0);
+  buttonsLayout->addWidget(testButton, 0, 1);
+  buttonsLayout->addWidget(backButton, 1, 0, 1, 2);
+  layout->addWidget(buttons);
+  layout->addStretch(1);
+
+  bool shouldRefreshLine = false;
+  if (lineConfig.hasLine && pose.valid)
+  {
+    const cv::Point2d imageStart = partToImage(pose, lineConfig.partStart);
+    const cv::Point2d imageEnd = partToImage(pose, lineConfig.partEnd);
+    LineGeometryMouseController& controller = m_lineGeometryMouseControllers[camera.id];
+    controller.setLine(QPointF(imageStart.x, imageStart.y), QPointF(imageEnd.x, imageEnd.y), lineConfig.bandHalfWidth);
+    m_activeDrawingRecipe = ActiveDrawingRecipe::Geometry;
+    m_geometryDrawingTarget = GeometryDrawingTarget::Line;
+    updateGeometryLineOverlay(camera);
+    m_largeImage->setGeometryOverlayPointEditingEnabled(true);
+    shouldRefreshLine = true;
+  }
+  else if (lineConfig.hasImageLine)
+  {
+    LineGeometryMouseController& controller = m_lineGeometryMouseControllers[camera.id];
+    controller.setLine(
+      QPointF(lineConfig.imageStart.x, lineConfig.imageStart.y),
+      QPointF(lineConfig.imageEnd.x, lineConfig.imageEnd.y),
+      lineConfig.bandHalfWidth);
+    m_activeDrawingRecipe = ActiveDrawingRecipe::Geometry;
+    m_geometryDrawingTarget = GeometryDrawingTarget::Line;
+    updateGeometryLineOverlay(camera);
+    m_largeImage->setGeometryOverlayPointEditingEnabled(true);
+    shouldRefreshLine = true;
+  }
+
+  m_toolsLayout->addWidget(panel);
+  if (shouldRefreshLine)
+  {
+    testGeometryLine(camera);
+  }
+}
+
+MainWindow::GeometryLineRuntimeConfig& MainWindow::activeGeometryLineConfig(const QString& cameraId)
+{
+  QVector<GeometryLineRuntimeConfig>& lines = m_geometryLineConfigs[cameraId];
+  if (lines.isEmpty())
+  {
+    GeometryLineRuntimeConfig line;
+    line.id = "line_1";
+    lines.append(line);
+  }
+
+  int index = qBound(0, m_activeGeometryLineIndexes.value(cameraId, 0), lines.size() - 1);
+  m_activeGeometryLineIndexes[cameraId] = index;
+  return lines[index];
+}
+
+const MainWindow::GeometryLineRuntimeConfig& MainWindow::activeGeometryLineConfig(const QString& cameraId) const
+{
+  const QVector<GeometryLineRuntimeConfig>& lines = m_geometryLineConfigs.value(cameraId);
+  static const GeometryLineRuntimeConfig fallback;
+  if (lines.isEmpty())
+  {
+    return fallback;
+  }
+
+  const int index = qBound(0, m_activeGeometryLineIndexes.value(cameraId, 0), lines.size() - 1);
+  return lines[index];
+}
+
+void MainWindow::addGeometryLine(const CameraConfig& camera)
+{
+  QVector<GeometryLineRuntimeConfig>& lines = m_geometryLineConfigs[camera.id];
+  if (lines.isEmpty())
+  {
+    GeometryLineRuntimeConfig first;
+    first.id = "line_1";
+    lines.append(first);
+  }
+
+  GeometryLineRuntimeConfig line = activeGeometryLineConfig(camera.id);
+  line.id = QString("line_%1").arg(lines.size() + 1);
+  line.hasImageLine = false;
+  line.hasLine = false;
+  lines.append(line);
+  m_activeGeometryLineIndexes[camera.id] = lines.size() - 1;
+}
+
+void MainWindow::loadGeometryPointRecipe(const CameraConfig& camera)
+{
+  GeometryPointRuntimeConfig& point = m_geometryPointConfigs[camera.id];
+  if (point.hasGuide || point.hasImageGuide)
+  {
+    return;
+  }
+
+  const GeometryPointRecipeConfig recipe = m_recipeManager.loadGeometryPoint(camera.id, point.id);
+  if (!recipe.enabled)
+  {
+    return;
+  }
+
+  point.enabled = recipe.enabled;
+  point.id = recipe.id;
+  point.partStart = cv::Point2d(recipe.partStart.x(), recipe.partStart.y());
+  point.partEnd = cv::Point2d(recipe.partEnd.x(), recipe.partEnd.y());
+  point.edgeSensitivity = recipe.edgeSensitivity;
+  point.useSubpixel = recipe.useSubpixel;
+  point.transition = transitionFromRecipe(recipe.transition);
+  point.pickMode = pickModeFromRecipe(recipe.pickMode);
+  point.hasGuide = true;
+}
+
+void MainWindow::saveGeometryPointRecipe(const CameraConfig& camera)
+{
+  const GeometryPointRuntimeConfig& point = m_geometryPointConfigs[camera.id];
+  if (!point.hasGuide)
+  {
+    return;
+  }
+
+  GeometryPointRecipeConfig recipe;
+  recipe.enabled = point.enabled;
+  recipe.id = point.id;
+  recipe.partStart = QPointF(point.partStart.x, point.partStart.y);
+  recipe.partEnd = QPointF(point.partEnd.x, point.partEnd.y);
+  recipe.edgeSensitivity = point.edgeSensitivity;
+  recipe.useSubpixel = point.useSubpixel;
+  recipe.transition = transitionToRecipe(point.transition);
+  recipe.pickMode = pickModeToRecipe(point.pickMode);
+
+  QString error;
+  if (!m_recipeManager.saveGeometryPoint(camera.id, recipe, &error))
+  {
+    appendLog(error);
+  }
+}
+
+void MainWindow::loadGeometryLinesRecipe(const CameraConfig& camera)
+{
+  QVector<GeometryLineRuntimeConfig>& lines = m_geometryLineConfigs[camera.id];
+  if (!lines.isEmpty())
+  {
+    return;
+  }
+
+  const QVector<GeometryLineRecipeConfig> recipes = m_recipeManager.loadGeometryLines(camera.id);
+  for (const GeometryLineRecipeConfig& recipe : recipes)
+  {
+    if (!recipe.enabled)
+    {
+      continue;
+    }
+
+    GeometryLineRuntimeConfig line;
+    line.id = recipe.id;
+    line.enabled = recipe.enabled;
+    line.partStart = cv::Point2d(recipe.partStart.x(), recipe.partStart.y());
+    line.partEnd = cv::Point2d(recipe.partEnd.x(), recipe.partEnd.y());
+    line.bandHalfWidth = recipe.bandHalfWidth;
+    line.edgeSensitivity = recipe.edgeSensitivity;
+    line.edgeCleanupDerivative = recipe.edgeCleanupDerivative;
+    line.edgeStatisticalFilter = recipe.edgeStatisticalFilter;
+    line.useSubpixel = recipe.useSubpixel;
+    line.scanDirection = scanDirectionFromRecipe(recipe.scanDirection);
+    line.transition = transitionFromRecipe(recipe.transition);
+    line.pickMode = pickModeFromRecipe(recipe.pickMode);
+    line.hasLine = true;
+    lines.append(line);
+  }
+
+  if (lines.isEmpty())
+  {
+    GeometryLineRuntimeConfig line;
+    line.id = "line_1";
+    lines.append(line);
+  }
+  m_activeGeometryLineIndexes[camera.id] = qBound(0, m_activeGeometryLineIndexes.value(camera.id, 0), lines.size() - 1);
+}
+
+void MainWindow::saveGeometryLinesRecipe(const CameraConfig& camera)
+{
+  QVector<GeometryLineRecipeConfig> recipes;
+  for (const GeometryLineRuntimeConfig& line : m_geometryLineConfigs[camera.id])
+  {
+    if (!line.hasLine)
+    {
+      continue;
+    }
+
+    GeometryLineRecipeConfig recipe;
+    recipe.enabled = line.enabled;
+    recipe.id = line.id;
+    recipe.partStart = QPointF(line.partStart.x, line.partStart.y);
+    recipe.partEnd = QPointF(line.partEnd.x, line.partEnd.y);
+    recipe.bandHalfWidth = line.bandHalfWidth;
+    recipe.edgeSensitivity = line.edgeSensitivity;
+    recipe.edgeCleanupDerivative = line.edgeCleanupDerivative;
+    recipe.edgeStatisticalFilter = line.edgeStatisticalFilter;
+    recipe.useSubpixel = line.useSubpixel;
+    recipe.scanDirection = scanDirectionToRecipe(line.scanDirection);
+    recipe.transition = transitionToRecipe(line.transition);
+    recipe.pickMode = pickModeToRecipe(line.pickMode);
+    recipes.append(recipe);
+  }
+
+  QString error;
+  if (!m_recipeManager.saveGeometryLines(camera.id, recipes, &error))
+  {
+    appendLog(error);
+  }
+}
+
+void MainWindow::activateGeometryLineDrawing(const CameraConfig& camera)
+{
+  if (camera.id != m_selectedCameraId)
+  {
+    return;
+  }
+
+  deactivateImageDrawingTools();
+  m_activeDrawingRecipe = ActiveDrawingRecipe::Geometry;
+  m_geometryDrawingTarget = GeometryDrawingTarget::Line;
+  m_lineGeometryMouseControllers[camera.id].begin(activeGeometryLineConfig(camera.id).bandHalfWidth);
+  m_largeImage->setGeometryOverlayPointEditingEnabled(false);
+  m_largeImage->setGeometryPointPickingEnabled(true);
+  updateGeometryLineOverlay(camera);
+  appendLog(trText("log.geometryLineDrawing") + ": " + camera.id);
+}
+
+void MainWindow::handleGeometryLinePoint(const CameraConfig& camera, const QPointF& imagePoint)
+{
+  if (camera.id != m_selectedCameraId)
+  {
+    return;
+  }
+
+  LineGeometryMouseController& controller = m_lineGeometryMouseControllers[camera.id];
+  controller.setBandHalfWidth(activeGeometryLineConfig(camera.id).bandHalfWidth);
+  const bool completed = controller.handleClick(imagePoint);
+  updateGeometryLineOverlay(camera);
+
+  if (!completed)
+  {
+    return;
+  }
+
+  const LineGeometryEditorState& state = controller.state();
+  GeometryLineRuntimeConfig& config = activeGeometryLineConfig(camera.id);
+  config.imageStart = cv::Point2d(state.imageStart.x(), state.imageStart.y());
+  config.imageEnd = cv::Point2d(state.imageEnd.x(), state.imageEnd.y());
+  config.hasImageLine = true;
+
+  const PartPose& pose = m_cameraRuntime[camera.id].currentPose();
+  if (pose.valid)
+  {
+    config.partStart = imageToPart(pose, config.imageStart);
+    config.partEnd = imageToPart(pose, config.imageEnd);
+    config.hasLine = true;
+  }
+
+  m_largeImage->setGeometryPointPickingEnabled(false);
+  m_largeImage->setGeometryOverlayPointEditingEnabled(true);
+  updateGeometryLineOverlay(camera);
+  appendLog(trText("log.geometryLineGuideSaved") + ": " + camera.id);
+  saveGeometryLinesRecipe(camera);
+  testGeometryLine(camera);
+}
+
+void MainWindow::handleGeometryLineHandleMoved(const CameraConfig& camera, int pointIndex, const QPointF& imagePoint)
+{
+  if (camera.id != m_selectedCameraId || pointIndex < 0 || pointIndex > 1)
+  {
+    return;
+  }
+
+  LineGeometryMouseController& controller = m_lineGeometryMouseControllers[camera.id];
+  controller.movePoint(pointIndex, imagePoint);
+
+  const LineGeometryEditorState& state = controller.state();
+  if (!state.hasStart || !state.hasEnd)
+  {
+    updateGeometryLineOverlay(camera);
+    return;
+  }
+
+  GeometryLineRuntimeConfig& config = activeGeometryLineConfig(camera.id);
+  config.imageStart = cv::Point2d(state.imageStart.x(), state.imageStart.y());
+  config.imageEnd = cv::Point2d(state.imageEnd.x(), state.imageEnd.y());
+  config.hasImageLine = true;
+
+  const PartPose& pose = m_cameraRuntime[camera.id].currentPose();
+  if (pose.valid)
+  {
+    config.partStart = imageToPart(pose, config.imageStart);
+    config.partEnd = imageToPart(pose, config.imageEnd);
+    config.hasLine = true;
+  }
+  else
+  {
+    config.hasLine = false;
+  }
+
+  updateGeometryLineOverlay(camera);
+  saveGeometryLinesRecipe(camera);
+  testGeometryLine(camera);
+}
+
+GeometryOverlay MainWindow::configuredGeometryLinesOverlay(const CameraConfig& camera, bool includeActive) const
+{
+  GeometryOverlay overlay;
+  const PartPose& pose = m_cameraRuntime.at(camera.id).currentPose();
+  const QVector<GeometryLineRuntimeConfig> lines = m_geometryLineConfigs.value(camera.id);
+  const int activeIndex = m_activeGeometryLineIndexes.value(camera.id, 0);
+
+  for (int i = 0; i < lines.size(); ++i)
+  {
+    if (!includeActive && i == activeIndex)
+    {
+      continue;
+    }
+
+    const GeometryLineRuntimeConfig& line = lines[i];
+    const bool usePartLine = pose.valid && line.hasLine;
+    if (!usePartLine && !line.hasImageLine)
+    {
+      continue;
+    }
+
+    const cv::Point2d imageStart = usePartLine ? partToImage(pose, line.partStart) : line.imageStart;
+    const cv::Point2d imageEnd = usePartLine ? partToImage(pose, line.partEnd) : line.imageEnd;
+    const QPointF start(imageStart.x, imageStart.y);
+    const QPointF end(imageEnd.x, imageEnd.y);
+    const QPointF center = (start + end) * 0.5;
+    const QPointF delta = end - start;
+    const double length = std::hypot(delta.x(), delta.y());
+    const double angleDegrees = std::atan2(delta.y(), delta.x()) * 180.0 / CV_PI;
+    const bool highlightActive =
+      m_activeDrawingRecipe == ActiveDrawingRecipe::Geometry &&
+      m_geometryDrawingTarget == GeometryDrawingTarget::Line &&
+      i == activeIndex;
+    const QColor lineColor = highlightActive ? QColor("#ff4fd8") : QColor(170, 205, 220, 170);
+    const QColor bandColor = highlightActive ? QColor(0, 210, 255, 35) : QColor(120, 170, 190, 22);
+    overlay.bands.append({center, QSizeF(length, line.bandHalfWidth * 2.0), angleDegrees, lineColor, bandColor});
+    overlay.lines.append({start, end, lineColor, highlightActive ? 3 : 1});
+    if (includeActive && highlightActive)
+    {
+      overlay.points.append({start, "1"});
+      overlay.points.append({end, "2"});
+    }
+  }
+
+  return overlay;
+}
+
+void MainWindow::updateGeometryLineOverlay(const CameraConfig& camera, const GeometryOverlay& extraOverlay)
+{
+  GeometryOverlay overlay = configuredGeometryLinesOverlay(camera, false);
+  GeometryOverlay activeOverlay = m_lineGeometryMouseControllers[camera.id].overlay();
+  for (const GeometryOverlayPoint& point : activeOverlay.points)
+  {
+    overlay.points.append(point);
+  }
+  for (const GeometryOverlayLine& line : activeOverlay.lines)
+  {
+    overlay.lines.append(line);
+  }
+  for (const GeometryOverlayBand& band : activeOverlay.bands)
+  {
+    overlay.bands.append(band);
+  }
+
+  for (const GeometryOverlayPoint& point : extraOverlay.points)
+  {
+    overlay.points.append(point);
+  }
+  for (const GeometryOverlayLine& line : extraOverlay.lines)
+  {
+    overlay.lines.append(line);
+  }
+  for (const GeometryOverlayBand& band : extraOverlay.bands)
+  {
+    overlay.bands.append(band);
+  }
+  m_largeImage->setGeometryOverlay(overlay);
+}
+
+void MainWindow::testGeometryLine(const CameraConfig& camera)
+{
+  if (camera.id != m_selectedCameraId)
+  {
+    return;
+  }
+
+  GeometryLineRuntimeConfig& lineConfig = activeGeometryLineConfig(camera.id);
+  const PartPose& pose = m_cameraRuntime[camera.id].currentPose();
+  if (pose.valid && !lineConfig.hasLine && lineConfig.hasImageLine)
+  {
+    lineConfig.partStart = imageToPart(pose, lineConfig.imageStart);
+    lineConfig.partEnd = imageToPart(pose, lineConfig.imageEnd);
+    lineConfig.hasLine = true;
+  }
+
+  const bool usePartLine = pose.valid && lineConfig.hasLine;
+  if (!usePartLine && !lineConfig.hasImageLine)
+  {
+    appendLog(trText("log.geometryLineRoiMissing") + ": " + camera.id);
+    return;
+  }
+
+  const cv::Point2d imageStart = usePartLine ? partToImage(pose, lineConfig.partStart) : lineConfig.imageStart;
+  const cv::Point2d imageEnd = usePartLine ? partToImage(pose, lineConfig.partEnd) : lineConfig.imageEnd;
+  QString imageError;
+  const cv::Mat input = currentInputImage(camera, &imageError);
+  if (input.empty())
+  {
+    appendLog(imageError);
+    return;
+  }
+
+  EdgeLineDetectorConfig config;
+  config.id = lineConfig.id;
+  config.label = lineConfig.id;
+  config.guideStart = imageStart;
+  config.guideEnd = imageEnd;
+  config.bandHalfWidth = lineConfig.bandHalfWidth;
+  config.edgeSensitivity = lineConfig.edgeSensitivity;
+  config.edgeCleanupDerivative = lineConfig.edgeCleanupDerivative;
+  config.edgeStatisticalFilter = lineConfig.edgeStatisticalFilter;
+  config.useSubpixel = isBwDimensionalCamera(camera) && lineConfig.useSubpixel;
+  config.scanDirection = lineConfig.scanDirection;
+  config.transition = lineConfig.transition;
+  config.pickMode = lineConfig.pickMode;
+
+  EdgeLineDetector detector;
+  const EdgeLineDetectorResult result = detector.detect(input, config);
+  if (!result.processed || result.diagnosticImage.empty())
+  {
+    appendLog(result.message.isEmpty() ? trText("log.geometryLineFailed") + ": " + camera.id : result.message);
+    return;
+  }
+
+  m_selectedPreview = matToPixmap(result.diagnosticImage);
+  m_largeImage->setImage(m_selectedPreview);
+  m_largeImage->setRoi(QRect(result.searchRoi.x, result.searchRoi.y, result.searchRoi.width, result.searchRoi.height));
+
+  LineGeometryMouseController& controller = m_lineGeometryMouseControllers[camera.id];
+  controller.setLine(QPointF(imageStart.x, imageStart.y), QPointF(imageEnd.x, imageEnd.y), lineConfig.bandHalfWidth);
+  m_geometryDrawingTarget = GeometryDrawingTarget::Line;
+  updateGeometryLineOverlay(camera);
+
+  if (!result.found)
+  {
+    appendLog(result.message.isEmpty() ? trText("log.geometryLineNotFound") + ": " + camera.id : result.message);
+    return;
+  }
+
+  GeometrySet& geometries = m_cameraRuntime[camera.id].geometries();
+  for (int i = geometries.lines.size() - 1; i >= 0; --i)
+  {
+    if (geometries.lines[i].meta.id == lineConfig.id)
+    {
+      geometries.lines.removeAt(i);
+    }
+  }
+  geometries.lines.append(result.line);
+  GeometryOverlay detectedOverlay;
+  detectedOverlay.lines.append({
+    QPointF(result.line.start.x, result.line.start.y),
+    QPointF(result.line.end.x, result.line.end.y),
+    QColor("#35c46a"),
+    3
+  });
+  updateGeometryLineOverlay(camera, detectedOverlay);
+
+  appendLog(QString("%1: %2 x1=%3 y1=%4 x2=%5 y2=%6")
+              .arg(trText("log.geometryLineFound"))
+              .arg(camera.id)
+              .arg(result.line.start.x, 0, 'f', 1)
+              .arg(result.line.start.y, 0, 'f', 1)
+              .arg(result.line.end.x, 0, 'f', 1)
+              .arg(result.line.end.y, 0, 'f', 1));
+}
+
+void MainWindow::testConfiguredGeometryLines(const CameraConfig& camera)
+{
+  if (camera.id != m_selectedCameraId)
+  {
+    return;
+  }
+
+  loadGeometryLinesRecipe(camera);
+  QVector<GeometryLineRuntimeConfig>& lines = m_geometryLineConfigs[camera.id];
+  const PartPose& pose = m_cameraRuntime[camera.id].currentPose();
+  QString imageError;
+  const cv::Mat input = currentInputImage(camera, &imageError);
+  if (input.empty())
+  {
+    appendLog(imageError);
+    return;
+  }
+
+  cv::Mat diagnostic;
+  if (input.channels() == 1)
+  {
+    cv::cvtColor(input, diagnostic, cv::COLOR_GRAY2BGR);
+  }
+  else
+  {
+    input.copyTo(diagnostic);
+  }
+
+  GeometrySet& geometries = m_cameraRuntime[camera.id].geometries();
+  geometries.lines.clear();
+  GeometryOverlay detectedOverlay;
+
+  for (int i = 0; i < lines.size(); ++i)
+  {
+    GeometryLineRuntimeConfig& line = lines[i];
+    if (!line.enabled)
+    {
+      continue;
+    }
+
+    if (pose.valid && !line.hasLine && line.hasImageLine)
+    {
+      line.partStart = imageToPart(pose, line.imageStart);
+      line.partEnd = imageToPart(pose, line.imageEnd);
+      line.hasLine = true;
+    }
+
+    const bool usePartLine = pose.valid && line.hasLine;
+    if (!usePartLine && !line.hasImageLine)
+    {
+      continue;
+    }
+
+    const cv::Point2d imageStart = usePartLine ? partToImage(pose, line.partStart) : line.imageStart;
+    const cv::Point2d imageEnd = usePartLine ? partToImage(pose, line.partEnd) : line.imageEnd;
+
+    EdgeLineDetectorConfig config;
+    config.id = line.id;
+    config.label = line.id;
+    config.guideStart = imageStart;
+    config.guideEnd = imageEnd;
+    config.bandHalfWidth = line.bandHalfWidth;
+    config.edgeSensitivity = line.edgeSensitivity;
+    config.edgeCleanupDerivative = line.edgeCleanupDerivative;
+    config.edgeStatisticalFilter = line.edgeStatisticalFilter;
+    config.useSubpixel = isBwDimensionalCamera(camera) && line.useSubpixel;
+    config.scanDirection = line.scanDirection;
+    config.transition = line.transition;
+    config.pickMode = line.pickMode;
+
+    EdgeLineDetector detector;
+    const EdgeLineDetectorResult result = detector.detect(input, config);
+    if (!result.processed)
+    {
+      continue;
+    }
+
+    for (const cv::Point2d& point : result.edgePoints)
+    {
+      cv::circle(
+        diagnostic,
+        cv::Point(static_cast<int>(std::round(point.x)), static_cast<int>(std::round(point.y))),
+        2,
+        cv::Scalar(0, 0, 255),
+        cv::FILLED,
+        cv::LINE_AA);
+    }
+
+    if (!result.found)
+    {
+      continue;
+    }
+
+    geometries.lines.append(result.line);
+    cv::line(
+      diagnostic,
+      cv::Point(static_cast<int>(std::round(result.line.start.x)), static_cast<int>(std::round(result.line.start.y))),
+      cv::Point(static_cast<int>(std::round(result.line.end.x)), static_cast<int>(std::round(result.line.end.y))),
+      cv::Scalar(0, 255, 0),
+      2,
+      cv::LINE_AA);
+    detectedOverlay.lines.append({
+      QPointF(result.line.start.x, result.line.start.y),
+      QPointF(result.line.end.x, result.line.end.y),
+      QColor("#35c46a"),
+      3
+    });
+  }
+
+  loadGeometryPointRecipe(camera);
+  GeometryPointRuntimeConfig& point = m_geometryPointConfigs[camera.id];
+  if (point.enabled && point.hasGuide && pose.valid)
+  {
+    const cv::Point2d imageStart = partToImage(pose, point.partStart);
+    const cv::Point2d imageEnd = partToImage(pose, point.partEnd);
+
+    EdgePointDetectorConfig config;
+    config.id = point.id;
+    config.label = point.id;
+    config.scanStart = imageStart;
+    config.scanEnd = imageEnd;
+    config.edgeSensitivity = point.edgeSensitivity;
+    config.useSubpixel = isBwDimensionalCamera(camera) && point.useSubpixel;
+    config.transition = point.transition;
+    config.pickMode = point.pickMode;
+
+    EdgePointDetector detector;
+    const EdgePointDetectorResult result = detector.detect(input, config);
+    if (result.processed)
+    {
+      cv::arrowedLine(
+        diagnostic,
+        cv::Point(static_cast<int>(std::round(imageStart.x)), static_cast<int>(std::round(imageStart.y))),
+        cv::Point(static_cast<int>(std::round(imageEnd.x)), static_cast<int>(std::round(imageEnd.y))),
+        cv::Scalar(255, 0, 255),
+        2,
+        cv::LINE_AA,
+        0,
+        0.08);
+      for (const cv::Point2d& candidate : result.candidates)
+      {
+        cv::circle(
+          diagnostic,
+          cv::Point(static_cast<int>(std::round(candidate.x)), static_cast<int>(std::round(candidate.y))),
+          2,
+          cv::Scalar(0, 120, 255),
+          cv::FILLED,
+          cv::LINE_AA);
+      }
+      if (result.found)
+      {
+        geometries.points.clear();
+        geometries.points.append(result.point);
+        drawCyanPointCross(diagnostic, result.point.point);
+        appendCyanPointCross(detectedOverlay, result.point.point);
+      }
+    }
+  }
+
+  m_selectedPreview = matToPixmap(diagnostic);
+  m_largeImage->setImage(m_selectedPreview);
+  m_largeImage->clearRoi();
+  GeometryOverlay setupOverlay = configuredGeometryLinesOverlay(camera, true);
+  setupOverlay.points.clear();
+  for (const GeometryOverlayLine& line : detectedOverlay.lines)
+  {
+    setupOverlay.lines.append(line);
+  }
+  for (const GeometryOverlayPoint& point : detectedOverlay.points)
+  {
+    setupOverlay.points.append(point);
+  }
+  m_largeImage->setGeometryOverlay(setupOverlay);
+}
+
+void MainWindow::activateGeometryPointDrawing(const CameraConfig& camera)
+{
+  if (camera.id != m_selectedCameraId)
+  {
+    return;
+  }
+
+  deactivateImageDrawingTools();
+  m_activeDrawingRecipe = ActiveDrawingRecipe::Geometry;
+  m_geometryDrawingTarget = GeometryDrawingTarget::Point;
+  m_pointGeometryMouseControllers[camera.id].begin(3.0);
+  m_largeImage->setGeometryOverlayPointEditingEnabled(false);
+  m_largeImage->setGeometryPointPickingEnabled(true);
+  updateGeometryPointOverlay(camera);
+  appendLog(trText("log.geometryPointDrawing") + ": " + camera.id);
+}
+
+void MainWindow::handleGeometryPointGuidePoint(const CameraConfig& camera, const QPointF& imagePoint)
+{
+  if (camera.id != m_selectedCameraId)
+  {
+    return;
+  }
+
+  LineGeometryMouseController& controller = m_pointGeometryMouseControllers[camera.id];
+  const bool completed = controller.handleClick(imagePoint);
+  updateGeometryPointOverlay(camera);
+
+  if (!completed)
+  {
+    return;
+  }
+
+  const LineGeometryEditorState& state = controller.state();
+  GeometryPointRuntimeConfig& config = m_geometryPointConfigs[camera.id];
+  config.imageStart = cv::Point2d(state.imageStart.x(), state.imageStart.y());
+  config.imageEnd = cv::Point2d(state.imageEnd.x(), state.imageEnd.y());
+  config.hasImageGuide = true;
+
+  const PartPose& pose = m_cameraRuntime[camera.id].currentPose();
+  if (pose.valid)
+  {
+    config.partStart = imageToPart(pose, config.imageStart);
+    config.partEnd = imageToPart(pose, config.imageEnd);
+    config.hasGuide = true;
+  }
+
+  m_largeImage->setGeometryPointPickingEnabled(false);
+  m_largeImage->setGeometryOverlayPointEditingEnabled(true);
+  updateGeometryPointOverlay(camera);
+  appendLog(trText("log.geometryPointGuideSaved") + ": " + camera.id);
+  saveGeometryPointRecipe(camera);
+  testGeometryPoint(camera);
+}
+
+void MainWindow::handleGeometryPointHandleMoved(const CameraConfig& camera, int pointIndex, const QPointF& imagePoint)
+{
+  if (camera.id != m_selectedCameraId || pointIndex < 0 || pointIndex > 1)
+  {
+    return;
+  }
+
+  LineGeometryMouseController& controller = m_pointGeometryMouseControllers[camera.id];
+  controller.movePoint(pointIndex, imagePoint);
+
+  const LineGeometryEditorState& state = controller.state();
+  if (!state.hasStart || !state.hasEnd)
+  {
+    updateGeometryPointOverlay(camera);
+    return;
+  }
+
+  GeometryPointRuntimeConfig& config = m_geometryPointConfigs[camera.id];
+  config.imageStart = cv::Point2d(state.imageStart.x(), state.imageStart.y());
+  config.imageEnd = cv::Point2d(state.imageEnd.x(), state.imageEnd.y());
+  config.hasImageGuide = true;
+
+  const PartPose& pose = m_cameraRuntime[camera.id].currentPose();
+  if (pose.valid)
+  {
+    config.partStart = imageToPart(pose, config.imageStart);
+    config.partEnd = imageToPart(pose, config.imageEnd);
+    config.hasGuide = true;
+  }
+  else
+  {
+    config.hasGuide = false;
+  }
+
+  updateGeometryPointOverlay(camera);
+  saveGeometryPointRecipe(camera);
+  testGeometryPoint(camera);
+}
+
+void MainWindow::updateGeometryPointOverlay(const CameraConfig& camera, const GeometryOverlay& extraOverlay)
+{
+  GeometryOverlay overlay = m_pointGeometryMouseControllers[camera.id].overlay();
+  for (GeometryOverlayLine& line : overlay.lines)
+  {
+    line.color = QColor("#ff4fd8");
+    line.width = 3;
+  }
+  for (GeometryOverlayBand& band : overlay.bands)
+  {
+    band.outlineColor = QColor("#ff4fd8");
+    band.fillColor = QColor(255, 79, 216, 24);
+  }
+  for (const GeometryOverlayPoint& point : extraOverlay.points)
+  {
+    overlay.points.append(point);
+  }
+  for (const GeometryOverlayLine& line : extraOverlay.lines)
+  {
+    overlay.lines.append(line);
+  }
+  for (const GeometryOverlayBand& band : extraOverlay.bands)
+  {
+    overlay.bands.append(band);
+  }
+  m_largeImage->setGeometryOverlay(overlay);
+}
+
+void MainWindow::testGeometryPoint(const CameraConfig& camera)
+{
+  if (camera.id != m_selectedCameraId)
+  {
+    return;
+  }
+
+  GeometryPointRuntimeConfig& pointConfig = m_geometryPointConfigs[camera.id];
+  const PartPose& pose = m_cameraRuntime[camera.id].currentPose();
+  if (pose.valid && !pointConfig.hasGuide && pointConfig.hasImageGuide)
+  {
+    pointConfig.partStart = imageToPart(pose, pointConfig.imageStart);
+    pointConfig.partEnd = imageToPart(pose, pointConfig.imageEnd);
+    pointConfig.hasGuide = true;
+  }
+
+  const bool usePartGuide = pose.valid && pointConfig.hasGuide;
+  if (!usePartGuide && !pointConfig.hasImageGuide)
+  {
+    updateGeometryPointOverlay(camera);
+    return;
+  }
+
+  const cv::Point2d imageStart = usePartGuide ? partToImage(pose, pointConfig.partStart) : pointConfig.imageStart;
+  const cv::Point2d imageEnd = usePartGuide ? partToImage(pose, pointConfig.partEnd) : pointConfig.imageEnd;
+  QString imageError;
+  const cv::Mat input = currentInputImage(camera, &imageError);
+  if (input.empty())
+  {
+    appendLog(imageError);
+    return;
+  }
+
+  EdgePointDetectorConfig config;
+  config.id = pointConfig.id;
+  config.label = pointConfig.id;
+  config.scanStart = imageStart;
+  config.scanEnd = imageEnd;
+  config.edgeSensitivity = pointConfig.edgeSensitivity;
+  config.useSubpixel = isBwDimensionalCamera(camera) && pointConfig.useSubpixel;
+  config.transition = pointConfig.transition;
+  config.pickMode = pointConfig.pickMode;
+
+  EdgePointDetector detector;
+  const EdgePointDetectorResult result = detector.detect(input, config);
+  if (!result.processed || result.diagnosticImage.empty())
+  {
+    appendLog(result.message.isEmpty() ? trText("log.geometryPointFailed") + ": " + camera.id : result.message);
+    return;
+  }
+
+  m_selectedPreview = matToPixmap(result.diagnosticImage);
+  m_largeImage->setImage(m_selectedPreview);
+  m_largeImage->clearRoi();
+
+  LineGeometryMouseController& controller = m_pointGeometryMouseControllers[camera.id];
+  controller.setLine(QPointF(imageStart.x, imageStart.y), QPointF(imageEnd.x, imageEnd.y), 3.0);
+  m_geometryDrawingTarget = GeometryDrawingTarget::Point;
+
+  GeometryOverlay detectedOverlay;
+  if (result.found)
+  {
+    appendCyanPointCross(detectedOverlay, result.point.point);
+  }
+  updateGeometryPointOverlay(camera, detectedOverlay);
+
+  if (!result.found)
+  {
+    appendLog(result.message.isEmpty() ? trText("log.geometryPointNotFound") + ": " + camera.id : result.message);
+    return;
+  }
+
+  GeometrySet& geometries = m_cameraRuntime[camera.id].geometries();
+  for (int i = geometries.points.size() - 1; i >= 0; --i)
+  {
+    if (geometries.points[i].meta.id == pointConfig.id)
+    {
+      geometries.points.removeAt(i);
+    }
+  }
+  geometries.points.append(result.point);
+
+  appendLog(QString("%1: %2 x=%3 y=%4")
+              .arg(trText("log.geometryPointFound"))
+              .arg(camera.id)
+              .arg(result.point.point.x, 0, 'f', 1)
+              .arg(result.point.point.y, 0, 'f', 1));
+}
+
+void MainWindow::startCameraSimulation(const CameraConfig& camera)
+{
+  if (camera.id != m_selectedCameraId)
+  {
+    selectCamera(camera);
+  }
+
+  if (camera.type != "file")
+  {
+    appendLog(trText("log.cameraSourceUnsupported") + ": " + camera.id);
+    return;
+  }
+
+  CameraRuntime& runtime = m_cameraRuntime[camera.id];
+  QString error;
+  const QString testFolder = cameraTestImagesFolder(camera);
+  if (!runtime.start(camera, testFolder, &error))
+  {
+    appendLog(error.isEmpty() ? trText("log.cameraStartFailed") + ": " + camera.id : error);
+    showCameraSetupPanel(camera);
+    return;
+  }
+
+  m_simulationTimer->start(runtime.intervalMs());
+  appendLog(trText("log.cameraStarted") + ": " + camera.id);
+  advanceCameraFrame(camera);
+  showCameraSetupPanel(camera);
+}
+
+void MainWindow::stopCameraSimulation(const CameraConfig& camera)
+{
+  CameraRuntime& runtime = m_cameraRuntime[camera.id];
+  runtime.stop();
+
+  if (camera.id == m_selectedCameraId)
+  {
+    m_simulationTimer->stop();
+    showCameraSetupPanel(camera);
+  }
+
+  appendLog(trText("log.cameraStopped") + ": " + camera.id);
+}
+
+void MainWindow::stepCameraSimulation(const CameraConfig& camera)
+{
+  if (camera.type != "file")
+  {
+    appendLog(trText("log.cameraSourceUnsupported") + ": " + camera.id);
+    return;
+  }
+
+  CameraRuntime& runtime = m_cameraRuntime[camera.id];
+  advanceCameraFrame(camera);
+  showCameraSetupPanel(camera);
+}
+
+void MainWindow::advanceCameraFrame(const CameraConfig& camera)
+{
+  if (camera.id != m_selectedCameraId)
+  {
+    return;
+  }
+
+  CameraRuntime& runtime = m_cameraRuntime[camera.id];
+  QString error;
+  const QString testFolder = cameraTestImagesFolder(camera);
+  if (!runtime.step(camera, testFolder, &error))
+  {
+    m_simulationTimer->stop();
+    appendLog(error.isEmpty() ? trText("log.cameraNoMoreFrames") + ": " + camera.id : error);
+    return;
+  }
+
+  m_selectedPreview = matToPixmap(runtime.currentFrame());
+  for (CameraTileWidget* tile : m_tiles)
+  {
+    if (tile->camera().id == camera.id)
+    {
+      tile->setPreview(m_selectedPreview);
+      break;
+    }
+  }
+  m_largeImage->setImage(m_selectedPreview);
+  processCurrentCameraFrame(camera);
+  updateCameraSetupDetails(camera);
+}
+
+void MainWindow::processCurrentCameraFrame(const CameraConfig& camera)
+{
+  auto runConfiguredGeometry = [this, camera]() {
+    testConfiguredGeometryLines(camera);
+  };
+
+  if (isBwDimensionalCamera(camera))
+  {
+    testLocalization(camera);
+    runConfiguredGeometry();
+    return;
+  }
+
+  if (!isGrayscaleLocalizationCamera(camera))
+  {
+    return;
+  }
+
+  const SurfaceAnnulusLocalizationConfig annulus = m_recipeManager.loadSurfaceAnnulusLocalization(camera.id);
+  if ((annulus.method == "edge" && annulus.hasEdgeCircle && annulus.edgeRadius > annulus.edgeBandInner) ||
+      (annulus.method != "edge" && annulus.hasOuterCircle && annulus.hasInnerCircle && annulus.outerRadius > annulus.innerRadius))
+  {
+    testSurfaceAnnulusLocalization(camera);
+    runConfiguredGeometry();
+    return;
+  }
+
+  QRect roi;
+  if (m_recipeManager.loadSurfaceDefectRoi(camera.id, roi))
+  {
+    testSurfaceEdgePcaLocalization(camera);
+    runConfiguredGeometry();
+  }
+}
+
+void MainWindow::refreshPoseForCurrentFrame(const CameraConfig& camera)
+{
+  if (camera.id != m_selectedCameraId)
+  {
+    return;
+  }
+
+  if (isBwDimensionalCamera(camera))
+  {
+    testLocalization(camera);
+    return;
+  }
+
+  if (!isGrayscaleLocalizationCamera(camera))
+  {
+    return;
+  }
+
+  const SurfaceAnnulusLocalizationConfig annulus = m_recipeManager.loadSurfaceAnnulusLocalization(camera.id);
+  if ((annulus.method == "edge" && annulus.hasEdgeCircle && annulus.edgeRadius > annulus.edgeBandInner) ||
+      (annulus.method != "edge" && annulus.hasOuterCircle && annulus.hasInnerCircle && annulus.outerRadius > annulus.innerRadius))
+  {
+    testSurfaceAnnulusLocalization(camera);
+    return;
+  }
+
+  QRect roi;
+  if (m_recipeManager.loadSurfaceDefectRoi(camera.id, roi))
+  {
+    testSurfaceEdgePcaLocalization(camera);
+  }
+}
+
+QString MainWindow::cameraSetupDetailsText(const CameraConfig& camera) const
+{
+  const auto runtimeIt = m_cameraRuntime.find(camera.id);
+  const CameraRuntime* runtime = runtimeIt == m_cameraRuntime.end() ? nullptr : &runtimeIt->second;
+  const PartPose pose = runtime ? runtime->currentPose() : makeInvalidPartPose(camera.id);
+  const QString samplePath = m_recipeManager.firstCameraSampleImagePath(camera.id);
+  const QString testPath = m_recipeManager.firstCameraTestImagePath(camera.id);
+
+  return QString("%1: %2\n%3: %4\n%5: %6\n%7: %8\n%9: %10\n%11: %12\n%13: %14")
+    .arg(trText("labels.source"), camera.type)
+    .arg(trText("labels.folder"), resolvedCameraFolder(camera))
+    .arg(trText("labels.sampleImage"), samplePath.isEmpty() ? trText("status.invalid") : samplePath)
+    .arg(trText("labels.testImages"), testPath.isEmpty() ? trText("status.invalid") : m_recipeManager.cameraTestImagesPath(camera.id))
+    .arg(trText("labels.status"), runtime ? runtimeStatusText(runtime->status()) : trText("status.stopped"))
+    .arg(trText("labels.frame"), runtime ? QString::number(runtime->frameIndex()) : QStringLiteral("0"))
+    .arg(
+      trText("labels.partPose"),
+      pose.valid
+        ? QString("X=%1 Y=%2 A=%3 S=%4")
+            .arg(pose.origin.x, 0, 'f', 1)
+            .arg(pose.origin.y, 0, 'f', 1)
+            .arg(pose.angleRadians * 180.0 / CV_PI, 0, 'f', 1)
+            .arg(pose.score, 0, 'f', 2)
+        : trText("status.invalid"));
+}
+
+void MainWindow::updateCameraSetupDetails(const CameraConfig& camera)
+{
+  if (!m_setupDetails || m_setupCameraId != camera.id)
+  {
+    return;
+  }
+
+  m_setupDetails->setText(cameraSetupDetailsText(camera));
+}
+
 void MainWindow::showSurfaceLocalizationStrategyPanel(const CameraConfig& camera, const QString& strategyId)
 {
+  deactivateImageDrawingTools();
+
   if (strategyId == "threshold" || strategyId == "edge")
   {
     QString error;
@@ -1484,6 +3423,7 @@ void MainWindow::showSurfaceLocalizationStrategyPanel(const CameraConfig& camera
 
 void MainWindow::showSurfaceLocalizationPanel(const CameraConfig& camera)
 {
+  deactivateImageDrawingTools();
   clearToolPanel();
 
   const SurfaceAnnulusLocalizationConfig annulus = m_recipeManager.loadSurfaceAnnulusLocalization(camera.id);
@@ -1960,17 +3900,11 @@ void MainWindow::testSurfaceAnnulusLocalization(const CameraConfig& camera)
     return;
   }
 
-  if (m_selectedImagePath.isEmpty())
-  {
-    appendLog(trText("log.imageMissing") + ": " + camera.id);
-    return;
-  }
-
-  const cv::Mat input = cv::imread(m_selectedImagePath.toStdString(), cv::IMREAD_COLOR);
-
+  QString imageError;
+  const cv::Mat input = currentInputImage(camera, &imageError);
   if (input.empty())
   {
-    appendLog(trText("log.imageMissing") + ": " + m_selectedImagePath);
+    appendLog(imageError);
     return;
   }
 
@@ -2017,6 +3951,7 @@ void MainWindow::testSurfaceAnnulusLocalization(const CameraConfig& camera)
   if (result.blobs.empty())
   {
     m_lastSurfaceLocalizationResults.remove(camera.id);
+    m_cameraRuntime[camera.id].clearCurrentPose(camera.id);
     appendLog(QString("%1: %2 min=%3 max=%4")
                 .arg(trText("log.surfaceNotFound"))
                 .arg(camera.id)
@@ -2029,10 +3964,12 @@ void MainWindow::testSurfaceAnnulusLocalization(const CameraConfig& camera)
   if (result.localization.found)
   {
     m_lastSurfaceLocalizationResults.insert(camera.id, result.localization);
+    m_cameraRuntime[camera.id].setCurrentPose(partPoseFromSurfaceReference(camera, result.localization));
   }
   else
   {
     m_lastSurfaceLocalizationResults.remove(camera.id);
+    m_cameraRuntime[camera.id].clearCurrentPose(camera.id);
   }
 
   appendLog(QString("%1: %2 cx=%3 cy=%4 r=%5 score=%6 area=%7 blobs=%8 min=%9 max=%10")
@@ -2069,17 +4006,11 @@ void MainWindow::testSurfaceLocalization(const CameraConfig& camera)
     return;
   }
 
-  if (m_selectedImagePath.isEmpty())
-  {
-    appendLog(trText("log.imageMissing") + ": " + camera.id);
-    return;
-  }
-
-  const cv::Mat input = cv::imread(m_selectedImagePath.toStdString(), cv::IMREAD_COLOR);
-
+  QString imageError;
+  const cv::Mat input = currentInputImage(camera, &imageError);
   if (input.empty())
   {
-    appendLog(trText("log.imageMissing") + ": " + m_selectedImagePath);
+    appendLog(imageError);
     return;
   }
 
@@ -2142,17 +4073,11 @@ void MainWindow::testSurfaceLocalizationStrategy(const CameraConfig& camera)
     return;
   }
 
-  if (m_selectedImagePath.isEmpty())
-  {
-    appendLog(trText("log.imageMissing") + ": " + camera.id);
-    return;
-  }
-
-  const cv::Mat input = cv::imread(m_selectedImagePath.toStdString(), cv::IMREAD_COLOR);
-
+  QString imageError;
+  const cv::Mat input = currentInputImage(camera, &imageError);
   if (input.empty())
   {
-    appendLog(trText("log.imageMissing") + ": " + m_selectedImagePath);
+    appendLog(imageError);
     return;
   }
 
@@ -2215,16 +4140,11 @@ void MainWindow::testSurfaceEdgePcaLocalization(const CameraConfig& camera)
     return;
   }
 
-  if (m_selectedImagePath.isEmpty())
-  {
-    appendLog(trText("log.imageMissing") + ": " + camera.id);
-    return;
-  }
-
-  const cv::Mat input = cv::imread(m_selectedImagePath.toStdString(), cv::IMREAD_COLOR);
+  QString imageError;
+  const cv::Mat input = currentInputImage(camera, &imageError);
   if (input.empty())
   {
-    appendLog(trText("log.imageMissing") + ": " + m_selectedImagePath);
+    appendLog(imageError);
     return;
   }
 
@@ -2253,11 +4173,13 @@ void MainWindow::testSurfaceEdgePcaLocalization(const CameraConfig& camera)
   if (!result.localization.found)
   {
     m_lastSurfaceLocalizationResults.remove(camera.id);
+    m_cameraRuntime[camera.id].clearCurrentPose(camera.id);
     appendLog(trText("log.surfaceStrategyNotFound") + ": " + camera.id);
     return;
   }
 
   m_lastSurfaceLocalizationResults.insert(camera.id, result.localization);
+  m_cameraRuntime[camera.id].setCurrentPose(partPoseFromSurfaceReference(camera, result.localization));
   appendLog(QString("%1: %2 cx=%3 cy=%4 angle=%5 points=%6 score=%7")
               .arg(trText("log.surfaceStrategyFound"))
               .arg(camera.id)
@@ -2282,10 +4204,11 @@ void MainWindow::acquireSurfaceModel(const CameraConfig& camera)
     return;
   }
 
-  const cv::Mat input = cv::imread(m_selectedImagePath.toStdString(), cv::IMREAD_COLOR);
+  QString imageError;
+  const cv::Mat input = currentInputImage(camera, &imageError);
   if (input.empty())
   {
-    appendLog(trText("log.imageMissing") + ": " + m_selectedImagePath);
+    appendLog(imageError);
     return;
   }
 
@@ -2347,10 +4270,11 @@ void MainWindow::previewSurfaceModel(const CameraConfig& camera)
     return;
   }
 
-  const cv::Mat input = cv::imread(m_selectedImagePath.toStdString(), cv::IMREAD_COLOR);
+  QString imageError;
+  const cv::Mat input = currentInputImage(camera, &imageError);
   if (input.empty())
   {
-    appendLog(trText("log.imageMissing") + ": " + m_selectedImagePath);
+    appendLog(imageError);
     return;
   }
 
@@ -2393,10 +4317,11 @@ void MainWindow::testSurfaceShapeModel(const CameraConfig& camera)
     return;
   }
 
-  const cv::Mat input = cv::imread(m_selectedImagePath.toStdString(), cv::IMREAD_COLOR);
+  QString imageError;
+  const cv::Mat input = currentInputImage(camera, &imageError);
   if (input.empty())
   {
-    appendLog(trText("log.imageMissing") + ": " + m_selectedImagePath);
+    appendLog(imageError);
     return;
   }
 
@@ -2415,11 +4340,13 @@ void MainWindow::testSurfaceShapeModel(const CameraConfig& camera)
   if (!result.processed || result.diagnosticImage.empty() || !result.localization.found)
   {
     m_lastSurfaceLocalizationResults.remove(camera.id);
+    m_cameraRuntime[camera.id].clearCurrentPose(camera.id);
     appendLog(trText("log.surfaceStrategyNotFound") + ": " + camera.id);
     return;
   }
 
   m_lastSurfaceLocalizationResults.insert(camera.id, result.localization);
+  m_cameraRuntime[camera.id].setCurrentPose(partPoseFromSurfaceReference(camera, result.localization));
   m_selectedPreview = matToPixmap(result.diagnosticImage);
   m_largeImage->setImage(m_selectedPreview);
   m_largeImage->setRoi(model.searchRoi);
@@ -2447,11 +4374,12 @@ void MainWindow::testSurfaceTemplateModel(const CameraConfig& camera)
     return;
   }
 
-  const cv::Mat input = cv::imread(m_selectedImagePath.toStdString(), cv::IMREAD_COLOR);
+  QString imageError;
+  const cv::Mat input = currentInputImage(camera, &imageError);
   const cv::Mat modelImage = cv::imread(model.templateImagePath.toStdString(), cv::IMREAD_COLOR);
   if (input.empty() || modelImage.empty())
   {
-    appendLog(trText("log.imageMissing") + ": " + camera.id);
+    appendLog(input.empty() ? imageError : trText("log.imageMissing") + ": " + model.templateImagePath);
     return;
   }
 
@@ -2470,11 +4398,13 @@ void MainWindow::testSurfaceTemplateModel(const CameraConfig& camera)
   if (!result.processed || result.diagnosticImage.empty() || !result.localization.found)
   {
     m_lastSurfaceLocalizationResults.remove(camera.id);
+    m_cameraRuntime[camera.id].clearCurrentPose(camera.id);
     appendLog(trText("log.surfaceStrategyNotFound") + ": " + camera.id);
     return;
   }
 
   m_lastSurfaceLocalizationResults.insert(camera.id, result.localization);
+  m_cameraRuntime[camera.id].setCurrentPose(partPoseFromSurfaceReference(camera, result.localization));
   m_selectedPreview = matToPixmap(result.diagnosticImage);
   m_largeImage->setImage(m_selectedPreview);
   m_largeImage->setRoi(model.searchRoi);
@@ -2509,17 +4439,11 @@ void MainWindow::testLocalization(const CameraConfig& camera)
     return;
   }
 
-  if (m_selectedImagePath.isEmpty())
-  {
-    appendLog(trText("log.imageMissing") + ": " + camera.id);
-    return;
-  }
-
-  const cv::Mat input = cv::imread(m_selectedImagePath.toStdString(), cv::IMREAD_COLOR);
-
+  QString imageError;
+  const cv::Mat input = currentInputImage(camera, &imageError);
   if (input.empty())
   {
-    appendLog(trText("log.imageMissing") + ": " + m_selectedImagePath);
+    appendLog(imageError);
     return;
   }
 
@@ -2536,6 +4460,7 @@ void MainWindow::testLocalization(const CameraConfig& camera)
   if (result.diagnosticImage.empty())
   {
     m_lastLocalizationResults.remove(camera.id);
+    m_cameraRuntime[camera.id].clearCurrentPose(camera.id);
     appendLog(trText("log.localizationFailed") + ": " + camera.id);
     return;
   }
@@ -2547,10 +4472,12 @@ void MainWindow::testLocalization(const CameraConfig& camera)
 
   if (!result.found)
   {
+    m_cameraRuntime[camera.id].clearCurrentPose(camera.id);
     appendLog(trText("log.localizationNotFound") + ": " + camera.id);
     return;
   }
 
+  m_cameraRuntime[camera.id].setCurrentPose(partPoseFromLocalizationResult(camera, result));
   appendLog(QString("%1: %2 cx=%3 cy=%4 angle=%5 area=%6 bg=%7 thr=%8 factor=%9 offset=%10")
               .arg(trText("log.localizationFound"))
               .arg(camera.id)
@@ -2581,6 +4508,8 @@ bool MainWindow::isGrayscaleLocalizationCamera(const CameraConfig& camera) const
 
 void MainWindow::clearToolPanel()
 {
+  m_setupDetails = nullptr;
+  m_setupCameraId.clear();
   while (QLayoutItem* item = m_toolsLayout->takeAt(0))
   {
     if (QWidget* widget = item->widget())
@@ -2625,9 +4554,65 @@ QString MainWindow::trText(const QString& key) const
   return m_translations.text(key);
 }
 
+QString MainWindow::runtimeStatusText(CameraRuntime::Status status) const
+{
+  switch (status)
+  {
+  case CameraRuntime::Status::Ready:
+    return trText("status.ready");
+  case CameraRuntime::Status::Running:
+    return trText("status.running");
+  case CameraRuntime::Status::Error:
+    return trText("status.error");
+  case CameraRuntime::Status::Stopped:
+  default:
+    return trText("status.stopped");
+  }
+}
+
+PartPose MainWindow::partPoseFromLocalizationResult(const CameraConfig& camera, const LocalizationResult& result) const
+{
+  if (!result.found)
+  {
+    return makeInvalidPartPose(camera.id);
+  }
+
+  PartPose pose;
+  pose.valid = true;
+  pose.cameraId = camera.id;
+  pose.method = "bw_localization";
+  pose.origin = result.center;
+  pose.angleRadians = result.angleRadians;
+  pose.score = result.area;
+  pose.xAxis = normalizedOrDefault(result.xAxisEnd - result.xAxisStart, {std::cos(result.angleRadians), std::sin(result.angleRadians)});
+  pose.yAxis = normalizedOrDefault(result.yAxisEnd - result.yAxisStart, {-pose.xAxis.y, pose.xAxis.x});
+  return pose;
+}
+
+PartPose MainWindow::partPoseFromSurfaceReference(const CameraConfig& camera, const SurfaceLocalizationReference& reference) const
+{
+  if (!reference.found)
+  {
+    return makeInvalidPartPose(camera.id);
+  }
+
+  PartPose pose;
+  pose.valid = true;
+  pose.cameraId = camera.id;
+  pose.method = QString::fromStdString(reference.method);
+  pose.origin = reference.center;
+  pose.angleRadians = reference.angleRadians;
+  pose.score = reference.score;
+
+  const cv::Point2d fallbackX(std::cos(reference.angleRadians), std::sin(reference.angleRadians));
+  pose.xAxis = normalizedOrDefault(reference.xAxisEnd - reference.xAxisStart, fallbackX);
+  pose.yAxis = normalizedOrDefault(reference.yAxisEnd - reference.yAxisStart, {-pose.xAxis.y, pose.xAxis.x});
+  return pose;
+}
+
 QPixmap MainWindow::loadCameraPreview(const CameraConfig& camera) const
 {
-  const QString imagePath = firstImageInFolder(camera.folder);
+  const QString imagePath = cameraSampleImagePath(camera);
 
   if (imagePath.isEmpty())
   {
@@ -2659,9 +4644,78 @@ QPixmap MainWindow::matToPixmap(const cv::Mat& image) const
   return QPixmap::fromImage(qimage.copy());
 }
 
+cv::Mat MainWindow::currentInputImage(const CameraConfig& camera, QString* errorMessage) const
+{
+  const auto runtimeIt = m_cameraRuntime.find(camera.id);
+  if (runtimeIt != m_cameraRuntime.end() && !runtimeIt->second.currentFrame().empty())
+  {
+    return runtimeIt->second.currentFrame().clone();
+  }
+
+  QString imagePath = camera.id == m_selectedCameraId ? m_selectedImagePath : QString();
+  if (imagePath.isEmpty())
+  {
+    imagePath = cameraSampleImagePath(camera);
+  }
+
+  if (imagePath.isEmpty())
+  {
+    if (errorMessage)
+    {
+      *errorMessage = trText("log.imageMissing") + ": " + camera.id;
+    }
+
+    return {};
+  }
+
+  cv::Mat input = cv::imread(imagePath.toStdString(), cv::IMREAD_COLOR);
+  if (input.empty() && errorMessage)
+  {
+    *errorMessage = trText("log.imageMissing") + ": " + imagePath;
+  }
+
+  return input;
+}
+
+QString MainWindow::cameraSampleImagePath(const CameraConfig& camera) const
+{
+  const QString recipeSample = m_recipeManager.firstCameraSampleImagePath(camera.id);
+  if (!recipeSample.isEmpty())
+  {
+    return recipeSample;
+  }
+
+  return firstImageInFolder(camera.folder);
+}
+
+QString MainWindow::cameraTestImagesFolder(const CameraConfig& camera) const
+{
+  if (!m_recipeManager.firstCameraTestImagePath(camera.id).isEmpty())
+  {
+    return m_recipeManager.cameraTestImagesPath(camera.id);
+  }
+
+  return resolvedCameraFolder(camera);
+}
+
+QString MainWindow::resolvedCameraFolder(const CameraConfig& camera) const
+{
+  if (camera.folder.isEmpty())
+  {
+    return projectPath("data/images");
+  }
+
+  return resolveProjectPath(camera.folder);
+}
+
 QString MainWindow::firstImageInFolder(const QString& folder) const
 {
-  QDir directory(projectPath(folder));
+  if (folder.isEmpty())
+  {
+    return {};
+  }
+
+  QDir directory(resolveProjectPath(folder));
   const QStringList filters = {"*.png", "*.jpg", "*.jpeg", "*.bmp", "*.tif", "*.tiff"};
   const QFileInfoList files = directory.entryInfoList(filters, QDir::Files, QDir::Name);
 

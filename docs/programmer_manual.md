@@ -131,6 +131,21 @@ Responsabilita':
 - filtrare le camere attive con `activeCameras()`;
 - associare ogni camera al suo `ProcessingProfile`.
 
+La configurazione camera descrive la sorgente fisica o simulata della camera, non
+il prodotto da controllare. Per questo la cartella immagini usata in simulazione
+resta in `config/cameras.json`: oggi rappresenta una `FileCamera`, domani potra'
+essere sostituita da una sorgente reale come `VimbaCamera` mantenendo invariata la
+pipeline dei tool.
+
+Direzione prevista:
+
+- menu alto `Telecamere` con la stessa lista camere visibile nelle miniature;
+- scelta di una camera, apertura finestra setup e associazione di una cartella
+  immagini;
+- salvataggio della sorgente nel file camera;
+- uso della cartella come stream simulato di frame in arrivo, non come semplice
+  immagine statica di test.
+
 `RecipeManager` gestisce i dati di processo salvati nella ricetta attiva.
 
 Prima funzione gestita:
@@ -180,12 +195,20 @@ File:
 - pannello destro;
 - tool dinamici della camera.
 
+Il menu superiore dovra' includere anche `Telecamere`. Questa voce serve a
+configurare la sorgente di ogni camera, per esempio associando una cartella
+immagini a `CAM01` durante la simulazione. La scelta appartiene alla
+configurazione macchina, quindi resta separata dalle ricette prodotto.
+
 Layout pannello destro:
 
 - in vista griglia/main mostra i comandi generali: `Start`, `Stop`, `Reset errori`,
   `Reload config`, `Esci`;
 - quando una camera e' selezionata mostra solo camera selezionata, pulsante
   `Vista griglia`, strategie disponibili e tool camera;
+- per ogni camera selezionata dovra' esserci una voce stabile `Setup`, dedicata a
+  sorgente, stato, Start/Stop camera, frame corrente, loop, intervallo e step
+  manuale;
 - `Start`/`Stop` restano anche nel menu `Sistema`;
 - il box `Log eventi` non e' piu' visibile nel pannello destro. Le chiamate
   `appendLog()` restano nel codice come diagnostica interna e sono no-op se il
@@ -302,7 +325,24 @@ recipes/default/cameras/CAM01.json
 recipes/default/cameras/CAM02.json
 ...
 recipes/default/assets/
+recipes/default/images/CAM01/sample/
+recipes/default/images/CAM01/test/
 ```
+
+Ogni camera della ricetta ha due aree immagini distinte:
+
+- `images/CAMxx/sample/`: contiene l'immagine campione usata per impostare localizzazione, geometrie e futuri tool di misura;
+- `images/CAMxx/test/`: contiene le immagini usate per provare la ricetta su pezzi successivi.
+
+Regola operativa: i pannelli tool leggono il sample quando non c'e' un frame runtime
+attivo; `Setup -> Start` e `Frame successivo` leggono invece la cartella `test`.
+La vecchia cartella in `config/cameras.json` resta solo come fallback e come
+concetto di sorgente camera simulata generale, non come archivio prodotto.
+
+Quando una ricetta viene creata, selezionata o la configurazione camere viene
+ricaricata, l'app prepara automaticamente `sample` e `test` per ogni camera
+attiva. Nel pannello `Set-up` della camera, `Acquisisci campione` salva il frame
+corrente in `sample/sample.png`.
 
 Per camere BW, il primo tool operativo importante sara':
 
@@ -310,6 +350,88 @@ Per camere BW, il primo tool operativo importante sara':
 - centro di massa;
 - assi X/Y del pezzo;
 - sistema di riferimento per le misure successive.
+
+La localizzazione deve produrre una posa pezzo riusabile da tutti i tool
+successivi. La struttura prevista, valida sia per BW sia per grayscale, dovra'
+contenere almeno:
+
+- validita' della posa;
+- metodo/strategia che l'ha prodotta;
+- origine pezzo in coordinate immagine;
+- angolo o orientamento;
+- assi X/Y del pezzo;
+- score/qualita' della localizzazione.
+
+Questa posa corrente deve vivere nello stato runtime della camera, non nella
+ricetta. La ricetta dice come localizzare e controllare il prodotto; il runtime
+dice dove si trova il pezzo nel frame corrente.
+
+Flusso operativo previsto per ogni camera:
+
+```text
+sorgente camera -> frame corrente -> localizzazione attiva -> posa pezzo corrente
+                 -> misure dimensionali -> controlli superficie -> AI -> risultato
+```
+
+I tool futuri, per esempio diametro, distanza, difetto superficie o maschera AI,
+dovranno poter lavorare in coordinate relative al pezzo. Servono quindi funzioni
+comuni di conversione:
+
+```text
+coordinate immagine -> coordinate pezzo
+coordinate pezzo -> coordinate immagine
+```
+
+In questo modo una misura puo' essere programmata rispetto all'origine dinamica
+del pezzo e non solo rispetto ai pixel assoluti dell'immagine.
+
+Le misure dimensionali devono essere divise in due livelli:
+
+1. rilevamento geometrie;
+2. calcolo misure sulle geometrie rilevate.
+
+Il primo livello produce primitive geometriche riusabili, come:
+
+- punto;
+- linea;
+- cerchio;
+- arco;
+- edge;
+- contorno.
+
+Ogni tipo geometrico vive in un file dedicato sotto `src/geometry/`. Le geometrie
+del frame corrente sono raccolte nel runtime camera tramite `GeometrySet`. Le
+misure non devono cercare direttamente edge o contorni: devono riferirsi a
+geometrie gia' rilevate, per esempio distanza tra un punto e una linea oppure
+concentricita' tra due cerchi.
+
+I detector geometrici vivono separati dai modelli in `src/processing/geometry/`.
+La geometria finale resta unica per BW e grayscale; cambia solo la strategia del
+detector. Per esempio un `CircleGeometry` puo' essere prodotto da soglia/contorno,
+da Canny+fit, da modello o in futuro da maschera AI.
+
+Primo detector disponibile:
+
+- `ThresholdCircleDetector`: costruisce una maschera da soglia in ROI, applica le
+  esclusioni, trova il contorno principale e usa `CircleFit` per produrre un
+  `CircleGeometry`.
+
+Nota implementativa GUI: l'interazione mouse delle geometrie non deve crescere
+dentro `MainWindow` o dentro la logica generica di `ImageViewWidget`. Il viewer
+dovra' limitarsi a mostrare immagine, convertire coordinate e inoltrare eventi.
+Gli editor geometrici dovranno vivere in file dedicati, per esempio:
+
+- `src/gui/geometry/GeometryOverlay.*`: primitive overlay riusabili;
+- `src/gui/geometry/LineGeometryEditor.*`: editor linea con due punti, fascia,
+  maniglie e output configurazione;
+- futuri editor dedicati per cerchio, arco e altre geometrie.
+
+Per la linea, il modello interattivo scelto e':
+
+1. click punto iniziale;
+2. click punto finale;
+3. fascia/offset attorno alla linea, regolabile con maniglie;
+4. rotazione data dalla direzione punto iniziale -> punto finale.
 
 Per camere grayscale con controllo superficie, la localizzazione dimensionale non viene
 usata. Il tool separato `Localizzazione grigi` gestisce invece:

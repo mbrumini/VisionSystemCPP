@@ -2,6 +2,7 @@
 
 #include <QRect>
 #include <QPoint>
+#include <QPointF>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -71,6 +72,34 @@ struct SurfaceModelConfig
   double angleStepDegrees = 5.0;
 };
 
+struct GeometryLineRecipeConfig
+{
+  bool enabled = false;
+  QString id = "line_1";
+  QPointF partStart;
+  QPointF partEnd;
+  int bandHalfWidth = 20;
+  int edgeSensitivity = 60;
+  int edgeCleanupDerivative = 12;
+  int edgeStatisticalFilter = 0;
+  bool useSubpixel = false;
+  QString scanDirection = "normal_positive";
+  QString transition = "light_to_dark";
+  QString pickMode = "first";
+};
+
+struct GeometryPointRecipeConfig
+{
+  bool enabled = false;
+  QString id = "point_1";
+  QPointF partStart;
+  QPointF partEnd;
+  int edgeSensitivity = 60;
+  bool useSubpixel = false;
+  QString transition = "light_to_dark";
+  QString pickMode = "first";
+};
+
 class RecipeManager
 {
 public:
@@ -119,12 +148,26 @@ public:
   bool saveSurfaceModelMinTemplateScore(const QString& cameraId, double score, QString* errorMessage = nullptr) const;
   bool saveSurfaceModelAngleRange(const QString& cameraId, double startDegrees, double endDegrees, double stepDegrees, QString* errorMessage = nullptr) const;
   QString surfaceModelTemplateImagePath(const QString& cameraId) const;
+  QVector<GeometryLineRecipeConfig> loadGeometryLines(const QString& cameraId) const;
+  bool saveGeometryLines(const QString& cameraId, const QVector<GeometryLineRecipeConfig>& configs, QString* errorMessage = nullptr) const;
+  GeometryLineRecipeConfig loadGeometryLine(const QString& cameraId, const QString& lineId = "line_1") const;
+  bool saveGeometryLine(const QString& cameraId, const GeometryLineRecipeConfig& config, QString* errorMessage = nullptr) const;
+  GeometryPointRecipeConfig loadGeometryPoint(const QString& cameraId, const QString& pointId = "point_1") const;
+  bool saveGeometryPoint(const QString& cameraId, const GeometryPointRecipeConfig& config, QString* errorMessage = nullptr) const;
+  QString cameraSampleImagesPath(const QString& cameraId) const;
+  QString cameraTestImagesPath(const QString& cameraId) const;
+  QString firstCameraSampleImagePath(const QString& cameraId) const;
+  QString firstCameraTestImagePath(const QString& cameraId) const;
+  bool ensureCameraImageFolders(const QString& cameraId, QString* errorMessage = nullptr) const;
+  bool importCameraSampleImage(const QString& cameraId, const QString& sourceFilePath, QString* errorMessage = nullptr) const;
+  bool importCameraTestImages(const QString& cameraId, const QString& sourceDirectory, QString* errorMessage = nullptr) const;
 
 private:
   static bool copyDirectory(const QString& sourceDirectory, const QString& destinationDirectory, QString* errorMessage);
   static bool writeRecipeMetadata(const QString& recipeId, const QString& path, QString* errorMessage);
 
   QString cameraRecipePath(const QString& cameraId) const;
+  QString cameraImagesPath(const QString& cameraId, const QString& kind) const;
 
   QString m_recipeId;
 };

@@ -7,6 +7,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QRegularExpression>
+#include <QStringList>
 
 namespace
 {
@@ -59,6 +60,47 @@ QJsonObject pointToJson(const QPoint& point)
 QPoint pointFromJson(const QJsonObject& object)
 {
   return QPoint(object.value("x").toInt(), object.value("y").toInt());
+}
+
+QJsonObject pointFToJson(const QPointF& point)
+{
+  QJsonObject result;
+  result["x"] = point.x();
+  result["y"] = point.y();
+  return result;
+}
+
+QPointF pointFFromJson(const QJsonObject& object)
+{
+  return QPointF(object.value("x").toDouble(), object.value("y").toDouble());
+}
+
+QStringList imageNameFilters()
+{
+  return {"*.bmp", "*.jpg", "*.jpeg", "*.png", "*.tif", "*.tiff"};
+}
+
+QString firstImageInDirectory(const QString& path)
+{
+  QDir directory(path);
+  if (!directory.exists())
+  {
+    return {};
+  }
+
+  const QFileInfoList entries = directory.entryInfoList(imageNameFilters(), QDir::Files, QDir::Name);
+  if (entries.isEmpty())
+  {
+    return {};
+  }
+
+  return entries.first().absoluteFilePath();
+}
+
+bool isSupportedImageFile(const QString& path)
+{
+  const QString suffix = QFileInfo(path).suffix().toLower();
+  return suffix == "bmp" || suffix == "jpg" || suffix == "jpeg" || suffix == "png" || suffix == "tif" || suffix == "tiff";
 }
 
 bool loadJsonObject(const QString& path, QJsonObject& root)
@@ -1264,9 +1306,374 @@ QString RecipeManager::surfaceModelTemplateImagePath(const QString& cameraId) co
   return QDir(recipesRoot()).filePath(m_recipeId + "/assets/" + cameraId + "_surface_model_template.png");
 }
 
+QVector<GeometryLineRecipeConfig> RecipeManager::loadGeometryLines(const QString& cameraId) const
+{
+  QVector<GeometryLineRecipeConfig> configs;
+
+  QJsonObject root;
+  if (!loadJsonObject(cameraRecipePath(cameraId), root))
+  {
+    return configs;
+  }
+
+  const QJsonArray lines = root.value("tools").toObject()
+    .value("geometries").toObject()
+    .value("lines").toArray();
+
+  for (const QJsonValue& value : lines)
+  {
+    const QJsonObject line = value.toObject();
+    GeometryLineRecipeConfig config;
+    config.id = line.value("id").toString(config.id);
+    if (config.id.isEmpty())
+    {
+      continue;
+    }
+
+    config.enabled = line.value("enabled").toBool(false);
+    config.partStart = pointFFromJson(line.value("partStart").toObject());
+    config.partEnd = pointFFromJson(line.value("partEnd").toObject());
+    config.bandHalfWidth = line.value("bandHalfWidth").toInt(config.bandHalfWidth);
+    config.edgeSensitivity = line.value("edgeSensitivity").toInt(config.edgeSensitivity);
+    config.edgeCleanupDerivative = line.value("edgeCleanupDerivative").toInt(config.edgeCleanupDerivative);
+    config.edgeStatisticalFilter = line.value("edgeStatisticalFilter").toInt(config.edgeStatisticalFilter);
+    config.useSubpixel = line.value("useSubpixel").toBool(config.useSubpixel);
+    config.scanDirection = line.value("scanDirection").toString(config.scanDirection);
+    config.transition = line.value("transition").toString(config.transition);
+    config.pickMode = line.value("pickMode").toString(config.pickMode);
+    configs.append(config);
+  }
+
+  return configs;
+}
+
+GeometryLineRecipeConfig RecipeManager::loadGeometryLine(const QString& cameraId, const QString& lineId) const
+{
+  const QVector<GeometryLineRecipeConfig> configs = loadGeometryLines(cameraId);
+  for (const GeometryLineRecipeConfig& config : configs)
+  {
+    if (config.id == lineId)
+    {
+      return config;
+    }
+  }
+
+  GeometryLineRecipeConfig config;
+  config.id = lineId;
+  return config;
+}
+
+bool RecipeManager::saveGeometryLines(const QString& cameraId, const QVector<GeometryLineRecipeConfig>& configs, QString* errorMessage) const
+{
+  const QString path = cameraRecipePath(cameraId);
+  QJsonObject root;
+  loadJsonObject(path, root);
+
+  root["cameraId"] = cameraId;
+
+  QJsonObject tools = root.value("tools").toObject();
+  QJsonObject geometries = tools.value("geometries").toObject();
+  geometries["enabled"] = true;
+  QJsonArray lines;
+  for (const GeometryLineRecipeConfig& config : configs)
+  {
+    QJsonObject line;
+    line["enabled"] = config.enabled;
+    line["id"] = config.id.isEmpty() ? QString("line_%1").arg(lines.size() + 1) : config.id;
+    line["type"] = "edge_line";
+    line["coordinateSpace"] = "part";
+    line["partStart"] = pointFToJson(config.partStart);
+    line["partEnd"] = pointFToJson(config.partEnd);
+    line["bandHalfWidth"] = qBound(2, config.bandHalfWidth, 500);
+    line["edgeSensitivity"] = qBound(1, config.edgeSensitivity, 255);
+    line["edgeCleanupDerivative"] = qBound(0, config.edgeCleanupDerivative, 100);
+    line["edgeStatisticalFilter"] = qBound(0, config.edgeStatisticalFilter, 100);
+    line["useSubpixel"] = config.useSubpixel;
+    line["scanDirection"] = config.scanDirection == "normal_negative" ? "normal_negative" : "normal_positive";
+    line["transition"] = config.transition == "dark_to_light" ? "dark_to_light" : "light_to_dark";
+    line["pickMode"] = config.pickMode == "last" || config.pickMode == "best" ? config.pickMode : "first";
+    lines.append(line);
+  }
+
+  geometries["lines"] = lines;
+  tools["geometries"] = geometries;
+  root["tools"] = tools;
+  return saveJsonObject(path, root, errorMessage);
+}
+
+bool RecipeManager::saveGeometryLine(const QString& cameraId, const GeometryLineRecipeConfig& config, QString* errorMessage) const
+{
+  QVector<GeometryLineRecipeConfig> configs = loadGeometryLines(cameraId);
+  bool replaced = false;
+  for (GeometryLineRecipeConfig& existing : configs)
+  {
+    if (existing.id == config.id)
+    {
+      existing = config;
+      replaced = true;
+      break;
+    }
+  }
+
+  if (!replaced)
+  {
+    configs.append(config);
+  }
+
+  return saveGeometryLines(cameraId, configs, errorMessage);
+}
+
+GeometryPointRecipeConfig RecipeManager::loadGeometryPoint(const QString& cameraId, const QString& pointId) const
+{
+  QJsonObject root;
+  if (!loadJsonObject(cameraRecipePath(cameraId), root))
+  {
+    GeometryPointRecipeConfig config;
+    config.id = pointId;
+    return config;
+  }
+
+  const QJsonArray points = root.value("tools").toObject()
+    .value("geometries").toObject()
+    .value("points").toArray();
+
+  for (const QJsonValue& value : points)
+  {
+    const QJsonObject point = value.toObject();
+    const QString id = point.value("id").toString("point_1");
+    if (id != pointId)
+    {
+      continue;
+    }
+
+    GeometryPointRecipeConfig config;
+    config.id = id;
+    config.enabled = point.value("enabled").toBool(false);
+    config.partStart = pointFFromJson(point.value("partStart").toObject());
+    config.partEnd = pointFFromJson(point.value("partEnd").toObject());
+    config.edgeSensitivity = point.value("edgeSensitivity").toInt(config.edgeSensitivity);
+    config.useSubpixel = point.value("useSubpixel").toBool(config.useSubpixel);
+    config.transition = point.value("transition").toString(config.transition);
+    config.pickMode = point.value("pickMode").toString(config.pickMode);
+    return config;
+  }
+
+  GeometryPointRecipeConfig config;
+  config.id = pointId;
+  return config;
+}
+
+bool RecipeManager::saveGeometryPoint(const QString& cameraId, const GeometryPointRecipeConfig& config, QString* errorMessage) const
+{
+  const QString path = cameraRecipePath(cameraId);
+  QJsonObject root;
+  loadJsonObject(path, root);
+
+  root["cameraId"] = cameraId;
+
+  QJsonObject tools = root.value("tools").toObject();
+  QJsonObject geometries = tools.value("geometries").toObject();
+  geometries["enabled"] = true;
+
+  QJsonArray points = geometries.value("points").toArray();
+  bool replaced = false;
+  for (int i = 0; i < points.size(); ++i)
+  {
+    QJsonObject point = points[i].toObject();
+    if (point.value("id").toString() != config.id)
+    {
+      continue;
+    }
+
+    point["enabled"] = config.enabled;
+    point["id"] = config.id.isEmpty() ? "point_1" : config.id;
+    point["type"] = "edge_point";
+    point["coordinateSpace"] = "part";
+    point["partStart"] = pointFToJson(config.partStart);
+    point["partEnd"] = pointFToJson(config.partEnd);
+    point["edgeSensitivity"] = qBound(1, config.edgeSensitivity, 255);
+    point["useSubpixel"] = config.useSubpixel;
+    point["transition"] = config.transition == "dark_to_light" ? "dark_to_light" : "light_to_dark";
+    point["pickMode"] = config.pickMode == "last" || config.pickMode == "best" ? config.pickMode : "first";
+    points[i] = point;
+    replaced = true;
+    break;
+  }
+
+  if (!replaced)
+  {
+    QJsonObject point;
+    point["enabled"] = config.enabled;
+    point["id"] = config.id.isEmpty() ? "point_1" : config.id;
+    point["type"] = "edge_point";
+    point["coordinateSpace"] = "part";
+    point["partStart"] = pointFToJson(config.partStart);
+    point["partEnd"] = pointFToJson(config.partEnd);
+    point["edgeSensitivity"] = qBound(1, config.edgeSensitivity, 255);
+    point["useSubpixel"] = config.useSubpixel;
+    point["transition"] = config.transition == "dark_to_light" ? "dark_to_light" : "light_to_dark";
+    point["pickMode"] = config.pickMode == "last" || config.pickMode == "best" ? config.pickMode : "first";
+    points.append(point);
+  }
+
+  geometries["points"] = points;
+  tools["geometries"] = geometries;
+  root["tools"] = tools;
+  return saveJsonObject(path, root, errorMessage);
+}
+
+QString RecipeManager::cameraSampleImagesPath(const QString& cameraId) const
+{
+  return cameraImagesPath(cameraId, "sample");
+}
+
+QString RecipeManager::cameraTestImagesPath(const QString& cameraId) const
+{
+  return cameraImagesPath(cameraId, "test");
+}
+
+QString RecipeManager::firstCameraSampleImagePath(const QString& cameraId) const
+{
+  return firstImageInDirectory(cameraSampleImagesPath(cameraId));
+}
+
+QString RecipeManager::firstCameraTestImagePath(const QString& cameraId) const
+{
+  return firstImageInDirectory(cameraTestImagesPath(cameraId));
+}
+
+bool RecipeManager::ensureCameraImageFolders(const QString& cameraId, QString* errorMessage) const
+{
+  QDir directory;
+  for (const QString& path : {cameraSampleImagesPath(cameraId), cameraTestImagesPath(cameraId)})
+  {
+    if (!directory.mkpath(path))
+    {
+      if (errorMessage)
+      {
+        *errorMessage = "Impossibile creare cartella immagini ricetta: " + path;
+      }
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool RecipeManager::importCameraSampleImage(const QString& cameraId, const QString& sourceFilePath, QString* errorMessage) const
+{
+  if (!isSupportedImageFile(sourceFilePath))
+  {
+    if (errorMessage)
+    {
+      *errorMessage = "Immagine campione non valida: " + sourceFilePath;
+    }
+    return false;
+  }
+
+  const QString destinationDirectory = cameraSampleImagesPath(cameraId);
+  if (!QDir().mkpath(destinationDirectory))
+  {
+    if (errorMessage)
+    {
+      *errorMessage = "Impossibile creare cartella sample: " + destinationDirectory;
+    }
+    return false;
+  }
+
+  QDir sampleDir(destinationDirectory);
+  const QFileInfo source(sourceFilePath);
+  const QString destinationPath = sampleDir.filePath(source.fileName());
+  const QString sourceAbsolutePath = source.absoluteFilePath();
+  const QString destinationAbsolutePath = QFileInfo(destinationPath).absoluteFilePath();
+  for (const QFileInfo& file : sampleDir.entryInfoList(imageNameFilters(), QDir::Files))
+  {
+    if (file.absoluteFilePath() == sourceAbsolutePath)
+    {
+      continue;
+    }
+    sampleDir.remove(file.fileName());
+  }
+
+  if (sourceAbsolutePath == destinationAbsolutePath)
+  {
+    return true;
+  }
+
+  if (!QFile::copy(sourceFilePath, destinationPath))
+  {
+    if (errorMessage)
+    {
+      *errorMessage = "Impossibile copiare immagine campione: " + sourceFilePath;
+    }
+    return false;
+  }
+
+  return true;
+}
+
+bool RecipeManager::importCameraTestImages(const QString& cameraId, const QString& sourceDirectory, QString* errorMessage) const
+{
+  QDir source(sourceDirectory);
+  if (!source.exists())
+  {
+    if (errorMessage)
+    {
+      *errorMessage = "Cartella immagini test non trovata: " + sourceDirectory;
+    }
+    return false;
+  }
+
+  const QString destinationDirectory = cameraTestImagesPath(cameraId);
+  if (!QDir().mkpath(destinationDirectory))
+  {
+    if (errorMessage)
+    {
+      *errorMessage = "Impossibile creare cartella test: " + destinationDirectory;
+    }
+    return false;
+  }
+
+  QDir destination(destinationDirectory);
+  int copied = 0;
+  for (const QFileInfo& file : source.entryInfoList(imageNameFilters(), QDir::Files, QDir::Name))
+  {
+    const QString destinationPath = destination.filePath(file.fileName());
+    if (file.absoluteFilePath() == QFileInfo(destinationPath).absoluteFilePath())
+    {
+      copied += 1;
+      continue;
+    }
+    if (QFile::exists(destinationPath))
+    {
+      QFile::remove(destinationPath);
+    }
+    if (QFile::copy(file.absoluteFilePath(), destinationPath))
+    {
+      copied += 1;
+    }
+  }
+
+  if (copied == 0)
+  {
+    if (errorMessage)
+    {
+      *errorMessage = "Nessuna immagine test copiata da: " + sourceDirectory;
+    }
+    return false;
+  }
+
+  return true;
+}
+
 QString RecipeManager::cameraRecipePath(const QString& cameraId) const
 {
   return QDir(recipesRoot()).filePath(m_recipeId + "/cameras/" + cameraId + ".json");
+}
+
+QString RecipeManager::cameraImagesPath(const QString& cameraId, const QString& kind) const
+{
+  return QDir(recipesRoot()).filePath(m_recipeId + "/images/" + cameraId + "/" + kind);
 }
 
 bool RecipeManager::copyDirectory(const QString& sourceDirectory, const QString& destinationDirectory, QString* errorMessage)
