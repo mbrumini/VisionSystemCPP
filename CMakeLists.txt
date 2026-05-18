@@ -41,6 +41,8 @@ add_executable(VisionSystemCPP
     src/gui/geometry/GeometryDiagnosticDrawing.h
     src/gui/geometry/GeometryDiagnosticDrawing.cpp
     src/gui/geometry/GeometryRuntimeConfig.h
+    src/gui/geometry/BandGeometryEditor.h
+    src/gui/geometry/BandGeometryEditor.cpp
     src/gui/geometry/LineGeometryEditor.h
     src/gui/geometry/LineGeometryEditor.cpp
     src/gui/geometry/LineGeometryMouseController.h

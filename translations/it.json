@@ -59,6 +59,7 @@
     "status": "Stato",
     "frame": "Frame",
     "frameInterval": "Intervallo frame",
+    "scanTime": "Tempo scansione",
     "partPose": "Posa pezzo",
     "geometryLine": "Linea geometria",
     "geometryLineBand": "Fascia linea",

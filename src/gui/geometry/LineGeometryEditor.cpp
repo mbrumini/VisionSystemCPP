@@ -1,16 +1,15 @@
 #include "LineGeometryEditor.h"
 
-#include <algorithm>
-#include <cmath>
-
 void LineGeometryEditor::reset()
 {
   m_state = {};
+  m_bandEditor.setHalfWidth(m_state.bandHalfWidth);
 }
 
 void LineGeometryEditor::setBandHalfWidth(double halfWidth)
 {
-  m_state.bandHalfWidth = std::max(2.0, halfWidth);
+  m_bandEditor.setHalfWidth(halfWidth);
+  m_state.bandHalfWidth = m_bandEditor.halfWidth();
 }
 
 void LineGeometryEditor::setLine(const QPointF& imageStart, const QPointF& imageEnd)
@@ -89,12 +88,7 @@ GeometryOverlay LineGeometryEditor::overlay() const
     const QPointF endPoint = m_state.hasEnd ? m_state.imageEnd : m_state.imagePreview;
     overlay.points.append({endPoint, "2"});
     overlay.lines.append({m_state.imageStart, endPoint});
-
-    const QPointF center = (m_state.imageStart + endPoint) * 0.5;
-    const QPointF delta = endPoint - m_state.imageStart;
-    const double length = std::hypot(delta.x(), delta.y());
-    const double angleDegrees = std::atan2(delta.y(), delta.x()) * 180.0 / 3.14159265358979323846;
-    overlay.bands.append({center, QSizeF(length, m_state.bandHalfWidth * 2.0), angleDegrees});
+    overlay.bands.append(m_bandEditor.bandForSegment(m_state.imageStart, endPoint));
   }
 
   return overlay;

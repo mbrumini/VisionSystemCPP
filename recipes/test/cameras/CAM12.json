@@ -13,12 +13,34 @@
                     "enabled": true,
                     "id": "line_1",
                     "partEnd": {
-                        "x": -473.1706942377318,
-                        "y": 239.0126035584351
+                        "x": -437.9706942377318,
+                        "y": 244.2919089129938
                     },
                     "partStart": {
                         "x": -1015.2506942377318,
-                        "y": 226.6942243977984
+                        "y": 235.4930666553961
+                    },
+                    "pickMode": "first",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 16,
+                    "edgeStatisticalFilter": 6,
+                    "enabled": true,
+                    "id": "line_2",
+                    "partEnd": {
+                        "x": 559.9493057622683,
+                        "y": 186.21955001284903
+                    },
+                    "partStart": {
+                        "x": 378.6693057622683,
+                        "y": 202.05746607652486
                     },
                     "pickMode": "first",
                     "scanDirection": "normal_positive",
@@ -34,12 +56,30 @@
                     "enabled": true,
                     "id": "point_2",
                     "partEnd": {
-                        "x": -659.7306942377318,
-                        "y": 325.2412576828924
+                        "x": -670.2906942377318,
+                        "y": 304.124036264658
                     },
                     "partStart": {
-                        "x": -631.5706942377318,
-                        "y": 163.34256014309506
+                        "x": -657.9706942377318,
+                        "y": 195.01839227044672
+                    },
+                    "pickMode": "best",
+                    "transition": "light_to_dark",
+                    "type": "edge_point",
+                    "useSubpixel": true
+                },
+                {
+                    "coordinateSpace": "part",
+                    "edgeSensitivity": 128,
+                    "enabled": true,
+                    "id": "point_2",
+                    "partEnd": {
+                        "x": 493.0693057622682,
+                        "y": 275.96774104034546
+                    },
+                    "partStart": {
+                        "x": 473.7093057622683,
+                        "y": 126.38742266118481
                     },
                     "pickMode": "best",
                     "transition": "light_to_dark",

@@ -106,6 +106,7 @@ private:
   void handleGeometryPointHandleMoved(const CameraConfig& camera, int pointIndex, const QPointF& imagePoint);
   GeometryOverlay configuredGeometryPointsOverlay(const CameraConfig& camera, bool includeActive) const;
   void updateGeometryPointOverlay(const CameraConfig& camera, const GeometryOverlay& extraOverlay = {});
+  void appendCurrentPartPoseOverlay(const CameraConfig& camera, GeometryOverlay& overlay) const;
   void testGeometryPoint(const CameraConfig& camera);
   void startCameraSimulation(const CameraConfig& camera);
   void stopCameraSimulation(const CameraConfig& camera);
@@ -185,6 +186,7 @@ private:
   std::map<QString, CameraRuntime> m_cameraRuntime;
   QHash<QString, LocalizationResult> m_lastLocalizationResults;
   QHash<QString, SurfaceLocalizationReference> m_lastSurfaceLocalizationResults;
+  QHash<QString, qint64> m_lastSetupScanElapsedMs;
 
   enum class ActiveDrawingRecipe
   {

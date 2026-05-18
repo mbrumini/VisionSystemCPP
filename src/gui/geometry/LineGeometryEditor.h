@@ -1,5 +1,6 @@
 #pragma once
 
+#include "gui/geometry/BandGeometryEditor.h"
 #include "gui/geometry/GeometryOverlay.h"
 
 #include <QPointF>
@@ -31,4 +32,5 @@ public:
 
 private:
   LineGeometryEditorState m_state;
+  BandGeometryEditor m_bandEditor;
 };

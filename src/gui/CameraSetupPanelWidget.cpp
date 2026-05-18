@@ -51,7 +51,7 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
   layout->addWidget(intervalLabel);
 
   auto* intervalSpin = new QSpinBox(this);
-  intervalSpin->setRange(50, 10000);
+  intervalSpin->setRange(0, 10000);
   intervalSpin->setSingleStep(50);
   intervalSpin->setSuffix(" ms");
   intervalSpin->setValue(intervalMs);

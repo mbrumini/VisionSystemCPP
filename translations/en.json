@@ -59,6 +59,7 @@
     "status": "Status",
     "frame": "Frame",
     "frameInterval": "Frame interval",
+    "scanTime": "Scan time",
     "partPose": "Part pose",
     "geometryLine": "Geometry line",
     "geometryLineBand": "Line band",

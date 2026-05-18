@@ -14,6 +14,7 @@
 #include <QComboBox>
 #include <QDateTime>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFileInfo>
 #include <QGridLayout>
 #include <QGroupBox>
@@ -1824,6 +1825,7 @@ void MainWindow::showGeometryPointPanel(const CameraConfig& camera)
     addGeometryPoint(camera);
     saveGeometryPointRecipe(camera);
     showGeometryPointPanel(camera);
+    activateGeometryPointDrawing(camera);
   });
   connect(deletePointButton, &QPushButton::clicked, this, [this, camera]() {
     removeActiveGeometryPoint(camera);
@@ -1862,11 +1864,9 @@ void MainWindow::showGeometryPointPanel(const CameraConfig& camera)
     testGeometryPoint(camera);
   });
 
-  auto* drawButton = new QPushButton(trText("actions.geometryPointScan"), panel);
   auto* testButton = new QPushButton(trText("actions.testGeometry"), panel);
   auto* backButton = new QPushButton(trText("commands.backToCameraTools"), panel);
 
-  connect(drawButton, &QPushButton::clicked, this, [this, camera]() { activateGeometryPointDrawing(camera); });
   connect(testButton, &QPushButton::clicked, this, [this, camera]() { testGeometryPoint(camera); });
   connect(backButton, &QPushButton::clicked, this, [this, camera]() { showGeometryPanel(camera); });
 
@@ -1875,8 +1875,7 @@ void MainWindow::showGeometryPointPanel(const CameraConfig& camera)
   buttonsLayout->setContentsMargins(0, 0, 0, 0);
   buttonsLayout->setHorizontalSpacing(8);
   buttonsLayout->setVerticalSpacing(8);
-  buttonsLayout->addWidget(drawButton, 0, 0);
-  buttonsLayout->addWidget(testButton, 0, 1);
+  buttonsLayout->addWidget(testButton, 0, 0, 1, 2);
   buttonsLayout->addWidget(backButton, 1, 0, 1, 2);
   layout->addWidget(buttons);
   layout->addStretch(1);
@@ -1904,6 +1903,10 @@ void MainWindow::showGeometryPointPanel(const CameraConfig& camera)
     m_geometryDrawingTarget = GeometryDrawingTarget::Point;
     m_largeImage->setGeometryOverlayPointEditingEnabled(true);
     testGeometryPoint(camera);
+  }
+  else
+  {
+    updateGeometryPointOverlay(camera);
   }
 
   m_toolsLayout->addWidget(panel);
@@ -2148,6 +2151,10 @@ void MainWindow::showGeometryLinePanel(const CameraConfig& camera)
   {
     testGeometryLine(camera);
   }
+  else
+  {
+    updateGeometryLineOverlay(camera);
+  }
 }
 
 GeometryLineRuntimeConfig& MainWindow::activeGeometryLineConfig(const QString& cameraId)
@@ -2309,6 +2316,12 @@ void MainWindow::addGeometryPoint(const CameraConfig& camera)
     point.id = "point_1";
     points.append(point);
     m_activeGeometryPointIndexes[camera.id] = 0;
+    return;
+  }
+
+  GeometryPointRuntimeConfig& activePoint = activeGeometryPointConfig(camera.id);
+  if (!activePoint.hasImageGuide && !activePoint.hasGuide)
+  {
     return;
   }
 
@@ -2623,6 +2636,7 @@ void MainWindow::updateGeometryLineOverlay(const CameraConfig& camera, const Geo
   {
     overlay.bands.append(band);
   }
+  appendCurrentPartPoseOverlay(camera, overlay);
   m_largeImage->setGeometryOverlay(overlay);
 }
 
@@ -2909,6 +2923,7 @@ void MainWindow::testConfiguredGeometryLines(const CameraConfig& camera)
   {
     setupOverlay.points.append(point);
   }
+  appendCurrentPartPoseOverlay(camera, setupOverlay);
   m_largeImage->setGeometryOverlay(setupOverlay);
 }
 
@@ -3081,7 +3096,25 @@ void MainWindow::updateGeometryPointOverlay(const CameraConfig& camera, const Ge
   {
     overlay.bands.append(band);
   }
+  appendCurrentPartPoseOverlay(camera, overlay);
   m_largeImage->setGeometryOverlay(overlay);
+}
+
+void MainWindow::appendCurrentPartPoseOverlay(const CameraConfig& camera, GeometryOverlay& overlay) const
+{
+  const auto runtimeIt = m_cameraRuntime.find(camera.id);
+  if (runtimeIt == m_cameraRuntime.end())
+  {
+    return;
+  }
+
+  const PartPose& pose = runtimeIt->second.currentPose();
+  if (!pose.valid)
+  {
+    return;
+  }
+
+  GeometryDiagnosticDrawing::appendCyanPointCross(overlay, pose.origin);
 }
 
 void MainWindow::testGeometryPoint(const CameraConfig& camera)
@@ -3256,7 +3289,10 @@ void MainWindow::advanceCameraFrame(const CameraConfig& camera)
     }
   }
   m_largeImage->setImage(m_selectedPreview);
+  QElapsedTimer scanTimer;
+  scanTimer.start();
   processCurrentCameraFrame(camera);
+  m_lastSetupScanElapsedMs[camera.id] = scanTimer.elapsed();
   updateCameraSetupDetails(camera);
 }
 
@@ -3335,8 +3371,9 @@ QString MainWindow::cameraSetupDetailsText(const CameraConfig& camera) const
   const PartPose pose = runtime ? runtime->currentPose() : makeInvalidPartPose(camera.id);
   const QString samplePath = m_recipeManager.firstCameraSampleImagePath(camera.id);
   const QString testPath = m_recipeManager.firstCameraTestImagePath(camera.id);
+  const qint64 scanElapsedMs = m_lastSetupScanElapsedMs.value(camera.id, -1);
 
-  return QString("%1: %2\n%3: %4\n%5: %6\n%7: %8\n%9: %10\n%11: %12\n%13: %14")
+  return QString("%1: %2\n%3: %4\n%5: %6\n%7: %8\n%9: %10\n%11: %12\n%13: %14\n%15: %16")
     .arg(trText("labels.source"), camera.type)
     .arg(trText("labels.folder"), resolvedCameraFolder(camera))
     .arg(trText("labels.sampleImage"), samplePath.isEmpty() ? trText("status.invalid") : samplePath)
@@ -3351,7 +3388,8 @@ QString MainWindow::cameraSetupDetailsText(const CameraConfig& camera) const
             .arg(pose.origin.y, 0, 'f', 1)
             .arg(pose.angleRadians * 180.0 / CV_PI, 0, 'f', 1)
             .arg(pose.score, 0, 'f', 2)
-        : trText("status.invalid"));
+        : trText("status.invalid"))
+    .arg(trText("labels.scanTime"), scanElapsedMs >= 0 ? QString("%1 ms").arg(scanElapsedMs) : trText("status.invalid"));
 }
 
 void MainWindow::updateCameraSetupDetails(const CameraConfig& camera)

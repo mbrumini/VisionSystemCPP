@@ -68,6 +68,7 @@
 ## Runtime camera e origine pezzo
 
 - [x] Aggiungere struttura runtime per camera con sorgente, frame corrente, stato, risultato tool e posa pezzo corrente.
+- [ ] IMPORTANTE: implementare runtime reale multicamera con pipeline/thread separato per ogni camera attiva, fino a 16 camere, e aggiornamento GUI tramite risultati asincroni.
 - [x] Definire una struttura comune `PiecePose`/`PartPose` valida per BW e grayscale: origine, angolo, assi, score, metodo e validita'.
 - [x] Aggiornare la posa pezzo a ogni localizzazione riuscita, indipendentemente dalla strategia usata.
 - [x] Aggiungere funzioni di conversione coordinate immagine <-> coordinate pezzo per riusare l'origine dinamica nei tool successivi.
@@ -96,11 +97,12 @@
 - [x] Nascondere le maniglie della linea nel setup/runtime: restano visibili solo nel tool di modifica.
 - [x] al passaggio da set-up a qualsiasi altra finestra ricaricare immagine di riferimento
 - [X] Aggiungere gestione multi-Punto nel pannello `Punto`: lista linee, `Nuovo punto`, punto attivo modificabile e salvataggio ricetta.
-- [ ] Visualizzare sempre il centro di massa durante il set-up
-- [ ] in set up, possibilità di portare il timer a 0 (ora minimo 50) ed inserire un timer per capire il tempo di scansione
-- [ ] Separare anche la gestione maniglie della fascia in un controller/editor riusabile.
+- [x] Visualizzare sempre il centro di massa durante il set-up
+- [x] in set up, possibilità di portare il timer a 0 (ora minimo 50) ed inserire un timer per capire il tempo di scansione
+- [x] Separare anche la gestione maniglie/fascia in un controller/editor riusabile per tutti gli editor geometrici.
 - [ ] Estendere i detector dedicati alle altre geometrie in ROI relative alla posa pezzo.
 - [ ] Aggiungere pulsante `Elimina` a tutte le geometrie configurabili: punto, segmento/linea, cerchio, arco, edge e contorno.
+- [ ] Per tutte le geometrie, `Nuovo ...` deve creare/selezionare l'elemento e attivare subito il disegno; evitare pulsanti separati tipo `Disegna ...`.
 - [ ] Salvare configurazione geometrie in ricetta camera.
 - [ ] Disegnare overlay diagnostici delle geometrie rilevate.
 - [ ] Implementare misure che usano geometrie gia' rilevate, per esempio distanza punto-linea.
