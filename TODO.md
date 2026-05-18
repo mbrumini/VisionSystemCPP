@@ -101,6 +101,7 @@
 - [x] in set up, possibilità di portare il timer a 0 (ora minimo 50) ed inserire un timer per capire il tempo di scansione
 - [x] Separare anche la gestione maniglie/fascia in un controller/editor riusabile per tutti gli editor geometrici.
 - [ ] Estendere i detector dedicati alle altre geometrie in ROI relative alla posa pezzo.
+- [x] Aggiungere detector dedicato `Cerchio`: guida a 3 punti, fascia edge interna/esterna, transizioni, filtri, subpixel BN e fit robusto.
 - [ ] Aggiungere pulsante `Elimina` a tutte le geometrie configurabili: punto, segmento/linea, cerchio, arco, edge e contorno.
 - [ ] Per tutte le geometrie, `Nuovo ...` deve creare/selezionare l'elemento e attivare subito il disegno; evitare pulsanti separati tipo `Disegna ...`.
 - [ ] Salvare configurazione geometrie in ricetta camera.

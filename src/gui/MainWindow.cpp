@@ -491,6 +491,12 @@ void MainWindow::buildUi()
       return;
     }
 
+    if (m_activeDrawingRecipe == ActiveDrawingRecipe::Geometry && m_geometryDrawingTarget == GeometryDrawingTarget::Circle)
+    {
+      handleGeometryCirclePoints(m_selectedCamera, points);
+      return;
+    }
+
     ImageCircle circle;
 
     if (!circleFromThreePoints(points, circle))
@@ -1721,6 +1727,10 @@ void MainWindow::showGeometryPanel(const CameraConfig& camera)
   connect(lineButton, &QPushButton::clicked, this, [this, camera]() { showGeometryLinePanel(camera); });
   layout->addWidget(lineButton);
 
+  auto* circleButton = new QPushButton(trText("actions.circleGeometry"), panel);
+  connect(circleButton, &QPushButton::clicked, this, [this, camera]() { showGeometryCirclePanel(camera); });
+  layout->addWidget(circleButton);
+
   auto* backButton = new QPushButton(trText("commands.backToCameraTools"), panel);
   connect(backButton, &QPushButton::clicked, this, [this, camera]() { showCameraToolList(camera); });
   layout->addWidget(backButton);
@@ -2157,6 +2167,175 @@ void MainWindow::showGeometryLinePanel(const CameraConfig& camera)
   }
 }
 
+void MainWindow::showGeometryCirclePanel(const CameraConfig& camera)
+{
+  deactivateImageDrawingTools();
+  clearToolPanel();
+  refreshPoseForCurrentFrame(camera);
+  m_largeImage->clearCircles();
+  loadGeometryCirclesRecipe(camera);
+
+  QVector<GeometryCircleRuntimeConfig>& circleConfigs = m_geometryCircleConfigs[camera.id];
+  GeometryCircleRuntimeConfig& circleConfig = activeGeometryCircleConfig(camera.id);
+  const PartPose& pose = m_cameraRuntime[camera.id].currentPose();
+
+  auto* panel = new QWidget(m_toolsContainer);
+  auto* layout = new QVBoxLayout(panel);
+  layout->setContentsMargins(0, 0, 0, 0);
+  layout->setSpacing(8);
+
+  auto* title = new QLabel(QString("%1 | %2").arg(trText("actions.circleGeometry"), camera.id), panel);
+  title->setObjectName("toolPanelTitle");
+  layout->addWidget(title);
+
+  auto* poseLabel = new QLabel(pose.valid ? trText("labels.partPose") : trText("log.partPoseMissing"), panel);
+  poseLabel->setObjectName("toolPanelNote");
+  poseLabel->setWordWrap(true);
+  layout->addWidget(poseLabel);
+
+  auto* circleSelector = new QComboBox(panel);
+  for (int i = 0; i < circleConfigs.size(); ++i)
+  {
+    circleSelector->addItem(circleConfigs[i].id, i);
+  }
+  circleSelector->setCurrentIndex(qBound(0, m_activeGeometryCircleIndexes.value(camera.id, 0), circleConfigs.size() - 1));
+  auto* newCircleButton = new QPushButton(trText("actions.newGeometryCircle"), panel);
+  auto* deleteCircleButton = new QPushButton(trText("actions.deleteGeometryCircle"), panel);
+
+  auto* top = new QWidget(panel);
+  auto* topLayout = new QGridLayout(top);
+  topLayout->setContentsMargins(0, 0, 0, 0);
+  topLayout->setHorizontalSpacing(6);
+  topLayout->addWidget(new QLabel(trText("actions.circleGeometry"), top), 0, 0);
+  topLayout->addWidget(circleSelector, 0, 1);
+  topLayout->addWidget(newCircleButton, 0, 2);
+  topLayout->addWidget(deleteCircleButton, 0, 3);
+  topLayout->setColumnStretch(1, 1);
+  layout->addWidget(top);
+
+  auto* form = new QWidget(panel);
+  auto* formLayout = new QGridLayout(form);
+  formLayout->setContentsMargins(0, 0, 0, 0);
+  formLayout->setHorizontalSpacing(8);
+  formLayout->setVerticalSpacing(6);
+  auto* innerBand = new QSpinBox(form);
+  innerBand->setRange(1, 500);
+  innerBand->setSuffix(" px");
+  innerBand->setValue(circleConfig.innerBand);
+  auto* outerBand = new QSpinBox(form);
+  outerBand->setRange(1, 500);
+  outerBand->setSuffix(" px");
+  outerBand->setValue(circleConfig.outerBand);
+  auto* sensitivity = new QSpinBox(form);
+  sensitivity->setRange(1, 255);
+  sensitivity->setValue(circleConfig.edgeSensitivity);
+  auto* cleanup = new QSpinBox(form);
+  cleanup->setRange(0, 100);
+  cleanup->setSuffix(" px");
+  cleanup->setValue(circleConfig.edgeCleanupDerivative);
+  auto* statFilter = new QSpinBox(form);
+  statFilter->setRange(0, 100);
+  statFilter->setSuffix(" px");
+  statFilter->setValue(circleConfig.edgeStatisticalFilter);
+  auto* subpixel = new QCheckBox(trText("labels.subpixelEdge"), form);
+  subpixel->setChecked(circleConfig.useSubpixel);
+  auto* transition = new QComboBox(form);
+  transition->addItem(trText("labels.transitionLightToDark"), "light_to_dark");
+  transition->addItem(trText("labels.transitionDarkToLight"), "dark_to_light");
+  transition->setCurrentIndex(circleConfig.transition == EdgeLineTransition::DarkToLight ? 1 : 0);
+  auto* pickMode = new QComboBox(form);
+  pickMode->addItem(trText("labels.edgePickFirst"), "first");
+  pickMode->addItem(trText("labels.edgePickLast"), "last");
+  pickMode->addItem(trText("labels.edgePickBest"), "best");
+  pickMode->setCurrentIndex(static_cast<int>(circleConfig.pickMode));
+
+  int row = 0;
+  formLayout->addWidget(new QLabel(trText("labels.edgeBandInner"), form), row, 0);
+  formLayout->addWidget(innerBand, row, 1);
+  formLayout->addWidget(new QLabel(trText("labels.edgeBandOuter"), form), row, 2);
+  formLayout->addWidget(outerBand, row++, 3);
+  formLayout->addWidget(new QLabel(trText("labels.edgeSensitivity"), form), row, 0);
+  formLayout->addWidget(sensitivity, row, 1);
+  formLayout->addWidget(new QLabel(trText("labels.edgeCleanupDerivative"), form), row, 2);
+  formLayout->addWidget(cleanup, row++, 3);
+  formLayout->addWidget(new QLabel(trText("labels.edgeStatisticalFilter"), form), row, 0);
+  formLayout->addWidget(statFilter, row++, 1);
+  if (isBwDimensionalCamera(camera))
+  {
+    formLayout->addWidget(subpixel, row++, 0, 1, 4);
+  }
+  formLayout->addWidget(new QLabel(trText("labels.edgeTransition"), form), row, 0);
+  formLayout->addWidget(transition, row, 1);
+  formLayout->addWidget(new QLabel(trText("labels.edgePickMode"), form), row, 2);
+  formLayout->addWidget(pickMode, row++, 3);
+  layout->addWidget(form);
+
+  connect(circleSelector, qOverload<int>(&QComboBox::currentIndexChanged), this, [this, camera](int index) {
+    if (index >= 0)
+    {
+      m_activeGeometryCircleIndexes[camera.id] = index;
+      showGeometryCirclePanel(camera);
+    }
+  });
+  connect(newCircleButton, &QPushButton::clicked, this, [this, camera]() {
+    addGeometryCircle(camera);
+    saveGeometryCirclesRecipe(camera);
+    showGeometryCirclePanel(camera);
+    activateGeometryCircleDrawing(camera);
+  });
+  connect(deleteCircleButton, &QPushButton::clicked, this, [this, camera]() { removeActiveGeometryCircle(camera); });
+  connect(innerBand, qOverload<int>(&QSpinBox::valueChanged), this, [this, camera](int value) {
+    activeGeometryCircleConfig(camera.id).innerBand = value;
+    saveGeometryCirclesRecipe(camera);
+    showConfiguredGeometryCircles(camera);
+  });
+  connect(outerBand, qOverload<int>(&QSpinBox::valueChanged), this, [this, camera](int value) {
+    activeGeometryCircleConfig(camera.id).outerBand = value;
+    saveGeometryCirclesRecipe(camera);
+    showConfiguredGeometryCircles(camera);
+  });
+  connect(sensitivity, qOverload<int>(&QSpinBox::valueChanged), this, [this, camera](int value) {
+    activeGeometryCircleConfig(camera.id).edgeSensitivity = value;
+    saveGeometryCirclesRecipe(camera);
+    testGeometryCircle(camera);
+  });
+  connect(cleanup, qOverload<int>(&QSpinBox::valueChanged), this, [this, camera](int value) {
+    activeGeometryCircleConfig(camera.id).edgeCleanupDerivative = value;
+    saveGeometryCirclesRecipe(camera);
+    testGeometryCircle(camera);
+  });
+  connect(statFilter, qOverload<int>(&QSpinBox::valueChanged), this, [this, camera](int value) {
+    activeGeometryCircleConfig(camera.id).edgeStatisticalFilter = value;
+    saveGeometryCirclesRecipe(camera);
+    testGeometryCircle(camera);
+  });
+  connect(subpixel, &QCheckBox::toggled, this, [this, camera](bool checked) {
+    activeGeometryCircleConfig(camera.id).useSubpixel = checked;
+    saveGeometryCirclesRecipe(camera);
+    testGeometryCircle(camera);
+  });
+  connect(transition, qOverload<int>(&QComboBox::currentIndexChanged), this, [this, camera](int index) {
+    activeGeometryCircleConfig(camera.id).transition = index == 1 ? EdgeLineTransition::DarkToLight : EdgeLineTransition::LightToDark;
+    saveGeometryCirclesRecipe(camera);
+    testGeometryCircle(camera);
+  });
+  connect(pickMode, qOverload<int>(&QComboBox::currentIndexChanged), this, [this, camera](int index) {
+    activeGeometryCircleConfig(camera.id).pickMode = index == 1 ? EdgeLinePickMode::Last : (index == 2 ? EdgeLinePickMode::Best : EdgeLinePickMode::First);
+    saveGeometryCirclesRecipe(camera);
+    testGeometryCircle(camera);
+  });
+
+  auto* testButton = new QPushButton(trText("actions.testGeometry"), panel);
+  auto* backButton = new QPushButton(trText("commands.backToCameraTools"), panel);
+  connect(testButton, &QPushButton::clicked, this, [this, camera]() { testGeometryCircle(camera); });
+  connect(backButton, &QPushButton::clicked, this, [this, camera]() { showGeometryPanel(camera); });
+  layout->addWidget(testButton);
+  layout->addWidget(backButton);
+  layout->addStretch(1);
+  m_toolsLayout->addWidget(panel);
+  showConfiguredGeometryCircles(camera);
+}
+
 GeometryLineRuntimeConfig& MainWindow::activeGeometryLineConfig(const QString& cameraId)
 {
   QVector<GeometryLineRuntimeConfig>& lines = m_geometryLineConfigs[cameraId];
@@ -2278,6 +2457,48 @@ void MainWindow::loadGeometryPointRecipe(const CameraConfig& camera)
   m_activeGeometryPointIndexes[camera.id] = qBound(0, m_activeGeometryPointIndexes.value(camera.id, 0), points.size() - 1);
 }
 
+void MainWindow::loadGeometryCirclesRecipe(const CameraConfig& camera)
+{
+  QVector<GeometryCircleRuntimeConfig>& circles = m_geometryCircleConfigs[camera.id];
+  if (!circles.isEmpty())
+  {
+    return;
+  }
+
+  const QVector<GeometryCircleRecipeConfig> recipes = m_recipeManager.loadGeometryCircles(camera.id);
+  for (const GeometryCircleRecipeConfig& recipe : recipes)
+  {
+    if (!recipe.enabled)
+    {
+      continue;
+    }
+
+    GeometryCircleRuntimeConfig circle;
+    circle.enabled = recipe.enabled;
+    circle.id = recipe.id;
+    circle.partCenter = cv::Point2d(recipe.partCenter.x(), recipe.partCenter.y());
+    circle.radius = recipe.radius;
+    circle.innerBand = recipe.innerBand;
+    circle.outerBand = recipe.outerBand;
+    circle.edgeSensitivity = recipe.edgeSensitivity;
+    circle.edgeCleanupDerivative = recipe.edgeCleanupDerivative;
+    circle.edgeStatisticalFilter = recipe.edgeStatisticalFilter;
+    circle.useSubpixel = recipe.useSubpixel;
+    circle.transition = transitionFromRecipe(recipe.transition);
+    circle.pickMode = pickModeFromRecipe(recipe.pickMode);
+    circle.hasCircle = true;
+    circles.append(circle);
+  }
+
+  if (circles.isEmpty())
+  {
+    GeometryCircleRuntimeConfig circle;
+    circle.id = "circle_1";
+    circles.append(circle);
+  }
+  m_activeGeometryCircleIndexes[camera.id] = qBound(0, m_activeGeometryCircleIndexes.value(camera.id, 0), circles.size() - 1);
+}
+
 void MainWindow::saveGeometryPointRecipe(const CameraConfig& camera)
 {
   QVector<GeometryPointRecipeConfig> recipes;
@@ -2302,6 +2523,39 @@ void MainWindow::saveGeometryPointRecipe(const CameraConfig& camera)
 
   QString error;
   if (!m_recipeManager.saveGeometryPoints(camera.id, recipes, &error))
+  {
+    appendLog(error);
+  }
+}
+
+void MainWindow::saveGeometryCirclesRecipe(const CameraConfig& camera)
+{
+  QVector<GeometryCircleRecipeConfig> recipes;
+  for (const GeometryCircleRuntimeConfig& circle : m_geometryCircleConfigs[camera.id])
+  {
+    if (!circle.hasCircle)
+    {
+      continue;
+    }
+
+    GeometryCircleRecipeConfig recipe;
+    recipe.enabled = circle.enabled;
+    recipe.id = circle.id;
+    recipe.partCenter = QPointF(circle.partCenter.x, circle.partCenter.y);
+    recipe.radius = circle.radius;
+    recipe.innerBand = circle.innerBand;
+    recipe.outerBand = circle.outerBand;
+    recipe.edgeSensitivity = circle.edgeSensitivity;
+    recipe.edgeCleanupDerivative = circle.edgeCleanupDerivative;
+    recipe.edgeStatisticalFilter = circle.edgeStatisticalFilter;
+    recipe.useSubpixel = circle.useSubpixel;
+    recipe.transition = transitionToRecipe(circle.transition);
+    recipe.pickMode = pickModeToRecipe(circle.pickMode);
+    recipes.append(recipe);
+  }
+
+  QString error;
+  if (!m_recipeManager.saveGeometryCircles(camera.id, recipes, &error))
   {
     appendLog(error);
   }
@@ -2333,6 +2587,32 @@ void MainWindow::addGeometryPoint(const CameraConfig& camera)
   m_activeGeometryPointIndexes[camera.id] = points.size() - 1;
 }
 
+void MainWindow::addGeometryCircle(const CameraConfig& camera)
+{
+  QVector<GeometryCircleRuntimeConfig>& circles = m_geometryCircleConfigs[camera.id];
+  if (circles.isEmpty())
+  {
+    GeometryCircleRuntimeConfig circle;
+    circle.id = "circle_1";
+    circles.append(circle);
+    m_activeGeometryCircleIndexes[camera.id] = 0;
+    return;
+  }
+
+  GeometryCircleRuntimeConfig& activeCircle = activeGeometryCircleConfig(camera.id);
+  if (!activeCircle.hasImageCircle && !activeCircle.hasCircle)
+  {
+    return;
+  }
+
+  GeometryCircleRuntimeConfig circle = activeCircle;
+  circle.id = QString("circle_%1").arg(circles.size() + 1);
+  circle.hasImageCircle = false;
+  circle.hasCircle = false;
+  circles.append(circle);
+  m_activeGeometryCircleIndexes[camera.id] = circles.size() - 1;
+}
+
 void MainWindow::removeActiveGeometryPoint(const CameraConfig& camera)
 {
   QVector<GeometryPointRuntimeConfig>& points = m_geometryPointConfigs[camera.id];
@@ -2362,6 +2642,33 @@ void MainWindow::removeActiveGeometryPoint(const CameraConfig& camera)
   showGeometryPointPanel(camera);
 }
 
+void MainWindow::removeActiveGeometryCircle(const CameraConfig& camera)
+{
+  QVector<GeometryCircleRuntimeConfig>& circles = m_geometryCircleConfigs[camera.id];
+  if (circles.isEmpty())
+  {
+    GeometryCircleRuntimeConfig circle;
+    circle.id = "circle_1";
+    circles.append(circle);
+    m_activeGeometryCircleIndexes[camera.id] = 0;
+    showGeometryCirclePanel(camera);
+    return;
+  }
+
+  const int index = qBound(0, m_activeGeometryCircleIndexes.value(camera.id, 0), circles.size() - 1);
+  circles.removeAt(index);
+  if (circles.isEmpty())
+  {
+    GeometryCircleRuntimeConfig circle;
+    circle.id = "circle_1";
+    circles.append(circle);
+  }
+
+  m_activeGeometryCircleIndexes[camera.id] = qBound(0, index, circles.size() - 1);
+  saveGeometryCirclesRecipe(camera);
+  showGeometryCirclePanel(camera);
+}
+
 GeometryPointRuntimeConfig& MainWindow::activeGeometryPointConfig(const QString& cameraId)
 {
   QVector<GeometryPointRuntimeConfig>& points = m_geometryPointConfigs[cameraId];
@@ -2377,6 +2684,21 @@ GeometryPointRuntimeConfig& MainWindow::activeGeometryPointConfig(const QString&
   return points[index];
 }
 
+GeometryCircleRuntimeConfig& MainWindow::activeGeometryCircleConfig(const QString& cameraId)
+{
+  QVector<GeometryCircleRuntimeConfig>& circles = m_geometryCircleConfigs[cameraId];
+  if (circles.isEmpty())
+  {
+    GeometryCircleRuntimeConfig circle;
+    circle.id = "circle_1";
+    circles.append(circle);
+  }
+
+  int index = qBound(0, m_activeGeometryCircleIndexes.value(cameraId, 0), circles.size() - 1);
+  m_activeGeometryCircleIndexes[cameraId] = index;
+  return circles[index];
+}
+
 const GeometryPointRuntimeConfig& MainWindow::activeGeometryPointConfig(const QString& cameraId) const
 {
   const QVector<GeometryPointRuntimeConfig>& points = m_geometryPointConfigs.value(cameraId);
@@ -2388,6 +2710,19 @@ const GeometryPointRuntimeConfig& MainWindow::activeGeometryPointConfig(const QS
 
   const int index = qBound(0, m_activeGeometryPointIndexes.value(cameraId, 0), points.size() - 1);
   return points[index];
+}
+
+const GeometryCircleRuntimeConfig& MainWindow::activeGeometryCircleConfig(const QString& cameraId) const
+{
+  const QVector<GeometryCircleRuntimeConfig>& circles = m_geometryCircleConfigs.value(cameraId);
+  static const GeometryCircleRuntimeConfig fallback;
+  if (circles.isEmpty())
+  {
+    return fallback;
+  }
+
+  const int index = qBound(0, m_activeGeometryCircleIndexes.value(cameraId, 0), circles.size() - 1);
+  return circles[index];
 }
 
 void MainWindow::loadGeometryLinesRecipe(const CameraConfig& camera)
@@ -2942,6 +3277,167 @@ void MainWindow::activateGeometryPointDrawing(const CameraConfig& camera)
   m_largeImage->setGeometryPointPickingEnabled(true);
   updateGeometryPointOverlay(camera);
   appendLog(trText("log.geometryPointDrawing") + ": " + camera.id);
+}
+
+void MainWindow::activateGeometryCircleDrawing(const CameraConfig& camera)
+{
+  if (camera.id != m_selectedCameraId)
+  {
+    return;
+  }
+
+  deactivateImageDrawingTools();
+  m_activeDrawingRecipe = ActiveDrawingRecipe::Geometry;
+  m_geometryDrawingTarget = GeometryDrawingTarget::Circle;
+  m_largeImage->setThreePointCircleDrawingEnabled(true);
+  showConfiguredGeometryCircles(camera);
+  appendLog(trText("log.geometryCircleDrawing") + ": " + camera.id);
+}
+
+void MainWindow::handleGeometryCirclePoints(const CameraConfig& camera, const QVector<QPoint>& points)
+{
+  if (camera.id != m_selectedCameraId)
+  {
+    return;
+  }
+
+  ImageCircle imageCircle;
+  if (!circleFromThreePoints(points, imageCircle))
+  {
+    appendLog(trText("log.surfaceEdgeCircleInvalid") + ": " + camera.id);
+    return;
+  }
+
+  GeometryCircleRuntimeConfig& config = activeGeometryCircleConfig(camera.id);
+  config.imageCenter = cv::Point2d(imageCircle.center.x(), imageCircle.center.y());
+  config.radius = imageCircle.radius;
+  config.hasImageCircle = true;
+
+  const PartPose& pose = m_cameraRuntime[camera.id].currentPose();
+  if (pose.valid)
+  {
+    config.partCenter = imageToPart(pose, config.imageCenter);
+    config.hasCircle = true;
+  }
+  else
+  {
+    config.hasCircle = false;
+  }
+
+  m_largeImage->setThreePointCircleDrawingEnabled(false);
+  m_activeDrawingRecipe = ActiveDrawingRecipe::Geometry;
+  m_geometryDrawingTarget = GeometryDrawingTarget::Circle;
+  saveGeometryCirclesRecipe(camera);
+  showConfiguredGeometryCircles(camera);
+  testGeometryCircle(camera);
+}
+
+void MainWindow::showConfiguredGeometryCircles(const CameraConfig& camera)
+{
+  const PartPose& pose = m_cameraRuntime[camera.id].currentPose();
+  QVector<ImageCircle> circles;
+  GeometryOverlay overlay;
+  for (const GeometryCircleRuntimeConfig& circle : m_geometryCircleConfigs.value(camera.id))
+  {
+    const bool usePartCircle = pose.valid && circle.hasCircle;
+    if (!usePartCircle && !circle.hasImageCircle)
+    {
+      continue;
+    }
+
+    const cv::Point2d center = usePartCircle ? partToImage(pose, circle.partCenter) : circle.imageCenter;
+    if (circle.radius > 0.0)
+    {
+      circles.append({QPoint(static_cast<int>(std::round(center.x)), static_cast<int>(std::round(center.y))), static_cast<int>(std::round(circle.radius))});
+      circles.append({QPoint(static_cast<int>(std::round(center.x)), static_cast<int>(std::round(center.y))), static_cast<int>(std::round(circle.radius + circle.outerBand))});
+      circles.append({QPoint(static_cast<int>(std::round(center.x)), static_cast<int>(std::round(center.y))), qMax(1, static_cast<int>(std::round(circle.radius - circle.innerBand)))});
+    }
+  }
+  m_largeImage->setCircles(circles);
+  appendCurrentPartPoseOverlay(camera, overlay);
+  m_largeImage->setGeometryOverlay(overlay);
+}
+
+void MainWindow::testGeometryCircle(const CameraConfig& camera)
+{
+  if (camera.id != m_selectedCameraId)
+  {
+    return;
+  }
+
+  GeometryCircleRuntimeConfig& circleConfig = activeGeometryCircleConfig(camera.id);
+  const PartPose& pose = m_cameraRuntime[camera.id].currentPose();
+  if (pose.valid && !circleConfig.hasCircle && circleConfig.hasImageCircle)
+  {
+    circleConfig.partCenter = imageToPart(pose, circleConfig.imageCenter);
+    circleConfig.hasCircle = true;
+    saveGeometryCirclesRecipe(camera);
+  }
+
+  const bool usePartCircle = pose.valid && circleConfig.hasCircle;
+  if (!usePartCircle && !circleConfig.hasImageCircle)
+  {
+    showConfiguredGeometryCircles(camera);
+    appendLog(trText("log.geometryCircleMissing") + ": " + camera.id);
+    return;
+  }
+
+  QString imageError;
+  const cv::Mat input = currentInputImage(camera, &imageError);
+  if (input.empty())
+  {
+    appendLog(imageError);
+    return;
+  }
+
+  const cv::Point2d guideCenter = usePartCircle ? partToImage(pose, circleConfig.partCenter) : circleConfig.imageCenter;
+  EdgeCircleDetectorConfig config;
+  config.id = circleConfig.id;
+  config.label = circleConfig.id;
+  config.guideCenter = guideCenter;
+  config.guideRadius = circleConfig.radius;
+  config.innerBand = circleConfig.innerBand;
+  config.outerBand = circleConfig.outerBand;
+  config.edgeSensitivity = circleConfig.edgeSensitivity;
+  config.edgeCleanupDerivative = circleConfig.edgeCleanupDerivative;
+  config.edgeStatisticalFilter = circleConfig.edgeStatisticalFilter;
+  config.useSubpixel = isBwDimensionalCamera(camera) && circleConfig.useSubpixel;
+  config.transition = circleConfig.transition;
+  config.pickMode = circleConfig.pickMode;
+
+  EdgeCircleDetector detector;
+  const EdgeCircleDetectorResult result = detector.detect(input, config);
+  if (!result.processed || result.diagnosticImage.empty())
+  {
+    appendLog(result.message.isEmpty() ? trText("log.geometryCircleFailed") + ": " + camera.id : result.message);
+    return;
+  }
+
+  m_selectedPreview = matToPixmap(result.diagnosticImage);
+  m_largeImage->setImage(m_selectedPreview);
+  showConfiguredGeometryCircles(camera);
+
+  if (!result.found)
+  {
+    appendLog(result.message.isEmpty() ? trText("log.geometryCircleNotFound") + ": " + camera.id : result.message);
+    return;
+  }
+
+  GeometrySet& geometries = m_cameraRuntime[camera.id].geometries();
+  for (int i = geometries.circles.size() - 1; i >= 0; --i)
+  {
+    if (geometries.circles[i].meta.id == circleConfig.id)
+    {
+      geometries.circles.removeAt(i);
+    }
+  }
+  geometries.circles.append(result.circle);
+  appendLog(QString("%1: %2 cx=%3 cy=%4 r=%5")
+              .arg(trText("log.geometryCircleFound"))
+              .arg(camera.id)
+              .arg(result.circle.center.x, 0, 'f', 1)
+              .arg(result.circle.center.y, 0, 'f', 1)
+              .arg(result.circle.radius, 0, 'f', 1));
 }
 
 void MainWindow::handleGeometryPointGuidePoint(const CameraConfig& camera, const QPointF& imagePoint)

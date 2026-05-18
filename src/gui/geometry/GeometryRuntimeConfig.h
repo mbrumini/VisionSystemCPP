@@ -41,3 +41,22 @@ struct GeometryPointRuntimeConfig
   bool hasImageGuide = false;
   bool hasGuide = false;
 };
+
+struct GeometryCircleRuntimeConfig
+{
+  QString id = "circle_1";
+  bool enabled = true;
+  cv::Point2d imageCenter;
+  cv::Point2d partCenter;
+  double radius = 0.0;
+  int innerBand = 20;
+  int outerBand = 20;
+  int edgeSensitivity = 60;
+  int edgeCleanupDerivative = 12;
+  int edgeStatisticalFilter = 0;
+  bool useSubpixel = true;
+  EdgeLineTransition transition = EdgeLineTransition::LightToDark;
+  EdgeLinePickMode pickMode = EdgeLinePickMode::First;
+  bool hasImageCircle = false;
+  bool hasCircle = false;
+};

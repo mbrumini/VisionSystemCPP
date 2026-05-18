@@ -1533,6 +1533,86 @@ bool RecipeManager::saveGeometryPoint(const QString& cameraId, const GeometryPoi
   return saveGeometryPoints(cameraId, configs, errorMessage);
 }
 
+QVector<GeometryCircleRecipeConfig> RecipeManager::loadGeometryCircles(const QString& cameraId) const
+{
+  QVector<GeometryCircleRecipeConfig> configs;
+
+  QJsonObject root;
+  if (!loadJsonObject(cameraRecipePath(cameraId), root))
+  {
+    return configs;
+  }
+
+  const QJsonArray circles = root.value("tools").toObject()
+    .value("geometries").toObject()
+    .value("circles").toArray();
+
+  for (const QJsonValue& value : circles)
+  {
+    const QJsonObject circle = value.toObject();
+    GeometryCircleRecipeConfig config;
+    config.id = circle.value("id").toString(QString("circle_%1").arg(configs.size() + 1));
+    if (config.id.isEmpty())
+    {
+      continue;
+    }
+
+    config.enabled = circle.value("enabled").toBool(false);
+    config.partCenter = pointFFromJson(circle.value("partCenter").toObject());
+    config.radius = circle.value("radius").toDouble(config.radius);
+    config.innerBand = circle.value("innerBand").toInt(config.innerBand);
+    config.outerBand = circle.value("outerBand").toInt(config.outerBand);
+    config.edgeSensitivity = circle.value("edgeSensitivity").toInt(config.edgeSensitivity);
+    config.edgeCleanupDerivative = circle.value("edgeCleanupDerivative").toInt(config.edgeCleanupDerivative);
+    config.edgeStatisticalFilter = circle.value("edgeStatisticalFilter").toInt(config.edgeStatisticalFilter);
+    config.useSubpixel = circle.value("useSubpixel").toBool(config.useSubpixel);
+    config.transition = circle.value("transition").toString(config.transition);
+    config.pickMode = circle.value("pickMode").toString(config.pickMode);
+    configs.append(config);
+  }
+
+  return configs;
+}
+
+bool RecipeManager::saveGeometryCircles(const QString& cameraId, const QVector<GeometryCircleRecipeConfig>& configs, QString* errorMessage) const
+{
+  const QString path = cameraRecipePath(cameraId);
+  QJsonObject root;
+  loadJsonObject(path, root);
+
+  root["cameraId"] = cameraId;
+
+  QJsonObject tools = root.value("tools").toObject();
+  QJsonObject geometries = tools.value("geometries").toObject();
+  geometries["enabled"] = true;
+
+  QJsonArray circles;
+  for (const GeometryCircleRecipeConfig& config : configs)
+  {
+    QJsonObject circle;
+    circle["enabled"] = config.enabled;
+    circle["id"] = config.id.isEmpty() ? QString("circle_%1").arg(circles.size() + 1) : config.id;
+    circle["type"] = "edge_circle";
+    circle["coordinateSpace"] = "part";
+    circle["partCenter"] = pointFToJson(config.partCenter);
+    circle["radius"] = qMax(1.0, config.radius);
+    circle["innerBand"] = qBound(1, config.innerBand, 500);
+    circle["outerBand"] = qBound(1, config.outerBand, 500);
+    circle["edgeSensitivity"] = qBound(1, config.edgeSensitivity, 255);
+    circle["edgeCleanupDerivative"] = qBound(0, config.edgeCleanupDerivative, 100);
+    circle["edgeStatisticalFilter"] = qBound(0, config.edgeStatisticalFilter, 100);
+    circle["useSubpixel"] = config.useSubpixel;
+    circle["transition"] = config.transition == "dark_to_light" ? "dark_to_light" : "light_to_dark";
+    circle["pickMode"] = config.pickMode == "last" || config.pickMode == "best" ? config.pickMode : "first";
+    circles.append(circle);
+  }
+
+  geometries["circles"] = circles;
+  tools["geometries"] = geometries;
+  root["tools"] = tools;
+  return saveJsonObject(path, root, errorMessage);
+}
+
 QString RecipeManager::cameraSampleImagesPath(const QString& cameraId) const
 {
   return cameraImagesPath(cameraId, "sample");

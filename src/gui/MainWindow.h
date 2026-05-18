@@ -10,6 +10,7 @@
 #include "gui/ImageViewWidget.h"
 #include "processing/LocalizationProcessor.h"
 #include "processing/SurfaceDefectProcessor.h"
+#include "processing/geometry/EdgeCircleDetector.h"
 #include "processing/geometry/EdgeLineDetector.h"
 #include "runtime/CameraRuntime.h"
 
@@ -49,7 +50,8 @@ private:
   {
     None,
     Line,
-    Point
+    Point,
+    Circle
   };
 
   void buildUi();
@@ -80,6 +82,7 @@ private:
   void showGeometryPanel(const CameraConfig& camera);
   void showGeometryPointPanel(const CameraConfig& camera);
   void showGeometryLinePanel(const CameraConfig& camera);
+  void showGeometryCirclePanel(const CameraConfig& camera);
   void showToolPanel(const CameraConfig& camera, const QString& toolId);
   void refreshPoseForCurrentFrame(const CameraConfig& camera);
   void loadGeometryPointRecipe(const CameraConfig& camera);
@@ -108,6 +111,16 @@ private:
   void updateGeometryPointOverlay(const CameraConfig& camera, const GeometryOverlay& extraOverlay = {});
   void appendCurrentPartPoseOverlay(const CameraConfig& camera, GeometryOverlay& overlay) const;
   void testGeometryPoint(const CameraConfig& camera);
+  void loadGeometryCirclesRecipe(const CameraConfig& camera);
+  void saveGeometryCirclesRecipe(const CameraConfig& camera);
+  void addGeometryCircle(const CameraConfig& camera);
+  void removeActiveGeometryCircle(const CameraConfig& camera);
+  GeometryCircleRuntimeConfig& activeGeometryCircleConfig(const QString& cameraId);
+  const GeometryCircleRuntimeConfig& activeGeometryCircleConfig(const QString& cameraId) const;
+  void activateGeometryCircleDrawing(const CameraConfig& camera);
+  void handleGeometryCirclePoints(const CameraConfig& camera, const QVector<QPoint>& points);
+  void showConfiguredGeometryCircles(const CameraConfig& camera);
+  void testGeometryCircle(const CameraConfig& camera);
   void startCameraSimulation(const CameraConfig& camera);
   void stopCameraSimulation(const CameraConfig& camera);
   void stepCameraSimulation(const CameraConfig& camera);
@@ -207,4 +220,6 @@ private:
   QHash<QString, QVector<GeometryPointRuntimeConfig>> m_geometryPointConfigs;
   QHash<QString, int> m_activeGeometryPointIndexes;
   QHash<QString, LineGeometryMouseController> m_pointGeometryMouseControllers;
+  QHash<QString, QVector<GeometryCircleRuntimeConfig>> m_geometryCircleConfigs;
+  QHash<QString, int> m_activeGeometryCircleIndexes;
 };

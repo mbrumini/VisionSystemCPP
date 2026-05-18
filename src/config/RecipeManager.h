@@ -100,6 +100,22 @@ struct GeometryPointRecipeConfig
   QString pickMode = "first";
 };
 
+struct GeometryCircleRecipeConfig
+{
+  bool enabled = false;
+  QString id = "circle_1";
+  QPointF partCenter;
+  double radius = 0.0;
+  int innerBand = 20;
+  int outerBand = 20;
+  int edgeSensitivity = 60;
+  int edgeCleanupDerivative = 12;
+  int edgeStatisticalFilter = 0;
+  bool useSubpixel = false;
+  QString transition = "light_to_dark";
+  QString pickMode = "first";
+};
+
 class RecipeManager
 {
 public:
@@ -156,6 +172,8 @@ public:
   bool saveGeometryPoints(const QString& cameraId, const QVector<GeometryPointRecipeConfig>& configs, QString* errorMessage = nullptr) const;
   GeometryPointRecipeConfig loadGeometryPoint(const QString& cameraId, const QString& pointId = "point_1") const;
   bool saveGeometryPoint(const QString& cameraId, const GeometryPointRecipeConfig& config, QString* errorMessage = nullptr) const;
+  QVector<GeometryCircleRecipeConfig> loadGeometryCircles(const QString& cameraId) const;
+  bool saveGeometryCircles(const QString& cameraId, const QVector<GeometryCircleRecipeConfig>& configs, QString* errorMessage = nullptr) const;
   QString cameraSampleImagesPath(const QString& cameraId) const;
   QString cameraTestImagesPath(const QString& cameraId) const;
   QString firstCameraSampleImagePath(const QString& cameraId) const;
