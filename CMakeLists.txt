@@ -22,6 +22,8 @@ add_executable(VisionSystemCPP
     src/camera/FileCamera.cpp
     src/gui/CameraTileWidget.h
     src/gui/CameraTileWidget.cpp
+    src/gui/CameraSetupPanelWidget.h
+    src/gui/CameraSetupPanelWidget.cpp
     src/gui/ImageViewWidget.h
     src/gui/ImageViewWidget.cpp
     src/gui/MainWindow.h
@@ -36,6 +38,9 @@ add_executable(VisionSystemCPP
     src/gui/ToolPanelWidget.cpp
     src/gui/geometry/GeometryOverlay.h
     src/gui/geometry/GeometryOverlay.cpp
+    src/gui/geometry/GeometryDiagnosticDrawing.h
+    src/gui/geometry/GeometryDiagnosticDrawing.cpp
+    src/gui/geometry/GeometryRuntimeConfig.h
     src/gui/geometry/LineGeometryEditor.h
     src/gui/geometry/LineGeometryEditor.cpp
     src/gui/geometry/LineGeometryMouseController.h

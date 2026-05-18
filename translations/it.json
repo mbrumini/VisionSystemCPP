@@ -222,6 +222,7 @@
     "nextFrame": "Frame successivo",
     "pointGeometry": "Punto",
     "lineGeometry": "Linea",
+    "newGeometryPoint": "Nuovo punto",
     "newGeometryLine": "Nuova linea",
     "circleGeometry": "Cerchio",
     "arcGeometry": "Arco",

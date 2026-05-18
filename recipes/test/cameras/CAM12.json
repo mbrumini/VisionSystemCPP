@@ -5,9 +5,9 @@
             "enabled": true,
             "lines": [
                 {
-                    "bandHalfWidth": 20,
+                    "bandHalfWidth": 19,
                     "coordinateSpace": "part",
-                    "edgeCleanupDerivative": 13,
+                    "edgeCleanupDerivative": 15,
                     "edgeSensitivity": 128,
                     "edgeStatisticalFilter": 6,
                     "enabled": true,
@@ -22,7 +22,7 @@
                     },
                     "pickMode": "best",
                     "scanDirection": "normal_positive",
-                    "transition": "light_to_dark",
+                    "transition": "dark_to_light",
                     "type": "edge_line",
                     "useSubpixel": false
                 },
@@ -78,14 +78,32 @@
                     "enabled": true,
                     "id": "point_1",
                     "partEnd": {
-                        "x": 477.7332719915714,
-                        "y": 330.5663746888721
+                        "x": 516.4532719915715,
+                        "y": 258.41586817657105
                     },
                     "partStart": {
-                        "x": 442.5332719915714,
+                        "x": 486.5332719915714,
                         "y": 73.64018076701961
                     },
                     "pickMode": "last",
+                    "transition": "light_to_dark",
+                    "type": "edge_point",
+                    "useSubpixel": true
+                },
+                {
+                    "coordinateSpace": "part",
+                    "edgeSensitivity": 128,
+                    "enabled": true,
+                    "id": "point_2",
+                    "partEnd": {
+                        "x": -659.7306942377318,
+                        "y": 325.2412576828924
+                    },
+                    "partStart": {
+                        "x": -631.5706942377318,
+                        "y": 163.34256014309506
+                    },
+                    "pickMode": "best",
                     "transition": "light_to_dark",
                     "type": "edge_point",
                     "useSubpixel": true

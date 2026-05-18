@@ -3,6 +3,8 @@
 #include "config/AppConfig.h"
 #include "config/RecipeManager.h"
 #include "config/TranslationManager.h"
+#include "gui/CameraSetupPanelWidget.h"
+#include "gui/geometry/GeometryRuntimeConfig.h"
 #include "gui/geometry/LineGeometryMouseController.h"
 #include "gui/CameraTileWidget.h"
 #include "gui/ImageViewWidget.h"
@@ -50,42 +52,6 @@ private:
     Point
   };
 
-  struct GeometryLineRuntimeConfig
-  {
-    QString id = "line_1";
-    bool enabled = true;
-    cv::Point2d imageStart;
-    cv::Point2d imageEnd;
-    cv::Point2d partStart;
-    cv::Point2d partEnd;
-    int bandHalfWidth = 20;
-    int edgeSensitivity = 60;
-    int edgeCleanupDerivative = 12;
-    int edgeStatisticalFilter = 0;
-    bool useSubpixel = true;
-    EdgeLineScanDirection scanDirection = EdgeLineScanDirection::NormalPositive;
-    EdgeLineTransition transition = EdgeLineTransition::LightToDark;
-    EdgeLinePickMode pickMode = EdgeLinePickMode::First;
-    bool hasImageLine = false;
-    bool hasLine = false;
-  };
-
-  struct GeometryPointRuntimeConfig
-  {
-    QString id = "point_1";
-    bool enabled = true;
-    cv::Point2d imageStart;
-    cv::Point2d imageEnd;
-    cv::Point2d partStart;
-    cv::Point2d partEnd;
-    int edgeSensitivity = 60;
-    bool useSubpixel = true;
-    EdgeLineTransition transition = EdgeLineTransition::LightToDark;
-    EdgeLinePickMode pickMode = EdgeLinePickMode::First;
-    bool hasImageGuide = false;
-    bool hasGuide = false;
-  };
-
   void buildUi();
   void buildMenu();
   void rebuildUi();
@@ -117,6 +83,9 @@ private:
   void refreshPoseForCurrentFrame(const CameraConfig& camera);
   void loadGeometryPointRecipe(const CameraConfig& camera);
   void saveGeometryPointRecipe(const CameraConfig& camera);
+  void addGeometryPoint(const CameraConfig& camera);
+  GeometryPointRuntimeConfig& activeGeometryPointConfig(const QString& cameraId);
+  const GeometryPointRuntimeConfig& activeGeometryPointConfig(const QString& cameraId) const;
   void loadGeometryLinesRecipe(const CameraConfig& camera);
   void saveGeometryLinesRecipe(const CameraConfig& camera);
   void addGeometryLine(const CameraConfig& camera);
@@ -132,6 +101,7 @@ private:
   void activateGeometryPointDrawing(const CameraConfig& camera);
   void handleGeometryPointGuidePoint(const CameraConfig& camera, const QPointF& imagePoint);
   void handleGeometryPointHandleMoved(const CameraConfig& camera, int pointIndex, const QPointF& imagePoint);
+  GeometryOverlay configuredGeometryPointsOverlay(const CameraConfig& camera, bool includeActive) const;
   void updateGeometryPointOverlay(const CameraConfig& camera, const GeometryOverlay& extraOverlay = {});
   void testGeometryPoint(const CameraConfig& camera);
   void startCameraSimulation(const CameraConfig& camera);
@@ -198,7 +168,7 @@ private:
   QLabel* m_largeTitle = nullptr;
   QLabel* m_systemStatus = nullptr;
   QLabel* m_cameraDetails = nullptr;
-  QLabel* m_setupDetails = nullptr;
+  CameraSetupPanelWidget* m_setupPanel = nullptr;
   QString m_setupCameraId;
   QWidget* m_toolsContainer = nullptr;
   QVBoxLayout* m_toolsLayout = nullptr;
@@ -228,6 +198,7 @@ private:
   QHash<QString, QVector<GeometryLineRuntimeConfig>> m_geometryLineConfigs;
   QHash<QString, int> m_activeGeometryLineIndexes;
   QHash<QString, LineGeometryMouseController> m_lineGeometryMouseControllers;
-  QHash<QString, GeometryPointRuntimeConfig> m_geometryPointConfigs;
+  QHash<QString, QVector<GeometryPointRuntimeConfig>> m_geometryPointConfigs;
+  QHash<QString, int> m_activeGeometryPointIndexes;
   QHash<QString, LineGeometryMouseController> m_pointGeometryMouseControllers;
 };
