@@ -1382,8 +1382,7 @@ void MainWindow::updateControlPanel(const CameraConfig* camera)
       {"start", "commands.start"},
       {"stop", "commands.stop"},
       {"resetErrors", "commands.resetErrors"},
-      {"reloadConfig", "commands.reloadConfig"},
-      {"exit", "commands.exit"}
+      {"reloadConfig", "commands.reloadConfig"}
     };
 
     for (int i = 0; i < commandsList.size(); ++i)
@@ -1401,10 +1400,6 @@ void MainWindow::updateControlPanel(const CameraConfig* camera)
       else if (commandId == "reloadConfig")
       {
         connect(button, &QPushButton::clicked, this, [this]() { loadConfiguration(); });
-      }
-      else if (commandId == "exit")
-      {
-        connect(button, &QPushButton::clicked, qApp, &QApplication::quit);
       }
       else
       {
@@ -1464,23 +1459,12 @@ void MainWindow::showCameraToolList(const CameraConfig& camera)
 
   if (isGrayscaleLocalizationCamera(camera))
   {
-    auto* strategyTitle = new QLabel(trText("groups.localizationStrategies"), m_toolsContainer);
-    strategyTitle->setObjectName("toolPanelTitle");
-    m_toolsLayout->addWidget(strategyTitle);
-
-    for (const SurfaceLocalizationStrategyDefinition& strategy : SurfaceLocalizationStrategies::all(m_translations))
-    {
-      auto* button = new QPushButton(strategy.label, m_toolsContainer);
-      button->setMinimumHeight(40);
-      connect(button, &QPushButton::clicked, this, [this, camera, strategy]() {
-        showSurfaceLocalizationStrategyPanel(camera, strategy.id);
-      });
-      m_toolsLayout->addWidget(button);
-    }
-
-    auto* toolsTitle = new QLabel(trText("groups.cameraTools"), m_toolsContainer);
-    toolsTitle->setObjectName("toolPanelNote");
-    m_toolsLayout->addWidget(toolsTitle);
+    auto* localizationButton = new QPushButton(trText("tools.localization"), m_toolsContainer);
+    localizationButton->setMinimumHeight(40);
+    connect(localizationButton, &QPushButton::clicked, this, [this, camera]() {
+      showLocalizationStrategyList(camera);
+    });
+    m_toolsLayout->addWidget(localizationButton);
   }
 
   for (const QString& tool : camera.profile.guiTools)
@@ -1498,6 +1482,48 @@ void MainWindow::showCameraToolList(const CameraConfig& camera)
   }
 
   m_toolsLayout->addStretch(1);
+}
+
+void MainWindow::showLocalizationStrategyList(const CameraConfig& camera)
+{
+  deactivateImageDrawingTools();
+  clearToolPanel();
+
+  auto* panel = new QWidget(m_toolsContainer);
+  auto* layout = new QVBoxLayout(panel);
+  layout->setContentsMargins(0, 0, 0, 0);
+  layout->setSpacing(8);
+
+  auto* title = new QLabel(trText("tools.localization") + " | " + QString("%1 %2").arg(trText("labels.camera")).arg(camera.slot), panel);
+  title->setObjectName("toolPanelTitle");
+  title->setWordWrap(true);
+  layout->addWidget(title);
+
+  auto* strategyTitle = new QLabel(trText("groups.localizationStrategies"), panel);
+  strategyTitle->setObjectName("toolPanelNote");
+  strategyTitle->setWordWrap(true);
+  layout->addWidget(strategyTitle);
+
+  for (const SurfaceLocalizationStrategyDefinition& strategy : SurfaceLocalizationStrategies::all(m_translations))
+  {
+    auto* button = new QPushButton(strategy.label, panel);
+    button->setMinimumHeight(40);
+    connect(button, &QPushButton::clicked, this, [this, camera, strategy]() {
+      showSurfaceLocalizationStrategyPanel(camera, strategy.id);
+    });
+    layout->addWidget(button);
+  }
+
+  auto* backButton = new QPushButton(trText("commands.backToCameraTools"), panel);
+  connect(backButton, &QPushButton::clicked, this, [this, camera]() {
+    showCameraToolList(camera);
+    appendLog(trText("log.backToCameraTools") + ": " + camera.id);
+  });
+  layout->addWidget(backButton);
+  layout->addStretch(1);
+
+  m_toolsLayout->addWidget(panel);
+  appendLog(trText("log.toolPanel") + ": " + trText("tools.localization"));
 }
 
 void MainWindow::showCameraSetupPanel(const CameraConfig& camera)
@@ -3316,9 +3342,9 @@ void MainWindow::showSurfaceLocalizationStrategyPanel(const CameraConfig& camera
     });
     layout->addWidget(sensitivityBox);
 
-    auto* backButton = new QPushButton(trText("commands.backToCameraTools"), panel);
+    auto* backButton = new QPushButton(trText("groups.localizationStrategies"), panel);
     connect(backButton, &QPushButton::clicked, this, [this, camera]() {
-      showCameraToolList(camera);
+      showLocalizationStrategyList(camera);
       appendLog(trText("log.backToCameraTools") + ": " + camera.id);
     });
     layout->addWidget(backButton);
@@ -3454,9 +3480,9 @@ void MainWindow::showSurfaceLocalizationStrategyPanel(const CameraConfig& camera
     });
     layout->addWidget(modelBox);
 
-    auto* backButton = new QPushButton(trText("commands.backToCameraTools"), panel);
+    auto* backButton = new QPushButton(trText("groups.localizationStrategies"), panel);
     connect(backButton, &QPushButton::clicked, this, [this, camera]() {
-      showCameraToolList(camera);
+      showLocalizationStrategyList(camera);
       appendLog(trText("log.backToCameraTools") + ": " + camera.id);
     });
     layout->addWidget(backButton);
@@ -3493,9 +3519,9 @@ void MainWindow::showSurfaceLocalizationStrategyPanel(const CameraConfig& camera
   controlsLayout->addWidget(new QPushButton(trText("actions.testStrategy"), controlsBox));
   layout->addWidget(controlsBox);
 
-  auto* backButton = new QPushButton(trText("commands.backToCameraTools"), panel);
+  auto* backButton = new QPushButton(trText("groups.localizationStrategies"), panel);
   connect(backButton, &QPushButton::clicked, this, [this, camera]() {
-    showCameraToolList(camera);
+    showLocalizationStrategyList(camera);
     appendLog(trText("log.backToCameraTools") + ": " + camera.id);
   });
   layout->addWidget(backButton);

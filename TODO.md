@@ -58,9 +58,9 @@
 - [ ] Implementare strategia `AI YOLO`: modello ONNX, classe target, confidenza, soglia maschera, centro/orientamento da mask.
 - [ ] Aggiungere editor GUI delle feature strategia.
 ## Gui 
-- [ ] lasciare solo Cam X, eliminare le repliche X e poi X di nuovo dalle miniature
-- [ ] togliere il pulsante Esci dalla gui lasciarlo solo nel menù a tendina
-- [ ] aggiungere 1 livello per la localizzazione, primo pulsante solo localizzazione che apre una finestra con la lista delle possibilità
+- [x] lasciare solo Cam X, eliminare le repliche X e poi X di nuovo dalle miniature
+- [x] togliere il pulsante Esci dalla gui lasciarlo solo nel menù a tendina
+- [x] aggiungere 1 livello per la localizzazione, primo pulsante solo localizzazione che apre una finestra con la lista delle possibilità
 - [ ] comandi linea, fascia linea e sensibilità bordo su una riga, pulizia edge e filtro statistico sulla seconda riga anche direzione linea e transizione bordo su una linea
 - [ ] quando premo Nuova linea il sistema deve prepararsi per fare una nuova linea, il pulsante disegna linea 2 punti è inutile, automatizzare ed eliminare il pulsante inutile
 

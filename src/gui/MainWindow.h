@@ -75,6 +75,7 @@ private:
   void updateControlPanel(const CameraConfig* camera);
   void deactivateImageDrawingTools();
   void showCameraToolList(const CameraConfig& camera);
+  void showLocalizationStrategyList(const CameraConfig& camera);
   void showCameraSetupPanel(const CameraConfig& camera);
   void showGeometryPanel(const CameraConfig& camera);
   void showGeometryPointPanel(const CameraConfig& camera);
