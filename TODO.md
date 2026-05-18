@@ -61,8 +61,8 @@
 - [x] lasciare solo Cam X, eliminare le repliche X e poi X di nuovo dalle miniature
 - [x] togliere il pulsante Esci dalla gui lasciarlo solo nel menù a tendina
 - [x] aggiungere 1 livello per la localizzazione, primo pulsante solo localizzazione che apre una finestra con la lista delle possibilità
-- [ ] comandi linea, fascia linea e sensibilità bordo su una riga, pulizia edge e filtro statistico sulla seconda riga anche direzione linea e transizione bordo su una linea
-- [ ] quando premo Nuova linea il sistema deve prepararsi per fare una nuova linea, il pulsante disegna linea 2 punti è inutile, automatizzare ed eliminare il pulsante inutile
+- [x] comandi linea, fascia linea e sensibilità bordo su una riga, pulizia edge e filtro statistico sulla seconda riga anche direzione linea e transizione bordo su una linea
+- [x] quando premo Nuova linea il sistema deve prepararsi per fare una nuova linea, il pulsante disegna linea 2 punti è inutile, automatizzare ed eliminare il pulsante inutile
 
 
 ## Runtime camera e origine pezzo
@@ -94,12 +94,13 @@
 - [x] Mostrare tutte le linee configurate in overlay e scansionarle tutte nel runtime/setup, non solo l'ultima selezionata.
 - [x] Aggiungere subpixel edge per linee su camere BN e nascondere l'opzione sulle camere non BN.
 - [x] Nascondere le maniglie della linea nel setup/runtime: restano visibili solo nel tool di modifica.
-- [ ] al passaggio da set-up a qualsiasi altra finestra ricaricare immagine di riferimento
+- [x] al passaggio da set-up a qualsiasi altra finestra ricaricare immagine di riferimento
 - [X] Aggiungere gestione multi-Punto nel pannello `Punto`: lista linee, `Nuovo punto`, punto attivo modificabile e salvataggio ricetta.
 - [ ] Visualizzare sempre il centro di massa durante il set-up
 - [ ] in set up, possibilità di portare il timer a 0 (ora minimo 50) ed inserire un timer per capire il tempo di scansione
 - [ ] Separare anche la gestione maniglie della fascia in un controller/editor riusabile.
 - [ ] Estendere i detector dedicati alle altre geometrie in ROI relative alla posa pezzo.
+- [ ] Aggiungere pulsante `Elimina` a tutte le geometrie configurabili: punto, segmento/linea, cerchio, arco, edge e contorno.
 - [ ] Salvare configurazione geometrie in ricetta camera.
 - [ ] Disegnare overlay diagnostici delle geometrie rilevate.
 - [ ] Implementare misure che usano geometrie gia' rilevate, per esempio distanza punto-linea.

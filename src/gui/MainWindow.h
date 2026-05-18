@@ -85,11 +85,13 @@ private:
   void loadGeometryPointRecipe(const CameraConfig& camera);
   void saveGeometryPointRecipe(const CameraConfig& camera);
   void addGeometryPoint(const CameraConfig& camera);
+  void removeActiveGeometryPoint(const CameraConfig& camera);
   GeometryPointRuntimeConfig& activeGeometryPointConfig(const QString& cameraId);
   const GeometryPointRuntimeConfig& activeGeometryPointConfig(const QString& cameraId) const;
   void loadGeometryLinesRecipe(const CameraConfig& camera);
   void saveGeometryLinesRecipe(const CameraConfig& camera);
   void addGeometryLine(const CameraConfig& camera);
+  void removeActiveGeometryLine(const CameraConfig& camera);
   GeometryLineRuntimeConfig& activeGeometryLineConfig(const QString& cameraId);
   const GeometryLineRuntimeConfig& activeGeometryLineConfig(const QString& cameraId) const;
   void activateGeometryLineDrawing(const CameraConfig& camera);
@@ -150,6 +152,7 @@ private:
   PartPose partPoseFromLocalizationResult(const CameraConfig& camera, const LocalizationResult& result) const;
   PartPose partPoseFromSurfaceReference(const CameraConfig& camera, const SurfaceLocalizationReference& reference) const;
   QPixmap loadCameraPreview(const CameraConfig& camera) const;
+  void reloadCameraReferenceImage(const CameraConfig& camera);
   QPixmap matToPixmap(const cv::Mat& image) const;
   cv::Mat currentInputImage(const CameraConfig& camera, QString* errorMessage = nullptr) const;
   QString cameraSampleImagePath(const CameraConfig& camera) const;
