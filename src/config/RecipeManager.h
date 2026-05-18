@@ -152,6 +152,8 @@ public:
   bool saveGeometryLines(const QString& cameraId, const QVector<GeometryLineRecipeConfig>& configs, QString* errorMessage = nullptr) const;
   GeometryLineRecipeConfig loadGeometryLine(const QString& cameraId, const QString& lineId = "line_1") const;
   bool saveGeometryLine(const QString& cameraId, const GeometryLineRecipeConfig& config, QString* errorMessage = nullptr) const;
+  QVector<GeometryPointRecipeConfig> loadGeometryPoints(const QString& cameraId) const;
+  bool saveGeometryPoints(const QString& cameraId, const QVector<GeometryPointRecipeConfig>& configs, QString* errorMessage = nullptr) const;
   GeometryPointRecipeConfig loadGeometryPoint(const QString& cameraId, const QString& pointId = "point_1") const;
   bool saveGeometryPoint(const QString& cameraId, const GeometryPointRecipeConfig& config, QString* errorMessage = nullptr) const;
   QString cameraSampleImagesPath(const QString& cameraId) const;

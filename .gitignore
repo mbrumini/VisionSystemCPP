@@ -1,7 +1,9 @@
 # Build outputs
 build/
+build-local/
 out/
 deploy/
+vcpkg_installed/
 
 # Visual Studio
 .vs/
@@ -12,6 +14,9 @@ deploy/
 
 # CMake
 CMakeUserPresets.json
+.deps/
+.cache/
+.tmp/
 
 # Logs
 *.log

@@ -8,6 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(OpenCV REQUIRED)
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_program(WINDEPLOYQT_EXECUTABLE windeployqt HINTS "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/tools/Qt6/bin")
 
 add_executable(VisionSystemCPP
     src/main.cpp
@@ -113,3 +114,14 @@ add_custom_command(TARGET VisionSystemCPP POST_BUILD
         "${CMAKE_SOURCE_DIR}/translations"
         "$<TARGET_FILE_DIR:VisionSystemCPP>/translations"
 )
+
+if(WINDEPLOYQT_EXECUTABLE)
+    add_custom_command(TARGET VisionSystemCPP POST_BUILD
+        COMMAND "${WINDEPLOYQT_EXECUTABLE}"
+            --no-translations
+            "$<TARGET_FILE:VisionSystemCPP>"
+        COMMENT "Deploying Qt runtime plugins"
+    )
+else()
+    message(WARNING "windeployqt was not found; Qt platform plugins must be copied next to the executable manually.")
+endif()

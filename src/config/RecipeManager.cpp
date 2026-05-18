@@ -1423,14 +1423,14 @@ bool RecipeManager::saveGeometryLine(const QString& cameraId, const GeometryLine
   return saveGeometryLines(cameraId, configs, errorMessage);
 }
 
-GeometryPointRecipeConfig RecipeManager::loadGeometryPoint(const QString& cameraId, const QString& pointId) const
+QVector<GeometryPointRecipeConfig> RecipeManager::loadGeometryPoints(const QString& cameraId) const
 {
+  QVector<GeometryPointRecipeConfig> configs;
+
   QJsonObject root;
   if (!loadJsonObject(cameraRecipePath(cameraId), root))
   {
-    GeometryPointRecipeConfig config;
-    config.id = pointId;
-    return config;
+    return configs;
   }
 
   const QJsonArray points = root.value("tools").toObject()
@@ -1441,7 +1441,7 @@ GeometryPointRecipeConfig RecipeManager::loadGeometryPoint(const QString& camera
   {
     const QJsonObject point = value.toObject();
     const QString id = point.value("id").toString("point_1");
-    if (id != pointId)
+    if (id.isEmpty())
     {
       continue;
     }
@@ -1455,15 +1455,16 @@ GeometryPointRecipeConfig RecipeManager::loadGeometryPoint(const QString& camera
     config.useSubpixel = point.value("useSubpixel").toBool(config.useSubpixel);
     config.transition = point.value("transition").toString(config.transition);
     config.pickMode = point.value("pickMode").toString(config.pickMode);
-    return config;
+    configs.append(config);
   }
 
-  GeometryPointRecipeConfig config;
-  config.id = pointId;
-  return config;
+  return configs;
 }
 
-bool RecipeManager::saveGeometryPoint(const QString& cameraId, const GeometryPointRecipeConfig& config, QString* errorMessage) const
+bool RecipeManager::saveGeometryPoints(
+  const QString& cameraId,
+  const QVector<GeometryPointRecipeConfig>& configs,
+  QString* errorMessage) const
 {
   const QString path = cameraRecipePath(cameraId);
   QJsonObject root;
@@ -1475,36 +1476,12 @@ bool RecipeManager::saveGeometryPoint(const QString& cameraId, const GeometryPoi
   QJsonObject geometries = tools.value("geometries").toObject();
   geometries["enabled"] = true;
 
-  QJsonArray points = geometries.value("points").toArray();
-  bool replaced = false;
-  for (int i = 0; i < points.size(); ++i)
-  {
-    QJsonObject point = points[i].toObject();
-    if (point.value("id").toString() != config.id)
-    {
-      continue;
-    }
-
-    point["enabled"] = config.enabled;
-    point["id"] = config.id.isEmpty() ? "point_1" : config.id;
-    point["type"] = "edge_point";
-    point["coordinateSpace"] = "part";
-    point["partStart"] = pointFToJson(config.partStart);
-    point["partEnd"] = pointFToJson(config.partEnd);
-    point["edgeSensitivity"] = qBound(1, config.edgeSensitivity, 255);
-    point["useSubpixel"] = config.useSubpixel;
-    point["transition"] = config.transition == "dark_to_light" ? "dark_to_light" : "light_to_dark";
-    point["pickMode"] = config.pickMode == "last" || config.pickMode == "best" ? config.pickMode : "first";
-    points[i] = point;
-    replaced = true;
-    break;
-  }
-
-  if (!replaced)
+  QJsonArray points;
+  for (const GeometryPointRecipeConfig& config : configs)
   {
     QJsonObject point;
     point["enabled"] = config.enabled;
-    point["id"] = config.id.isEmpty() ? "point_1" : config.id;
+    point["id"] = config.id.isEmpty() ? QString("point_%1").arg(points.size() + 1) : config.id;
     point["type"] = "edge_point";
     point["coordinateSpace"] = "part";
     point["partStart"] = pointFToJson(config.partStart);
@@ -1520,6 +1497,44 @@ bool RecipeManager::saveGeometryPoint(const QString& cameraId, const GeometryPoi
   tools["geometries"] = geometries;
   root["tools"] = tools;
   return saveJsonObject(path, root, errorMessage);
+}
+
+GeometryPointRecipeConfig RecipeManager::loadGeometryPoint(const QString& cameraId, const QString& pointId) const
+{
+  const QVector<GeometryPointRecipeConfig> configs = loadGeometryPoints(cameraId);
+  for (const GeometryPointRecipeConfig& config : configs)
+  {
+    if (config.id == pointId)
+    {
+      return config;
+    }
+  }
+
+  GeometryPointRecipeConfig config;
+  config.id = pointId;
+  return config;
+}
+
+bool RecipeManager::saveGeometryPoint(const QString& cameraId, const GeometryPointRecipeConfig& config, QString* errorMessage) const
+{
+  QVector<GeometryPointRecipeConfig> configs = loadGeometryPoints(cameraId);
+  bool replaced = false;
+  for (GeometryPointRecipeConfig& existing : configs)
+  {
+    if (existing.id == config.id)
+    {
+      existing = config;
+      replaced = true;
+      break;
+    }
+  }
+
+  if (!replaced)
+  {
+    configs.append(config);
+  }
+
+  return saveGeometryPoints(cameraId, configs, errorMessage);
 }
 
 QString RecipeManager::cameraSampleImagesPath(const QString& cameraId) const

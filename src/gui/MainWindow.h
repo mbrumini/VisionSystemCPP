@@ -115,8 +115,11 @@ private:
   void showGeometryLinePanel(const CameraConfig& camera);
   void showToolPanel(const CameraConfig& camera, const QString& toolId);
   void refreshPoseForCurrentFrame(const CameraConfig& camera);
-  void loadGeometryPointRecipe(const CameraConfig& camera);
-  void saveGeometryPointRecipe(const CameraConfig& camera);
+  void loadGeometryPointsRecipe(const CameraConfig& camera);
+  void saveGeometryPointsRecipe(const CameraConfig& camera);
+  void addGeometryPoint(const CameraConfig& camera);
+  GeometryPointRuntimeConfig& activeGeometryPointConfig(const QString& cameraId);
+  const GeometryPointRuntimeConfig& activeGeometryPointConfig(const QString& cameraId) const;
   void loadGeometryLinesRecipe(const CameraConfig& camera);
   void saveGeometryLinesRecipe(const CameraConfig& camera);
   void addGeometryLine(const CameraConfig& camera);
@@ -132,6 +135,7 @@ private:
   void activateGeometryPointDrawing(const CameraConfig& camera);
   void handleGeometryPointGuidePoint(const CameraConfig& camera, const QPointF& imagePoint);
   void handleGeometryPointHandleMoved(const CameraConfig& camera, int pointIndex, const QPointF& imagePoint);
+  GeometryOverlay configuredGeometryPointsOverlay(const CameraConfig& camera, bool includeActive) const;
   void updateGeometryPointOverlay(const CameraConfig& camera, const GeometryOverlay& extraOverlay = {});
   void testGeometryPoint(const CameraConfig& camera);
   void startCameraSimulation(const CameraConfig& camera);
@@ -228,6 +232,7 @@ private:
   QHash<QString, QVector<GeometryLineRuntimeConfig>> m_geometryLineConfigs;
   QHash<QString, int> m_activeGeometryLineIndexes;
   QHash<QString, LineGeometryMouseController> m_lineGeometryMouseControllers;
-  QHash<QString, GeometryPointRuntimeConfig> m_geometryPointConfigs;
+  QHash<QString, QVector<GeometryPointRuntimeConfig>> m_geometryPointConfigs;
+  QHash<QString, int> m_activeGeometryPointIndexes;
   QHash<QString, LineGeometryMouseController> m_pointGeometryMouseControllers;
 };

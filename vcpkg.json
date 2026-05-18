@@ -1,0 +1,21 @@
+{
+  "dependencies": [
+    {
+      "name": "opencv4",
+      "default-features": false,
+      "features": [
+        "jpeg",
+        "png",
+        "tiff",
+        "thread"
+      ]
+    },
+    {
+      "name": "qtbase",
+      "default-features": false,
+      "features": [
+        "widgets"
+      ]
+    }
+  ]
+}

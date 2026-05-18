@@ -1778,9 +1778,10 @@ void MainWindow::showGeometryPointPanel(const CameraConfig& camera)
   deactivateImageDrawingTools();
   clearToolPanel();
   refreshPoseForCurrentFrame(camera);
-  loadGeometryPointRecipe(camera);
+  loadGeometryPointsRecipe(camera);
 
-  GeometryPointRuntimeConfig& pointConfig = m_geometryPointConfigs[camera.id];
+  QVector<GeometryPointRuntimeConfig>& pointConfigs = m_geometryPointConfigs[camera.id];
+  GeometryPointRuntimeConfig& pointConfig = activeGeometryPointConfig(camera.id);
   const PartPose& pose = m_cameraRuntime[camera.id].currentPose();
 
   auto* panel = new QWidget(m_toolsContainer);
@@ -1796,6 +1797,17 @@ void MainWindow::showGeometryPointPanel(const CameraConfig& camera)
   poseLabel->setObjectName("toolPanelNote");
   poseLabel->setWordWrap(true);
   layout->addWidget(poseLabel);
+
+  auto* pointSelector = new QComboBox(panel);
+  for (int i = 0; i < pointConfigs.size(); ++i)
+  {
+    pointSelector->addItem(pointConfigs[i].id, i);
+  }
+  pointSelector->setCurrentIndex(qBound(0, m_activeGeometryPointIndexes.value(camera.id, 0), pointConfigs.size() - 1));
+  auto* newPointButton = new QPushButton(trText("actions.newGeometryPoint"), panel);
+  layout->addWidget(new QLabel(trText("labels.geometryPoint"), panel));
+  layout->addWidget(pointSelector);
+  layout->addWidget(newPointButton);
 
   auto* form = new QWidget(panel);
   auto* formLayout = new QGridLayout(form);
@@ -1835,36 +1847,50 @@ void MainWindow::showGeometryPointPanel(const CameraConfig& camera)
   layout->addWidget(form);
 
   connect(edgeSensitivity, qOverload<int>(&QSpinBox::valueChanged), this, [this, camera](int value) {
-    m_geometryPointConfigs[camera.id].edgeSensitivity = value;
-    saveGeometryPointRecipe(camera);
+    activeGeometryPointConfig(camera.id).edgeSensitivity = value;
+    saveGeometryPointsRecipe(camera);
     testGeometryPoint(camera);
   });
   connect(subpixelEdge, &QCheckBox::toggled, this, [this, camera](bool checked) {
-    m_geometryPointConfigs[camera.id].useSubpixel = checked;
-    saveGeometryPointRecipe(camera);
+    activeGeometryPointConfig(camera.id).useSubpixel = checked;
+    saveGeometryPointsRecipe(camera);
     testGeometryPoint(camera);
   });
   connect(edgeTransition, qOverload<int>(&QComboBox::currentIndexChanged), this, [this, camera](int index) {
-    m_geometryPointConfigs[camera.id].transition =
+    activeGeometryPointConfig(camera.id).transition =
       index == 1 ? EdgeLineTransition::DarkToLight : EdgeLineTransition::LightToDark;
-    saveGeometryPointRecipe(camera);
+    saveGeometryPointsRecipe(camera);
     testGeometryPoint(camera);
   });
   connect(edgePickMode, qOverload<int>(&QComboBox::currentIndexChanged), this, [this, camera](int index) {
     if (index == 1)
     {
-      m_geometryPointConfigs[camera.id].pickMode = EdgeLinePickMode::Last;
+      activeGeometryPointConfig(camera.id).pickMode = EdgeLinePickMode::Last;
     }
     else if (index == 2)
     {
-      m_geometryPointConfigs[camera.id].pickMode = EdgeLinePickMode::Best;
+      activeGeometryPointConfig(camera.id).pickMode = EdgeLinePickMode::Best;
     }
     else
     {
-      m_geometryPointConfigs[camera.id].pickMode = EdgeLinePickMode::First;
+      activeGeometryPointConfig(camera.id).pickMode = EdgeLinePickMode::First;
     }
-    saveGeometryPointRecipe(camera);
+    saveGeometryPointsRecipe(camera);
     testGeometryPoint(camera);
+  });
+  connect(pointSelector, qOverload<int>(&QComboBox::currentIndexChanged), this, [this, camera](int index) {
+    if (index < 0)
+    {
+      return;
+    }
+
+    m_activeGeometryPointIndexes[camera.id] = index;
+    showGeometryPointPanel(camera);
+  });
+  connect(newPointButton, &QPushButton::clicked, this, [this, camera]() {
+    addGeometryPoint(camera);
+    saveGeometryPointsRecipe(camera);
+    showGeometryPointPanel(camera);
   });
 
   auto* drawButton = new QPushButton(trText("actions.geometryPointScan"), panel);
@@ -2169,51 +2195,114 @@ void MainWindow::addGeometryLine(const CameraConfig& camera)
   m_activeGeometryLineIndexes[camera.id] = lines.size() - 1;
 }
 
-void MainWindow::loadGeometryPointRecipe(const CameraConfig& camera)
+MainWindow::GeometryPointRuntimeConfig& MainWindow::activeGeometryPointConfig(const QString& cameraId)
 {
-  GeometryPointRuntimeConfig& point = m_geometryPointConfigs[camera.id];
-  if (point.hasGuide || point.hasImageGuide)
+  QVector<GeometryPointRuntimeConfig>& points = m_geometryPointConfigs[cameraId];
+  if (points.isEmpty())
   {
-    return;
+    GeometryPointRuntimeConfig point;
+    point.id = "point_1";
+    points.append(point);
   }
 
-  const GeometryPointRecipeConfig recipe = m_recipeManager.loadGeometryPoint(camera.id, point.id);
-  if (!recipe.enabled)
-  {
-    return;
-  }
-
-  point.enabled = recipe.enabled;
-  point.id = recipe.id;
-  point.partStart = cv::Point2d(recipe.partStart.x(), recipe.partStart.y());
-  point.partEnd = cv::Point2d(recipe.partEnd.x(), recipe.partEnd.y());
-  point.edgeSensitivity = recipe.edgeSensitivity;
-  point.useSubpixel = recipe.useSubpixel;
-  point.transition = transitionFromRecipe(recipe.transition);
-  point.pickMode = pickModeFromRecipe(recipe.pickMode);
-  point.hasGuide = true;
+  int index = qBound(0, m_activeGeometryPointIndexes.value(cameraId, 0), points.size() - 1);
+  m_activeGeometryPointIndexes[cameraId] = index;
+  return points[index];
 }
 
-void MainWindow::saveGeometryPointRecipe(const CameraConfig& camera)
+const MainWindow::GeometryPointRuntimeConfig& MainWindow::activeGeometryPointConfig(const QString& cameraId) const
 {
-  const GeometryPointRuntimeConfig& point = m_geometryPointConfigs[camera.id];
-  if (!point.hasGuide)
+  const QVector<GeometryPointRuntimeConfig>& points = m_geometryPointConfigs.value(cameraId);
+  static const GeometryPointRuntimeConfig fallback;
+  if (points.isEmpty())
+  {
+    return fallback;
+  }
+
+  const int index = qBound(0, m_activeGeometryPointIndexes.value(cameraId, 0), points.size() - 1);
+  return points[index];
+}
+
+void MainWindow::addGeometryPoint(const CameraConfig& camera)
+{
+  QVector<GeometryPointRuntimeConfig>& points = m_geometryPointConfigs[camera.id];
+  if (points.isEmpty())
+  {
+    GeometryPointRuntimeConfig first;
+    first.id = "point_1";
+    points.append(first);
+  }
+
+  GeometryPointRuntimeConfig point = activeGeometryPointConfig(camera.id);
+  point.id = QString("point_%1").arg(points.size() + 1);
+  point.hasImageGuide = false;
+  point.hasGuide = false;
+  points.append(point);
+  m_activeGeometryPointIndexes[camera.id] = points.size() - 1;
+}
+
+void MainWindow::loadGeometryPointsRecipe(const CameraConfig& camera)
+{
+  QVector<GeometryPointRuntimeConfig>& points = m_geometryPointConfigs[camera.id];
+  if (!points.isEmpty())
   {
     return;
   }
 
-  GeometryPointRecipeConfig recipe;
-  recipe.enabled = point.enabled;
-  recipe.id = point.id;
-  recipe.partStart = QPointF(point.partStart.x, point.partStart.y);
-  recipe.partEnd = QPointF(point.partEnd.x, point.partEnd.y);
-  recipe.edgeSensitivity = point.edgeSensitivity;
-  recipe.useSubpixel = point.useSubpixel;
-  recipe.transition = transitionToRecipe(point.transition);
-  recipe.pickMode = pickModeToRecipe(point.pickMode);
+  const QVector<GeometryPointRecipeConfig> recipes = m_recipeManager.loadGeometryPoints(camera.id);
+  for (const GeometryPointRecipeConfig& recipe : recipes)
+  {
+    if (!recipe.enabled)
+    {
+      continue;
+    }
+
+    GeometryPointRuntimeConfig point;
+    point.enabled = recipe.enabled;
+    point.id = recipe.id;
+    point.partStart = cv::Point2d(recipe.partStart.x(), recipe.partStart.y());
+    point.partEnd = cv::Point2d(recipe.partEnd.x(), recipe.partEnd.y());
+    point.edgeSensitivity = recipe.edgeSensitivity;
+    point.useSubpixel = recipe.useSubpixel;
+    point.transition = transitionFromRecipe(recipe.transition);
+    point.pickMode = pickModeFromRecipe(recipe.pickMode);
+    point.hasGuide = true;
+    points.append(point);
+  }
+
+  if (points.isEmpty())
+  {
+    GeometryPointRuntimeConfig point;
+    point.id = "point_1";
+    points.append(point);
+  }
+  m_activeGeometryPointIndexes[camera.id] = qBound(0, m_activeGeometryPointIndexes.value(camera.id, 0), points.size() - 1);
+}
+
+void MainWindow::saveGeometryPointsRecipe(const CameraConfig& camera)
+{
+  QVector<GeometryPointRecipeConfig> recipes;
+  for (const GeometryPointRuntimeConfig& point : m_geometryPointConfigs[camera.id])
+  {
+    if (!point.hasGuide)
+    {
+      continue;
+    }
+
+    GeometryPointRecipeConfig recipe;
+    recipe.enabled = point.enabled;
+    recipe.id = point.id;
+    recipe.partStart = QPointF(point.partStart.x, point.partStart.y);
+    recipe.partEnd = QPointF(point.partEnd.x, point.partEnd.y);
+    recipe.edgeSensitivity = point.edgeSensitivity;
+    recipe.useSubpixel = point.useSubpixel;
+    recipe.transition = transitionToRecipe(point.transition);
+    recipe.pickMode = pickModeToRecipe(point.pickMode);
+    recipes.append(recipe);
+  }
 
   QString error;
-  if (!m_recipeManager.saveGeometryPoint(camera.id, recipe, &error))
+  if (!m_recipeManager.saveGeometryPoints(camera.id, recipes, &error))
   {
     appendLog(error);
   }
@@ -2425,6 +2514,47 @@ GeometryOverlay MainWindow::configuredGeometryLinesOverlay(const CameraConfig& c
     const QColor lineColor = highlightActive ? QColor("#ff4fd8") : QColor(170, 205, 220, 170);
     const QColor bandColor = highlightActive ? QColor(0, 210, 255, 35) : QColor(120, 170, 190, 22);
     overlay.bands.append({center, QSizeF(length, line.bandHalfWidth * 2.0), angleDegrees, lineColor, bandColor});
+    overlay.lines.append({start, end, lineColor, highlightActive ? 3 : 1});
+    if (includeActive && highlightActive)
+    {
+      overlay.points.append({start, "1"});
+      overlay.points.append({end, "2"});
+    }
+  }
+
+  return overlay;
+}
+
+GeometryOverlay MainWindow::configuredGeometryPointsOverlay(const CameraConfig& camera, bool includeActive) const
+{
+  GeometryOverlay overlay;
+  const PartPose& pose = m_cameraRuntime.at(camera.id).currentPose();
+  const QVector<GeometryPointRuntimeConfig> points = m_geometryPointConfigs.value(camera.id);
+  const int activeIndex = m_activeGeometryPointIndexes.value(camera.id, 0);
+
+  for (int i = 0; i < points.size(); ++i)
+  {
+    if (!includeActive && i == activeIndex)
+    {
+      continue;
+    }
+
+    const GeometryPointRuntimeConfig& point = points[i];
+    const bool usePartGuide = pose.valid && point.hasGuide;
+    if (!usePartGuide && !point.hasImageGuide)
+    {
+      continue;
+    }
+
+    const cv::Point2d imageStart = usePartGuide ? partToImage(pose, point.partStart) : point.imageStart;
+    const cv::Point2d imageEnd = usePartGuide ? partToImage(pose, point.partEnd) : point.imageEnd;
+    const QPointF start(imageStart.x, imageStart.y);
+    const QPointF end(imageEnd.x, imageEnd.y);
+    const bool highlightActive =
+      m_activeDrawingRecipe == ActiveDrawingRecipe::Geometry &&
+      m_geometryDrawingTarget == GeometryDrawingTarget::Point &&
+      i == activeIndex;
+    const QColor lineColor = highlightActive ? QColor("#ff4fd8") : QColor(170, 205, 220, 170);
     overlay.lines.append({start, end, lineColor, highlightActive ? 3 : 1});
     if (includeActive && highlightActive)
     {
@@ -2674,12 +2804,31 @@ void MainWindow::testConfiguredGeometryLines(const CameraConfig& camera)
     });
   }
 
-  loadGeometryPointRecipe(camera);
-  GeometryPointRuntimeConfig& point = m_geometryPointConfigs[camera.id];
-  if (point.enabled && point.hasGuide && pose.valid)
+  loadGeometryPointsRecipe(camera);
+  QVector<GeometryPointRuntimeConfig>& points = m_geometryPointConfigs[camera.id];
+  geometries.points.clear();
+  for (GeometryPointRuntimeConfig& point : points)
   {
-    const cv::Point2d imageStart = partToImage(pose, point.partStart);
-    const cv::Point2d imageEnd = partToImage(pose, point.partEnd);
+    if (!point.enabled)
+    {
+      continue;
+    }
+
+    if (pose.valid && !point.hasGuide && point.hasImageGuide)
+    {
+      point.partStart = imageToPart(pose, point.imageStart);
+      point.partEnd = imageToPart(pose, point.imageEnd);
+      point.hasGuide = true;
+    }
+
+    const bool usePartGuide = pose.valid && point.hasGuide;
+    if (!usePartGuide && !point.hasImageGuide)
+    {
+      continue;
+    }
+
+    const cv::Point2d imageStart = usePartGuide ? partToImage(pose, point.partStart) : point.imageStart;
+    const cv::Point2d imageEnd = usePartGuide ? partToImage(pose, point.partEnd) : point.imageEnd;
 
     EdgePointDetectorConfig config;
     config.id = point.id;
@@ -2716,7 +2865,6 @@ void MainWindow::testConfiguredGeometryLines(const CameraConfig& camera)
       }
       if (result.found)
       {
-        geometries.points.clear();
         geometries.points.append(result.point);
         drawCyanPointCross(diagnostic, result.point.point);
         appendCyanPointCross(detectedOverlay, result.point.point);
@@ -2729,6 +2877,15 @@ void MainWindow::testConfiguredGeometryLines(const CameraConfig& camera)
   m_largeImage->clearRoi();
   GeometryOverlay setupOverlay = configuredGeometryLinesOverlay(camera, true);
   setupOverlay.points.clear();
+  const GeometryOverlay pointSetupOverlay = configuredGeometryPointsOverlay(camera, true);
+  for (const GeometryOverlayLine& line : pointSetupOverlay.lines)
+  {
+    setupOverlay.lines.append(line);
+  }
+  for (const GeometryOverlayPoint& point : pointSetupOverlay.points)
+  {
+    setupOverlay.points.append(point);
+  }
   for (const GeometryOverlayLine& line : detectedOverlay.lines)
   {
     setupOverlay.lines.append(line);
@@ -2774,7 +2931,7 @@ void MainWindow::handleGeometryPointGuidePoint(const CameraConfig& camera, const
   }
 
   const LineGeometryEditorState& state = controller.state();
-  GeometryPointRuntimeConfig& config = m_geometryPointConfigs[camera.id];
+  GeometryPointRuntimeConfig& config = activeGeometryPointConfig(camera.id);
   config.imageStart = cv::Point2d(state.imageStart.x(), state.imageStart.y());
   config.imageEnd = cv::Point2d(state.imageEnd.x(), state.imageEnd.y());
   config.hasImageGuide = true;
@@ -2791,7 +2948,7 @@ void MainWindow::handleGeometryPointGuidePoint(const CameraConfig& camera, const
   m_largeImage->setGeometryOverlayPointEditingEnabled(true);
   updateGeometryPointOverlay(camera);
   appendLog(trText("log.geometryPointGuideSaved") + ": " + camera.id);
-  saveGeometryPointRecipe(camera);
+  saveGeometryPointsRecipe(camera);
   testGeometryPoint(camera);
 }
 
@@ -2812,7 +2969,7 @@ void MainWindow::handleGeometryPointHandleMoved(const CameraConfig& camera, int 
     return;
   }
 
-  GeometryPointRuntimeConfig& config = m_geometryPointConfigs[camera.id];
+  GeometryPointRuntimeConfig& config = activeGeometryPointConfig(camera.id);
   config.imageStart = cv::Point2d(state.imageStart.x(), state.imageStart.y());
   config.imageEnd = cv::Point2d(state.imageEnd.x(), state.imageEnd.y());
   config.hasImageGuide = true;
@@ -2830,22 +2987,35 @@ void MainWindow::handleGeometryPointHandleMoved(const CameraConfig& camera, int 
   }
 
   updateGeometryPointOverlay(camera);
-  saveGeometryPointRecipe(camera);
+  saveGeometryPointsRecipe(camera);
   testGeometryPoint(camera);
 }
 
 void MainWindow::updateGeometryPointOverlay(const CameraConfig& camera, const GeometryOverlay& extraOverlay)
 {
-  GeometryOverlay overlay = m_pointGeometryMouseControllers[camera.id].overlay();
-  for (GeometryOverlayLine& line : overlay.lines)
+  GeometryOverlay overlay = configuredGeometryPointsOverlay(camera, false);
+  GeometryOverlay activeOverlay = m_pointGeometryMouseControllers[camera.id].overlay();
+  for (GeometryOverlayLine& line : activeOverlay.lines)
   {
     line.color = QColor("#ff4fd8");
     line.width = 3;
   }
-  for (GeometryOverlayBand& band : overlay.bands)
+  for (GeometryOverlayBand& band : activeOverlay.bands)
   {
     band.outlineColor = QColor("#ff4fd8");
     band.fillColor = QColor(255, 79, 216, 24);
+  }
+  for (const GeometryOverlayPoint& point : activeOverlay.points)
+  {
+    overlay.points.append(point);
+  }
+  for (const GeometryOverlayLine& line : activeOverlay.lines)
+  {
+    overlay.lines.append(line);
+  }
+  for (const GeometryOverlayBand& band : activeOverlay.bands)
+  {
+    overlay.bands.append(band);
   }
   for (const GeometryOverlayPoint& point : extraOverlay.points)
   {
@@ -2869,7 +3039,7 @@ void MainWindow::testGeometryPoint(const CameraConfig& camera)
     return;
   }
 
-  GeometryPointRuntimeConfig& pointConfig = m_geometryPointConfigs[camera.id];
+  GeometryPointRuntimeConfig& pointConfig = activeGeometryPointConfig(camera.id);
   const PartPose& pose = m_cameraRuntime[camera.id].currentPose();
   if (pose.valid && !pointConfig.hasGuide && pointConfig.hasImageGuide)
   {
