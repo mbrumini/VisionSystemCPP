@@ -1,4 +1,4 @@
-﻿#include "MainWindow.h"
+#include "MainWindow.h"
 
 #include "gui/SurfaceLocalizationPanelWidget.h"
 #include "gui/SurfaceLocalizationStrategies.h"
@@ -13,6 +13,7 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDateTime>
+#include <QSettings>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFileInfo>
@@ -43,6 +44,14 @@
 #include <cmath>
 #include <functional>
 #include <vector>
+#include <QtConcurrent/QtConcurrent>
+#include <QFutureWatcher>
+#include <type_traits>
+#include "util/AsyncExecutor.h"
+#include <thread>
+#include <memory>
+
+using AsyncExecutor::runAsyncTask;
 
 namespace
 {
@@ -50,6 +59,8 @@ QString projectPath(const QString& relativePath)
 {
   return QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath(relativePath);
 }
+
+
 
 QString resolveProjectPath(const QString& path)
 {
@@ -203,6 +214,53 @@ MainWindow::MainWindow(QWidget* parent)
   }
 
   buildUi();
+  // Initialize async executor: set thread count based on hardware and enable metrics logging
+  AsyncExecutor::setDefaultMaxThreadsToHardware();
+  // Load persisted max threads if present
+  {
+    QSettings settings;
+    const QVariant v = settings.value("system/maxThreads", QVariant());
+    if (v.isValid())
+    {
+      const int saved = v.toInt();
+      if (saved <= 0)
+      {
+        AsyncExecutor::setDefaultMaxThreadsToHardware();
+      }
+      else
+      {
+        AsyncExecutor::setMaxThreads(saved);
+      }
+    }
+  }
+  AsyncExecutor::setMetricsHandler([this](const QString& name, qint64 ms) {
+    if (m_metricsPanel)
+    {
+      m_metricsPanel->addMetric(name, ms);
+      return;
+    }
+
+    if (name.isEmpty())
+    {
+      appendLog(QString("metric: %1 ms").arg(ms));
+    }
+    else
+    {
+      appendLog(QString("metric %1: %2 ms").arg(name).arg(ms));
+    }
+  });
+  // Initialize async executor: set thread count based on hardware and enable metrics logging
+  AsyncExecutor::setDefaultMaxThreadsToHardware();
+  AsyncExecutor::setMetricsHandler([this](const QString& name, qint64 ms) {
+    if (name.isEmpty())
+    {
+      appendLog(QString("metric: %1 ms").arg(ms));
+    }
+    else
+    {
+      appendLog(QString("metric %1: %2 ms").arg(name).arg(ms));
+    }
+  });
   loadConfiguration();
 }
 
@@ -732,6 +790,10 @@ void MainWindow::buildUi()
   m_systemStatus->setObjectName("panelStatus");
   panelLayout->addWidget(m_systemStatus);
 
+  m_metricsPanel = new MetricsPanelWidget(panel);
+  m_metricsPanel->setFixedHeight(120);
+  panelLayout->addWidget(m_metricsPanel);
+
   auto* cameraBox = new QGroupBox(trText("groups.selectedCamera"), panel);
   auto* cameraLayout = new QVBoxLayout(cameraBox);
   m_cameraDetails = new QLabel(trText("labels.selectThumbnail"), cameraBox);
@@ -811,8 +873,71 @@ void MainWindow::buildMenu()
   systemMenu->addAction(trText("commands.gridView"), this, [this]() { showGridView(); });
   systemMenu->addAction(trText("commands.reloadConfig"), this, [this]() { loadConfiguration(); });
   systemMenu->addAction(trText("commands.toggleFullScreen"), this, [this]() { toggleFullScreen(); });
+  systemMenu->addAction(trText("commands.setMaxThreads"), this, [this]() { setThreadLimitPrompt(); });
   systemMenu->addSeparator();
   systemMenu->addAction(trText("commands.exit"), qApp, &QApplication::quit);
+}
+
+void MainWindow::setThreadLimitPrompt()
+{
+  bool ok = false;
+  const int current = QThreadPool::globalInstance()->maxThreadCount();
+  const unsigned int hw = std::thread::hardware_concurrency();
+  const int hwCount = hw == 0 ? 1 : static_cast<int>(hw);
+  const int value = QInputDialog::getInt(
+    this,
+    trText("commands.setMaxThreads"),
+    trText("labels.maxThreads"),
+    current,
+    0,
+    1024,
+    1,
+    &ok);
+
+  if (!ok)
+  {
+    return;
+  }
+
+  if (value <= 0)
+  {
+    AsyncExecutor::setDefaultMaxThreadsToHardware();
+    appendLog(QString("%1: %2").arg(trText("log.threadLimitSet"), QString("auto=%1").arg(hwCount)));
+    QSettings settings;
+    settings.setValue("system/maxThreads", 0);
+    return;
+  }
+
+  AsyncExecutor::setMaxThreads(value);
+  appendLog(QString("%1: %2").arg(trText("log.threadLimitSet"), QString::number(value)));
+  QSettings settings;
+  settings.setValue("system/maxThreads", value);
+}
+
+void MainWindow::incPendingJobs(const QString& cameraId)
+{
+  const int v = m_cameraPendingJobs.value(cameraId, 0) + 1;
+  m_cameraPendingJobs[cameraId] = v;
+  m_cameraProcessingBusy[cameraId] = true;
+  if (m_metricsPanel)
+  {
+    m_metricsPanel->addMetric(QString("pendingJobs_%1").arg(cameraId), v);
+  }
+}
+
+void MainWindow::decPendingJobs(const QString& cameraId)
+{
+  int v = m_cameraPendingJobs.value(cameraId, 0) - 1;
+  if (v < 0)
+  {
+    v = 0;
+  }
+  m_cameraPendingJobs[cameraId] = v;
+  m_cameraProcessingBusy[cameraId] = (v > 0);
+  if (m_metricsPanel)
+  {
+    m_metricsPanel->addMetric(QString("pendingJobs_%1").arg(cameraId), v);
+  }
 }
 
 void MainWindow::rebuildUi()
@@ -1211,7 +1336,6 @@ void MainWindow::refreshSelectedCameraRecipeData()
     m_largeImage->setCircles(circles);
     return;
   }
-
   if (m_recipeManager.loadLocalizationRoi(m_selectedCameraId, roi))
   {
     m_largeImage->setRoi(roi);
@@ -2151,7 +2275,6 @@ void MainWindow::showGeometryLinePanel(const CameraConfig& camera)
       lineConfig.bandHalfWidth);
     m_activeDrawingRecipe = ActiveDrawingRecipe::Geometry;
     m_geometryDrawingTarget = GeometryDrawingTarget::Line;
-    updateGeometryLineOverlay(camera);
     m_largeImage->setGeometryOverlayPointEditingEnabled(true);
     shouldRefreshLine = true;
   }
@@ -2271,11 +2394,13 @@ void MainWindow::showGeometryCirclePanel(const CameraConfig& camera)
   layout->addWidget(form);
 
   connect(circleSelector, qOverload<int>(&QComboBox::currentIndexChanged), this, [this, camera](int index) {
-    if (index >= 0)
+    if (index < 0)
     {
-      m_activeGeometryCircleIndexes[camera.id] = index;
-      showGeometryCirclePanel(camera);
+      return;
     }
+
+    m_activeGeometryCircleIndexes[camera.id] = index;
+    showGeometryCirclePanel(camera);
   });
   connect(newCircleButton, &QPushButton::clicked, this, [this, camera]() {
     addGeometryCircle(camera);
@@ -2341,9 +2466,11 @@ GeometryLineRuntimeConfig& MainWindow::activeGeometryLineConfig(const QString& c
   QVector<GeometryLineRuntimeConfig>& lines = m_geometryLineConfigs[cameraId];
   if (lines.isEmpty())
   {
-    GeometryLineRuntimeConfig line;
-    line.id = "line_1";
-    lines.append(line);
+    GeometryLineRuntimeConfig first;
+    first.id = "line_1";
+    lines.append(first);
+    m_activeGeometryLineIndexes[cameraId] = 0;
+    return lines[0];
   }
 
   int index = qBound(0, m_activeGeometryLineIndexes.value(cameraId, 0), lines.size() - 1);
@@ -2612,6 +2739,7 @@ void MainWindow::addGeometryCircle(const CameraConfig& camera)
   circles.append(circle);
   m_activeGeometryCircleIndexes[camera.id] = circles.size() - 1;
 }
+
 
 void MainWindow::removeActiveGeometryPoint(const CameraConfig& camera)
 {
@@ -3022,54 +3150,63 @@ void MainWindow::testGeometryLine(const CameraConfig& camera)
   config.transition = lineConfig.transition;
   config.pickMode = lineConfig.pickMode;
 
-  EdgeLineDetector detector;
-  const EdgeLineDetectorResult result = detector.detect(input, config);
-  if (!result.processed || result.diagnosticImage.empty())
-  {
-    appendLog(result.message.isEmpty() ? trText("log.geometryLineFailed") + ": " + camera.id : result.message);
-    return;
-  }
+  // Run detection in background to avoid blocking UI using helper
+  auto job = [input, config]() -> EdgeLineDetectorResult {
+    EdgeLineDetector detector;
+    return detector.detect(input, config);
+  };
 
-  m_selectedPreview = matToPixmap(result.diagnosticImage);
-  m_largeImage->setImage(m_selectedPreview);
-  m_largeImage->setRoi(QRect(result.searchRoi.x, result.searchRoi.y, result.searchRoi.width, result.searchRoi.height));
-
-  LineGeometryMouseController& controller = m_lineGeometryMouseControllers[camera.id];
-  controller.setLine(QPointF(imageStart.x, imageStart.y), QPointF(imageEnd.x, imageEnd.y), lineConfig.bandHalfWidth);
-  m_geometryDrawingTarget = GeometryDrawingTarget::Line;
-  updateGeometryLineOverlay(camera);
-
-  if (!result.found)
-  {
-    appendLog(result.message.isEmpty() ? trText("log.geometryLineNotFound") + ": " + camera.id : result.message);
-    return;
-  }
-
-  GeometrySet& geometries = m_cameraRuntime[camera.id].geometries();
-  for (int i = geometries.lines.size() - 1; i >= 0; --i)
-  {
-    if (geometries.lines[i].meta.id == lineConfig.id)
+  const QString __pendingCameraId_testGeometryLine = camera.id;
+  incPendingJobs(__pendingCameraId_testGeometryLine);
+  runAsyncTask(decltype(job)(job), this, [this, camera, imageStart, imageEnd, __pendingCameraId_testGeometryLine](const EdgeLineDetectorResult& result) {
+    auto __dec_guard = std::shared_ptr<void>(nullptr, [this, __pendingCameraId_testGeometryLine](void*) { decPendingJobs(__pendingCameraId_testGeometryLine); });
+    if (!result.processed || result.diagnosticImage.empty())
     {
-      geometries.lines.removeAt(i);
+      appendLog(result.message.isEmpty() ? trText("log.geometryLineFailed") + ": " + camera.id : result.message);
+      return;
     }
-  }
-  geometries.lines.append(result.line);
-  GeometryOverlay detectedOverlay;
-  detectedOverlay.lines.append({
-    QPointF(result.line.start.x, result.line.start.y),
-    QPointF(result.line.end.x, result.line.end.y),
-    QColor("#35c46a"),
-    3
-  });
-  updateGeometryLineOverlay(camera, detectedOverlay);
 
-  appendLog(QString("%1: %2 x1=%3 y1=%4 x2=%5 y2=%6")
-              .arg(trText("log.geometryLineFound"))
-              .arg(camera.id)
-              .arg(result.line.start.x, 0, 'f', 1)
-              .arg(result.line.start.y, 0, 'f', 1)
-              .arg(result.line.end.x, 0, 'f', 1)
-              .arg(result.line.end.y, 0, 'f', 1));
+    m_selectedPreview = matToPixmap(result.diagnosticImage);
+    m_largeImage->setImage(m_selectedPreview);
+    m_largeImage->setRoi(QRect(result.searchRoi.x, result.searchRoi.y, result.searchRoi.width, result.searchRoi.height));
+
+    LineGeometryMouseController& controller = m_lineGeometryMouseControllers[camera.id];
+    controller.setLine(QPointF(imageStart.x, imageStart.y), QPointF(imageEnd.x, imageEnd.y), activeGeometryLineConfig(camera.id).bandHalfWidth);
+    m_geometryDrawingTarget = GeometryDrawingTarget::Line;
+    updateGeometryLineOverlay(camera);
+
+    if (!result.found)
+    {
+      appendLog(result.message.isEmpty() ? trText("log.geometryLineNotFound") + ": " + camera.id : result.message);
+      return;
+    }
+
+    GeometrySet& geometries = m_cameraRuntime[camera.id].geometries();
+    for (int i = geometries.lines.size() - 1; i >= 0; --i)
+    {
+      if (geometries.lines[i].meta.id == result.line.meta.id)
+      {
+        geometries.lines.removeAt(i);
+      }
+    }
+    geometries.lines.append(result.line);
+    GeometryOverlay detectedOverlay;
+    detectedOverlay.lines.append({
+      QPointF(result.line.start.x, result.line.start.y),
+      QPointF(result.line.end.x, result.line.end.y),
+      QColor("#35c46a"),
+      3
+    });
+    updateGeometryLineOverlay(camera, detectedOverlay);
+
+    appendLog(QString("%1: %2 x1=%3 y1=%4 x2=%5 y2=%6")
+                .arg(trText("log.geometryLineFound"))
+                .arg(camera.id)
+                .arg(result.line.start.x, 0, 'f', 1)
+                .arg(result.line.start.y, 0, 'f', 1)
+                .arg(result.line.end.x, 0, 'f', 1)
+                .arg(result.line.end.y, 0, 'f', 1));
+  });
 }
 
 void MainWindow::testConfiguredGeometryLines(const CameraConfig& camera)
@@ -3294,6 +3431,7 @@ void MainWindow::activateGeometryCircleDrawing(const CameraConfig& camera)
   appendLog(trText("log.geometryCircleDrawing") + ": " + camera.id);
 }
 
+
 void MainWindow::handleGeometryCirclePoints(const CameraConfig& camera, const QVector<QPoint>& points)
 {
   if (camera.id != m_selectedCameraId)
@@ -3332,6 +3470,7 @@ void MainWindow::handleGeometryCirclePoints(const CameraConfig& camera, const QV
   testGeometryCircle(camera);
 }
 
+
 void MainWindow::showConfiguredGeometryCircles(const CameraConfig& camera)
 {
   const PartPose& pose = m_cameraRuntime[camera.id].currentPose();
@@ -3357,6 +3496,7 @@ void MainWindow::showConfiguredGeometryCircles(const CameraConfig& camera)
   appendCurrentPartPoseOverlay(camera, overlay);
   m_largeImage->setGeometryOverlay(overlay);
 }
+
 
 void MainWindow::testGeometryCircle(const CameraConfig& camera)
 {
@@ -3440,6 +3580,7 @@ void MainWindow::testGeometryCircle(const CameraConfig& camera)
               .arg(result.circle.radius, 0, 'f', 1));
 }
 
+
 void MainWindow::handleGeometryPointGuidePoint(const CameraConfig& camera, const QPointF& imagePoint)
 {
   if (camera.id != m_selectedCameraId)
@@ -3477,6 +3618,7 @@ void MainWindow::handleGeometryPointGuidePoint(const CameraConfig& camera, const
   saveGeometryPointRecipe(camera);
   testGeometryPoint(camera);
 }
+
 
 void MainWindow::handleGeometryPointHandleMoved(const CameraConfig& camera, int pointIndex, const QPointF& imagePoint)
 {
@@ -3516,6 +3658,7 @@ void MainWindow::handleGeometryPointHandleMoved(const CameraConfig& camera, int 
   saveGeometryPointRecipe(camera);
   testGeometryPoint(camera);
 }
+
 
 GeometryOverlay MainWindow::configuredGeometryPointsOverlay(const CameraConfig& camera, bool includeActive) const
 {
@@ -3564,6 +3707,7 @@ GeometryOverlay MainWindow::configuredGeometryPointsOverlay(const CameraConfig& 
   return overlay;
 }
 
+
 void MainWindow::updateGeometryPointOverlay(const CameraConfig& camera, const GeometryOverlay& extraOverlay)
 {
   GeometryOverlay overlay = configuredGeometryPointsOverlay(camera, false);
@@ -3596,6 +3740,7 @@ void MainWindow::updateGeometryPointOverlay(const CameraConfig& camera, const Ge
   m_largeImage->setGeometryOverlay(overlay);
 }
 
+
 void MainWindow::appendCurrentPartPoseOverlay(const CameraConfig& camera, GeometryOverlay& overlay) const
 {
   const auto runtimeIt = m_cameraRuntime.find(camera.id);
@@ -3612,6 +3757,7 @@ void MainWindow::appendCurrentPartPoseOverlay(const CameraConfig& camera, Geomet
 
   GeometryDiagnosticDrawing::appendCyanPointCross(overlay, pose.origin);
 }
+
 
 void MainWindow::testGeometryPoint(const CameraConfig& camera)
 {
@@ -3702,6 +3848,7 @@ void MainWindow::testGeometryPoint(const CameraConfig& camera)
               .arg(result.point.point.y, 0, 'f', 1));
 }
 
+
 void MainWindow::startCameraSimulation(const CameraConfig& camera)
 {
   if (camera.id != m_selectedCameraId)
@@ -3731,6 +3878,7 @@ void MainWindow::startCameraSimulation(const CameraConfig& camera)
   showCameraSetupPanel(camera);
 }
 
+
 void MainWindow::stopCameraSimulation(const CameraConfig& camera)
 {
   CameraRuntime& runtime = m_cameraRuntime[camera.id];
@@ -3745,6 +3893,7 @@ void MainWindow::stopCameraSimulation(const CameraConfig& camera)
   appendLog(trText("log.cameraStopped") + ": " + camera.id);
 }
 
+
 void MainWindow::stepCameraSimulation(const CameraConfig& camera)
 {
   if (camera.type != "file")
@@ -3757,6 +3906,7 @@ void MainWindow::stepCameraSimulation(const CameraConfig& camera)
   advanceCameraFrame(camera);
   showCameraSetupPanel(camera);
 }
+
 
 void MainWindow::advanceCameraFrame(const CameraConfig& camera)
 {
@@ -3791,6 +3941,7 @@ void MainWindow::advanceCameraFrame(const CameraConfig& camera)
   m_lastSetupScanElapsedMs[camera.id] = scanTimer.elapsed();
   updateCameraSetupDetails(camera);
 }
+
 
 void MainWindow::processCurrentCameraFrame(const CameraConfig& camera)
 {
@@ -3827,6 +3978,7 @@ void MainWindow::processCurrentCameraFrame(const CameraConfig& camera)
   }
 }
 
+
 void MainWindow::refreshPoseForCurrentFrame(const CameraConfig& camera)
 {
   if (camera.id != m_selectedCameraId)
@@ -3860,6 +4012,18 @@ void MainWindow::refreshPoseForCurrentFrame(const CameraConfig& camera)
   }
 }
 
+
+void MainWindow::updateCameraSetupDetails(const CameraConfig& camera)
+{
+  if (!m_setupPanel || m_setupCameraId != camera.id)
+  {
+    return;
+  }
+
+  m_setupPanel->setDetailsText(cameraSetupDetailsText(camera));
+}
+
+
 QString MainWindow::cameraSetupDetailsText(const CameraConfig& camera) const
 {
   const auto runtimeIt = m_cameraRuntime.find(camera.id);
@@ -3888,15 +4052,6 @@ QString MainWindow::cameraSetupDetailsText(const CameraConfig& camera) const
     .arg(trText("labels.scanTime"), scanElapsedMs >= 0 ? QString("%1 ms").arg(scanElapsedMs) : trText("status.invalid"));
 }
 
-void MainWindow::updateCameraSetupDetails(const CameraConfig& camera)
-{
-  if (!m_setupPanel || m_setupCameraId != camera.id)
-  {
-    return;
-  }
-
-  m_setupPanel->setDetailsText(cameraSetupDetailsText(camera));
-}
 
 void MainWindow::showSurfaceLocalizationStrategyPanel(const CameraConfig& camera, const QString& strategyId)
 {
@@ -4177,6 +4332,7 @@ void MainWindow::showSurfaceLocalizationStrategyPanel(const CameraConfig& camera
   appendLog(trText("log.toolPanel") + ": " + strategy.label);
 }
 
+
 void MainWindow::showSurfaceLocalizationPanel(const CameraConfig& camera)
 {
   deactivateImageDrawingTools();
@@ -4218,6 +4374,7 @@ void MainWindow::showSurfaceLocalizationPanel(const CameraConfig& camera)
   }
 }
 
+
 void MainWindow::activateLocalizationRoiDrawing(const CameraConfig& camera)
 {
   if (!isBwDimensionalCamera(camera))
@@ -4235,6 +4392,7 @@ void MainWindow::activateLocalizationRoiDrawing(const CameraConfig& camera)
   m_activeDrawingRecipe = ActiveDrawingRecipe::Localization;
   appendLog(trText("log.localizationRoiDrawing") + ": " + camera.id);
 }
+
 
 void MainWindow::activateLocalizationExclusionDrawing(const CameraConfig& camera)
 {
@@ -4254,6 +4412,7 @@ void MainWindow::activateLocalizationExclusionDrawing(const CameraConfig& camera
   appendLog(trText("log.localizationExclusionDrawing") + ": " + camera.id);
 }
 
+
 void MainWindow::clearLocalizationExclusions(const CameraConfig& camera)
 {
   if (camera.id != m_selectedCameraId)
@@ -4272,6 +4431,7 @@ void MainWindow::clearLocalizationExclusions(const CameraConfig& camera)
   m_largeImage->clearExclusionRects();
   appendLog(trText("log.localizationExclusionsCleared") + ": " + camera.id);
 }
+
 
 void MainWindow::activateSurfaceDefectRoiDrawing(const CameraConfig& camera)
 {
@@ -4331,7 +4491,6 @@ void MainWindow::clearSurfaceDefectExclusions(const CameraConfig& camera)
   m_largeImage->setImage(m_selectedPreview);
   appendLog(trText("log.surfaceGeometryCleared") + ": " + camera.id);
 }
-
 void MainWindow::activateSurfaceOuterCircleDrawing(const CameraConfig& camera)
 {
   if (!isGrayscaleLocalizationCamera(camera))
@@ -4350,7 +4509,6 @@ void MainWindow::activateSurfaceOuterCircleDrawing(const CameraConfig& camera)
   m_activeDrawingRecipe = ActiveDrawingRecipe::SurfaceDefects;
   appendLog(trText("log.surfaceOuterCircleDrawing") + ": " + camera.id);
 }
-
 void MainWindow::activateSurfaceInnerCircleDrawing(const CameraConfig& camera)
 {
   if (!isGrayscaleLocalizationCamera(camera))
@@ -4682,63 +4840,72 @@ void MainWindow::testSurfaceAnnulusLocalization(const CameraConfig& camera)
   processorConfig.edgeSensitivity = annulus.edgeSensitivity;
   processorConfig.edgeFitMaxError = annulus.edgeFitMaxError;
 
-  SurfaceDefectProcessor processor;
   const QVector<QRect> exclusionRects = m_recipeManager.loadSurfaceDefectExclusionRects(camera.id);
-  const SurfaceDefectResult result = annulus.method == "edge"
-    ? processor.locateAnnulusByEdge(input, processorConfig, toCvRects(exclusionRects))
-    : processor.locateAnnulusByGrayscaleThreshold(input, processorConfig, toCvRects(exclusionRects));
 
-  if (!result.processed || result.diagnosticImage.empty())
-  {
-    appendLog(trText("log.surfaceFailed") + ": " + camera.id);
-    return;
-  }
+  auto job = [input, processorConfig, exclusionRects, annulus]() -> SurfaceDefectResult {
+    SurfaceDefectProcessor processor;
+    if (annulus.method == "edge")
+    {
+      return processor.locateAnnulusByEdge(input, processorConfig, toCvRects(exclusionRects));
+    }
+    return processor.locateAnnulusByGrayscaleThreshold(input, processorConfig, toCvRects(exclusionRects));
+  };
+  const QString __pendingCameraId_testSurfaceAnnulus = camera.id;
+  incPendingJobs(__pendingCameraId_testSurfaceAnnulus);
+  runAsyncTask(decltype(job)(job), this, [this, camera, annulus, exclusionRects, __pendingCameraId_testSurfaceAnnulus](const SurfaceDefectResult& result) {
+    auto __dec_guard = std::shared_ptr<void>(nullptr, [this, __pendingCameraId_testSurfaceAnnulus](void*) { decPendingJobs(__pendingCameraId_testSurfaceAnnulus); });
+    if (!result.processed || result.diagnosticImage.empty())
+    {
+      appendLog(trText("log.surfaceFailed") + ": " + camera.id);
+      return;
+    }
 
-  m_selectedPreview = matToPixmap(result.diagnosticImage);
-  m_largeImage->setImage(m_selectedPreview);
-  m_largeImage->setExclusionRects(exclusionRects);
-  m_largeImage->setCircles(annulus.method == "edge"
-    ? QVector<ImageCircle>{
-        {annulus.edgeCenter, annulus.edgeRadius + annulus.edgeBandOuter},
-        {annulus.edgeCenter, qMax(1, annulus.edgeRadius - annulus.edgeBandInner)}
-      }
-    : QVector<ImageCircle>{{annulus.center, annulus.outerRadius}, {annulus.center, annulus.innerRadius}});
+    m_selectedPreview = matToPixmap(result.diagnosticImage);
+    m_largeImage->setImage(m_selectedPreview);
+    m_largeImage->setExclusionRects(exclusionRects);
+    m_largeImage->setCircles(annulus.method == "edge"
+      ? QVector<ImageCircle>{
+          {annulus.edgeCenter, annulus.edgeRadius + annulus.edgeBandOuter},
+          {annulus.edgeCenter, qMax(1, annulus.edgeRadius - annulus.edgeBandInner)}
+        }
+      : QVector<ImageCircle>{{annulus.center, annulus.outerRadius}, {annulus.center, annulus.innerRadius}});
 
-  if (result.blobs.empty())
-  {
-    m_lastSurfaceLocalizationResults.remove(camera.id);
-    m_cameraRuntime[camera.id].clearCurrentPose(camera.id);
-    appendLog(QString("%1: %2 min=%3 max=%4")
-                .arg(trText("log.surfaceNotFound"))
+    if (result.blobs.empty())
+    {
+      m_lastSurfaceLocalizationResults.remove(camera.id);
+      m_cameraRuntime[camera.id].clearCurrentPose(camera.id);
+      appendLog(QString("%1: %2 blobs=0 min=%3 max=%4")
+                  .arg(trText("log.surfaceNotFound"))
+                  .arg(camera.id)
+                  .arg(annulus.thresholdMin)
+                  .arg(annulus.thresholdMax));
+      return;
+    }
+
+    const SurfaceBlob& mainBlob = result.blobs.front();
+    if (result.localization.found)
+    {
+      m_lastSurfaceLocalizationResults.insert(camera.id, result.localization);
+      m_cameraRuntime[camera.id].setCurrentPose(partPoseFromSurfaceReference(camera, result.localization));
+    }
+    else
+    {
+      m_lastSurfaceLocalizationResults.remove(camera.id);
+      m_cameraRuntime[camera.id].clearCurrentPose(camera.id);
+    }
+
+    appendLog(QString("%1: %2 cx=%3 cy=%4 r=%5 score=%6 area=%7 blobs=%8 min=%9 max=%10")
+                .arg(trText("log.surfaceFound"))
                 .arg(camera.id)
+                .arg(result.localization.found ? result.localization.center.x : mainBlob.center.x, 0, 'f', 1)
+                .arg(result.localization.found ? result.localization.center.y : mainBlob.center.y, 0, 'f', 1)
+                .arg(result.localization.radius, 0, 'f', 1)
+                .arg(result.localization.score, 0, 'f', 2)
+                .arg(mainBlob.area, 0, 'f', 1)
+                .arg(result.blobs.size())
                 .arg(annulus.thresholdMin)
                 .arg(annulus.thresholdMax));
-    return;
-  }
-
-  const SurfaceBlob& mainBlob = result.blobs.front();
-  if (result.localization.found)
-  {
-    m_lastSurfaceLocalizationResults.insert(camera.id, result.localization);
-    m_cameraRuntime[camera.id].setCurrentPose(partPoseFromSurfaceReference(camera, result.localization));
-  }
-  else
-  {
-    m_lastSurfaceLocalizationResults.remove(camera.id);
-    m_cameraRuntime[camera.id].clearCurrentPose(camera.id);
-  }
-
-  appendLog(QString("%1: %2 cx=%3 cy=%4 r=%5 score=%6 area=%7 blobs=%8 min=%9 max=%10")
-              .arg(trText("log.surfaceFound"))
-              .arg(camera.id)
-              .arg(result.localization.found ? result.localization.center.x : mainBlob.center.x, 0, 'f', 1)
-              .arg(result.localization.found ? result.localization.center.y : mainBlob.center.y, 0, 'f', 1)
-              .arg(result.localization.radius, 0, 'f', 1)
-              .arg(result.localization.score, 0, 'f', 2)
-              .arg(mainBlob.area, 0, 'f', 1)
-              .arg(result.blobs.size())
-              .arg(annulus.thresholdMin)
-              .arg(annulus.thresholdMax));
+  });
 }
 
 void MainWindow::testSurfaceLocalization(const CameraConfig& camera)
@@ -4775,45 +4942,53 @@ void MainWindow::testSurfaceLocalization(const CameraConfig& camera)
   thresholdSettings.minValue = recipeSettings.thresholdMin;
   thresholdSettings.maxValue = recipeSettings.thresholdMax;
 
-  SurfaceDefectProcessor processor;
   const QVector<QRect> exclusionRects = m_recipeManager.loadSurfaceDefectExclusionRects(camera.id);
-  const SurfaceDefectResult result = processor.detectByGrayscaleThreshold(
-    input,
-    cv::Rect(roi.x(), roi.y(), roi.width(), roi.height()),
-    toCvRects(exclusionRects),
-    thresholdSettings);
 
-  if (!result.processed || result.diagnosticImage.empty())
-  {
-    appendLog(trText("log.surfaceFailed") + ": " + camera.id);
-    return;
-  }
+  auto job = [input, roi, exclusionRects, thresholdSettings]() -> SurfaceDefectResult {
+    SurfaceDefectProcessor processor;
+    return processor.detectByGrayscaleThreshold(
+      input,
+      cv::Rect(roi.x(), roi.y(), roi.width(), roi.height()),
+      toCvRects(exclusionRects),
+      thresholdSettings);
+  };
 
-  m_selectedPreview = matToPixmap(result.diagnosticImage);
-  m_largeImage->setImage(m_selectedPreview);
-  m_largeImage->setRoi(roi);
-  m_largeImage->setExclusionRects(exclusionRects);
+  const QString __pendingCameraId_testSurfaceLocalization = camera.id;
+  incPendingJobs(__pendingCameraId_testSurfaceLocalization);
+  runAsyncTask(decltype(job)(job), this, [this, camera, roi, exclusionRects, thresholdSettings, __pendingCameraId_testSurfaceLocalization](const SurfaceDefectResult& result) {
+    auto __dec_guard = std::shared_ptr<void>(nullptr, [this, __pendingCameraId_testSurfaceLocalization](void*) { decPendingJobs(__pendingCameraId_testSurfaceLocalization); });
+    if (!result.processed || result.diagnosticImage.empty())
+    {
+      appendLog(trText("log.surfaceFailed") + ": " + camera.id);
+      return;
+    }
 
-  if (result.blobs.empty())
-  {
-    appendLog(QString("%1: %2 blobs=0 min=%3 max=%4")
-                .arg(trText("log.surfaceNotFound"))
+    m_selectedPreview = matToPixmap(result.diagnosticImage);
+    m_largeImage->setImage(m_selectedPreview);
+    m_largeImage->setRoi(roi);
+    m_largeImage->setExclusionRects(exclusionRects);
+
+    if (result.blobs.empty())
+    {
+      appendLog(QString("%1: %2 blobs=0 min=%3 max=%4")
+                  .arg(trText("log.surfaceNotFound"))
+                  .arg(camera.id)
+                  .arg(thresholdSettings.minValue)
+                  .arg(thresholdSettings.maxValue));
+      return;
+    }
+
+    const SurfaceBlob& mainBlob = result.blobs.front();
+    appendLog(QString("%1: %2 cx=%3 cy=%4 area=%5 blobs=%6 min=%7 max=%8")
+                .arg(trText("log.surfaceFound"))
                 .arg(camera.id)
+                .arg(mainBlob.center.x, 0, 'f', 1)
+                .arg(mainBlob.center.y, 0, 'f', 1)
+                .arg(mainBlob.area, 0, 'f', 1)
+                .arg(result.blobs.size())
                 .arg(thresholdSettings.minValue)
                 .arg(thresholdSettings.maxValue));
-    return;
-  }
-
-  const SurfaceBlob& mainBlob = result.blobs.front();
-  appendLog(QString("%1: %2 cx=%3 cy=%4 area=%5 blobs=%6 min=%7 max=%8")
-              .arg(trText("log.surfaceFound"))
-              .arg(camera.id)
-              .arg(mainBlob.center.x, 0, 'f', 1)
-              .arg(mainBlob.center.y, 0, 'f', 1)
-              .arg(mainBlob.area, 0, 'f', 1)
-              .arg(result.blobs.size())
-              .arg(thresholdSettings.minValue)
-              .arg(thresholdSettings.maxValue));
+  });
 }
 
 void MainWindow::testSurfaceLocalizationStrategy(const CameraConfig& camera)
@@ -4845,35 +5020,41 @@ void MainWindow::testSurfaceLocalizationStrategy(const CameraConfig& camera)
     return;
   }
 
-  SurfaceDefectProcessor processor;
   const QVector<QRect> exclusionRects = m_recipeManager.loadSurfaceDefectExclusionRects(camera.id);
-  const SurfaceStrategyResult result = processor.locateTwoCirclesAxis(
-    input,
-    toProcessorStrategy(recipeStrategy),
-    toCvRects(exclusionRects));
+  auto processorStrategy = toProcessorStrategy(recipeStrategy);
 
-  if (result.diagnosticImage.empty())
-  {
-    appendLog(trText("log.surfaceFailed") + ": " + camera.id);
-    return;
-  }
+  auto job = [input, processorStrategy, exclusionRects]() -> SurfaceStrategyResult {
+    SurfaceDefectProcessor processor;
+    return processor.locateTwoCirclesAxis(input, processorStrategy, toCvRects(exclusionRects));
+  };
 
-  m_selectedPreview = matToPixmap(result.diagnosticImage);
-  m_largeImage->setImage(m_selectedPreview);
-  m_largeImage->setExclusionRects(exclusionRects);
+  const QString __pendingCameraId_testSurfaceLocalizationStrategy = camera.id;
+  incPendingJobs(__pendingCameraId_testSurfaceLocalizationStrategy);
+  runAsyncTask(decltype(job)(job), this, [this, camera, exclusionRects, __pendingCameraId_testSurfaceLocalizationStrategy](const SurfaceStrategyResult& result) {
+    auto __dec_guard = std::shared_ptr<void>(nullptr, [this, __pendingCameraId_testSurfaceLocalizationStrategy](void*) { decPendingJobs(__pendingCameraId_testSurfaceLocalizationStrategy); });
+    if (result.diagnosticImage.empty())
+    {
+      appendLog(trText("log.surfaceFailed") + ": " + camera.id);
+      return;
+    }
 
-  if (!result.found)
-  {
-    appendLog(trText("log.surfaceStrategyNotFound") + ": " + camera.id);
-    return;
-  }
+    m_selectedPreview = matToPixmap(result.diagnosticImage);
+    m_largeImage->setImage(m_selectedPreview);
+    m_largeImage->setExclusionRects(exclusionRects);
 
-  appendLog(QString("%1: %2 originX=%3 originY=%4 features=%5")
-              .arg(trText("log.surfaceStrategyFound"))
-              .arg(camera.id)
-              .arg(result.origin.x, 0, 'f', 1)
-              .arg(result.origin.y, 0, 'f', 1)
-              .arg(result.features.size()));
+    if (!result.found)
+    {
+      appendLog(trText("log.surfaceStrategyNotFound") + ": " + camera.id);
+      return;
+    }
+
+    appendLog(QString("%1: %2 originX=%3 originY=%4 features=%5")
+                .arg(trText("log.surfaceStrategyFound"))
+                .arg(camera.id)
+                .arg(result.origin.x, 0, 'f', 1)
+                .arg(result.origin.y, 0, 'f', 1)
+                .arg(result.features.size()));
+  });
 }
 
 void MainWindow::testSurfaceEdgePcaLocalization(const CameraConfig& camera)
@@ -4905,45 +5086,52 @@ void MainWindow::testSurfaceEdgePcaLocalization(const CameraConfig& camera)
   }
 
   const SurfaceAnnulusLocalizationConfig annulus = m_recipeManager.loadSurfaceAnnulusLocalization(camera.id);
-  SurfaceDefectProcessor processor;
   const QVector<QRect> exclusionRects = m_recipeManager.loadSurfaceDefectExclusionRects(camera.id);
-  const SurfaceDefectResult result = processor.locateByEdgePca(
-    input,
-    cv::Rect(roi.x(), roi.y(), roi.width(), roi.height()),
-    toCvRects(exclusionRects),
-    annulus.edgeSensitivity);
 
-  if (!result.processed || result.diagnosticImage.empty())
-  {
-    m_lastSurfaceLocalizationResults.remove(camera.id);
-    appendLog(trText("log.surfaceFailed") + ": " + camera.id);
-    return;
-  }
+  auto job = [input, roi, exclusionRects, annulus]() -> SurfaceDefectResult {
+    SurfaceDefectProcessor processor;
+    return processor.locateByEdgePca(
+      input,
+      cv::Rect(roi.x(), roi.y(), roi.width(), roi.height()),
+      toCvRects(exclusionRects),
+      annulus.edgeSensitivity);
+  };
 
-  m_selectedPreview = matToPixmap(result.diagnosticImage);
-  m_largeImage->setImage(m_selectedPreview);
-  m_largeImage->setRoi(roi);
-  m_largeImage->setExclusionRects(exclusionRects);
-  m_largeImage->clearCircles();
+  const QString __pendingCameraId_testSurfaceEdgePca = camera.id;
+  incPendingJobs(__pendingCameraId_testSurfaceEdgePca);
+  runAsyncTask(decltype(job)(job), this, [this, camera, roi, exclusionRects, __pendingCameraId_testSurfaceEdgePca](const SurfaceDefectResult& result) {
+    auto __dec_guard = std::shared_ptr<void>(nullptr, [this, __pendingCameraId_testSurfaceEdgePca](void*) { decPendingJobs(__pendingCameraId_testSurfaceEdgePca); });
+    if (!result.processed || result.diagnosticImage.empty())
+    {
+      m_lastSurfaceLocalizationResults.remove(camera.id);
+      appendLog(trText("log.surfaceFailed") + ": " + camera.id);
+      return;
+    }
 
-  if (!result.localization.found)
-  {
-    m_lastSurfaceLocalizationResults.remove(camera.id);
-    m_cameraRuntime[camera.id].clearCurrentPose(camera.id);
-    appendLog(trText("log.surfaceStrategyNotFound") + ": " + camera.id);
-    return;
-  }
+    m_selectedPreview = matToPixmap(result.diagnosticImage);
+    m_largeImage->setImage(m_selectedPreview);
+    m_largeImage->setRoi(roi);
+    m_largeImage->setExclusionRects(exclusionRects);
+    m_largeImage->clearCircles();
 
-  m_lastSurfaceLocalizationResults.insert(camera.id, result.localization);
-  m_cameraRuntime[camera.id].setCurrentPose(partPoseFromSurfaceReference(camera, result.localization));
-  appendLog(QString("%1: %2 cx=%3 cy=%4 angle=%5 points=%6 score=%7")
-              .arg(trText("log.surfaceStrategyFound"))
-              .arg(camera.id)
-              .arg(result.localization.center.x, 0, 'f', 1)
-              .arg(result.localization.center.y, 0, 'f', 1)
-              .arg(result.localization.angleRadians * 180.0 / CV_PI, 0, 'f', 1)
-              .arg(result.localization.usedPoints)
-              .arg(result.localization.score, 0, 'f', 2));
+    if (!result.localization.found)
+    {
+      m_lastSurfaceLocalizationResults.remove(camera.id);
+      m_cameraRuntime[camera.id].clearCurrentPose(camera.id);
+      appendLog(trText("log.surfaceStrategyNotFound") + ": " + camera.id);
+      return;
+    }
+
+    m_lastSurfaceLocalizationResults.insert(camera.id, result.localization);
+    m_cameraRuntime[camera.id].setCurrentPose(partPoseFromSurfaceReference(camera, result.localization));
+    appendLog(QString("%1: %2 cx=%3 cy=%4 angle=%5 score=%6")
+                .arg(trText("log.surfaceStrategyFound"))
+                .arg(camera.id)
+                .arg(result.localization.center.x, 0, 'f', 1)
+                .arg(result.localization.center.y, 0, 'f', 1)
+                .arg(result.localization.angleRadians * 180.0 / CV_PI, 0, 'f', 1)
+                .arg(result.localization.score, 0, 'f', 2));
+  });
 }
 
 void MainWindow::acquireSurfaceModel(const CameraConfig& camera)
@@ -5075,45 +5263,55 @@ void MainWindow::testSurfaceShapeModel(const CameraConfig& camera)
 
   QString imageError;
   const cv::Mat input = currentInputImage(camera, &imageError);
-  if (input.empty())
+  if (input.empty() || model.contour.isEmpty())
   {
-    appendLog(imageError);
+    appendLog(input.empty() ? imageError : trText("surfaceModel.missing"));
     return;
   }
 
   SurfaceShapeMatchConfig config;
   config.searchRoi = cv::Rect(model.searchRoi.x(), model.searchRoi.y(), model.searchRoi.width(), model.searchRoi.height());
-  config.edgeSensitivity = model.edgeSensitivity;
-  config.maxShapeDistance = model.maxShapeDistance;
+  config.modelContour.reserve(static_cast<size_t>(model.contour.size()));
   for (const QPoint& point : model.contour)
   {
     config.modelContour.emplace_back(point.x(), point.y());
   }
+  config.edgeSensitivity = model.edgeSensitivity;
+  config.maxShapeDistance = model.maxShapeDistance;
 
-  SurfaceDefectProcessor processor;
   const QVector<QRect> exclusionRects = m_recipeManager.loadSurfaceDefectExclusionRects(camera.id);
-  const SurfaceDefectResult result = processor.locateByShapeMatching(input, config, toCvRects(exclusionRects));
-  if (!result.processed || result.diagnosticImage.empty() || !result.localization.found)
-  {
-    m_lastSurfaceLocalizationResults.remove(camera.id);
-    m_cameraRuntime[camera.id].clearCurrentPose(camera.id);
-    appendLog(trText("log.surfaceStrategyNotFound") + ": " + camera.id);
-    return;
-  }
 
-  m_lastSurfaceLocalizationResults.insert(camera.id, result.localization);
-  m_cameraRuntime[camera.id].setCurrentPose(partPoseFromSurfaceReference(camera, result.localization));
-  m_selectedPreview = matToPixmap(result.diagnosticImage);
-  m_largeImage->setImage(m_selectedPreview);
-  m_largeImage->setRoi(model.searchRoi);
-  m_largeImage->setExclusionRects(exclusionRects);
-  appendLog(QString("%1: %2 shape cx=%3 cy=%4 angle=%5 score=%6")
-              .arg(trText("log.surfaceStrategyFound"))
-              .arg(camera.id)
-              .arg(result.localization.center.x, 0, 'f', 1)
-              .arg(result.localization.center.y, 0, 'f', 1)
-              .arg(result.localization.angleRadians * 180.0 / CV_PI, 0, 'f', 1)
-              .arg(result.localization.score, 0, 'f', 2));
+  auto job = [input, config, exclusionRects]() -> SurfaceDefectResult {
+    SurfaceDefectProcessor processor;
+    return processor.locateByShapeMatching(input, config, toCvRects(exclusionRects));
+  };
+
+  const QString __pendingCameraId_testSurfaceShapeModel = camera.id;
+  incPendingJobs(__pendingCameraId_testSurfaceShapeModel);
+  runAsyncTask(decltype(job)(job), this, [this, camera, model, exclusionRects, __pendingCameraId_testSurfaceShapeModel](const SurfaceDefectResult& result) {
+    auto __dec_guard = std::shared_ptr<void>(nullptr, [this, __pendingCameraId_testSurfaceShapeModel](void*) { decPendingJobs(__pendingCameraId_testSurfaceShapeModel); });
+    if (!result.processed || result.diagnosticImage.empty() || !result.localization.found)
+    {
+      m_lastSurfaceLocalizationResults.remove(camera.id);
+      m_cameraRuntime[camera.id].clearCurrentPose(camera.id);
+      appendLog(trText("log.surfaceStrategyNotFound") + ": " + camera.id);
+      return;
+    }
+
+    m_lastSurfaceLocalizationResults.insert(camera.id, result.localization);
+    m_cameraRuntime[camera.id].setCurrentPose(partPoseFromSurfaceReference(camera, result.localization));
+    m_selectedPreview = matToPixmap(result.diagnosticImage);
+    m_largeImage->setImage(m_selectedPreview);
+    m_largeImage->setRoi(model.searchRoi);
+    m_largeImage->setExclusionRects(exclusionRects);
+    appendLog(QString("%1: %2 shape cx=%3 cy=%4 angle=%5 score=%6")
+                .arg(trText("log.surfaceStrategyFound"))
+                .arg(camera.id)
+                .arg(result.localization.center.x, 0, 'f', 1)
+                .arg(result.localization.center.y, 0, 'f', 1)
+                .arg(result.localization.angleRadians * 180.0 / CV_PI, 0, 'f', 1)
+                .arg(result.localization.score, 0, 'f', 2));
+  });
 }
 
 void MainWindow::testSurfaceTemplateModel(const CameraConfig& camera)
@@ -5148,30 +5346,39 @@ void MainWindow::testSurfaceTemplateModel(const CameraConfig& camera)
   config.angleEndDegrees = model.angleEndDegrees;
   config.angleStepDegrees = model.angleStepDegrees;
 
-  SurfaceDefectProcessor processor;
   const QVector<QRect> exclusionRects = m_recipeManager.loadSurfaceDefectExclusionRects(camera.id);
-  const SurfaceDefectResult result = processor.locateByTemplateMatching(input, config, toCvRects(exclusionRects));
-  if (!result.processed || result.diagnosticImage.empty() || !result.localization.found)
-  {
-    m_lastSurfaceLocalizationResults.remove(camera.id);
-    m_cameraRuntime[camera.id].clearCurrentPose(camera.id);
-    appendLog(trText("log.surfaceStrategyNotFound") + ": " + camera.id);
-    return;
-  }
 
-  m_lastSurfaceLocalizationResults.insert(camera.id, result.localization);
-  m_cameraRuntime[camera.id].setCurrentPose(partPoseFromSurfaceReference(camera, result.localization));
-  m_selectedPreview = matToPixmap(result.diagnosticImage);
-  m_largeImage->setImage(m_selectedPreview);
-  m_largeImage->setRoi(model.searchRoi);
-  m_largeImage->setExclusionRects(exclusionRects);
-  appendLog(QString("%1: %2 template cx=%3 cy=%4 angle=%5 score=%6")
-              .arg(trText("log.surfaceStrategyFound"))
-              .arg(camera.id)
-              .arg(result.localization.center.x, 0, 'f', 1)
-              .arg(result.localization.center.y, 0, 'f', 1)
-              .arg(result.localization.angleRadians * 180.0 / CV_PI, 0, 'f', 1)
-              .arg(result.localization.score, 0, 'f', 2));
+  auto job = [input, config, exclusionRects]() -> SurfaceDefectResult {
+    SurfaceDefectProcessor processor;
+    return processor.locateByTemplateMatching(input, config, toCvRects(exclusionRects));
+  };
+
+  const QString __pendingCameraId_testSurfaceTemplateModel = camera.id;
+  incPendingJobs(__pendingCameraId_testSurfaceTemplateModel);
+  runAsyncTask(decltype(job)(job), this, [this, camera, model, exclusionRects, __pendingCameraId_testSurfaceTemplateModel](const SurfaceDefectResult& result) {
+    auto __dec_guard = std::shared_ptr<void>(nullptr, [this, __pendingCameraId_testSurfaceTemplateModel](void*) { decPendingJobs(__pendingCameraId_testSurfaceTemplateModel); });
+    if (!result.processed || result.diagnosticImage.empty() || !result.localization.found)
+    {
+      m_lastSurfaceLocalizationResults.remove(camera.id);
+      m_cameraRuntime[camera.id].clearCurrentPose(camera.id);
+      appendLog(trText("log.surfaceStrategyNotFound") + ": " + camera.id);
+      return;
+    }
+
+    m_lastSurfaceLocalizationResults.insert(camera.id, result.localization);
+    m_cameraRuntime[camera.id].setCurrentPose(partPoseFromSurfaceReference(camera, result.localization));
+    m_selectedPreview = matToPixmap(result.diagnosticImage);
+    m_largeImage->setImage(m_selectedPreview);
+    m_largeImage->setRoi(model.searchRoi);
+    m_largeImage->setExclusionRects(exclusionRects);
+    appendLog(QString("%1: %2 template cx=%3 cy=%4 angle=%5 score=%6")
+                .arg(trText("log.surfaceStrategyFound"))
+                .arg(camera.id)
+                .arg(result.localization.center.x, 0, 'f', 1)
+                .arg(result.localization.center.y, 0, 'f', 1)
+                .arg(result.localization.angleRadians * 180.0 / CV_PI, 0, 'f', 1)
+                .arg(result.localization.score, 0, 'f', 2));
+  });
 }
 
 void MainWindow::testLocalization(const CameraConfig& camera)
@@ -5203,48 +5410,54 @@ void MainWindow::testLocalization(const CameraConfig& camera)
     return;
   }
 
-  LocalizationProcessor processor;
   const LocalizationSettings settings = m_recipeManager.loadLocalizationSettings(camera.id);
   const QVector<QRect> exclusionRects = m_recipeManager.loadLocalizationExclusionRects(camera.id);
-  const LocalizationResult result = processor.locateDarkObjectOnLightBackground(
-    input,
-    cv::Rect(roi.x(), roi.y(), roi.width(), roi.height()),
-    toCvRects(exclusionRects),
-    settings.thresholdFactor,
-    settings.thresholdOffset);
 
-  if (result.diagnosticImage.empty())
-  {
-    m_lastLocalizationResults.remove(camera.id);
-    m_cameraRuntime[camera.id].clearCurrentPose(camera.id);
-    appendLog(trText("log.localizationFailed") + ": " + camera.id);
-    return;
-  }
+  auto job = [input, roi, exclusionRects, settings]() -> LocalizationResult {
+    LocalizationProcessor processor;
+    return processor.locateDarkObjectOnLightBackground(
+      input,
+      cv::Rect(roi.x(), roi.y(), roi.width(), roi.height()),
+      toCvRects(exclusionRects),
+      settings.thresholdFactor,
+      settings.thresholdOffset);
+  };
+  const QString __pendingCameraId_testLocalization = camera.id;
+  incPendingJobs(__pendingCameraId_testLocalization);
+  runAsyncTask(decltype(job)(job), this, [this, camera, roi, settings, __pendingCameraId_testLocalization](const LocalizationResult& result) {
+    auto __dec_guard = std::shared_ptr<void>(nullptr, [this, __pendingCameraId_testLocalization](void*) { decPendingJobs(__pendingCameraId_testLocalization); });
+    if (result.diagnosticImage.empty())
+    {
+      m_lastLocalizationResults.remove(camera.id);
+      m_cameraRuntime[camera.id].clearCurrentPose(camera.id);
+      appendLog(trText("log.localizationFailed") + ": " + camera.id);
+      return;
+    }
 
-  m_selectedPreview = matToPixmap(result.diagnosticImage);
-  m_largeImage->setImage(m_selectedPreview);
-  m_largeImage->setRoi(roi);
-  m_lastLocalizationResults.insert(camera.id, result);
+    m_selectedPreview = matToPixmap(result.diagnosticImage);
+    m_largeImage->setImage(m_selectedPreview);
+    m_largeImage->setRoi(roi);
+    m_lastLocalizationResults.insert(camera.id, result);
 
-  if (!result.found)
-  {
-    m_cameraRuntime[camera.id].clearCurrentPose(camera.id);
-    appendLog(trText("log.localizationNotFound") + ": " + camera.id);
-    return;
-  }
+    if (!result.found)
+    {
+      m_cameraRuntime[camera.id].clearCurrentPose(camera.id);
+      appendLog(trText("log.localizationNotFound") + ": " + camera.id);
+      return;
+    }
 
-  m_cameraRuntime[camera.id].setCurrentPose(partPoseFromLocalizationResult(camera, result));
-  appendLog(QString("%1: %2 cx=%3 cy=%4 angle=%5 area=%6 bg=%7 thr=%8 factor=%9 offset=%10")
-              .arg(trText("log.localizationFound"))
-              .arg(camera.id)
-              .arg(result.center.x, 0, 'f', 1)
-              .arg(result.center.y, 0, 'f', 1)
-              .arg(result.angleRadians * 180.0 / CV_PI, 0, 'f', 1)
-              .arg(result.area, 0, 'f', 1)
-              .arg(result.backgroundLevel, 0, 'f', 1)
-              .arg(result.thresholdValue, 0, 'f', 1)
-              .arg(settings.thresholdFactor, 0, 'f', 3)
-              .arg(settings.thresholdOffset, 0, 'f', 1));
+    m_cameraRuntime[camera.id].setCurrentPose(partPoseFromLocalizationResult(camera, result));
+    appendLog(QString("%1: %2 cx=%3 cy=%4 angle=%5 area=%6 thr=%7 factor=%8 offset=%9")
+                .arg(trText("log.localizationFound"))
+                .arg(camera.id)
+                .arg(result.center.x, 0, 'f', 1)
+                .arg(result.center.y, 0, 'f', 1)
+                .arg(result.angleRadians * 180.0 / CV_PI, 0, 'f', 1)
+                .arg(result.area, 0, 'f', 1)
+                .arg(result.thresholdValue, 0, 'f', 1)
+                .arg(settings.thresholdFactor, 0, 'f', 3)
+                .arg(settings.thresholdOffset, 0, 'f', 1));
+  });
 }
 
 bool MainWindow::isBwDimensionalCamera(const CameraConfig& camera) const

@@ -7,17 +7,17 @@
                     "coordinateSpace": "part",
                     "edgeCleanupDerivative": 12,
                     "edgeSensitivity": 60,
-                    "edgeStatisticalFilter": 0,
+                    "edgeStatisticalFilter": 2,
                     "enabled": true,
                     "id": "circle_1",
                     "innerBand": 20,
                     "outerBand": 20,
                     "partCenter": {
-                        "x": -3.2106942377317864,
-                        "y": -4.307222780204484
+                        "x": 2.7893057622682136,
+                        "y": -2.3072227802044836
                     },
                     "pickMode": "first",
-                    "radius": 302,
+                    "radius": 299,
                     "transition": "light_to_dark",
                     "type": "edge_circle",
                     "useSubpixel": true
@@ -73,34 +73,34 @@
             "points": [
                 {
                     "coordinateSpace": "part",
-                    "edgeSensitivity": 128,
+                    "edgeSensitivity": 60,
                     "enabled": true,
-                    "id": "point_2",
+                    "id": "point_1",
                     "partEnd": {
-                        "x": -670.2906942377318,
-                        "y": 304.124036264658
+                        "x": 484.26930576226823,
+                        "y": 244.2919089129938
                     },
                     "partStart": {
-                        "x": -657.9706942377318,
-                        "y": 195.01839227044672
+                        "x": 466.6693057622683,
+                        "y": 126.38742266118481
                     },
-                    "pickMode": "best",
+                    "pickMode": "first",
                     "transition": "light_to_dark",
                     "type": "edge_point",
                     "useSubpixel": true
                 },
                 {
                     "coordinateSpace": "part",
-                    "edgeSensitivity": 128,
+                    "edgeSensitivity": 60,
                     "enabled": true,
                     "id": "point_2",
                     "partEnd": {
-                        "x": 493.0693057622682,
-                        "y": 275.96774104034546
+                        "x": -594.6106942377318,
+                        "y": 270.68843568578677
                     },
                     "partStart": {
-                        "x": 473.7093057622683,
-                        "y": 126.38742266118481
+                        "x": -594.6106942377318,
+                        "y": 170.3816339491732
                     },
                     "pickMode": "best",
                     "transition": "light_to_dark",

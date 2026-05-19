@@ -25,6 +25,8 @@
 #include <QVBoxLayout>
 #include <QVector>
 
+#include "gui/MetricsPanelWidget.h"
+
 #include <opencv2/core/mat.hpp>
 
 #include <map>
@@ -134,6 +136,7 @@ private:
   void activateLocalizationExclusionDrawing(const CameraConfig& camera);
   void clearLocalizationExclusions(const CameraConfig& camera);
   void testLocalization(const CameraConfig& camera);
+  void setThreadLimitPrompt();
   void activateSurfaceDefectRoiDrawing(const CameraConfig& camera);
   void activateSurfaceDefectExclusionDrawing(const CameraConfig& camera);
   void clearSurfaceDefectExclusions(const CameraConfig& camera);
@@ -191,6 +194,7 @@ private:
   QWidget* m_toolsContainer = nullptr;
   QVBoxLayout* m_toolsLayout = nullptr;
   QTextEdit* m_log = nullptr;
+  MetricsPanelWidget* m_metricsPanel = nullptr;
   QString m_selectedCameraId;
   CameraConfig m_selectedCamera;
   QPixmap m_selectedPreview;
@@ -200,6 +204,12 @@ private:
   QHash<QString, LocalizationResult> m_lastLocalizationResults;
   QHash<QString, SurfaceLocalizationReference> m_lastSurfaceLocalizationResults;
   QHash<QString, qint64> m_lastSetupScanElapsedMs;
+  QHash<QString, bool> m_cameraProcessingBusy;
+  QHash<QString, int> m_cameraDroppedFrames;
+  QHash<QString, int> m_cameraPendingJobs;
+
+  void incPendingJobs(const QString& cameraId);
+  void decPendingJobs(const QString& cameraId);
 
   enum class ActiveDrawingRecipe
   {

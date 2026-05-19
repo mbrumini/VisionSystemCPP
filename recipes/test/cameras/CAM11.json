@@ -1,6 +1,30 @@
 {
     "cameraId": "CAM11",
     "tools": {
+        "geometries": {
+            "circles": [
+                {
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "circle_1",
+                    "innerBand": 20,
+                    "outerBand": 20,
+                    "partCenter": {
+                        "x": 3.6946691214202474,
+                        "y": -5.572840277890123
+                    },
+                    "pickMode": "first",
+                    "radius": 306,
+                    "transition": "light_to_dark",
+                    "type": "edge_circle",
+                    "useSubpixel": true
+                }
+            ],
+            "enabled": true
+        },
         "surfaceLocalization": {
             "annulus": {
                 "innerCircle": {

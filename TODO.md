@@ -102,12 +102,16 @@
 - [x] Separare anche la gestione maniglie/fascia in un controller/editor riusabile per tutti gli editor geometrici.
 - [ ] Estendere i detector dedicati alle altre geometrie in ROI relative alla posa pezzo.
 - [x] Aggiungere detector dedicato `Cerchio`: guida a 3 punti, fascia edge interna/esterna, transizioni, filtri, subpixel BN e fit robusto.
+- [ ] quando entro nel tool cerchio visualizzo i cerchi di costruzione usati per la localizzazione. non voglio vederli
+- [ ] Visualizzare il cerchio in set-up
 - [ ] Aggiungere pulsante `Elimina` a tutte le geometrie configurabili: punto, segmento/linea, cerchio, arco, edge e contorno.
 - [ ] Per tutte le geometrie, `Nuovo ...` deve creare/selezionare l'elemento e attivare subito il disegno; evitare pulsanti separati tipo `Disegna ...`.
 - [ ] Salvare configurazione geometrie in ricetta camera.
+- [ ] Aggiungere arco nelle geometrie, si possono anche unire archi per formare un cerchio
 - [ ] Disegnare overlay diagnostici delle geometrie rilevate.
 - [ ] Implementare misure che usano geometrie gia' rilevate, per esempio distanza punto-linea.
 - [ ] Implementare tolleranze/criteri su misure e relazioni tra geometrie, per esempio concentricita' tra due cerchi.
+- [ ] Aggingere la possibilità di inserire punti relativi all'intersezione di 2 linee o altre geometrie
 
 
 ## Ricette
@@ -138,3 +142,17 @@
 ## Divisione compiti
 
 - [ ] Controllare che non ci siano funzioni diverse annidate nello stesso modulo, tenere tutte le funzioni separate in modo da poterle riutilizzare e non avere blocchi di codice infiniti
+
+
+
+## consigli
+Suggerimenti generali (breve, pratici)
+•	Eseguire l’elaborazione pesante (detector, trainer, processor) fuori dal thread UI (QtConcurrent / QThreadPool) per evitare freeze della UI.
+•	Ridurre duplicazioni: molte funzioni ripetono pattern "carica immagine -> valida -> crea config -> esegui detector -> aggiornamento UI"; estrarre helper comuni (es. runAsyncDetector, showDiagnosticImageAndRoi).
+•	Evitare closure che catturano copie pesanti: cattura const CameraConfig& quando possibile per risparmiare copie non necessarie.
+•	Centralizzare la costruzione dei log (helper logInfo() / logError()) per evitare ripetizioni e formattazioni multiple.
+•	Spostare lo stylesheet in risorsa qss / file esterno per manutenibilità.
+•	Considerare uso di piccoli helper const/ref per projectPath / resolveProjectPath — già OK, ma attenzione a macro compile-time.
+Esempio concreto: rendere testGeometryLine asincrono con QtConcurrent
+•	questo evita il blocco della UI mentre EdgeLineDetector::detect(...) esegue
+•	mostra come integrare QFutureWatcher per aggiornare UI a termine

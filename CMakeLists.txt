@@ -28,6 +28,8 @@ add_executable(VisionSystemCPP
     src/gui/ImageViewWidget.cpp
     src/gui/MainWindow.h
     src/gui/MainWindow.cpp
+    src/gui/MetricsPanelWidget.h
+    src/gui/MetricsPanelWidget.cpp
     src/gui/SurfaceLocalizationPanelWidget.h
     src/gui/SurfaceLocalizationPanelWidget.cpp
     src/gui/SurfaceLocalizationStrategies.h
