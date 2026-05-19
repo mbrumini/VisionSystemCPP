@@ -104,6 +104,7 @@ private:
   void handleGeometryLineHandleMoved(const CameraConfig& camera, int pointIndex, const QPointF& imagePoint);
   GeometryOverlay configuredGeometryLinesOverlay(const CameraConfig& camera, bool includeActive) const;
   void updateGeometryLineOverlay(const CameraConfig& camera, const GeometryOverlay& extraOverlay = {});
+  void restoreCleanGeometryImage(const CameraConfig& camera);
   void testGeometryLine(const CameraConfig& camera);
   void testConfiguredGeometryLines(const CameraConfig& camera);
   void activateGeometryPointDrawing(const CameraConfig& camera);

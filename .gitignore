@@ -1,7 +1,14 @@
 # Build outputs
 build/
+build-local/
 out/
 deploy/
+
+# Local dependency/cache folders
+.cache/
+.deps/
+.tmp/
+vcpkg_installed/
 
 # Visual Studio
 .vs/

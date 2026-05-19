@@ -1,12 +1,14 @@
 #pragma once
 
-#include <QtConcurrent/QtConcurrent>
-#include <QFutureWatcher>
+#include <QMetaObject>
+#include <QObject>
+#include <QPointer>
+#include <QRunnable>
 #include <QThreadPool>
 #include <QDateTime>
-#include <QVariant>
 
 #include <functional>
+#include <memory>
 #include <type_traits>
 #include <QString>
 #include <algorithm>
@@ -40,37 +42,42 @@ void runAsyncTask(F job, QObject* parent, Callback callback, const QString& task
   using Result = std::invoke_result_t<F>;
 
   const qint64 start = QDateTime::currentMSecsSinceEpoch();
-  QFuture<Result> future = QtConcurrent::run(job);
-  QFutureWatcher<Result>* watcher = new QFutureWatcher<Result>(parent);
-  watcher->setProperty("startTime", QVariant::fromValue(start));
-  watcher->setProperty("taskName", QVariant::fromValue(taskName));
-  watcher->setFuture(future);
+  QPointer<QObject> context(parent);
 
-  QObject::connect(watcher, &QFutureWatcher<Result>::finished, parent, [watcher, callback]() mutable {
+  auto finish = [context, callback = std::move(callback), taskName, start](auto&&... args) mutable {
     const qint64 end = QDateTime::currentMSecsSinceEpoch();
-    const qint64 start = watcher->property("startTime").toLongLong();
-    const QString name = watcher->property("taskName").toString();
+    if (g_metricsHandler)
+    {
+      g_metricsHandler(taskName, end - start);
+    }
+    if (context)
+    {
+      callback(std::forward<decltype(args)>(args)...);
+    }
+  };
 
+  QThreadPool::globalInstance()->start(QRunnable::create([job = std::move(job), context, finish = std::move(finish)]() mutable {
     if constexpr (std::is_void_v<Result>)
     {
-      watcher->deleteLater();
-      if (g_metricsHandler)
+      job();
+      if (context)
       {
-        g_metricsHandler(name, end - start);
+        QMetaObject::invokeMethod(context, [finish = std::move(finish)]() mutable {
+          finish();
+        }, Qt::QueuedConnection);
       }
-      callback();
     }
     else
     {
-      Result result = watcher->result();
-      watcher->deleteLater();
-      if (g_metricsHandler)
+      auto result = std::make_shared<Result>(job());
+      if (context)
       {
-        g_metricsHandler(name, end - start);
+        QMetaObject::invokeMethod(context, [finish = std::move(finish), result]() mutable {
+          finish(*result);
+        }, Qt::QueuedConnection);
       }
-      callback(result);
     }
-  });
+  }));
 }
 
 } // namespace AsyncExecutor
