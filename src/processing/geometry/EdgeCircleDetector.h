@@ -1,5 +1,6 @@
 #pragma once
 
+#include "geometry/ArcGeometry.h"
 #include "geometry/CircleGeometry.h"
 #include "processing/geometry/EdgeLineDetector.h"
 #include "processing/geometry/GeometryDetectorCommon.h"
@@ -16,6 +17,9 @@ struct EdgeCircleDetectorConfig
   int edgeCleanupDerivative = 12;
   int edgeStatisticalFilter = 0;
   int minPoints = 30;
+  bool useArc = false;
+  double startAngleRadians = 0.0;
+  double endAngleRadians = 0.0;
   bool useSubpixel = false;
   EdgeLineTransition transition = EdgeLineTransition::LightToDark;
   EdgeLinePickMode pickMode = EdgeLinePickMode::First;
@@ -24,6 +28,7 @@ struct EdgeCircleDetectorConfig
 struct EdgeCircleDetectorResult : GeometryDetectorResult
 {
   CircleGeometry circle;
+  ArcGeometry arc;
   std::vector<cv::Point2d> edgePoints;
   std::vector<cv::Point2d> rawEdgePoints;
 };

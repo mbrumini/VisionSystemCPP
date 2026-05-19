@@ -99,7 +99,7 @@ EdgePointDetectorResult EdgePointDetector::detect(const cv::Mat& input, const Ed
   const cv::Point2d unit = axis * (1.0 / length);
   const int samples = std::max(2, static_cast<int>(std::round(length)));
   const int sensitivity = std::clamp(config.edgeSensitivity, 1, 255);
-  const int gradientThreshold = std::max(3, (256 - sensitivity) / 6 + 2);
+  const int gradientThreshold = std::max(2, (256 - sensitivity) / 12 + 1);
   int bestStrength = -1;
   cv::Point2d bestPoint;
   bool found = false;

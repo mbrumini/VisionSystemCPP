@@ -1,10 +1,13 @@
-#include "MainWindow.h"
+#include "gui/MainWindow.h"
+
+#include "gui/modules/MainWindowCameraProfile.h"
 
 #include "gui/SurfaceLocalizationPanelWidget.h"
 #include "gui/SurfaceLocalizationStrategies.h"
 #include "gui/ToolCatalog.h"
 #include "gui/ToolPanelWidget.h"
 #include "gui/geometry/GeometryDiagnosticDrawing.h"
+#include "gui/geometry/GeometryMath.h"
 #include "processing/SurfaceModelTrainer.h"
 #include "processing/geometry/EdgeLineDetector.h"
 #include "processing/geometry/EdgePointDetector.h"
@@ -41,7 +44,6 @@
 #include <opencv2/imgproc.hpp>
 
 #include <algorithm>
-#include <cmath>
 #include <functional>
 #include <vector>
 #include <type_traits>
@@ -50,48 +52,6 @@
 #include <memory>
 
 using AsyncExecutor::runAsyncTask;
-
-namespace
-{
-bool circleFromThreePoints(const QVector<QPoint>& points, ImageCircle& circle)
-{
-  if (points.size() < 3)
-  {
-    return false;
-  }
-
-  const double x1 = points[0].x();
-  const double y1 = points[0].y();
-  const double x2 = points[1].x();
-  const double y2 = points[1].y();
-  const double x3 = points[2].x();
-  const double y3 = points[2].y();
-  const double d = 2.0 * (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2));
-
-  if (std::abs(d) < 0.001)
-  {
-    return false;
-  }
-
-  const double ux = ((x1 * x1 + y1 * y1) * (y2 - y3) +
-                     (x2 * x2 + y2 * y2) * (y3 - y1) +
-                     (x3 * x3 + y3 * y3) * (y1 - y2)) / d;
-  const double uy = ((x1 * x1 + y1 * y1) * (x3 - x2) +
-                     (x2 * x2 + y2 * y2) * (x1 - x3) +
-                     (x3 * x3 + y3 * y3) * (x2 - x1)) / d;
-  const QPoint center(qRound(ux), qRound(uy));
-  const int radius = qRound(std::hypot(x1 - ux, y1 - uy));
-
-  if (radius <= 2)
-  {
-    return false;
-  }
-
-  circle = {center, radius};
-  return true;
-}
-
-}
 
 void MainWindow::resizeEvent(QResizeEvent* event)
 {
@@ -110,7 +70,7 @@ void MainWindow::buildUi()
     connect(m_simulationTimer, &QTimer::timeout, this, [this]() {
       if (!m_selectedCameraId.isEmpty())
       {
-        advanceCameraFrame(m_selectedCamera);
+        m_setup.advanceCameraFrame(m_selectedCamera);
       }
     });
   }
@@ -167,7 +127,7 @@ void MainWindow::buildUi()
 
     QString error;
 
-    if (m_activeDrawingRecipe == ActiveDrawingRecipe::SurfaceDefects)
+    if (m_activeDrawingRecipe == MainWindowActiveDrawingRecipe::SurfaceDefects)
     {
       if (!m_recipeManager.saveSurfaceDefectRoi(m_selectedCameraId, roi, &error))
       {
@@ -185,7 +145,7 @@ void MainWindow::buildUi()
       return;
     }
 
-    if (m_activeDrawingRecipe == ActiveDrawingRecipe::Geometry)
+    if (m_activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry)
     {
       deactivateImageDrawingTools();
       return;
@@ -213,7 +173,7 @@ void MainWindow::buildUi()
 
     QString error;
 
-    if (m_activeDrawingRecipe == ActiveDrawingRecipe::SurfaceDefects)
+    if (m_activeDrawingRecipe == MainWindowActiveDrawingRecipe::SurfaceDefects)
     {
       if (!m_recipeManager.addSurfaceDefectExclusionRect(m_selectedCameraId, rect, &error))
       {
@@ -253,7 +213,7 @@ void MainWindow::buildUi()
 
     QString error;
 
-    if (m_activeDrawingRecipe == ActiveDrawingRecipe::SurfaceDefects)
+    if (m_activeDrawingRecipe == MainWindowActiveDrawingRecipe::SurfaceDefects)
     {
       if (!m_recipeManager.saveSurfaceDefectExclusionRects(m_selectedCameraId, rects, &error))
       {
@@ -286,7 +246,7 @@ void MainWindow::buildUi()
     }
 
     QString error;
-    if (m_surfaceCircleTarget == SurfaceCircleTarget::None)
+    if (m_surface.circleTarget() == MainWindowSurfaceModule::CircleTarget::None)
     {
       const SurfaceAnnulusLocalizationConfig current = m_recipeManager.loadSurfaceAnnulusLocalization(m_selectedCameraId);
       const int innerRadius = qMax(1, circle.radius - current.edgeBandInner);
@@ -316,12 +276,12 @@ void MainWindow::buildUi()
       if ((annulus.method == "edge" && annulus.hasEdgeCircle && annulus.edgeRadius > annulus.edgeBandInner) ||
           (annulus.method != "edge" && annulus.hasOuterCircle && annulus.hasInnerCircle && annulus.outerRadius > annulus.innerRadius))
       {
-        testSurfaceAnnulusLocalization(m_selectedCamera);
+        m_surface.testSurfaceAnnulusLocalization(m_selectedCamera);
       }
       return;
     }
 
-    if (m_surfaceCircleTarget == SurfaceCircleTarget::Edge)
+    if (m_surface.circleTarget() == MainWindowSurfaceModule::CircleTarget::Edge)
     {
       if (!m_recipeManager.saveSurfaceEdgeCircle(m_selectedCameraId, circle.center, circle.radius, &error))
       {
@@ -341,11 +301,11 @@ void MainWindow::buildUi()
                   .arg(circle.center.x())
                   .arg(circle.center.y())
                   .arg(circle.radius));
-      testSurfaceAnnulusLocalization(m_selectedCamera);
+      m_surface.testSurfaceAnnulusLocalization(m_selectedCamera);
       return;
     }
 
-    const bool targetOuter = m_surfaceCircleTarget == SurfaceCircleTarget::Inner ? false : outerCircle;
+    const bool targetOuter = m_surface.circleTarget() == MainWindowSurfaceModule::CircleTarget::Inner ? false : outerCircle;
 
     if (!m_recipeManager.saveSurfaceAnnulusCircle(m_selectedCameraId, targetOuter, circle.center, circle.radius, &error))
     {
@@ -378,15 +338,21 @@ void MainWindow::buildUi()
       return;
     }
 
-    if (m_activeDrawingRecipe == ActiveDrawingRecipe::Geometry && m_geometryDrawingTarget == GeometryDrawingTarget::Circle)
+    if (m_activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry && m_geometry.drawingTarget() == MainWindowGeometryModule::DrawingTarget::Circle)
     {
-      handleGeometryCirclePoints(m_selectedCamera, points);
+      m_geometry.handleGeometryCirclePoints(m_selectedCamera, points);
+      return;
+    }
+
+    if (m_activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry && m_geometry.drawingTarget() == MainWindowGeometryModule::DrawingTarget::Arc)
+    {
+      m_geometry.handleGeometryArcPoints(m_selectedCamera, points);
       return;
     }
 
     ImageCircle circle;
 
-    if (!circleFromThreePoints(points, circle))
+    if (!GeometryMath::circleFromThreePoints(points, circle))
     {
       appendLog(trText("log.surfaceEdgeCircleInvalid") + ": " + m_selectedCameraId);
       return;
@@ -394,7 +360,7 @@ void MainWindow::buildUi()
 
     QString error;
 
-    if (m_surfaceCircleTarget == SurfaceCircleTarget::None)
+    if (m_surface.circleTarget() == MainWindowSurfaceModule::CircleTarget::None)
     {
       const SurfaceAnnulusLocalizationConfig current = m_recipeManager.loadSurfaceAnnulusLocalization(m_selectedCameraId);
       const int innerRadius = qMax(1, circle.radius - current.edgeBandInner);
@@ -424,12 +390,12 @@ void MainWindow::buildUi()
       if ((annulus.method == "edge" && annulus.hasEdgeCircle && annulus.edgeRadius > annulus.edgeBandInner) ||
           (annulus.method != "edge" && annulus.hasOuterCircle && annulus.hasInnerCircle && annulus.outerRadius > annulus.innerRadius))
       {
-        testSurfaceAnnulusLocalization(m_selectedCamera);
+        m_surface.testSurfaceAnnulusLocalization(m_selectedCamera);
       }
       return;
     }
 
-    if (m_surfaceCircleTarget == SurfaceCircleTarget::Edge)
+    if (m_surface.circleTarget() == MainWindowSurfaceModule::CircleTarget::Edge)
     {
       if (!m_recipeManager.saveSurfaceEdgeCircle(m_selectedCameraId, circle.center, circle.radius, &error))
       {
@@ -449,11 +415,11 @@ void MainWindow::buildUi()
                   .arg(circle.center.x())
                   .arg(circle.center.y())
                   .arg(circle.radius));
-      testSurfaceAnnulusLocalization(m_selectedCamera);
+      m_surface.testSurfaceAnnulusLocalization(m_selectedCamera);
       return;
     }
 
-    const bool targetOuter = m_surfaceCircleTarget != SurfaceCircleTarget::Inner;
+    const bool targetOuter = m_surface.circleTarget() != MainWindowSurfaceModule::CircleTarget::Inner;
 
     if (!m_recipeManager.saveSurfaceAnnulusCircle(m_selectedCameraId, targetOuter, circle.center, circle.radius, &error))
     {
@@ -482,8 +448,8 @@ void MainWindow::buildUi()
   });
   m_largeImage->setTwoPointLineHandler([this](const QVector<QPoint>& points) {
     if (m_selectedCameraId.isEmpty() ||
-        m_activeDrawingRecipe != ActiveDrawingRecipe::Geometry ||
-        m_geometryDrawingTarget != GeometryDrawingTarget::Line ||
+        m_activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry ||
+        m_geometry.drawingTarget() != MainWindowGeometryModule::DrawingTarget::Line ||
         points.size() < 2)
     {
       return;
@@ -497,7 +463,7 @@ void MainWindow::buildUi()
       return;
     }
 
-    GeometryLineRuntimeConfig& config = activeGeometryLineConfig(m_selectedCameraId);
+    GeometryLineRuntimeConfig& config = m_geometry.activeGeometryLineConfig(m_selectedCameraId);
     config.partStart = imageToPart(pose, cv::Point2d(points[0].x(), points[0].y()));
     config.partEnd = imageToPart(pose, cv::Point2d(points[1].x(), points[1].y()));
     config.hasLine = true;
@@ -519,45 +485,45 @@ void MainWindow::buildUi()
     m_largeImage->setGeometryLines({
       {QPointF(imageStart.x, imageStart.y), QPointF(imageEnd.x, imageEnd.y)}
     });
-    m_geometryDrawingTarget = GeometryDrawingTarget::Line;
+    m_geometry.setDrawingTarget(MainWindowGeometryModule::DrawingTarget::Line);
     m_largeImage->setGeometryAreaEditingEnabled(true);
 
-    testGeometryLine(m_selectedCamera);
+    m_geometry.testGeometryLine(m_selectedCamera);
   });
   m_largeImage->setGeometryPointPickedHandler([this](const QPointF& imagePoint) {
     if (m_selectedCameraId.isEmpty() ||
-        m_activeDrawingRecipe != ActiveDrawingRecipe::Geometry)
+        m_activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry)
     {
       return;
     }
 
-    if (m_geometryDrawingTarget == GeometryDrawingTarget::Line)
+    if (m_geometry.drawingTarget() == MainWindowGeometryModule::DrawingTarget::Line)
     {
-      handleGeometryLinePoint(m_selectedCamera, imagePoint);
+      m_geometry.handleGeometryLinePoint(m_selectedCamera, imagePoint);
     }
-    else if (m_geometryDrawingTarget == GeometryDrawingTarget::Point)
+    else if (m_geometry.drawingTarget() == MainWindowGeometryModule::DrawingTarget::Point)
     {
-      handleGeometryPointGuidePoint(m_selectedCamera, imagePoint);
+      m_geometry.handleGeometryPointGuidePoint(m_selectedCamera, imagePoint);
     }
   });
   m_largeImage->setGeometryPointMovedHandler([this](const QPointF& imagePoint) {
     if (m_selectedCameraId.isEmpty() ||
-        m_activeDrawingRecipe != ActiveDrawingRecipe::Geometry)
+        m_activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry)
     {
       return;
     }
 
-    if (m_geometryDrawingTarget == GeometryDrawingTarget::Line)
+    if (m_geometry.drawingTarget() == MainWindowGeometryModule::DrawingTarget::Line)
     {
-      LineGeometryMouseController& controller = m_lineGeometryMouseControllers[m_selectedCameraId];
+      LineGeometryMouseController& controller = m_geometry.lineMouseController(m_selectedCameraId);
       controller.handleMove(imagePoint);
-      updateGeometryLineOverlay(m_selectedCamera);
+      m_geometry.updateGeometryLineOverlay(m_selectedCamera);
     }
-    else if (m_geometryDrawingTarget == GeometryDrawingTarget::Point)
+    else if (m_geometry.drawingTarget() == MainWindowGeometryModule::DrawingTarget::Point)
     {
-      LineGeometryMouseController& controller = m_pointGeometryMouseControllers[m_selectedCameraId];
+      LineGeometryMouseController& controller = m_geometry.pointMouseController(m_selectedCameraId);
       controller.handleMove(imagePoint);
-      updateGeometryPointOverlay(m_selectedCamera);
+      m_geometry.updateGeometryPointOverlay(m_selectedCamera);
     }
   });
   m_largeImage->setGeometryOverlayPointMovedHandler([this](int pointIndex, const QPointF& imagePoint) {
@@ -566,17 +532,17 @@ void MainWindow::buildUi()
       return;
     }
 
-    if (m_geometryDrawingTarget == GeometryDrawingTarget::Line)
+    if (m_geometry.drawingTarget() == MainWindowGeometryModule::DrawingTarget::Line)
     {
-      handleGeometryLineHandleMoved(m_selectedCamera, pointIndex, imagePoint);
+      m_geometry.handleGeometryLineHandleMoved(m_selectedCamera, pointIndex, imagePoint);
     }
-    else if (m_geometryDrawingTarget == GeometryDrawingTarget::Point)
+    else if (m_geometry.drawingTarget() == MainWindowGeometryModule::DrawingTarget::Point)
     {
-      handleGeometryPointHandleMoved(m_selectedCamera, pointIndex, imagePoint);
+      m_geometry.handleGeometryPointHandleMoved(m_selectedCamera, pointIndex, imagePoint);
     }
   });
   m_largeImage->setGeometryAreaChangedHandler([this](const ImageRotatedRect& area) {
-    if (m_selectedCameraId.isEmpty() || m_geometryDrawingTarget != GeometryDrawingTarget::Line)
+    if (m_selectedCameraId.isEmpty() || m_geometry.drawingTarget() != MainWindowGeometryModule::DrawingTarget::Line)
     {
       return;
     }
@@ -590,13 +556,13 @@ void MainWindow::buildUi()
     const double angle = area.angleDegrees * CV_PI / 180.0;
     const cv::Point2d axis(std::cos(angle), std::sin(angle));
     const cv::Point2d center(area.center.x(), area.center.y());
-    GeometryLineRuntimeConfig& config = activeGeometryLineConfig(m_selectedCameraId);
+    GeometryLineRuntimeConfig& config = m_geometry.activeGeometryLineConfig(m_selectedCameraId);
     config.partStart = imageToPart(pose, center - axis * (area.size.width() * 0.5));
     config.partEnd = imageToPart(pose, center + axis * (area.size.width() * 0.5));
     config.bandHalfWidth = std::max(2, static_cast<int>(std::round(area.size.height() * 0.5)));
     config.hasLine = true;
-    testGeometryLine(m_selectedCamera);
-    showGeometryLinePanel(m_selectedCamera);
+    m_geometry.testGeometryLine(m_selectedCamera);
+    m_geometry.showGeometryLinePanel(m_selectedCamera);
   });
 
   largeLayout->addWidget(m_largeTitle);
@@ -663,17 +629,17 @@ void MainWindow::buildMenu()
   menuBar()->clear();
 
   QMenu* recipesMenu = menuBar()->addMenu(trText("menu.recipes"));
-  recipesMenu->addAction(trText("menu.selectRecipe"), this, [this]() { selectRecipe(); });
-  recipesMenu->addAction(trText("menu.newRecipe"), this, [this]() { createRecipe(); });
-  recipesMenu->addAction(trText("menu.duplicateRecipe"), this, [this]() { duplicateRecipe(); });
-  recipesMenu->addAction(trText("menu.importRecipe"), this, [this]() { importRecipe(); });
-  recipesMenu->addAction(trText("menu.exportRecipe"), this, [this]() { exportRecipe(); });
+  recipesMenu->addAction(trText("menu.selectRecipe"), this, [this]() { m_recipes.selectRecipe(); });
+  recipesMenu->addAction(trText("menu.newRecipe"), this, [this]() { m_recipes.createRecipe(); });
+  recipesMenu->addAction(trText("menu.duplicateRecipe"), this, [this]() { m_recipes.duplicateRecipe(); });
+  recipesMenu->addAction(trText("menu.importRecipe"), this, [this]() { m_recipes.importRecipe(); });
+  recipesMenu->addAction(trText("menu.exportRecipe"), this, [this]() { m_recipes.exportRecipe(); });
 
   QMenu* camerasMenu = menuBar()->addMenu(trText("menu.cameras"));
   for (const CameraConfig& camera : m_config.activeCameras())
   {
     camerasMenu->addAction(QString("%1 | %2").arg(camera.id, camera.displayName), this, [this, camera]() {
-      configureCameraSource(camera);
+      m_cameraConfig.configureCameraSource(camera);
     });
   }
 
@@ -839,7 +805,7 @@ void MainWindow::selectCamera(const CameraConfig& camera)
 {
   m_selectedCameraId = camera.id;
   m_selectedCamera = camera;
-  m_selectedImagePath = cameraSampleImagePath(camera);
+  m_selectedImagePath = m_imaging.cameraSampleImagePath(camera);
   deactivateImageDrawingTools();
   m_largeImage->clearRoi();
   m_largeImage->clearExclusionRects();
@@ -854,7 +820,7 @@ void MainWindow::selectCamera(const CameraConfig& camera)
   auto runtimeIt = m_cameraRuntime.find(camera.id);
   if (runtimeIt != m_cameraRuntime.end() && !runtimeIt->second.currentFrame().empty())
   {
-    m_selectedPreview = matToPixmap(runtimeIt->second.currentFrame());
+    m_selectedPreview = m_imaging.matToPixmap(runtimeIt->second.currentFrame());
   }
   else
   {
@@ -873,7 +839,7 @@ void MainWindow::selectCamera(const CameraConfig& camera)
   }
 
   QRect savedRoi;
-  if (isGrayscaleLocalizationCamera(camera))
+  if (MainWindowCameraProfile::isGrayscaleLocalization(camera, m_config))
   {
     if (m_recipeManager.loadSurfaceDefectRoi(camera.id, savedRoi))
     {
@@ -883,7 +849,7 @@ void MainWindow::selectCamera(const CameraConfig& camera)
     m_largeImage->setExclusionRects(m_recipeManager.loadSurfaceDefectExclusionRects(camera.id));
     m_largeImage->clearCircles();
     GeometryOverlay overlay;
-    appendCurrentPartPoseOverlay(camera, overlay);
+    m_geometry.appendCurrentPartPoseOverlay(camera, overlay);
     m_largeImage->setGeometryOverlay(overlay);
   }
   else if (m_recipeManager.loadLocalizationRoi(camera.id, savedRoi))
@@ -965,12 +931,13 @@ void MainWindow::deactivateImageDrawingTools()
   m_largeImage->setOuterCircleDrawingEnabled(false);
   m_largeImage->setInnerCircleDrawingEnabled(false);
   m_largeImage->setThreePointCircleDrawingEnabled(false);
+  m_largeImage->setThreePointArcDrawingEnabled(false);
   m_largeImage->setGeometryPointPickingEnabled(false);
   m_largeImage->setGeometryOverlayPointEditingEnabled(false);
   m_largeImage->setTwoPointLineDrawingEnabled(false);
-  m_activeDrawingRecipe = ActiveDrawingRecipe::None;
-  m_surfaceCircleTarget = SurfaceCircleTarget::None;
-  m_geometryDrawingTarget = GeometryDrawingTarget::None;
+  m_activeDrawingRecipe = MainWindowActiveDrawingRecipe::None;
+  m_surface.setCircleTarget(MainWindowSurfaceModule::CircleTarget::None);
+  m_geometry.setDrawingTarget(MainWindowGeometryModule::DrawingTarget::None);
 }
 
 void MainWindow::showCameraToolList(const CameraConfig& camera)
@@ -985,10 +952,10 @@ void MainWindow::showCameraToolList(const CameraConfig& camera)
 
   auto* setupButton = new QPushButton(trText("tools.setup"), m_toolsContainer);
   setupButton->setMinimumHeight(38);
-  connect(setupButton, &QPushButton::clicked, this, [this, camera]() { showCameraSetupPanel(camera); });
+  connect(setupButton, &QPushButton::clicked, this, [this, camera]() { m_setup.showCameraSetupPanel(camera); });
   m_toolsLayout->addWidget(setupButton);
 
-  if (isGrayscaleLocalizationCamera(camera))
+  if (MainWindowCameraProfile::isGrayscaleLocalization(camera, m_config))
   {
     auto* localizationButton = new QPushButton(trText("tools.localization"), m_toolsContainer);
     localizationButton->setMinimumHeight(40);
@@ -1000,14 +967,14 @@ void MainWindow::showCameraToolList(const CameraConfig& camera)
 
   for (const QString& tool : camera.profile.guiTools)
   {
-    if (isGrayscaleLocalizationCamera(camera) && tool == "surfaceLocalization")
+    if (MainWindowCameraProfile::isGrayscaleLocalization(camera, m_config) && tool == "surfaceLocalization")
     {
       continue;
     }
 
     auto* button = new QPushButton(ToolCatalog::label(tool, m_translations), m_toolsContainer);
     connect(button, &QPushButton::clicked, this, [this, camera, tool]() {
-      showToolPanel(camera, tool);
+      m_setup.showToolPanel(camera, tool);
     });
     m_toolsLayout->addWidget(button);
   }
@@ -1040,7 +1007,7 @@ void MainWindow::showLocalizationStrategyList(const CameraConfig& camera)
     auto* button = new QPushButton(strategy.label, panel);
     button->setMinimumHeight(40);
     connect(button, &QPushButton::clicked, this, [this, camera, strategy]() {
-      showSurfaceLocalizationStrategyPanel(camera, strategy.id);
+      m_surface.showSurfaceLocalizationStrategyPanel(camera, strategy.id);
     });
     layout->addWidget(button);
   }
@@ -1055,21 +1022,6 @@ void MainWindow::showLocalizationStrategyList(const CameraConfig& camera)
 
   m_toolsLayout->addWidget(panel);
   appendLog(trText("log.toolPanel") + ": " + trText("tools.localization"));
-}
-
-bool MainWindow::isBwDimensionalCamera(const CameraConfig& camera) const
-{
-  return camera.profile.imageMode == "bw" &&
-    camera.profile.inspectionTypes.contains("dimensional");
-}
-
-bool MainWindow::isGrayscaleLocalizationCamera(const CameraConfig& camera) const
-{
-  const bool hasAi = camera.profile.inspectionTypes.contains("ai");
-  const bool hasGrayscaleWork = camera.profile.inspectionTypes.contains("measurement") ||
-    camera.profile.inspectionTypes.contains("surface");
-
-  return camera.profile.imageMode == "grayscale" && (!hasAi || hasGrayscaleWork);
 }
 
 void MainWindow::clearToolPanel()
@@ -1119,21 +1071,4 @@ QString MainWindow::trText(const QString& key) const
 {
   return m_translations.text(key);
 }
-
-QString MainWindow::runtimeStatusText(CameraRuntime::Status status) const
-{
-  switch (status)
-  {
-  case CameraRuntime::Status::Ready:
-    return trText("status.ready");
-  case CameraRuntime::Status::Running:
-    return trText("status.running");
-  case CameraRuntime::Status::Error:
-    return trText("status.error");
-  case CameraRuntime::Status::Stopped:
-  default:
-    return trText("status.stopped");
-  }
-}
-
 

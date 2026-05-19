@@ -108,7 +108,7 @@
 - [ ] Aggiungere pulsante `Elimina` a tutte le geometrie configurabili: punto, segmento/linea, cerchio, arco, edge e contorno.
 - [ ] Per tutte le geometrie, `Nuovo ...` deve creare/selezionare l'elemento e attivare subito il disegno; evitare pulsanti separati tipo `Disegna ...`.
 - [ ] Salvare configurazione geometrie in ricetta camera.
-- [ ] Aggiungere arco nelle geometrie, si possono anche unire archi per formare un cerchio
+- [x] Aggiungere arco nelle geometrie, si possono anche unire archi per formare un cerchio
 - [ ] Disegnare overlay diagnostici delle geometrie rilevate.
 - [ ] Implementare misure che usano geometrie gia' rilevate, per esempio distanza punto-linea.
 - [ ] Implementare tolleranze/criteri su misure e relazioni tra geometrie, per esempio concentricita' tra due cerchi.

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QString>
+#include <QStringList>
 #include <QWidget>
 
 #include <functional>
@@ -18,6 +19,8 @@ struct CameraSetupPanelTexts
   QString stop;
   QString nextFrame;
   QString back;
+  QString toolsTitle;
+  QStringList toolLabels;
 };
 
 class QLabel;
@@ -36,6 +39,7 @@ public:
     std::function<void()> start,
     std::function<void()> stop,
     std::function<void()> nextFrame,
+    QVector<std::function<void()>> toolHandlers,
     std::function<void()> back,
     QWidget* parent = nullptr);
 

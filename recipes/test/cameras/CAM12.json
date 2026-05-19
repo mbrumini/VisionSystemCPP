@@ -2,28 +2,82 @@
     "cameraId": "CAM12",
     "tools": {
         "geometries": {
-            "circles": [
+            "arcs": [
                 {
                     "coordinateSpace": "part",
                     "edgeCleanupDerivative": 12,
                     "edgeSensitivity": 60,
                     "edgeStatisticalFilter": 0,
                     "enabled": true,
-                    "id": "circle_1",
+                    "endAngleRadians": 5.421535308293509,
+                    "id": "arc_2",
                     "innerBand": 20,
                     "outerBand": 20,
                     "partCenter": {
-                        "x": 5.224825944776967,
-                        "y": 5.005141062118241
+                        "x": -1.4814069172391555,
+                        "y": 3.7925368058600952
                     },
-                    "pickMode": "first",
-                    "radius": 307,
+                    "partEnd": {
+                        "x": 204.2989190266103,
+                        "y": -236.03198370796406
+                    },
+                    "partStart": {
+                        "x": -193.7010809733897,
+                        "y": -247.03198370796406
+                    },
+                    "pickMode": "best",
+                    "radius": 316.00845429393587,
+                    "startAngleRadians": 4.058504966183386,
                     "transition": "light_to_dark",
-                    "type": "edge_circle",
+                    "type": "edge_arc",
                     "useSubpixel": true
                 }
             ],
-            "enabled": true
+            "enabled": true,
+            "lines": [
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_1",
+                    "partEnd": {
+                        "x": 565.5389190266103,
+                        "y": 195.5338628911676
+                    },
+                    "partStart": {
+                        "x": 340.25891902661033,
+                        "y": 216.6510843094021
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                }
+            ],
+            "points": [
+                {
+                    "coordinateSpace": "part",
+                    "edgeSensitivity": 60,
+                    "enabled": true,
+                    "id": "point_1",
+                    "partEnd": {
+                        "x": 491.61891902661023,
+                        "y": 274.72344320954676
+                    },
+                    "partStart": {
+                        "x": 477.5389190266103,
+                        "y": 118.10405102430798
+                    },
+                    "pickMode": "best",
+                    "transition": "light_to_dark",
+                    "type": "edge_point",
+                    "useSubpixel": true
+                }
+            ]
         },
         "surfaceLocalization": {
             "annulus": {

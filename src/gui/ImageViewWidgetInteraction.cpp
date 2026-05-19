@@ -1,0 +1,412 @@
+#include "ImageViewWidget.h"
+
+#include <QKeyEvent>
+#include <QMouseEvent>
+
+#include <cmath>
+
+void ImageViewWidget::keyPressEvent(QKeyEvent* event)
+{
+  if ((event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace) &&
+      m_selectedExclusionIndex >= 0 &&
+      m_selectedExclusionIndex < m_exclusionRects.size())
+  {
+    m_exclusionRects.removeAt(m_selectedExclusionIndex);
+    m_selectedExclusionIndex = -1;
+    m_movingExclusion = false;
+    m_resizingExclusion = false;
+    m_activeExclusionHandle = ExclusionHandle::None;
+    m_dragging = false;
+
+    if (m_exclusionRectsChangedHandler)
+    {
+      m_exclusionRectsChangedHandler(m_exclusionRects);
+    }
+
+    update();
+    return;
+  }
+
+  QWidget::keyPressEvent(event);
+}
+
+void ImageViewWidget::mousePressEvent(QMouseEvent* event)
+{
+  if (m_drawingMode == DrawingMode::None || event->button() != Qt::LeftButton || m_image.isNull())
+  {
+    QWidget::mousePressEvent(event);
+    return;
+  }
+
+  if (!imageDrawRect().contains(event->pos()))
+  {
+    return;
+  }
+
+  setFocus();
+
+  if (m_drawingMode == DrawingMode::Exclusion)
+  {
+    ExclusionHandle handle = ExclusionHandle::None;
+    const int handleIndex = exclusionHandleAt(event->pos(), handle);
+
+    if (handleIndex >= 0)
+    {
+      m_selectedExclusionIndex = handleIndex;
+      m_activeExclusionHandle = handle;
+      m_resizingExclusion = true;
+      m_dragging = true;
+      m_moveStartImageRect = m_exclusionRects[handleIndex];
+      update();
+      return;
+    }
+
+    const int hitIndex = exclusionRectAt(event->pos());
+    if (hitIndex >= 0)
+    {
+      m_selectedExclusionIndex = hitIndex;
+      m_movingExclusion = true;
+      m_dragging = true;
+      m_moveStartImagePoint = widgetToImage(event->pos());
+      m_moveStartImageRect = m_exclusionRects[hitIndex];
+      update();
+      return;
+    }
+
+    m_selectedExclusionIndex = -1;
+    m_activeExclusionHandle = ExclusionHandle::None;
+  }
+
+  if (m_drawingMode == DrawingMode::GeometryArea && m_hasGeometryArea)
+  {
+    const GeometryAreaHandle handle = geometryAreaHandleAt(event->pos());
+    if (handle != GeometryAreaHandle::None)
+    {
+      m_activeGeometryAreaHandle = handle;
+      m_moveStartGeometryArea = m_geometryArea;
+      m_moveStartImagePoint = widgetToImage(event->pos());
+      m_dragging = true;
+      update();
+      return;
+    }
+  }
+
+  if (m_drawingMode == DrawingMode::GeometryPointPick)
+  {
+    if (m_geometryPointPickedHandler)
+    {
+      m_geometryPointPickedHandler(widgetToImageF(event->pos()));
+    }
+    update();
+    return;
+  }
+
+  if (m_drawingMode == DrawingMode::GeometryOverlayPointEdit)
+  {
+    const int pointIndex = geometryOverlayPointAt(event->pos());
+    if (pointIndex >= 0)
+    {
+      m_selectedGeometryOverlayPointIndex = pointIndex;
+      m_movingGeometryOverlayPoint = true;
+      m_dragging = true;
+      setCursor(Qt::ClosedHandCursor);
+      update();
+    }
+    return;
+  }
+
+  if (m_drawingMode == DrawingMode::ThreePointCircle || m_drawingMode == DrawingMode::ThreePointArc)
+  {
+    m_threePointCirclePoints.append(widgetToImage(event->pos()));
+
+    if (m_threePointCirclePoints.size() >= 3)
+    {
+      const QVector<QPoint> points = m_threePointCirclePoints;
+      m_threePointCirclePoints.clear();
+
+      if (m_threePointCircleHandler)
+      {
+        m_threePointCircleHandler(points);
+      }
+    }
+
+    update();
+    return;
+  }
+
+  if (m_drawingMode == DrawingMode::TwoPointLine)
+  {
+    m_twoPointLinePoints.append(widgetToImage(event->pos()));
+
+    if (m_twoPointLinePoints.size() >= 2)
+    {
+      const QVector<QPoint> points = m_twoPointLinePoints;
+      m_twoPointLinePoints.clear();
+
+      if (m_twoPointLineHandler)
+      {
+        m_twoPointLineHandler(points);
+      }
+    }
+
+    update();
+    return;
+  }
+
+  m_dragging = true;
+  if (m_drawingMode == DrawingMode::InnerCircle && !m_circles.isEmpty())
+  {
+    m_dragStart = imagePointToWidget(m_circles[0].center);
+  }
+  else
+  {
+    m_dragStart = event->pos();
+  }
+  m_dragEnd = event->pos();
+  update();
+}
+
+void ImageViewWidget::mouseMoveEvent(QMouseEvent* event)
+{
+  if (m_drawingMode == DrawingMode::GeometryPointPick)
+  {
+    if (m_geometryPointMovedHandler && imageDrawRect().contains(event->pos()))
+    {
+      m_geometryPointMovedHandler(widgetToImageF(event->pos()));
+    }
+    QWidget::mouseMoveEvent(event);
+    return;
+  }
+
+  if (!m_dragging)
+  {
+    QWidget::mouseMoveEvent(event);
+    return;
+  }
+
+  if (m_movingGeometryOverlayPoint &&
+      m_selectedGeometryOverlayPointIndex >= 0 &&
+      m_selectedGeometryOverlayPointIndex < m_geometryOverlay.points.size())
+  {
+    if (m_geometryOverlayPointMovedHandler && imageDrawRect().contains(event->pos()))
+    {
+      m_geometryOverlayPointMovedHandler(m_selectedGeometryOverlayPointIndex, widgetToImageF(event->pos()));
+    }
+    update();
+    return;
+  }
+
+  if (m_movingExclusion &&
+      m_selectedExclusionIndex >= 0 &&
+      m_selectedExclusionIndex < m_exclusionRects.size())
+  {
+    const QPoint currentImagePoint = widgetToImage(event->pos());
+    const QPoint delta = currentImagePoint - m_moveStartImagePoint;
+    QRect moved = m_moveStartImageRect.translated(delta);
+    m_exclusionRects[m_selectedExclusionIndex] = clampImageRectToImage(moved);
+    update();
+    return;
+  }
+
+  if (m_resizingExclusion &&
+      m_selectedExclusionIndex >= 0 &&
+      m_selectedExclusionIndex < m_exclusionRects.size())
+  {
+    const QPoint currentImagePoint = widgetToImage(event->pos());
+    QRect resized = m_moveStartImageRect;
+
+    if (m_activeExclusionHandle == ExclusionHandle::TopLeft)
+    {
+      resized.setTopLeft(currentImagePoint);
+    }
+    else if (m_activeExclusionHandle == ExclusionHandle::TopRight)
+    {
+      resized.setTopRight(currentImagePoint);
+    }
+    else if (m_activeExclusionHandle == ExclusionHandle::BottomLeft)
+    {
+      resized.setBottomLeft(currentImagePoint);
+    }
+    else if (m_activeExclusionHandle == ExclusionHandle::BottomRight)
+    {
+      resized.setBottomRight(currentImagePoint);
+    }
+
+    resized = clampImageRectToImage(resized);
+    if (resized.width() > 2 && resized.height() > 2)
+    {
+      m_exclusionRects[m_selectedExclusionIndex] = resized;
+    }
+
+    update();
+    return;
+  }
+
+  if (m_drawingMode == DrawingMode::GeometryArea &&
+      m_activeGeometryAreaHandle != GeometryAreaHandle::None &&
+      m_hasGeometryArea)
+  {
+    const QPointF currentImagePoint = widgetToImageF(event->pos());
+    const QPointF startImagePoint = QPointF(m_moveStartImagePoint);
+
+    if (m_activeGeometryAreaHandle == GeometryAreaHandle::Move)
+    {
+      const QPointF delta = currentImagePoint - startImagePoint;
+      m_geometryArea.center = m_moveStartGeometryArea.center + delta;
+    }
+    else if (m_activeGeometryAreaHandle == GeometryAreaHandle::Rotate)
+    {
+      const QPointF delta = currentImagePoint - m_moveStartGeometryArea.center;
+      m_geometryArea.angleDegrees = std::atan2(delta.y(), delta.x()) * 180.0 / 3.14159265358979323846 + 90.0;
+    }
+    else
+    {
+      const double angle = m_moveStartGeometryArea.angleDegrees * 3.14159265358979323846 / 180.0;
+      const QPointF axisX(std::cos(angle), std::sin(angle));
+      const QPointF axisY(-std::sin(angle), std::cos(angle));
+      const QPointF delta = currentImagePoint - m_moveStartGeometryArea.center;
+      const double projectionX = delta.x() * axisX.x() + delta.y() * axisX.y();
+      const double projectionY = delta.x() * axisY.x() + delta.y() * axisY.y();
+      m_geometryArea.size.setWidth(std::max(4.0, std::abs(projectionX) * 2.0));
+      m_geometryArea.size.setHeight(std::max(4.0, std::abs(projectionY) * 2.0));
+    }
+
+    update();
+    return;
+  }
+
+  m_dragEnd = event->pos();
+  update();
+}
+
+void ImageViewWidget::mouseReleaseEvent(QMouseEvent* event)
+{
+  if (!m_dragging || event->button() != Qt::LeftButton)
+  {
+    QWidget::mouseReleaseEvent(event);
+    return;
+  }
+
+  m_dragging = false;
+  m_dragEnd = event->pos();
+
+  if (m_movingExclusion || m_resizingExclusion)
+  {
+    m_movingExclusion = false;
+    m_resizingExclusion = false;
+    m_activeExclusionHandle = ExclusionHandle::None;
+
+    if (m_exclusionRectsChangedHandler)
+    {
+      m_exclusionRectsChangedHandler(m_exclusionRects);
+    }
+
+    update();
+    return;
+  }
+
+  if (m_movingGeometryOverlayPoint)
+  {
+    if (m_geometryOverlayPointMovedHandler && imageDrawRect().contains(event->pos()))
+    {
+      m_geometryOverlayPointMovedHandler(m_selectedGeometryOverlayPointIndex, widgetToImageF(event->pos()));
+    }
+
+    m_movingGeometryOverlayPoint = false;
+    m_selectedGeometryOverlayPointIndex = -1;
+    setCursor(Qt::OpenHandCursor);
+    update();
+    return;
+  }
+
+  if (m_drawingMode == DrawingMode::GeometryArea &&
+      m_activeGeometryAreaHandle != GeometryAreaHandle::None)
+  {
+    m_activeGeometryAreaHandle = GeometryAreaHandle::None;
+
+    if (m_geometryAreaChangedHandler)
+    {
+      m_geometryAreaChangedHandler(m_geometryArea);
+    }
+
+    update();
+    return;
+  }
+
+  if (m_drawingMode == DrawingMode::OuterCircle || m_drawingMode == DrawingMode::InnerCircle)
+  {
+    const bool isOuter = m_drawingMode == DrawingMode::OuterCircle;
+    const QPoint center = isOuter || m_circles.isEmpty() ? widgetToImage(m_dragStart) : m_circles[0].center;
+    const QPoint edge = widgetToImage(m_dragEnd);
+    const int radius = static_cast<int>(std::hypot(edge.x() - center.x(), edge.y() - center.y()));
+
+    if (radius > 2)
+    {
+      ImageCircle circle{center, radius};
+
+      if (isOuter)
+      {
+        if (m_circles.isEmpty())
+        {
+          m_circles.append(circle);
+        }
+        else
+        {
+          m_circles[0] = circle;
+        }
+      }
+      else
+      {
+        while (m_circles.size() < 1)
+        {
+          m_circles.append(circle);
+        }
+
+        if (m_circles.size() == 1)
+        {
+          m_circles.append(circle);
+        }
+        else
+        {
+          m_circles[1] = circle;
+        }
+      }
+
+      if (m_circleChangedHandler)
+      {
+        m_circleChangedHandler(isOuter, circle);
+      }
+    }
+
+    update();
+    return;
+  }
+
+  const QRect imageRoi = widgetRectToImageRect(QRect(m_dragStart, m_dragEnd).normalized());
+
+  if (imageRoi.width() > 2 && imageRoi.height() > 2)
+  {
+    if (m_drawingMode == DrawingMode::Roi)
+    {
+      setRoi(imageRoi);
+
+      if (m_roiChangedHandler)
+      {
+        m_roiChangedHandler(m_roi);
+      }
+    }
+    else if (m_drawingMode == DrawingMode::Exclusion)
+    {
+      m_exclusionRects.append(imageRoi.normalized());
+      m_selectedExclusionIndex = m_exclusionRects.size() - 1;
+
+      if (m_exclusionRectAddedHandler)
+      {
+        m_exclusionRectAddedHandler(imageRoi.normalized());
+      }
+    }
+  }
+
+  update();
+}
+

@@ -1,6 +1,7 @@
 #include "CameraSetupPanelWidget.h"
 
 #include <QGridLayout>
+#include <QGroupBox>
 #include <QLabel>
 #include <QPushButton>
 #include <QSpinBox>
@@ -30,6 +31,7 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
   std::function<void()> start,
   std::function<void()> stop,
   std::function<void()> nextFrame,
+  QVector<std::function<void()>> toolHandlers,
   std::function<void()> back,
   QWidget* parent)
   : QWidget(parent)
@@ -62,6 +64,25 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
     }
   });
   layout->addWidget(intervalSpin);
+
+  if (!texts.toolLabels.isEmpty())
+  {
+    auto* toolsBox = new QGroupBox(texts.toolsTitle, this);
+    auto* toolsLayout = new QGridLayout(toolsBox);
+    toolsLayout->setContentsMargins(8, 10, 8, 8);
+    toolsLayout->setSpacing(6);
+    for (int i = 0; i < texts.toolLabels.size(); ++i)
+    {
+      auto* button = new QPushButton(texts.toolLabels[i], toolsBox);
+      button->setMinimumHeight(34);
+      toolsLayout->addWidget(button, i / 2, i % 2);
+      if (i < toolHandlers.size())
+      {
+        connectButton(button, toolHandlers[i]);
+      }
+    }
+    layout->addWidget(toolsBox);
+  }
 
   auto* buttons = new QWidget(this);
   auto* buttonsLayout = new QGridLayout(buttons);

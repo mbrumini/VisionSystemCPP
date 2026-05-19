@@ -1,19 +1,153 @@
 {
     "cameraId": "CAM08",
     "tools": {
-        "surfaceLocalization": {
-            "annulus": {
-                "innerCircle": {
-                    "centerX": 970,
-                    "centerY": 707,
-                    "radius": 307
+        "geometries": {
+            "arcs": [
+                {
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 5,
+                    "edgeSensitivity": 255,
+                    "edgeStatisticalFilter": 2,
+                    "enabled": true,
+                    "endAngleRadians": 0.5181280433185934,
+                    "id": "arc_2",
+                    "innerBand": 51,
+                    "outerBand": 51,
+                    "partCenter": {
+                        "x": -17.474692172705886,
+                        "y": -7.859426219140801
+                    },
+                    "partEnd": {
+                        "x": 323.0917030314565,
+                        "y": 186.29027404101078
+                    },
+                    "partStart": {
+                        "x": 300.0917030314565,
+                        "y": -237.70972595898922
+                    },
+                    "pickMode": "best",
+                    "radius": 392.0198664015185,
+                    "startAngleRadians": 5.656672923339939,
+                    "transition": "dark_to_light",
+                    "type": "edge_arc",
+                    "useSubpixel": true
                 },
-                "outerCircle": {
-                    "centerX": 970,
-                    "centerY": 707,
-                    "radius": 396
+                {
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 0,
+                    "edgeSensitivity": 128,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "endAngleRadians": 0.5534306063657654,
+                    "id": "arc_3",
+                    "innerBand": 20,
+                    "outerBand": 20,
+                    "partCenter": {
+                        "x": -16.99368170513253,
+                        "y": -3.6213182767918397
+                    },
+                    "partEnd": {
+                        "x": 314.4734225537593,
+                        "y": 201.1707745334661
+                    },
+                    "partStart": {
+                        "x": 306.4734225537593,
+                        "y": -220.8292254665339
+                    },
+                    "pickMode": "best",
+                    "radius": 389.62833891207197,
+                    "startAngleRadians": 5.6918445498311145,
+                    "transition": "dark_to_light",
+                    "type": "edge_arc",
+                    "useSubpixel": true
                 }
-            },
+            ],
+            "circles": [
+                {
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 2,
+                    "edgeSensitivity": 226,
+                    "edgeStatisticalFilter": 2,
+                    "enabled": true,
+                    "id": "circle_1",
+                    "innerBand": 28,
+                    "outerBand": 31,
+                    "partCenter": {
+                        "x": -2.526577446240708,
+                        "y": 0.17077453346610127
+                    },
+                    "pickMode": "best",
+                    "radius": 377,
+                    "transition": "dark_to_light",
+                    "type": "edge_circle",
+                    "useSubpixel": true
+                }
+            ],
+            "enabled": true,
+            "lines": [
+                {
+                    "bandHalfWidth": 49,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 4,
+                    "edgeSensitivity": 70,
+                    "edgeStatisticalFilter": 3,
+                    "enabled": true,
+                    "id": "line_1",
+                    "partEnd": {
+                        "x": 723.6334225537594,
+                        "y": 221.25036932362525
+                    },
+                    "partStart": {
+                        "x": 385.7134225537593,
+                        "y": 235.32851693578152
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                }
+            ],
+            "points": [
+                {
+                    "coordinateSpace": "part",
+                    "edgeSensitivity": 157,
+                    "enabled": true,
+                    "id": "point_1",
+                    "partEnd": {
+                        "x": -273.9071731304309,
+                        "y": -80.02190212013807
+                    },
+                    "partStart": {
+                        "x": -462.22717313043097,
+                        "y": -159.21148243851724
+                    },
+                    "pickMode": "best",
+                    "transition": "light_to_dark",
+                    "type": "edge_point",
+                    "useSubpixel": true
+                },
+                {
+                    "coordinateSpace": "part",
+                    "edgeSensitivity": 157,
+                    "enabled": true,
+                    "id": "point_2",
+                    "partEnd": {
+                        "x": 278.3534225537594,
+                        "y": 124.4631044900508
+                    },
+                    "partStart": {
+                        "x": 422.67342255375934,
+                        "y": 193.0940740993127
+                    },
+                    "pickMode": "best",
+                    "transition": "light_to_dark",
+                    "type": "edge_point",
+                    "useSubpixel": true
+                }
+            ]
+        },
+        "surfaceLocalization": {
             "edge": {
                 "band": {
                     "inner": 69,
@@ -29,12 +163,7 @@
             "enabled": true,
             "exclusionRects": [
             ],
-            "method": "edge",
-            "threshold": {
-                "max": 177,
-                "min": 0,
-                "value": 177
-            }
+            "method": "edge"
         }
     }
 }

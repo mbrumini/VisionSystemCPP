@@ -1,55 +1,13 @@
-#include "MainWindow.h"
+#include "gui/modules/MainWindowImagingModule.h"
 
-#include "gui/SurfaceLocalizationPanelWidget.h"
-#include "gui/SurfaceLocalizationStrategies.h"
-#include "gui/ToolCatalog.h"
-#include "gui/ToolPanelWidget.h"
-#include "gui/geometry/GeometryDiagnosticDrawing.h"
-#include "processing/SurfaceModelTrainer.h"
-#include "processing/geometry/EdgeLineDetector.h"
-#include "processing/geometry/EdgePointDetector.h"
+#include "processing/SurfaceDefectProcessor.h"
 
-#include <QApplication>
-#include <QCheckBox>
-#include <QComboBox>
-#include <QDateTime>
-#include <QSettings>
 #include <QDir>
-#include <QElapsedTimer>
 #include <QFileInfo>
-#include <QGridLayout>
-#include <QGroupBox>
-#include <QHBoxLayout>
-#include <QJsonDocument>
-#include <QLabel>
-#include <QFileDialog>
-#include <QInputDialog>
-#include <QLineEdit>
-#include <QMenu>
-#include <QMenuBar>
-#include <QMessageBox>
-#include <QPushButton>
-#include <QResizeEvent>
-#include <QScrollArea>
-#include <QSizePolicy>
-#include <QSlider>
-#include <QSplitter>
-#include <QSpinBox>
-#include <QVBoxLayout>
+#include <QImage>
 
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
-
-#include <algorithm>
-#include <cmath>
-#include <functional>
-#include <vector>
-#include <type_traits>
-#include "util/AsyncExecutor.h"
-#include <thread>
-#include <memory>
-
-using AsyncExecutor::runAsyncTask;
 
 namespace
 {
@@ -57,8 +15,6 @@ QString projectPath(const QString& relativePath)
 {
   return QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath(relativePath);
 }
-
-
 
 QString resolveProjectPath(const QString& path)
 {
@@ -71,8 +27,12 @@ QString resolveProjectPath(const QString& path)
 }
 }
 
+MainWindowImagingModule::MainWindowImagingModule(MainWindowContext& context)
+  : MainWindowModuleBase(context)
+{
+}
 
-PartPose MainWindow::partPoseFromLocalizationResult(const CameraConfig& camera, const LocalizationResult& result) const
+PartPose MainWindowImagingModule::partPoseFromLocalizationResult(const CameraConfig& camera, const LocalizationResult& result) const
 {
   if (!result.found)
   {
@@ -91,7 +51,7 @@ PartPose MainWindow::partPoseFromLocalizationResult(const CameraConfig& camera, 
   return pose;
 }
 
-PartPose MainWindow::partPoseFromSurfaceReference(const CameraConfig& camera, const SurfaceLocalizationReference& reference) const
+PartPose MainWindowImagingModule::partPoseFromSurfaceReference(const CameraConfig& camera, const SurfaceLocalizationReference& reference) const
 {
   if (!reference.found)
   {
@@ -112,10 +72,9 @@ PartPose MainWindow::partPoseFromSurfaceReference(const CameraConfig& camera, co
   return pose;
 }
 
-QPixmap MainWindow::loadCameraPreview(const CameraConfig& camera) const
+QPixmap MainWindowImagingModule::loadCameraPreview(const CameraConfig& camera) const
 {
   const QString imagePath = cameraSampleImagePath(camera);
-
   if (imagePath.isEmpty())
   {
     return {};
@@ -124,26 +83,29 @@ QPixmap MainWindow::loadCameraPreview(const CameraConfig& camera) const
   return QPixmap(imagePath);
 }
 
-void MainWindow::reloadCameraReferenceImage(const CameraConfig& camera)
+void MainWindowImagingModule::reloadCameraReferenceImage(const CameraConfig& camera)
 {
-  if (camera.id != m_selectedCameraId || !m_largeImage)
+  if (camera.id != selectedCameraId() || !largeImage())
   {
     return;
   }
 
-  m_selectedImagePath = cameraSampleImagePath(camera);
-  m_selectedPreview = m_selectedImagePath.isEmpty() ? QPixmap() : QPixmap(m_selectedImagePath);
-  if (m_selectedPreview.isNull())
+  selectedImagePath() = cameraSampleImagePath(camera);
+  selectedPreview() = selectedImagePath().isEmpty() ? QPixmap() : QPixmap(selectedImagePath());
+  if (selectedPreview().isNull())
   {
-    m_largeImage->clearImage();
+    largeImage()->clearImage();
     return;
   }
 
-  m_largeImage->setImage(m_selectedPreview);
-  updateLargePreview();
+  largeImage()->setImage(selectedPreview());
+  if (context().updateLargePreview)
+  {
+    context().updateLargePreview();
+  }
 }
 
-QPixmap MainWindow::matToPixmap(const cv::Mat& image) const
+QPixmap MainWindowImagingModule::matToPixmap(const cv::Mat& image) const
 {
   if (image.empty())
   {
@@ -151,7 +113,6 @@ QPixmap MainWindow::matToPixmap(const cv::Mat& image) const
   }
 
   cv::Mat rgb;
-
   if (image.channels() == 1)
   {
     cv::cvtColor(image, rgb, cv::COLOR_GRAY2RGB);
@@ -165,15 +126,15 @@ QPixmap MainWindow::matToPixmap(const cv::Mat& image) const
   return QPixmap::fromImage(qimage.copy());
 }
 
-cv::Mat MainWindow::currentInputImage(const CameraConfig& camera, QString* errorMessage) const
+cv::Mat MainWindowImagingModule::currentInputImage(const CameraConfig& camera, QString* errorMessage) const
 {
-  const auto runtimeIt = m_cameraRuntime.find(camera.id);
-  if (runtimeIt != m_cameraRuntime.end() && !runtimeIt->second.currentFrame().empty())
+  const auto runtimeIt = cameraRuntime().find(camera.id);
+  if (runtimeIt != cameraRuntime().end() && !runtimeIt->second.currentFrame().empty())
   {
     return runtimeIt->second.currentFrame().clone();
   }
 
-  QString imagePath = camera.id == m_selectedCameraId ? m_selectedImagePath : QString();
+  QString imagePath = camera.id == selectedCameraId() ? selectedImagePath() : QString();
   if (imagePath.isEmpty())
   {
     imagePath = cameraSampleImagePath(camera);
@@ -183,24 +144,23 @@ cv::Mat MainWindow::currentInputImage(const CameraConfig& camera, QString* error
   {
     if (errorMessage)
     {
-      *errorMessage = trText("log.imageMissing") + ": " + camera.id;
+      *errorMessage = tr("log.imageMissing") + ": " + camera.id;
     }
-
     return {};
   }
 
   cv::Mat input = cv::imread(imagePath.toStdString(), cv::IMREAD_COLOR);
   if (input.empty() && errorMessage)
   {
-    *errorMessage = trText("log.imageMissing") + ": " + imagePath;
+    *errorMessage = tr("log.imageMissing") + ": " + imagePath;
   }
 
   return input;
 }
 
-QString MainWindow::cameraSampleImagePath(const CameraConfig& camera) const
+QString MainWindowImagingModule::cameraSampleImagePath(const CameraConfig& camera) const
 {
-  const QString recipeSample = m_recipeManager.firstCameraSampleImagePath(camera.id);
+  const QString recipeSample = recipes().firstCameraSampleImagePath(camera.id);
   if (!recipeSample.isEmpty())
   {
     return recipeSample;
@@ -209,17 +169,17 @@ QString MainWindow::cameraSampleImagePath(const CameraConfig& camera) const
   return firstImageInFolder(camera.folder);
 }
 
-QString MainWindow::cameraTestImagesFolder(const CameraConfig& camera) const
+QString MainWindowImagingModule::cameraTestImagesFolder(const CameraConfig& camera) const
 {
-  if (!m_recipeManager.firstCameraTestImagePath(camera.id).isEmpty())
+  if (!recipes().firstCameraTestImagePath(camera.id).isEmpty())
   {
-    return m_recipeManager.cameraTestImagesPath(camera.id);
+    return recipes().cameraTestImagesPath(camera.id);
   }
 
   return resolvedCameraFolder(camera);
 }
 
-QString MainWindow::resolvedCameraFolder(const CameraConfig& camera) const
+QString MainWindowImagingModule::resolvedCameraFolder(const CameraConfig& camera) const
 {
   if (camera.folder.isEmpty())
   {
@@ -229,7 +189,7 @@ QString MainWindow::resolvedCameraFolder(const CameraConfig& camera) const
   return resolveProjectPath(camera.folder);
 }
 
-QString MainWindow::firstImageInFolder(const QString& folder) const
+QString MainWindowImagingModule::firstImageInFolder(const QString& folder) const
 {
   if (folder.isEmpty())
   {
@@ -239,7 +199,6 @@ QString MainWindow::firstImageInFolder(const QString& folder) const
   QDir directory(resolveProjectPath(folder));
   const QStringList filters = {"*.png", "*.jpg", "*.jpeg", "*.bmp", "*.tif", "*.tiff"};
   const QFileInfoList files = directory.entryInfoList(filters, QDir::Files, QDir::Name);
-
   if (files.isEmpty())
   {
     return {};
@@ -247,5 +206,3 @@ QString MainWindow::firstImageInFolder(const QString& folder) const
 
   return files.first().absoluteFilePath();
 }
-
-

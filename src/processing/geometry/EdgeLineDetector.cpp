@@ -269,7 +269,7 @@ EdgeLineDetectorResult EdgeLineDetector::detect(const cv::Mat& input, const Edge
   cv::Mat blurred;
   cv::GaussianBlur(gray, blurred, cv::Size(3, 3), 0.0);
   const int sensitivity = std::clamp(config.edgeSensitivity, 1, 255);
-  const int gradientThreshold = std::max(3, (256 - sensitivity) / 6 + 2);
+  const int gradientThreshold = std::max(2, (256 - sensitivity) / 12 + 1);
   result.rawEdgePoints = scanLineEdges(blurred, config, gradientThreshold);
   result.edgePoints = EdgePointFilters::filterByDerivative(
     result.rawEdgePoints,
@@ -282,11 +282,13 @@ EdgeLineDetectorResult EdgeLineDetector::detect(const cv::Mat& input, const Edge
   drawScanDiagnostics(result.diagnosticImage, config);
   for (const cv::Point2d& point : result.rawEdgePoints)
   {
-    cv::circle(result.diagnosticImage, surfacePoint(point), 1, cv::Scalar(0, 120, 255), cv::FILLED, cv::LINE_AA);
+    cv::circle(result.diagnosticImage, surfacePoint(point), 3, cv::Scalar(0, 120, 255), cv::FILLED, cv::LINE_AA);
   }
   for (const cv::Point2d& point : result.edgePoints)
   {
-    cv::circle(result.diagnosticImage, surfacePoint(point), 2, cv::Scalar(0, 0, 255), cv::FILLED, cv::LINE_AA);
+    const cv::Point imagePoint = surfacePoint(point);
+    cv::circle(result.diagnosticImage, imagePoint, 6, cv::Scalar(255, 255, 255), 1, cv::LINE_AA);
+    cv::circle(result.diagnosticImage, imagePoint, 5, cv::Scalar(0, 0, 255), cv::FILLED, cv::LINE_AA);
   }
   result.processed = true;
 

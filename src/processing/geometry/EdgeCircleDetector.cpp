@@ -51,13 +51,32 @@ std::vector<cv::Point2d> scanCircleEdges(const cv::Mat& gray, const EdgeCircleDe
     return points;
   }
 
-  const int angleSamples = std::max(90, static_cast<int>(std::round(config.guideRadius * 2.0)));
+  double startAngle = 0.0;
+  double span = 2.0 * CV_PI;
+  if (config.useArc)
+  {
+    startAngle = config.startAngleRadians;
+    span = config.endAngleRadians - config.startAngleRadians;
+    while (span < 0.0)
+    {
+      span += 2.0 * CV_PI;
+    }
+    if (span < 0.001)
+    {
+      span = 2.0 * CV_PI;
+    }
+  }
+
+  const int fullCircleSamples = std::max(90, static_cast<int>(std::round(config.guideRadius * 2.0)));
+  const int angleSamples = config.useArc
+    ? std::max(12, static_cast<int>(std::round(fullCircleSamples * span / (2.0 * CV_PI))))
+    : fullCircleSamples;
   const double startOffset = -static_cast<double>(config.innerBand);
   const double endOffset = static_cast<double>(config.outerBand);
 
   for (int i = 0; i < angleSamples; ++i)
   {
-    const double angle = 2.0 * CV_PI * static_cast<double>(i) / static_cast<double>(angleSamples);
+    const double angle = startAngle + span * static_cast<double>(i) / static_cast<double>(std::max(1, angleSamples - 1));
     const cv::Point2d radial(std::cos(angle), std::sin(angle));
     cv::Point2d previousPoint = config.guideCenter + radial * (config.guideRadius + startOffset);
     if (!pointInsideImage(gray, previousPoint))
@@ -210,22 +229,45 @@ EdgeCircleDetectorResult EdgeCircleDetector::detect(const cv::Mat& input, const 
   cv::Mat blurred;
   cv::GaussianBlur(gray, blurred, cv::Size(3, 3), 0.0);
   const int sensitivity = std::clamp(config.edgeSensitivity, 1, 255);
-  const int gradientThreshold = std::max(3, (256 - sensitivity) / 6 + 2);
+  const int gradientThreshold = std::max(2, (256 - sensitivity) / 12 + 1);
   result.rawEdgePoints = scanCircleEdges(blurred, config, gradientThreshold);
   result.edgePoints = filterByRadialDerivative(result.rawEdgePoints, config);
   result.edgePoints = filterByRadialMedianDeviation(result.edgePoints, config);
 
   result.processed = true;
-  cv::circle(result.diagnosticImage, surfacePoint(config.guideCenter), static_cast<int>(std::round(config.guideRadius)), cv::Scalar(255, 160, 0), 1, cv::LINE_AA);
-  cv::circle(result.diagnosticImage, surfacePoint(config.guideCenter), static_cast<int>(std::round(config.guideRadius - config.innerBand)), cv::Scalar(0, 255, 255), 1, cv::LINE_AA);
-  cv::circle(result.diagnosticImage, surfacePoint(config.guideCenter), static_cast<int>(std::round(config.guideRadius + config.outerBand)), cv::Scalar(0, 255, 255), 1, cv::LINE_AA);
+  const double startDegrees = config.startAngleRadians * 180.0 / CV_PI;
+  double endDegrees = config.endAngleRadians * 180.0 / CV_PI;
+  if (config.useArc && endDegrees < startDegrees)
+  {
+    endDegrees += 360.0;
+  }
+  if (config.useArc)
+  {
+    cv::ellipse(result.diagnosticImage, surfacePoint(config.guideCenter),
+      cv::Size(static_cast<int>(std::round(config.guideRadius)), static_cast<int>(std::round(config.guideRadius))),
+      0.0, startDegrees, endDegrees, cv::Scalar(255, 160, 0), 1, cv::LINE_AA);
+    cv::ellipse(result.diagnosticImage, surfacePoint(config.guideCenter),
+      cv::Size(std::max(1, static_cast<int>(std::round(config.guideRadius - config.innerBand))), std::max(1, static_cast<int>(std::round(config.guideRadius - config.innerBand)))),
+      0.0, startDegrees, endDegrees, cv::Scalar(0, 255, 255), 1, cv::LINE_AA);
+    cv::ellipse(result.diagnosticImage, surfacePoint(config.guideCenter),
+      cv::Size(static_cast<int>(std::round(config.guideRadius + config.outerBand)), static_cast<int>(std::round(config.guideRadius + config.outerBand))),
+      0.0, startDegrees, endDegrees, cv::Scalar(0, 255, 255), 1, cv::LINE_AA);
+  }
+  else
+  {
+    cv::circle(result.diagnosticImage, surfacePoint(config.guideCenter), static_cast<int>(std::round(config.guideRadius)), cv::Scalar(255, 160, 0), 1, cv::LINE_AA);
+    cv::circle(result.diagnosticImage, surfacePoint(config.guideCenter), static_cast<int>(std::round(config.guideRadius - config.innerBand)), cv::Scalar(0, 255, 255), 1, cv::LINE_AA);
+    cv::circle(result.diagnosticImage, surfacePoint(config.guideCenter), static_cast<int>(std::round(config.guideRadius + config.outerBand)), cv::Scalar(0, 255, 255), 1, cv::LINE_AA);
+  }
   for (const cv::Point2d& point : result.rawEdgePoints)
   {
-    cv::circle(result.diagnosticImage, surfacePoint(point), 1, cv::Scalar(0, 120, 255), cv::FILLED, cv::LINE_AA);
+    cv::circle(result.diagnosticImage, surfacePoint(point), 3, cv::Scalar(0, 120, 255), cv::FILLED, cv::LINE_AA);
   }
   for (const cv::Point2d& point : result.edgePoints)
   {
-    cv::circle(result.diagnosticImage, surfacePoint(point), 2, cv::Scalar(0, 0, 255), cv::FILLED, cv::LINE_AA);
+    const cv::Point imagePoint = surfacePoint(point);
+    cv::circle(result.diagnosticImage, imagePoint, 6, cv::Scalar(255, 255, 255), 1, cv::LINE_AA);
+    cv::circle(result.diagnosticImage, imagePoint, 5, cv::Scalar(0, 0, 255), cv::FILLED, cv::LINE_AA);
   }
 
   if (static_cast<int>(result.edgePoints.size()) < config.minPoints)
@@ -253,6 +295,23 @@ EdgeCircleDetectorResult EdgeCircleDetector::detect(const cv::Mat& input, const 
   result.circle.center = fit.center;
   result.circle.radius = fit.radius;
   result.circle.meanError = fit.meanError;
-  cv::circle(result.diagnosticImage, surfacePoint(fit.center), static_cast<int>(std::round(fit.radius)), cv::Scalar(0, 255, 0), 2, cv::LINE_AA);
+  if (config.useArc)
+  {
+    result.circle.meta.method = "edge_arc_circle_fit";
+    result.arc.meta = result.circle.meta;
+    result.arc.meta.method = "edge_arc";
+    result.arc.center = fit.center;
+    result.arc.radius = fit.radius;
+    result.arc.startAngleRadians = config.startAngleRadians;
+    result.arc.endAngleRadians = config.endAngleRadians;
+    result.arc.meanError = fit.meanError;
+    cv::ellipse(result.diagnosticImage, surfacePoint(fit.center),
+      cv::Size(static_cast<int>(std::round(fit.radius)), static_cast<int>(std::round(fit.radius))),
+      0.0, startDegrees, endDegrees, cv::Scalar(0, 255, 0), 2, cv::LINE_AA);
+  }
+  else
+  {
+    cv::circle(result.diagnosticImage, surfacePoint(fit.center), static_cast<int>(std::round(fit.radius)), cv::Scalar(0, 255, 0), 2, cv::LINE_AA);
+  }
   return result;
 }

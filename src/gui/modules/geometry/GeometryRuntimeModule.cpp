@@ -1,6 +1,11 @@
-#include "MainWindow.h"
+#include "gui/modules/MainWindowGeometryModule.h"
+#include "gui/modules/MainWindowCameraProfile.h"
+#include "gui/modules/MainWindowImagingModule.h"
+#include "gui/modules/MainWindowContext.h"
 
 #include "gui/geometry/GeometryDiagnosticDrawing.h"
+#include "gui/geometry/GeometryMath.h"
+#include "processing/geometry/EdgeCircleDetector.h"
 #include "processing/geometry/EdgePointDetector.h"
 #include "util/AsyncExecutor.h"
 
@@ -22,71 +27,45 @@ using AsyncExecutor::runAsyncTask;
 
 namespace
 {
-bool circleFromThreePoints(const QVector<QPoint>& points, ImageCircle& circle)
+double normalizedSetupArcAngle(double angle)
 {
-  if (points.size() < 3)
+  while (angle < 0.0)
   {
-    return false;
+    angle += 2.0 * CV_PI;
   }
-
-  const double x1 = points[0].x();
-  const double y1 = points[0].y();
-  const double x2 = points[1].x();
-  const double y2 = points[1].y();
-  const double x3 = points[2].x();
-  const double y3 = points[2].y();
-  const double d = 2.0 * (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2));
-
-  if (std::abs(d) < 0.001)
+  while (angle >= 2.0 * CV_PI)
   {
-    return false;
+    angle -= 2.0 * CV_PI;
   }
-
-  const double ux = ((x1 * x1 + y1 * y1) * (y2 - y3) +
-                     (x2 * x2 + y2 * y2) * (y3 - y1) +
-                     (x3 * x3 + y3 * y3) * (y1 - y2)) / d;
-  const double uy = ((x1 * x1 + y1 * y1) * (x3 - x2) +
-                     (x2 * x2 + y2 * y2) * (x1 - x3) +
-                     (x3 * x3 + y3 * y3) * (x2 - x1)) / d;
-  const QPoint center(qRound(ux), qRound(uy));
-  const int radius = qRound(std::hypot(x1 - ux, y1 - uy));
-
-  if (radius <= 2)
-  {
-    return false;
-  }
-
-  circle = {center, radius};
-  return true;
+  return angle;
+}
 }
 
-}
-
-void MainWindow::activateGeometryLineDrawing(const CameraConfig& camera)
+void MainWindowGeometryModule::activateGeometryLineDrawing(const CameraConfig& camera)
 {
-  if (camera.id != m_selectedCameraId)
+  if (camera.id != selectedCameraId())
   {
     return;
   }
 
-  deactivateImageDrawingTools();
-  m_activeDrawingRecipe = ActiveDrawingRecipe::Geometry;
-  m_geometryDrawingTarget = GeometryDrawingTarget::Line;
-  m_lineGeometryMouseControllers[camera.id].begin(activeGeometryLineConfig(camera.id).bandHalfWidth);
-  m_largeImage->setGeometryOverlayPointEditingEnabled(false);
-  m_largeImage->setGeometryPointPickingEnabled(true);
+  context().deactivateImageDrawingTools();
+  *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Geometry;
+  m_drawingTarget = DrawingTarget::Line;
+  m_lineMouseControllers[camera.id].begin(activeGeometryLineConfig(camera.id).bandHalfWidth);
+  largeImage()->setGeometryOverlayPointEditingEnabled(false);
+  largeImage()->setGeometryPointPickingEnabled(true);
   updateGeometryLineOverlay(camera);
-  appendLog(trText("log.geometryLineDrawing") + ": " + camera.id);
+  log(tr("log.geometryLineDrawing") + ": " + camera.id);
 }
 
-void MainWindow::handleGeometryLinePoint(const CameraConfig& camera, const QPointF& imagePoint)
+void MainWindowGeometryModule::handleGeometryLinePoint(const CameraConfig& camera, const QPointF& imagePoint)
 {
-  if (camera.id != m_selectedCameraId)
+  if (camera.id != selectedCameraId())
   {
     return;
   }
 
-  LineGeometryMouseController& controller = m_lineGeometryMouseControllers[camera.id];
+  LineGeometryMouseController& controller = m_lineMouseControllers[camera.id];
   controller.setBandHalfWidth(activeGeometryLineConfig(camera.id).bandHalfWidth);
   const bool completed = controller.handleClick(imagePoint);
   updateGeometryLineOverlay(camera);
@@ -102,7 +81,7 @@ void MainWindow::handleGeometryLinePoint(const CameraConfig& camera, const QPoin
   config.imageEnd = cv::Point2d(state.imageEnd.x(), state.imageEnd.y());
   config.hasImageLine = true;
 
-  const PartPose& pose = m_cameraRuntime[camera.id].currentPose();
+  const PartPose& pose = cameraRuntime()[camera.id].currentPose();
   if (pose.valid)
   {
     config.partStart = imageToPart(pose, config.imageStart);
@@ -110,22 +89,22 @@ void MainWindow::handleGeometryLinePoint(const CameraConfig& camera, const QPoin
     config.hasLine = true;
   }
 
-  m_largeImage->setGeometryPointPickingEnabled(false);
-  m_largeImage->setGeometryOverlayPointEditingEnabled(true);
+  largeImage()->setGeometryPointPickingEnabled(false);
+  largeImage()->setGeometryOverlayPointEditingEnabled(true);
   updateGeometryLineOverlay(camera);
-  appendLog(trText("log.geometryLineGuideSaved") + ": " + camera.id);
+  log(tr("log.geometryLineGuideSaved") + ": " + camera.id);
   saveGeometryLinesRecipe(camera);
   testGeometryLine(camera);
 }
 
-void MainWindow::handleGeometryLineHandleMoved(const CameraConfig& camera, int pointIndex, const QPointF& imagePoint)
+void MainWindowGeometryModule::handleGeometryLineHandleMoved(const CameraConfig& camera, int pointIndex, const QPointF& imagePoint)
 {
-  if (camera.id != m_selectedCameraId || pointIndex < 0 || pointIndex > 1)
+  if (camera.id != selectedCameraId() || pointIndex < 0 || pointIndex > 1)
   {
     return;
   }
 
-  LineGeometryMouseController& controller = m_lineGeometryMouseControllers[camera.id];
+  LineGeometryMouseController& controller = m_lineMouseControllers[camera.id];
   controller.movePoint(pointIndex, imagePoint);
 
   const LineGeometryEditorState& state = controller.state();
@@ -140,7 +119,7 @@ void MainWindow::handleGeometryLineHandleMoved(const CameraConfig& camera, int p
   config.imageEnd = cv::Point2d(state.imageEnd.x(), state.imageEnd.y());
   config.hasImageLine = true;
 
-  const PartPose& pose = m_cameraRuntime[camera.id].currentPose();
+  const PartPose& pose = cameraRuntime()[camera.id].currentPose();
   if (pose.valid)
   {
     config.partStart = imageToPart(pose, config.imageStart);
@@ -157,12 +136,12 @@ void MainWindow::handleGeometryLineHandleMoved(const CameraConfig& camera, int p
   testGeometryLine(camera);
 }
 
-GeometryOverlay MainWindow::configuredGeometryLinesOverlay(const CameraConfig& camera, bool includeActive) const
+GeometryOverlay MainWindowGeometryModule::configuredGeometryLinesOverlay(const CameraConfig& camera, bool includeActive) const
 {
   GeometryOverlay overlay;
-  const PartPose& pose = m_cameraRuntime.at(camera.id).currentPose();
-  const QVector<GeometryLineRuntimeConfig> lines = m_geometryLineConfigs.value(camera.id);
-  const int activeIndex = m_activeGeometryLineIndexes.value(camera.id, 0);
+  const PartPose& pose = cameraRuntime().at(camera.id).currentPose();
+  const QVector<GeometryLineRuntimeConfig> lines = m_lineConfigs.value(camera.id);
+  const int activeIndex = m_activeLineIndexes.value(camera.id, 0);
 
   for (int i = 0; i < lines.size(); ++i)
   {
@@ -187,8 +166,8 @@ GeometryOverlay MainWindow::configuredGeometryLinesOverlay(const CameraConfig& c
     const double length = std::hypot(delta.x(), delta.y());
     const double angleDegrees = std::atan2(delta.y(), delta.x()) * 180.0 / CV_PI;
     const bool highlightActive =
-      m_activeDrawingRecipe == ActiveDrawingRecipe::Geometry &&
-      m_geometryDrawingTarget == GeometryDrawingTarget::Line &&
+      *context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry &&
+      m_drawingTarget == DrawingTarget::Line &&
       i == activeIndex;
     const QColor lineColor = highlightActive ? QColor("#ff4fd8") : QColor(170, 205, 220, 170);
     const QColor bandColor = highlightActive ? QColor(0, 210, 255, 35) : QColor(120, 170, 190, 22);
@@ -204,10 +183,10 @@ GeometryOverlay MainWindow::configuredGeometryLinesOverlay(const CameraConfig& c
   return overlay;
 }
 
-void MainWindow::updateGeometryLineOverlay(const CameraConfig& camera, const GeometryOverlay& extraOverlay)
+void MainWindowGeometryModule::updateGeometryLineOverlay(const CameraConfig& camera, const GeometryOverlay& extraOverlay)
 {
   GeometryOverlay overlay = configuredGeometryLinesOverlay(camera, false);
-  GeometryOverlay activeOverlay = m_lineGeometryMouseControllers[camera.id].overlay();
+  GeometryOverlay activeOverlay = m_lineMouseControllers[camera.id].overlay();
   for (const GeometryOverlayPoint& point : activeOverlay.points)
   {
     overlay.points.append(point);
@@ -234,48 +213,48 @@ void MainWindow::updateGeometryLineOverlay(const CameraConfig& camera, const Geo
     overlay.bands.append(band);
   }
   appendCurrentPartPoseOverlay(camera, overlay);
-  m_largeImage->setGeometryOverlay(overlay);
+  largeImage()->setGeometryOverlay(overlay);
 }
 
-void MainWindow::restoreCleanGeometryImage(const CameraConfig& camera)
+void MainWindowGeometryModule::restoreCleanGeometryImage(const CameraConfig& camera)
 {
-  if (camera.id != m_selectedCameraId)
+  if (camera.id != selectedCameraId())
   {
     return;
   }
 
-  const auto runtimeIt = m_cameraRuntime.find(camera.id);
-  if (runtimeIt != m_cameraRuntime.end() && !runtimeIt->second.currentFrame().empty())
+  const auto runtimeIt = cameraRuntime().find(camera.id);
+  if (runtimeIt != cameraRuntime().end() && !runtimeIt->second.currentFrame().empty())
   {
-    m_selectedPreview = matToPixmap(runtimeIt->second.currentFrame());
+    selectedPreview() = context().imaging->matToPixmap(runtimeIt->second.currentFrame());
   }
   else
   {
-    m_selectedPreview = loadCameraPreview(camera);
+    selectedPreview() = context().imaging->loadCameraPreview(camera);
   }
 
-  if (m_selectedPreview.isNull())
+  if (selectedPreview().isNull())
   {
-    m_largeImage->clearImage();
+    largeImage()->clearImage();
   }
   else
   {
-    m_largeImage->setImage(m_selectedPreview);
+    largeImage()->setImage(selectedPreview());
   }
-  m_largeImage->clearRoi();
-  m_largeImage->clearExclusionRects();
-  m_largeImage->clearCircles();
+  largeImage()->clearRoi();
+  largeImage()->clearExclusionRects();
+  largeImage()->clearCircles();
 }
 
-void MainWindow::testGeometryLine(const CameraConfig& camera)
+void MainWindowGeometryModule::testGeometryLine(const CameraConfig& camera)
 {
-  if (camera.id != m_selectedCameraId)
+  if (camera.id != selectedCameraId())
   {
     return;
   }
 
   GeometryLineRuntimeConfig& lineConfig = activeGeometryLineConfig(camera.id);
-  const PartPose& pose = m_cameraRuntime[camera.id].currentPose();
+  const PartPose& pose = cameraRuntime()[camera.id].currentPose();
   if (pose.valid && !lineConfig.hasLine && lineConfig.hasImageLine)
   {
     lineConfig.partStart = imageToPart(pose, lineConfig.imageStart);
@@ -286,17 +265,17 @@ void MainWindow::testGeometryLine(const CameraConfig& camera)
   const bool usePartLine = pose.valid && lineConfig.hasLine;
   if (!usePartLine && !lineConfig.hasImageLine)
   {
-    appendLog(trText("log.geometryLineRoiMissing") + ": " + camera.id);
+    log(tr("log.geometryLineRoiMissing") + ": " + camera.id);
     return;
   }
 
   const cv::Point2d imageStart = usePartLine ? partToImage(pose, lineConfig.partStart) : lineConfig.imageStart;
   const cv::Point2d imageEnd = usePartLine ? partToImage(pose, lineConfig.partEnd) : lineConfig.imageEnd;
   QString imageError;
-  const cv::Mat input = currentInputImage(camera, &imageError);
+  const cv::Mat input = context().imaging->currentInputImage(camera, &imageError);
   if (input.empty())
   {
-    appendLog(imageError);
+    log(imageError);
     return;
   }
 
@@ -309,7 +288,7 @@ void MainWindow::testGeometryLine(const CameraConfig& camera)
   config.edgeSensitivity = lineConfig.edgeSensitivity;
   config.edgeCleanupDerivative = lineConfig.edgeCleanupDerivative;
   config.edgeStatisticalFilter = lineConfig.edgeStatisticalFilter;
-  config.useSubpixel = isBwDimensionalCamera(camera) && lineConfig.useSubpixel;
+  config.useSubpixel = MainWindowCameraProfile::isBwDimensional(camera, MainWindowModuleBase::config()) && lineConfig.useSubpixel;
   config.scanDirection = lineConfig.scanDirection;
   config.transition = lineConfig.transition;
   config.pickMode = lineConfig.pickMode;
@@ -321,31 +300,31 @@ void MainWindow::testGeometryLine(const CameraConfig& camera)
   };
 
   const QString __pendingCameraId_testGeometryLine = camera.id;
-  incPendingJobs(__pendingCameraId_testGeometryLine);
-  runAsyncTask(decltype(job)(job), this, [this, camera, imageStart, imageEnd, __pendingCameraId_testGeometryLine](const EdgeLineDetectorResult& result) {
-    auto __dec_guard = std::shared_ptr<void>(nullptr, [this, __pendingCameraId_testGeometryLine](void*) { decPendingJobs(__pendingCameraId_testGeometryLine); });
+  context().incPendingJobs(__pendingCameraId_testGeometryLine);
+  runAsyncTask(decltype(job)(job), window(), [this, camera, imageStart, imageEnd, __pendingCameraId_testGeometryLine](const EdgeLineDetectorResult& result) {
+    auto __dec_guard = std::shared_ptr<void>(nullptr, [this, __pendingCameraId_testGeometryLine](void*) { context().decPendingJobs(__pendingCameraId_testGeometryLine); });
     if (!result.processed || result.diagnosticImage.empty())
     {
-      appendLog(result.message.isEmpty() ? trText("log.geometryLineFailed") + ": " + camera.id : result.message);
+      log(result.message.isEmpty() ? tr("log.geometryLineFailed") + ": " + camera.id : result.message);
       return;
     }
 
-    m_selectedPreview = matToPixmap(result.diagnosticImage);
-    m_largeImage->setImage(m_selectedPreview);
-    m_largeImage->setRoi(QRect(result.searchRoi.x, result.searchRoi.y, result.searchRoi.width, result.searchRoi.height));
+    selectedPreview() = context().imaging->matToPixmap(result.diagnosticImage);
+    largeImage()->setImage(selectedPreview());
+    largeImage()->setRoi(QRect(result.searchRoi.x, result.searchRoi.y, result.searchRoi.width, result.searchRoi.height));
 
-    LineGeometryMouseController& controller = m_lineGeometryMouseControllers[camera.id];
+    LineGeometryMouseController& controller = m_lineMouseControllers[camera.id];
     controller.setLine(QPointF(imageStart.x, imageStart.y), QPointF(imageEnd.x, imageEnd.y), activeGeometryLineConfig(camera.id).bandHalfWidth);
-    m_geometryDrawingTarget = GeometryDrawingTarget::Line;
+    m_drawingTarget = DrawingTarget::Line;
     updateGeometryLineOverlay(camera);
 
     if (!result.found)
     {
-      appendLog(result.message.isEmpty() ? trText("log.geometryLineNotFound") + ": " + camera.id : result.message);
+      log(result.message.isEmpty() ? tr("log.geometryLineNotFound") + ": " + camera.id : result.message);
       return;
     }
 
-    GeometrySet& geometries = m_cameraRuntime[camera.id].geometries();
+    GeometrySet& geometries = cameraRuntime()[camera.id].geometries();
     for (int i = geometries.lines.size() - 1; i >= 0; --i)
     {
       if (geometries.lines[i].meta.id == result.line.meta.id)
@@ -363,8 +342,8 @@ void MainWindow::testGeometryLine(const CameraConfig& camera)
     });
     updateGeometryLineOverlay(camera, detectedOverlay);
 
-    appendLog(QString("%1: %2 x1=%3 y1=%4 x2=%5 y2=%6")
-                .arg(trText("log.geometryLineFound"))
+    log(QString("%1: %2 x1=%3 y1=%4 x2=%5 y2=%6")
+                .arg(tr("log.geometryLineFound"))
                 .arg(camera.id)
                 .arg(result.line.start.x, 0, 'f', 1)
                 .arg(result.line.start.y, 0, 'f', 1)
@@ -373,21 +352,21 @@ void MainWindow::testGeometryLine(const CameraConfig& camera)
   });
 }
 
-void MainWindow::testConfiguredGeometryLines(const CameraConfig& camera)
+void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& camera)
 {
-  if (camera.id != m_selectedCameraId)
+  if (camera.id != selectedCameraId())
   {
     return;
   }
 
   loadGeometryLinesRecipe(camera);
-  QVector<GeometryLineRuntimeConfig>& lines = m_geometryLineConfigs[camera.id];
-  const PartPose& pose = m_cameraRuntime[camera.id].currentPose();
+  QVector<GeometryLineRuntimeConfig>& lines = m_lineConfigs[camera.id];
+  const PartPose& pose = cameraRuntime()[camera.id].currentPose();
   QString imageError;
-  const cv::Mat input = currentInputImage(camera, &imageError);
+  const cv::Mat input = context().imaging->currentInputImage(camera, &imageError);
   if (input.empty())
   {
-    appendLog(imageError);
+    log(imageError);
     return;
   }
 
@@ -401,7 +380,7 @@ void MainWindow::testConfiguredGeometryLines(const CameraConfig& camera)
     input.copyTo(diagnostic);
   }
 
-  GeometrySet& geometries = m_cameraRuntime[camera.id].geometries();
+  GeometrySet& geometries = cameraRuntime()[camera.id].geometries();
   geometries.lines.clear();
   GeometryOverlay detectedOverlay;
 
@@ -438,7 +417,7 @@ void MainWindow::testConfiguredGeometryLines(const CameraConfig& camera)
     config.edgeSensitivity = line.edgeSensitivity;
     config.edgeCleanupDerivative = line.edgeCleanupDerivative;
     config.edgeStatisticalFilter = line.edgeStatisticalFilter;
-    config.useSubpixel = isBwDimensionalCamera(camera) && line.useSubpixel;
+    config.useSubpixel = MainWindowCameraProfile::isBwDimensional(camera, MainWindowModuleBase::config()) && line.useSubpixel;
     config.scanDirection = line.scanDirection;
     config.transition = line.transition;
     config.pickMode = line.pickMode;
@@ -472,7 +451,7 @@ void MainWindow::testConfiguredGeometryLines(const CameraConfig& camera)
   }
 
   loadGeometryPointRecipe(camera);
-  QVector<GeometryPointRuntimeConfig>& points = m_geometryPointConfigs[camera.id];
+  QVector<GeometryPointRuntimeConfig>& points = m_pointConfigs[camera.id];
   geometries.points.clear();
   for (GeometryPointRuntimeConfig& point : points)
   {
@@ -490,7 +469,7 @@ void MainWindow::testConfiguredGeometryLines(const CameraConfig& camera)
     config.scanStart = imageStart;
     config.scanEnd = imageEnd;
     config.edgeSensitivity = point.edgeSensitivity;
-    config.useSubpixel = isBwDimensionalCamera(camera) && point.useSubpixel;
+    config.useSubpixel = MainWindowCameraProfile::isBwDimensional(camera, MainWindowModuleBase::config()) && point.useSubpixel;
     config.transition = point.transition;
     config.pickMode = point.pickMode;
 
@@ -505,7 +484,7 @@ void MainWindow::testConfiguredGeometryLines(const CameraConfig& camera)
   }
 
   loadGeometryCirclesRecipe(camera);
-  QVector<GeometryCircleRuntimeConfig>& circles = m_geometryCircleConfigs[camera.id];
+  QVector<GeometryCircleRuntimeConfig>& circles = m_circleConfigs[camera.id];
   geometries.circles.clear();
   for (GeometryCircleRuntimeConfig& circle : circles)
   {
@@ -543,7 +522,7 @@ void MainWindow::testConfiguredGeometryLines(const CameraConfig& camera)
     config.edgeSensitivity = circle.edgeSensitivity;
     config.edgeCleanupDerivative = circle.edgeCleanupDerivative;
     config.edgeStatisticalFilter = circle.edgeStatisticalFilter;
-    config.useSubpixel = isBwDimensionalCamera(camera) && circle.useSubpixel;
+    config.useSubpixel = MainWindowCameraProfile::isBwDimensional(camera, MainWindowModuleBase::config()) && circle.useSubpixel;
     config.transition = circle.transition;
     config.pickMode = circle.pickMode;
 
@@ -569,10 +548,86 @@ void MainWindow::testConfiguredGeometryLines(const CameraConfig& camera)
       cv::LINE_AA);
   }
 
-  m_selectedPreview = matToPixmap(diagnostic);
-  m_largeImage->setImage(m_selectedPreview);
-  m_largeImage->clearRoi();
-  m_largeImage->clearCircles();
+  loadGeometryArcsRecipe(camera);
+  QVector<GeometryArcRuntimeConfig>& arcs = m_arcConfigs[camera.id];
+  geometries.arcs.clear();
+  for (GeometryArcRuntimeConfig& arc : arcs)
+  {
+    if (!arc.enabled)
+    {
+      continue;
+    }
+
+    if (pose.valid && !arc.hasArc && arc.hasImageArc)
+    {
+      arc.partCenter = imageToPart(pose, arc.imageCenter);
+      arc.partStart = imageToPart(pose, arc.imageStart);
+      arc.partEnd = imageToPart(pose, arc.imageEnd);
+      arc.hasArc = true;
+    }
+
+    const bool usePartArc = pose.valid && arc.hasArc;
+    if (!usePartArc && !arc.hasImageArc)
+    {
+      continue;
+    }
+
+    const cv::Point2d guideCenter = usePartArc ? partToImage(pose, arc.partCenter) : arc.imageCenter;
+    const cv::Point2d guideStart = usePartArc ? partToImage(pose, arc.partStart) : arc.imageStart;
+    const cv::Point2d guideEnd = usePartArc ? partToImage(pose, arc.partEnd) : arc.imageEnd;
+    const double guideRadius = std::hypot(guideStart.x - guideCenter.x, guideStart.y - guideCenter.y);
+    if (guideRadius <= 1.0)
+    {
+      continue;
+    }
+
+    EdgeCircleDetectorConfig config;
+    config.id = arc.id;
+    config.label = arc.id;
+    config.guideCenter = guideCenter;
+    config.guideRadius = guideRadius;
+    config.innerBand = arc.innerBand;
+    config.outerBand = arc.outerBand;
+    config.edgeSensitivity = arc.edgeSensitivity;
+    config.edgeCleanupDerivative = arc.edgeCleanupDerivative;
+    config.edgeStatisticalFilter = arc.edgeStatisticalFilter;
+    config.useSubpixel = MainWindowCameraProfile::isBwDimensional(camera, MainWindowModuleBase::config()) && arc.useSubpixel;
+    config.transition = arc.transition;
+    config.pickMode = arc.pickMode;
+    config.useArc = true;
+    config.startAngleRadians = normalizedSetupArcAngle(std::atan2(guideStart.y - guideCenter.y, guideStart.x - guideCenter.x));
+    config.endAngleRadians = normalizedSetupArcAngle(std::atan2(guideEnd.y - guideCenter.y, guideEnd.x - guideCenter.x));
+
+    EdgeCircleDetector detector;
+    const EdgeCircleDetectorResult result = detector.detect(input, config);
+    if (!result.processed || !result.found)
+    {
+      continue;
+    }
+
+    geometries.arcs.append(result.arc);
+    double startDegrees = config.startAngleRadians * 180.0 / CV_PI;
+    double endDegrees = config.endAngleRadians * 180.0 / CV_PI;
+    if (endDegrees < startDegrees)
+    {
+      endDegrees += 360.0;
+    }
+    cv::ellipse(
+      diagnostic,
+      cv::Point(static_cast<int>(std::round(result.arc.center.x)), static_cast<int>(std::round(result.arc.center.y))),
+      cv::Size(static_cast<int>(std::round(result.arc.radius)), static_cast<int>(std::round(result.arc.radius))),
+      0.0,
+      startDegrees,
+      endDegrees,
+      cv::Scalar(0, 255, 0),
+      2,
+      cv::LINE_AA);
+  }
+
+  selectedPreview() = context().imaging->matToPixmap(diagnostic);
+  largeImage()->setImage(selectedPreview());
+  largeImage()->clearRoi();
+  largeImage()->clearCircles();
   GeometryOverlay setupOverlay;
   for (const GeometryOverlayLine& line : detectedOverlay.lines)
   {
@@ -583,52 +638,52 @@ void MainWindow::testConfiguredGeometryLines(const CameraConfig& camera)
     setupOverlay.points.append(point);
   }
   appendCurrentPartPoseOverlay(camera, setupOverlay);
-  m_largeImage->setGeometryOverlay(setupOverlay);
+  largeImage()->setGeometryOverlay(setupOverlay);
 }
 
-void MainWindow::activateGeometryPointDrawing(const CameraConfig& camera)
+void MainWindowGeometryModule::activateGeometryPointDrawing(const CameraConfig& camera)
 {
-  if (camera.id != m_selectedCameraId)
+  if (camera.id != selectedCameraId())
   {
     return;
   }
 
-  deactivateImageDrawingTools();
-  m_activeDrawingRecipe = ActiveDrawingRecipe::Geometry;
-  m_geometryDrawingTarget = GeometryDrawingTarget::Point;
-  m_pointGeometryMouseControllers[camera.id].begin(3.0);
-  m_largeImage->setGeometryOverlayPointEditingEnabled(false);
-  m_largeImage->setGeometryPointPickingEnabled(true);
+  context().deactivateImageDrawingTools();
+  *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Geometry;
+  m_drawingTarget = DrawingTarget::Point;
+  m_pointMouseControllers[camera.id].begin(3.0);
+  largeImage()->setGeometryOverlayPointEditingEnabled(false);
+  largeImage()->setGeometryPointPickingEnabled(true);
   updateGeometryPointOverlay(camera);
-  appendLog(trText("log.geometryPointDrawing") + ": " + camera.id);
+  log(tr("log.geometryPointDrawing") + ": " + camera.id);
 }
 
-void MainWindow::activateGeometryCircleDrawing(const CameraConfig& camera)
+void MainWindowGeometryModule::activateGeometryCircleDrawing(const CameraConfig& camera)
 {
-  if (camera.id != m_selectedCameraId)
+  if (camera.id != selectedCameraId())
   {
     return;
   }
 
-  deactivateImageDrawingTools();
-  m_activeDrawingRecipe = ActiveDrawingRecipe::Geometry;
-  m_geometryDrawingTarget = GeometryDrawingTarget::Circle;
-  m_largeImage->setThreePointCircleDrawingEnabled(true);
+  context().deactivateImageDrawingTools();
+  *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Geometry;
+  m_drawingTarget = DrawingTarget::Circle;
+  largeImage()->setThreePointCircleDrawingEnabled(true);
   showConfiguredGeometryCircles(camera);
-  appendLog(trText("log.geometryCircleDrawing") + ": " + camera.id);
+  log(tr("log.geometryCircleDrawing") + ": " + camera.id);
 }
 
-void MainWindow::handleGeometryCirclePoints(const CameraConfig& camera, const QVector<QPoint>& points)
+void MainWindowGeometryModule::handleGeometryCirclePoints(const CameraConfig& camera, const QVector<QPoint>& points)
 {
-  if (camera.id != m_selectedCameraId)
+  if (camera.id != selectedCameraId())
   {
     return;
   }
 
   ImageCircle imageCircle;
-  if (!circleFromThreePoints(points, imageCircle))
+  if (!GeometryMath::circleFromThreePoints(points, imageCircle))
   {
-    appendLog(trText("log.surfaceEdgeCircleInvalid") + ": " + camera.id);
+    log(tr("log.surfaceEdgeCircleInvalid") + ": " + camera.id);
     return;
   }
 
@@ -637,7 +692,7 @@ void MainWindow::handleGeometryCirclePoints(const CameraConfig& camera, const QV
   config.radius = imageCircle.radius;
   config.hasImageCircle = true;
 
-  const PartPose& pose = m_cameraRuntime[camera.id].currentPose();
+  const PartPose& pose = cameraRuntime()[camera.id].currentPose();
   if (pose.valid)
   {
     config.partCenter = imageToPart(pose, config.imageCenter);
@@ -648,31 +703,31 @@ void MainWindow::handleGeometryCirclePoints(const CameraConfig& camera, const QV
     config.hasCircle = false;
   }
 
-  m_largeImage->setThreePointCircleDrawingEnabled(false);
-  m_activeDrawingRecipe = ActiveDrawingRecipe::Geometry;
-  m_geometryDrawingTarget = GeometryDrawingTarget::Circle;
+  largeImage()->setThreePointCircleDrawingEnabled(false);
+  *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Geometry;
+  m_drawingTarget = DrawingTarget::Circle;
   saveGeometryCirclesRecipe(camera);
   showConfiguredGeometryCircles(camera);
   testGeometryCircle(camera);
 }
 
-void MainWindow::showConfiguredGeometryCircles(const CameraConfig& camera)
+void MainWindowGeometryModule::showConfiguredGeometryCircles(const CameraConfig& camera)
 {
   GeometryOverlay overlay;
-  m_largeImage->clearCircles();
+  largeImage()->clearCircles();
   appendCurrentPartPoseOverlay(camera, overlay);
-  m_largeImage->setGeometryOverlay(overlay);
+  largeImage()->setGeometryOverlay(overlay);
 }
 
-void MainWindow::testGeometryCircle(const CameraConfig& camera)
+void MainWindowGeometryModule::testGeometryCircle(const CameraConfig& camera)
 {
-  if (camera.id != m_selectedCameraId)
+  if (camera.id != selectedCameraId())
   {
     return;
   }
 
   GeometryCircleRuntimeConfig& circleConfig = activeGeometryCircleConfig(camera.id);
-  const PartPose& pose = m_cameraRuntime[camera.id].currentPose();
+  const PartPose& pose = cameraRuntime()[camera.id].currentPose();
   if (pose.valid && !circleConfig.hasCircle && circleConfig.hasImageCircle)
   {
     circleConfig.partCenter = imageToPart(pose, circleConfig.imageCenter);
@@ -684,15 +739,15 @@ void MainWindow::testGeometryCircle(const CameraConfig& camera)
   if (!usePartCircle && !circleConfig.hasImageCircle)
   {
     showConfiguredGeometryCircles(camera);
-    appendLog(trText("log.geometryCircleMissing") + ": " + camera.id);
+    log(tr("log.geometryCircleMissing") + ": " + camera.id);
     return;
   }
 
   QString imageError;
-  const cv::Mat input = currentInputImage(camera, &imageError);
+  const cv::Mat input = context().imaging->currentInputImage(camera, &imageError);
   if (input.empty())
   {
-    appendLog(imageError);
+    log(imageError);
     return;
   }
 
@@ -707,7 +762,7 @@ void MainWindow::testGeometryCircle(const CameraConfig& camera)
   config.edgeSensitivity = circleConfig.edgeSensitivity;
   config.edgeCleanupDerivative = circleConfig.edgeCleanupDerivative;
   config.edgeStatisticalFilter = circleConfig.edgeStatisticalFilter;
-  config.useSubpixel = isBwDimensionalCamera(camera) && circleConfig.useSubpixel;
+  config.useSubpixel = MainWindowCameraProfile::isBwDimensional(camera, MainWindowModuleBase::config()) && circleConfig.useSubpixel;
   config.transition = circleConfig.transition;
   config.pickMode = circleConfig.pickMode;
 
@@ -715,21 +770,21 @@ void MainWindow::testGeometryCircle(const CameraConfig& camera)
   const EdgeCircleDetectorResult result = detector.detect(input, config);
   if (!result.processed || result.diagnosticImage.empty())
   {
-    appendLog(result.message.isEmpty() ? trText("log.geometryCircleFailed") + ": " + camera.id : result.message);
+    log(result.message.isEmpty() ? tr("log.geometryCircleFailed") + ": " + camera.id : result.message);
     return;
   }
 
-  m_selectedPreview = matToPixmap(result.diagnosticImage);
-  m_largeImage->setImage(m_selectedPreview);
+  selectedPreview() = context().imaging->matToPixmap(result.diagnosticImage);
+  largeImage()->setImage(selectedPreview());
   showConfiguredGeometryCircles(camera);
 
   if (!result.found)
   {
-    appendLog(result.message.isEmpty() ? trText("log.geometryCircleNotFound") + ": " + camera.id : result.message);
+    log(result.message.isEmpty() ? tr("log.geometryCircleNotFound") + ": " + camera.id : result.message);
     return;
   }
 
-  GeometrySet& geometries = m_cameraRuntime[camera.id].geometries();
+  GeometrySet& geometries = cameraRuntime()[camera.id].geometries();
   for (int i = geometries.circles.size() - 1; i >= 0; --i)
   {
     if (geometries.circles[i].meta.id == circleConfig.id)
@@ -738,22 +793,22 @@ void MainWindow::testGeometryCircle(const CameraConfig& camera)
     }
   }
   geometries.circles.append(result.circle);
-  appendLog(QString("%1: %2 cx=%3 cy=%4 r=%5")
-              .arg(trText("log.geometryCircleFound"))
+  log(QString("%1: %2 cx=%3 cy=%4 r=%5")
+              .arg(tr("log.geometryCircleFound"))
               .arg(camera.id)
               .arg(result.circle.center.x, 0, 'f', 1)
               .arg(result.circle.center.y, 0, 'f', 1)
               .arg(result.circle.radius, 0, 'f', 1));
 }
 
-void MainWindow::handleGeometryPointGuidePoint(const CameraConfig& camera, const QPointF& imagePoint)
+void MainWindowGeometryModule::handleGeometryPointGuidePoint(const CameraConfig& camera, const QPointF& imagePoint)
 {
-  if (camera.id != m_selectedCameraId)
+  if (camera.id != selectedCameraId())
   {
     return;
   }
 
-  LineGeometryMouseController& controller = m_pointGeometryMouseControllers[camera.id];
+  LineGeometryMouseController& controller = m_pointMouseControllers[camera.id];
   const bool completed = controller.handleClick(imagePoint);
   updateGeometryPointOverlay(camera);
 
@@ -768,7 +823,7 @@ void MainWindow::handleGeometryPointGuidePoint(const CameraConfig& camera, const
   config.imageEnd = cv::Point2d(state.imageEnd.x(), state.imageEnd.y());
   config.hasImageGuide = true;
 
-  const PartPose& pose = m_cameraRuntime[camera.id].currentPose();
+  const PartPose& pose = cameraRuntime()[camera.id].currentPose();
   if (pose.valid)
   {
     config.partStart = imageToPart(pose, config.imageStart);
@@ -776,22 +831,22 @@ void MainWindow::handleGeometryPointGuidePoint(const CameraConfig& camera, const
     config.hasGuide = true;
   }
 
-  m_largeImage->setGeometryPointPickingEnabled(false);
-  m_largeImage->setGeometryOverlayPointEditingEnabled(true);
+  largeImage()->setGeometryPointPickingEnabled(false);
+  largeImage()->setGeometryOverlayPointEditingEnabled(true);
   updateGeometryPointOverlay(camera);
-  appendLog(trText("log.geometryPointGuideSaved") + ": " + camera.id);
+  log(tr("log.geometryPointGuideSaved") + ": " + camera.id);
   saveGeometryPointRecipe(camera);
   testGeometryPoint(camera);
 }
 
-void MainWindow::handleGeometryPointHandleMoved(const CameraConfig& camera, int pointIndex, const QPointF& imagePoint)
+void MainWindowGeometryModule::handleGeometryPointHandleMoved(const CameraConfig& camera, int pointIndex, const QPointF& imagePoint)
 {
-  if (camera.id != m_selectedCameraId || pointIndex < 0 || pointIndex > 1)
+  if (camera.id != selectedCameraId() || pointIndex < 0 || pointIndex > 1)
   {
     return;
   }
 
-  LineGeometryMouseController& controller = m_pointGeometryMouseControllers[camera.id];
+  LineGeometryMouseController& controller = m_pointMouseControllers[camera.id];
   controller.movePoint(pointIndex, imagePoint);
 
   const LineGeometryEditorState& state = controller.state();
@@ -806,7 +861,7 @@ void MainWindow::handleGeometryPointHandleMoved(const CameraConfig& camera, int 
   config.imageEnd = cv::Point2d(state.imageEnd.x(), state.imageEnd.y());
   config.hasImageGuide = true;
 
-  const PartPose& pose = m_cameraRuntime[camera.id].currentPose();
+  const PartPose& pose = cameraRuntime()[camera.id].currentPose();
   if (pose.valid)
   {
     config.partStart = imageToPart(pose, config.imageStart);
@@ -823,12 +878,12 @@ void MainWindow::handleGeometryPointHandleMoved(const CameraConfig& camera, int 
   testGeometryPoint(camera);
 }
 
-GeometryOverlay MainWindow::configuredGeometryPointsOverlay(const CameraConfig& camera, bool includeActive) const
+GeometryOverlay MainWindowGeometryModule::configuredGeometryPointsOverlay(const CameraConfig& camera, bool includeActive) const
 {
   GeometryOverlay overlay;
-  const PartPose& pose = m_cameraRuntime.at(camera.id).currentPose();
-  const QVector<GeometryPointRuntimeConfig> points = m_geometryPointConfigs.value(camera.id);
-  const int activeIndex = m_activeGeometryPointIndexes.value(camera.id, 0);
+  const PartPose& pose = cameraRuntime().at(camera.id).currentPose();
+  const QVector<GeometryPointRuntimeConfig> points = m_pointConfigs.value(camera.id);
+  const int activeIndex = m_activePointIndexes.value(camera.id, 0);
 
   for (int i = 0; i < points.size(); ++i)
   {
@@ -853,8 +908,8 @@ GeometryOverlay MainWindow::configuredGeometryPointsOverlay(const CameraConfig& 
     const double length = std::hypot(delta.x(), delta.y());
     const double angleDegrees = std::atan2(delta.y(), delta.x()) * 180.0 / CV_PI;
     const bool highlightActive =
-      m_activeDrawingRecipe == ActiveDrawingRecipe::Geometry &&
-      m_geometryDrawingTarget == GeometryDrawingTarget::Point &&
+      *context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry &&
+      m_drawingTarget == DrawingTarget::Point &&
       i == activeIndex;
     const QColor lineColor = highlightActive ? QColor("#ff4fd8") : QColor(170, 205, 220, 170);
     const QColor bandColor = highlightActive ? QColor(255, 79, 216, 24) : QColor(120, 170, 190, 18);
@@ -870,10 +925,10 @@ GeometryOverlay MainWindow::configuredGeometryPointsOverlay(const CameraConfig& 
   return overlay;
 }
 
-void MainWindow::updateGeometryPointOverlay(const CameraConfig& camera, const GeometryOverlay& extraOverlay)
+void MainWindowGeometryModule::updateGeometryPointOverlay(const CameraConfig& camera, const GeometryOverlay& extraOverlay)
 {
   GeometryOverlay overlay = configuredGeometryPointsOverlay(camera, false);
-  GeometryOverlay activeOverlay = m_pointGeometryMouseControllers[camera.id].overlay();
+  GeometryOverlay activeOverlay = m_pointMouseControllers[camera.id].overlay();
   for (const GeometryOverlayPoint& point : activeOverlay.points)
   {
     overlay.points.append(point);
@@ -899,13 +954,13 @@ void MainWindow::updateGeometryPointOverlay(const CameraConfig& camera, const Ge
     overlay.bands.append(band);
   }
   appendCurrentPartPoseOverlay(camera, overlay);
-  m_largeImage->setGeometryOverlay(overlay);
+  largeImage()->setGeometryOverlay(overlay);
 }
 
-void MainWindow::appendCurrentPartPoseOverlay(const CameraConfig& camera, GeometryOverlay& overlay) const
+void MainWindowGeometryModule::appendCurrentPartPoseOverlay(const CameraConfig& camera, GeometryOverlay& overlay) const
 {
-  const auto runtimeIt = m_cameraRuntime.find(camera.id);
-  if (runtimeIt == m_cameraRuntime.end())
+  const auto runtimeIt = cameraRuntime().find(camera.id);
+  if (runtimeIt == cameraRuntime().end())
   {
     return;
   }
@@ -919,15 +974,15 @@ void MainWindow::appendCurrentPartPoseOverlay(const CameraConfig& camera, Geomet
   GeometryDiagnosticDrawing::appendCyanPointCross(overlay, pose.origin);
 }
 
-void MainWindow::testGeometryPoint(const CameraConfig& camera)
+void MainWindowGeometryModule::testGeometryPoint(const CameraConfig& camera)
 {
-  if (camera.id != m_selectedCameraId)
+  if (camera.id != selectedCameraId())
   {
     return;
   }
 
   GeometryPointRuntimeConfig& pointConfig = activeGeometryPointConfig(camera.id);
-  const PartPose& pose = m_cameraRuntime[camera.id].currentPose();
+  const PartPose& pose = cameraRuntime()[camera.id].currentPose();
   if (pose.valid && !pointConfig.hasGuide && pointConfig.hasImageGuide)
   {
     pointConfig.partStart = imageToPart(pose, pointConfig.imageStart);
@@ -945,10 +1000,10 @@ void MainWindow::testGeometryPoint(const CameraConfig& camera)
   const cv::Point2d imageStart = usePartGuide ? partToImage(pose, pointConfig.partStart) : pointConfig.imageStart;
   const cv::Point2d imageEnd = usePartGuide ? partToImage(pose, pointConfig.partEnd) : pointConfig.imageEnd;
   QString imageError;
-  const cv::Mat input = currentInputImage(camera, &imageError);
+  const cv::Mat input = context().imaging->currentInputImage(camera, &imageError);
   if (input.empty())
   {
-    appendLog(imageError);
+    log(imageError);
     return;
   }
 
@@ -958,7 +1013,7 @@ void MainWindow::testGeometryPoint(const CameraConfig& camera)
   config.scanStart = imageStart;
   config.scanEnd = imageEnd;
   config.edgeSensitivity = pointConfig.edgeSensitivity;
-  config.useSubpixel = isBwDimensionalCamera(camera) && pointConfig.useSubpixel;
+  config.useSubpixel = MainWindowCameraProfile::isBwDimensional(camera, MainWindowModuleBase::config()) && pointConfig.useSubpixel;
   config.transition = pointConfig.transition;
   config.pickMode = pointConfig.pickMode;
 
@@ -966,17 +1021,17 @@ void MainWindow::testGeometryPoint(const CameraConfig& camera)
   const EdgePointDetectorResult result = detector.detect(input, config);
   if (!result.processed || result.diagnosticImage.empty())
   {
-    appendLog(result.message.isEmpty() ? trText("log.geometryPointFailed") + ": " + camera.id : result.message);
+    log(result.message.isEmpty() ? tr("log.geometryPointFailed") + ": " + camera.id : result.message);
     return;
   }
 
-  m_selectedPreview = matToPixmap(result.diagnosticImage);
-  m_largeImage->setImage(m_selectedPreview);
-  m_largeImage->clearRoi();
+  selectedPreview() = context().imaging->matToPixmap(result.diagnosticImage);
+  largeImage()->setImage(selectedPreview());
+  largeImage()->clearRoi();
 
-  LineGeometryMouseController& controller = m_pointGeometryMouseControllers[camera.id];
+  LineGeometryMouseController& controller = m_pointMouseControllers[camera.id];
   controller.setLine(QPointF(imageStart.x, imageStart.y), QPointF(imageEnd.x, imageEnd.y), 3.0);
-  m_geometryDrawingTarget = GeometryDrawingTarget::Point;
+  m_drawingTarget = DrawingTarget::Point;
 
   GeometryOverlay detectedOverlay;
   if (result.found)
@@ -987,11 +1042,11 @@ void MainWindow::testGeometryPoint(const CameraConfig& camera)
 
   if (!result.found)
   {
-    appendLog(result.message.isEmpty() ? trText("log.geometryPointNotFound") + ": " + camera.id : result.message);
+    log(result.message.isEmpty() ? tr("log.geometryPointNotFound") + ": " + camera.id : result.message);
     return;
   }
 
-  GeometrySet& geometries = m_cameraRuntime[camera.id].geometries();
+  GeometrySet& geometries = cameraRuntime()[camera.id].geometries();
   for (int i = geometries.points.size() - 1; i >= 0; --i)
   {
     if (geometries.points[i].meta.id == pointConfig.id)
@@ -1001,8 +1056,8 @@ void MainWindow::testGeometryPoint(const CameraConfig& camera)
   }
   geometries.points.append(result.point);
 
-  appendLog(QString("%1: %2 x=%3 y=%4")
-              .arg(trText("log.geometryPointFound"))
+  log(QString("%1: %2 x=%3 y=%4")
+              .arg(tr("log.geometryPointFound"))
               .arg(camera.id)
               .arg(result.point.point.x, 0, 'f', 1)
               .arg(result.point.point.y, 0, 'f', 1));

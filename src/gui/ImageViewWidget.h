@@ -1,34 +1,15 @@
 #pragma once
 
+#include "gui/ImagePrimitives.h"
 #include "gui/geometry/GeometryOverlay.h"
 
 #include <QPixmap>
 #include <QPoint>
 #include <QPointF>
 #include <QRect>
-#include <QSizeF>
 #include <QWidget>
 #include <QVector>
 #include <functional>
-
-struct ImageCircle
-{
-  QPoint center;
-  int radius = 0;
-};
-
-struct ImageRotatedRect
-{
-  QPointF center;
-  QSizeF size;
-  double angleDegrees = 0.0;
-};
-
-struct ImageLine
-{
-  QPointF start;
-  QPointF end;
-};
 
 class ImageViewWidget : public QWidget
 {
@@ -60,6 +41,7 @@ public:
   void setOuterCircleDrawingEnabled(bool enabled);
   void setInnerCircleDrawingEnabled(bool enabled);
   void setThreePointCircleDrawingEnabled(bool enabled);
+  void setThreePointArcDrawingEnabled(bool enabled);
   void setRoiChangedHandler(std::function<void(const QRect&)> handler);
   void setExclusionRectAddedHandler(std::function<void(const QRect&)> handler);
   void setExclusionRectsChangedHandler(std::function<void(const QVector<QRect>&)> handler);
@@ -125,6 +107,7 @@ private:
     OuterCircle,
     InnerCircle,
     ThreePointCircle,
+    ThreePointArc,
     GeometryArea,
     GeometryPointPick,
     GeometryOverlayPointEdit,

@@ -15,6 +15,10 @@ add_executable(VisionSystemCPP
     src/config/AppConfig.cpp
     src/config/RecipeManager.h
     src/config/RecipeManager.cpp
+    src/config/RecipeManagerGeometry.cpp
+    src/config/RecipeManagerStorage.cpp
+    src/config/RecipeJsonUtils.h
+    src/config/RecipeJsonUtils.cpp
     src/config/TranslationManager.h
     src/config/TranslationManager.cpp
     src/camera/ICamera.h
@@ -24,23 +28,36 @@ add_executable(VisionSystemCPP
     src/gui/CameraTileWidget.cpp
     src/gui/CameraSetupPanelWidget.h
     src/gui/CameraSetupPanelWidget.cpp
+    src/gui/ImagePrimitives.h
     src/gui/ImageViewWidget.h
     src/gui/ImageViewWidget.cpp
+    src/gui/ImageViewWidgetInteraction.cpp
+    src/gui/ImageViewWidgetPainting.cpp
     src/gui/MainWindow.h
     src/gui/MainWindow.cpp
-    src/gui/MainWindowCameraConfig.cpp
-    src/gui/MainWindowGeometryPanels.cpp
-    src/gui/MainWindowGeometryRecipe.cpp
-    src/gui/MainWindowGeometryRuntime.cpp
-    src/gui/MainWindowImaging.cpp
-    src/gui/MainWindowRecipes.cpp
-    src/gui/MainWindowSetup.cpp
-    src/gui/MainWindowSurface.cpp
     src/gui/MainWindowUi.cpp
+    src/gui/modules/MainWindowCameraProfile.cpp
+    src/gui/modules/MainWindowImagingModule.cpp
+    src/gui/modules/MainWindowRecipeModule.cpp
+    src/gui/modules/MainWindowLocalizationModule.cpp
+    src/gui/modules/MainWindowGeometryModule.h
+    src/gui/modules/geometry/MainWindowGeometryModule_Recipe.cpp
+    src/gui/modules/geometry/GeometryToolPanels.cpp
+    src/gui/modules/geometry/GeometryRuntimeModule.cpp
+    src/gui/modules/geometry/MainWindowGeometryModule_ArcPanels.cpp
+    src/gui/modules/geometry/MainWindowGeometryModule_ArcRuntime.cpp
+    src/gui/modules/MainWindowSurfaceModule.h
+    src/gui/modules/surface/MainWindowSurfaceModule_Panels.cpp
+    src/gui/modules/surface/MainWindowSurfaceModule_Runtime.cpp
+    src/gui/modules/surface/MainWindowSurfaceModule_Model.cpp
+    src/gui/modules/MainWindowSetupModule.cpp
+    src/gui/modules/MainWindowCameraConfigModule.cpp
     src/gui/MetricsPanelWidget.h
     src/gui/MetricsPanelWidget.cpp
     src/gui/SurfaceLocalizationPanelWidget.h
     src/gui/SurfaceLocalizationPanelWidget.cpp
+    src/gui/SurfaceLocalizationAdapters.h
+    src/gui/SurfaceLocalizationAdapters.cpp
     src/gui/SurfaceLocalizationStrategies.h
     src/gui/SurfaceLocalizationStrategies.cpp
     src/gui/ToolCatalog.h
@@ -51,6 +68,8 @@ add_executable(VisionSystemCPP
     src/gui/geometry/GeometryOverlay.cpp
     src/gui/geometry/GeometryDiagnosticDrawing.h
     src/gui/geometry/GeometryDiagnosticDrawing.cpp
+    src/gui/geometry/GeometryMath.h
+    src/gui/geometry/GeometryMath.cpp
     src/gui/geometry/GeometryRuntimeConfig.h
     src/gui/geometry/BandGeometryEditor.h
     src/gui/geometry/BandGeometryEditor.cpp

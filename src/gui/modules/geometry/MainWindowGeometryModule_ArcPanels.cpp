@@ -1,0 +1,186 @@
+#include "gui/modules/MainWindowGeometryModule.h"
+#include "gui/modules/MainWindowCameraProfile.h"
+#include "gui/modules/MainWindowImagingModule.h"
+#include "gui/modules/MainWindowContext.h"
+#include "gui/modules/MainWindowSetupModule.h"
+
+#include <QCheckBox>
+#include <QComboBox>
+#include <QGridLayout>
+#include <QLabel>
+#include <QPushButton>
+#include <QSpinBox>
+
+void MainWindowGeometryModule::showGeometryArcPanel(const CameraConfig& camera)
+{
+  context().deactivateImageDrawingTools();
+  context().clearToolPanel();
+  *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Geometry;
+  m_drawingTarget = DrawingTarget::Arc;
+  if (context().setup) { context().setup->refreshPoseForCurrentFrame(camera); }
+  restoreCleanGeometryImage(camera);
+  largeImage()->clearCircles();
+  loadGeometryArcsRecipe(camera);
+
+  QVector<GeometryArcRuntimeConfig>& arcConfigs = m_arcConfigs[camera.id];
+  GeometryArcRuntimeConfig& arcConfig = activeGeometryArcConfig(camera.id);
+  const PartPose& pose = cameraRuntime()[camera.id].currentPose();
+
+  auto* panel = new QWidget(toolsContainer());
+  auto* layout = new QVBoxLayout(panel);
+  layout->setContentsMargins(0, 0, 0, 0);
+  layout->setSpacing(8);
+
+  auto* title = new QLabel(QString("%1 | %2").arg(tr("actions.arcGeometry"), camera.id), panel);
+  title->setObjectName("toolPanelTitle");
+  layout->addWidget(title);
+
+  auto* poseLabel = new QLabel(pose.valid ? tr("labels.partPose") : tr("log.partPoseMissing"), panel);
+  poseLabel->setObjectName("toolPanelNote");
+  poseLabel->setWordWrap(true);
+  layout->addWidget(poseLabel);
+
+  auto* arcSelector = new QComboBox(panel);
+  for (int i = 0; i < arcConfigs.size(); ++i)
+  {
+    arcSelector->addItem(arcConfigs[i].id, i);
+  }
+  arcSelector->setCurrentIndex(qBound(0, m_activeArcIndexes.value(camera.id, 0), arcConfigs.size() - 1));
+  auto* newArcButton = new QPushButton(tr("actions.newGeometryArc"), panel);
+  auto* deleteArcButton = new QPushButton(tr("actions.deleteGeometryArc"), panel);
+
+  auto* top = new QWidget(panel);
+  auto* topLayout = new QGridLayout(top);
+  topLayout->setContentsMargins(0, 0, 0, 0);
+  topLayout->setHorizontalSpacing(6);
+  topLayout->addWidget(new QLabel(tr("actions.arcGeometry"), top), 0, 0);
+  topLayout->addWidget(arcSelector, 0, 1);
+  topLayout->addWidget(newArcButton, 0, 2);
+  topLayout->addWidget(deleteArcButton, 0, 3);
+  topLayout->setColumnStretch(1, 1);
+  layout->addWidget(top);
+
+  auto* form = new QWidget(panel);
+  auto* formLayout = new QGridLayout(form);
+  formLayout->setContentsMargins(0, 0, 0, 0);
+  formLayout->setHorizontalSpacing(8);
+  formLayout->setVerticalSpacing(6);
+  auto* innerBand = new QSpinBox(form);
+  innerBand->setRange(1, 500);
+  innerBand->setSuffix(" px");
+  innerBand->setValue(arcConfig.innerBand);
+  auto* outerBand = new QSpinBox(form);
+  outerBand->setRange(1, 500);
+  outerBand->setSuffix(" px");
+  outerBand->setValue(arcConfig.outerBand);
+  auto* sensitivity = new QSpinBox(form);
+  sensitivity->setRange(1, 255);
+  sensitivity->setValue(arcConfig.edgeSensitivity);
+  auto* cleanup = new QSpinBox(form);
+  cleanup->setRange(0, 100);
+  cleanup->setSuffix(" px");
+  cleanup->setValue(arcConfig.edgeCleanupDerivative);
+  auto* statFilter = new QSpinBox(form);
+  statFilter->setRange(0, 100);
+  statFilter->setSuffix(" px");
+  statFilter->setValue(arcConfig.edgeStatisticalFilter);
+  auto* subpixel = new QCheckBox(tr("labels.subpixelEdge"), form);
+  subpixel->setChecked(arcConfig.useSubpixel);
+  auto* transition = new QComboBox(form);
+  transition->addItem(tr("labels.transitionLightToDark"), "light_to_dark");
+  transition->addItem(tr("labels.transitionDarkToLight"), "dark_to_light");
+  transition->setCurrentIndex(arcConfig.transition == EdgeLineTransition::DarkToLight ? 1 : 0);
+  auto* pickMode = new QComboBox(form);
+  pickMode->addItem(tr("labels.edgePickFirst"), "first");
+  pickMode->addItem(tr("labels.edgePickLast"), "last");
+  pickMode->addItem(tr("labels.edgePickBest"), "best");
+  pickMode->setCurrentIndex(static_cast<int>(arcConfig.pickMode));
+
+  int row = 0;
+  formLayout->addWidget(new QLabel(tr("labels.edgeBandInner"), form), row, 0);
+  formLayout->addWidget(innerBand, row, 1);
+  formLayout->addWidget(new QLabel(tr("labels.edgeBandOuter"), form), row, 2);
+  formLayout->addWidget(outerBand, row++, 3);
+  formLayout->addWidget(new QLabel(tr("labels.edgeSensitivity"), form), row, 0);
+  formLayout->addWidget(sensitivity, row, 1);
+  formLayout->addWidget(new QLabel(tr("labels.edgeCleanupDerivative"), form), row, 2);
+  formLayout->addWidget(cleanup, row++, 3);
+  formLayout->addWidget(new QLabel(tr("labels.edgeStatisticalFilter"), form), row, 0);
+  formLayout->addWidget(statFilter, row++, 1);
+  if (MainWindowCameraProfile::isBwDimensional(camera, config()))
+  {
+    formLayout->addWidget(subpixel, row++, 0, 1, 4);
+  }
+  formLayout->addWidget(new QLabel(tr("labels.edgeTransition"), form), row, 0);
+  formLayout->addWidget(transition, row, 1);
+  formLayout->addWidget(new QLabel(tr("labels.edgePickMode"), form), row, 2);
+  formLayout->addWidget(pickMode, row++, 3);
+  layout->addWidget(form);
+
+  QObject::connect(arcSelector, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
+    if (index < 0)
+    {
+      return;
+    }
+
+    m_activeArcIndexes[camera.id] = index;
+    showGeometryArcPanel(camera);
+  });
+  QObject::connect(newArcButton, &QPushButton::clicked, window(), [this, camera]() {
+    addGeometryArc(camera);
+    saveGeometryArcsRecipe(camera);
+    showGeometryArcPanel(camera);
+    activateGeometryArcDrawing(camera);
+  });
+  QObject::connect(deleteArcButton, &QPushButton::clicked, window(), [this, camera]() { removeActiveGeometryArc(camera); });
+  QObject::connect(innerBand, qOverload<int>(&QSpinBox::valueChanged), window(), [this, camera](int value) {
+    activeGeometryArcConfig(camera.id).innerBand = value;
+    saveGeometryArcsRecipe(camera);
+    showConfiguredGeometryArcs(camera);
+  });
+  QObject::connect(outerBand, qOverload<int>(&QSpinBox::valueChanged), window(), [this, camera](int value) {
+    activeGeometryArcConfig(camera.id).outerBand = value;
+    saveGeometryArcsRecipe(camera);
+    showConfiguredGeometryArcs(camera);
+  });
+  QObject::connect(sensitivity, qOverload<int>(&QSpinBox::valueChanged), window(), [this, camera](int value) {
+    activeGeometryArcConfig(camera.id).edgeSensitivity = value;
+    saveGeometryArcsRecipe(camera);
+    testGeometryArc(camera);
+  });
+  QObject::connect(cleanup, qOverload<int>(&QSpinBox::valueChanged), window(), [this, camera](int value) {
+    activeGeometryArcConfig(camera.id).edgeCleanupDerivative = value;
+    saveGeometryArcsRecipe(camera);
+    testGeometryArc(camera);
+  });
+  QObject::connect(statFilter, qOverload<int>(&QSpinBox::valueChanged), window(), [this, camera](int value) {
+    activeGeometryArcConfig(camera.id).edgeStatisticalFilter = value;
+    saveGeometryArcsRecipe(camera);
+    testGeometryArc(camera);
+  });
+  QObject::connect(subpixel, &QCheckBox::toggled, window(), [this, camera](bool checked) {
+    activeGeometryArcConfig(camera.id).useSubpixel = checked;
+    saveGeometryArcsRecipe(camera);
+    testGeometryArc(camera);
+  });
+  QObject::connect(transition, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
+    activeGeometryArcConfig(camera.id).transition = index == 1 ? EdgeLineTransition::DarkToLight : EdgeLineTransition::LightToDark;
+    saveGeometryArcsRecipe(camera);
+    testGeometryArc(camera);
+  });
+  QObject::connect(pickMode, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
+    activeGeometryArcConfig(camera.id).pickMode = index == 1 ? EdgeLinePickMode::Last : (index == 2 ? EdgeLinePickMode::Best : EdgeLinePickMode::First);
+    saveGeometryArcsRecipe(camera);
+    testGeometryArc(camera);
+  });
+
+  auto* testButton = new QPushButton(tr("actions.testGeometry"), panel);
+  auto* backButton = new QPushButton(tr("commands.backToCameraTools"), panel);
+  QObject::connect(testButton, &QPushButton::clicked, window(), [this, camera]() { testGeometryArc(camera); });
+  QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() { showGeometryPanel(camera); });
+  layout->addWidget(testButton);
+  layout->addWidget(backButton);
+  layout->addStretch(1);
+  toolsLayout()->addWidget(panel);
+  showConfiguredGeometryArcs(camera);
+}

@@ -60,3 +60,28 @@ struct GeometryCircleRuntimeConfig
   bool hasImageCircle = false;
   bool hasCircle = false;
 };
+
+struct GeometryArcRuntimeConfig
+{
+  QString id = "arc_1";
+  bool enabled = true;
+  cv::Point2d imageCenter;
+  cv::Point2d imageStart;
+  cv::Point2d imageEnd;
+  cv::Point2d partCenter;
+  cv::Point2d partStart;
+  cv::Point2d partEnd;
+  double radius = 0.0;
+  double startAngleRadians = 0.0;
+  double endAngleRadians = 0.0;
+  int innerBand = 20;
+  int outerBand = 20;
+  int edgeSensitivity = 60;
+  int edgeCleanupDerivative = 12;
+  int edgeStatisticalFilter = 0;
+  bool useSubpixel = true;
+  EdgeLineTransition transition = EdgeLineTransition::LightToDark;
+  EdgeLinePickMode pickMode = EdgeLinePickMode::First;
+  bool hasImageArc = false;
+  bool hasArc = false;
+};
