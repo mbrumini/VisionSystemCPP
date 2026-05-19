@@ -74,6 +74,7 @@
 - [x] Aggiungere funzioni di conversione coordinate immagine <-> coordinate pezzo per riusare l'origine dinamica nei tool successivi.
 - [ ] Collegare misure future, controlli superficie e AI alla posa corrente invece che alle sole coordinate pixel assolute.
 - [ ] Gestire il caso posa non valida: blocco tool dipendenti, risultato NOK o stato di allarme configurabile.
+- [ ] Aggiungere sub localizzazione relativa: dopo una localizzazione primaria su shape simmetrico, permettere una seconda ricerca dentro la posa trovata per agganciare dettagli asimmetrici, per esempio un foro non simmetrico, e risolvere ambiguita' di orientamento/posizione.
 
 ## Geometrie e misure
 
