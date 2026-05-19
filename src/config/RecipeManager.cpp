@@ -80,6 +80,81 @@ QStringList imageNameFilters()
   return {"*.bmp", "*.jpg", "*.jpeg", "*.png", "*.tif", "*.tiff"};
 }
 
+QString normalizedSurfaceLocalizationMethod(const QString& method)
+{
+  if (method == "edge" || method == "edgePca" || method == "model" || method == "aiYolo")
+  {
+    return method;
+  }
+
+  return "threshold";
+}
+
+void pruneSurfaceLocalizationForMethod(QJsonObject& surfaceLocalization, const QString& method)
+{
+  const QString normalizedMethod = normalizedSurfaceLocalizationMethod(method);
+  surfaceLocalization["method"] = normalizedMethod;
+
+  if (normalizedMethod != "threshold")
+  {
+    surfaceLocalization.remove("annulus");
+    surfaceLocalization.remove("threshold");
+  }
+
+  if (normalizedMethod != "edge" && normalizedMethod != "edgePca")
+  {
+    surfaceLocalization.remove("edge");
+  }
+
+  if (normalizedMethod != "model")
+  {
+    surfaceLocalization.remove("model");
+  }
+
+  if (normalizedMethod != "aiYolo")
+  {
+    surfaceLocalization.remove("aiYolo");
+  }
+
+  surfaceLocalization.remove("strategy");
+}
+
+void setGeometryArray(QJsonObject& geometries, const QString& key, const QJsonArray& values)
+{
+  if (values.isEmpty())
+  {
+    geometries.remove(key);
+    return;
+  }
+
+  geometries[key] = values;
+}
+
+void writeGeometriesTool(QJsonObject& tools, QJsonObject geometries)
+{
+  if (geometries.value("lines").toArray().isEmpty())
+  {
+    geometries.remove("lines");
+  }
+  if (geometries.value("points").toArray().isEmpty())
+  {
+    geometries.remove("points");
+  }
+  if (geometries.value("circles").toArray().isEmpty())
+  {
+    geometries.remove("circles");
+  }
+
+  if (!geometries.contains("lines") && !geometries.contains("points") && !geometries.contains("circles"))
+  {
+    tools.remove("geometries");
+    return;
+  }
+
+  geometries["enabled"] = true;
+  tools["geometries"] = geometries;
+}
+
 QString firstImageInDirectory(const QString& path)
 {
   QDir directory(path);
@@ -704,22 +779,26 @@ bool RecipeManager::saveSurfaceDefectRoi(const QString& cameraId, const QRect& r
   QJsonObject tools = root.value("tools").toObject();
   QJsonObject surfaceDefects = tools.value("surfaceLocalization").toObject();
   surfaceDefects["enabled"] = true;
-  surfaceDefects["method"] = surfaceDefects.value("method").toString("threshold");
+  const QString method = normalizedSurfaceLocalizationMethod(surfaceDefects.value("method").toString("threshold"));
+  pruneSurfaceLocalizationForMethod(surfaceDefects, method);
   surfaceDefects["searchRoi"] = rectToJson(roi.normalized());
 
-  QJsonObject threshold = surfaceDefects.value("threshold").toObject();
-
-  if (!threshold.contains("min"))
+  if (method == "threshold")
   {
-    threshold["min"] = SurfaceDefectSettings().thresholdMin;
-  }
+    QJsonObject threshold = surfaceDefects.value("threshold").toObject();
 
-  if (!threshold.contains("max"))
-  {
-    threshold["max"] = SurfaceDefectSettings().thresholdMax;
-  }
+    if (!threshold.contains("min"))
+    {
+      threshold["min"] = SurfaceDefectSettings().thresholdMin;
+    }
 
-  surfaceDefects["threshold"] = threshold;
+    if (!threshold.contains("max"))
+    {
+      threshold["max"] = SurfaceDefectSettings().thresholdMax;
+    }
+
+    surfaceDefects["threshold"] = threshold;
+  }
   tools["surfaceLocalization"] = surfaceDefects;
   root["tools"] = tools;
 
@@ -737,7 +816,7 @@ bool RecipeManager::addSurfaceDefectExclusionRect(const QString& cameraId, const
   QJsonObject tools = root.value("tools").toObject();
   QJsonObject surfaceDefects = tools.value("surfaceLocalization").toObject();
   surfaceDefects["enabled"] = true;
-  surfaceDefects["method"] = surfaceDefects.value("method").toString("threshold");
+  pruneSurfaceLocalizationForMethod(surfaceDefects, surfaceDefects.value("method").toString("threshold"));
 
   QJsonArray exclusions = surfaceDefects.value("exclusionRects").toArray();
   exclusions.append(rectToJson(rect.normalized()));
@@ -759,7 +838,7 @@ bool RecipeManager::saveSurfaceDefectExclusionRects(const QString& cameraId, con
   QJsonObject tools = root.value("tools").toObject();
   QJsonObject surfaceDefects = tools.value("surfaceLocalization").toObject();
   surfaceDefects["enabled"] = true;
-  surfaceDefects["method"] = surfaceDefects.value("method").toString("threshold");
+  pruneSurfaceLocalizationForMethod(surfaceDefects, surfaceDefects.value("method").toString("threshold"));
 
   QJsonArray exclusions;
   for (const QRect& rect : rects)
@@ -952,7 +1031,7 @@ bool RecipeManager::saveSurfaceAnnulusCircle(const QString& cameraId, bool outer
   QJsonObject tools = root.value("tools").toObject();
   QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
   surfaceLocalization["enabled"] = true;
-  surfaceLocalization["method"] = surfaceLocalization.value("method").toString("threshold");
+  pruneSurfaceLocalizationForMethod(surfaceLocalization, "threshold");
 
   QJsonObject annulus = surfaceLocalization.value("annulus").toObject();
   annulus[outerCircle ? "outerCircle" : "innerCircle"] = circleToJson(center, radius);
@@ -993,7 +1072,7 @@ bool RecipeManager::saveSurfaceAnnulusThreshold(const QString& cameraId, int min
   QJsonObject tools = root.value("tools").toObject();
   QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
   surfaceLocalization["enabled"] = true;
-  surfaceLocalization["method"] = "threshold";
+  pruneSurfaceLocalizationForMethod(surfaceLocalization, "threshold");
 
   QJsonObject threshold;
   threshold["min"] = qBound(0, minValue, 255);
@@ -1017,7 +1096,7 @@ bool RecipeManager::saveSurfaceLocalizationMethod(const QString& cameraId, const
   QJsonObject tools = root.value("tools").toObject();
   QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
   surfaceLocalization["enabled"] = true;
-  surfaceLocalization["method"] = method == "edge" || method == "edgePca" ? method : "threshold";
+  pruneSurfaceLocalizationForMethod(surfaceLocalization, method);
   tools["surfaceLocalization"] = surfaceLocalization;
   root["tools"] = tools;
 
@@ -1035,7 +1114,7 @@ bool RecipeManager::saveSurfaceEdgeCircle(const QString& cameraId, const QPoint&
   QJsonObject tools = root.value("tools").toObject();
   QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
   surfaceLocalization["enabled"] = true;
-  surfaceLocalization["method"] = surfaceLocalization.value("method").toString("threshold");
+  pruneSurfaceLocalizationForMethod(surfaceLocalization, "edge");
 
   QJsonObject edge = surfaceLocalization.value("edge").toObject();
   edge["circle"] = circleToJson(center, qMax(1, radius));
@@ -1072,7 +1151,7 @@ bool RecipeManager::saveSurfaceEdgeSensitivity(const QString& cameraId, int sens
   QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
   surfaceLocalization["enabled"] = true;
   const QString currentMethod = surfaceLocalization.value("method").toString("edge");
-  surfaceLocalization["method"] = currentMethod == "edgePca" ? currentMethod : "edge";
+  pruneSurfaceLocalizationForMethod(surfaceLocalization, currentMethod == "edgePca" ? currentMethod : "edge");
 
   QJsonObject edge = surfaceLocalization.value("edge").toObject();
   edge["sensitivity"] = qBound(0, sensitivity, 255);
@@ -1095,7 +1174,7 @@ bool RecipeManager::saveSurfaceEdgeBand(const QString& cameraId, int innerWidth,
   QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
   surfaceLocalization["enabled"] = true;
   const QString currentMethod = surfaceLocalization.value("method").toString("edge");
-  surfaceLocalization["method"] = currentMethod == "edgePca" ? currentMethod : "edge";
+  pruneSurfaceLocalizationForMethod(surfaceLocalization, currentMethod == "edgePca" ? currentMethod : "edge");
 
   QJsonObject edge = surfaceLocalization.value("edge").toObject();
   QJsonObject band;
@@ -1121,7 +1200,7 @@ bool RecipeManager::saveSurfaceEdgeFitMaxError(const QString& cameraId, int maxE
   QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
   surfaceLocalization["enabled"] = true;
   const QString currentMethod = surfaceLocalization.value("method").toString("edge");
-  surfaceLocalization["method"] = currentMethod == "edgePca" ? currentMethod : "edge";
+  pruneSurfaceLocalizationForMethod(surfaceLocalization, currentMethod == "edgePca" ? currentMethod : "edge");
 
   QJsonObject edge = surfaceLocalization.value("edge").toObject();
   edge["fitMaxError"] = qBound(1, maxError, 50);
@@ -1183,7 +1262,7 @@ bool RecipeManager::saveSurfaceModel(const QString& cameraId, const QRect& searc
   QJsonObject tools = root.value("tools").toObject();
   QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
   surfaceLocalization["enabled"] = true;
-  surfaceLocalization["method"] = "model";
+  pruneSurfaceLocalizationForMethod(surfaceLocalization, "model");
 
   QJsonObject model = surfaceLocalization.value("model").toObject();
   model["searchRoi"] = rectToJson(searchRoi.normalized());
@@ -1230,11 +1309,11 @@ bool RecipeManager::saveSurfaceModelEdgeSensitivity(const QString& cameraId, int
   root["cameraId"] = cameraId;
   QJsonObject tools = root.value("tools").toObject();
   QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
+  pruneSurfaceLocalizationForMethod(surfaceLocalization, "model");
   QJsonObject model = surfaceLocalization.value("model").toObject();
   model["edgeSensitivity"] = qBound(1, sensitivity, 255);
   surfaceLocalization["model"] = model;
   surfaceLocalization["enabled"] = true;
-  surfaceLocalization["method"] = "model";
   tools["surfaceLocalization"] = surfaceLocalization;
   root["tools"] = tools;
   return saveJsonObject(path, root, errorMessage);
@@ -1249,11 +1328,11 @@ bool RecipeManager::saveSurfaceModelMaxShapeDistance(const QString& cameraId, do
   root["cameraId"] = cameraId;
   QJsonObject tools = root.value("tools").toObject();
   QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
+  pruneSurfaceLocalizationForMethod(surfaceLocalization, "model");
   QJsonObject model = surfaceLocalization.value("model").toObject();
   model["maxShapeDistance"] = qBound(0.001, distance, 5.0);
   surfaceLocalization["model"] = model;
   surfaceLocalization["enabled"] = true;
-  surfaceLocalization["method"] = "model";
   tools["surfaceLocalization"] = surfaceLocalization;
   root["tools"] = tools;
   return saveJsonObject(path, root, errorMessage);
@@ -1268,11 +1347,11 @@ bool RecipeManager::saveSurfaceModelMinTemplateScore(const QString& cameraId, do
   root["cameraId"] = cameraId;
   QJsonObject tools = root.value("tools").toObject();
   QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
+  pruneSurfaceLocalizationForMethod(surfaceLocalization, "model");
   QJsonObject model = surfaceLocalization.value("model").toObject();
   model["minTemplateScore"] = qBound(0.0, score, 1.0);
   surfaceLocalization["model"] = model;
   surfaceLocalization["enabled"] = true;
-  surfaceLocalization["method"] = "model";
   tools["surfaceLocalization"] = surfaceLocalization;
   root["tools"] = tools;
   return saveJsonObject(path, root, errorMessage);
@@ -1287,6 +1366,7 @@ bool RecipeManager::saveSurfaceModelAngleRange(const QString& cameraId, double s
   root["cameraId"] = cameraId;
   QJsonObject tools = root.value("tools").toObject();
   QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
+  pruneSurfaceLocalizationForMethod(surfaceLocalization, "model");
   QJsonObject model = surfaceLocalization.value("model").toObject();
   QJsonObject angleRange;
   angleRange["start"] = qBound(-180.0, startDegrees, 180.0);
@@ -1295,7 +1375,6 @@ bool RecipeManager::saveSurfaceModelAngleRange(const QString& cameraId, double s
   model["angleRange"] = angleRange;
   surfaceLocalization["model"] = model;
   surfaceLocalization["enabled"] = true;
-  surfaceLocalization["method"] = "model";
   tools["surfaceLocalization"] = surfaceLocalization;
   root["tools"] = tools;
   return saveJsonObject(path, root, errorMessage);
@@ -1373,7 +1452,6 @@ bool RecipeManager::saveGeometryLines(const QString& cameraId, const QVector<Geo
 
   QJsonObject tools = root.value("tools").toObject();
   QJsonObject geometries = tools.value("geometries").toObject();
-  geometries["enabled"] = true;
   QJsonArray lines;
   for (const GeometryLineRecipeConfig& config : configs)
   {
@@ -1395,8 +1473,8 @@ bool RecipeManager::saveGeometryLines(const QString& cameraId, const QVector<Geo
     lines.append(line);
   }
 
-  geometries["lines"] = lines;
-  tools["geometries"] = geometries;
+  setGeometryArray(geometries, "lines", lines);
+  writeGeometriesTool(tools, geometries);
   root["tools"] = tools;
   return saveJsonObject(path, root, errorMessage);
 }
@@ -1486,7 +1564,6 @@ bool RecipeManager::saveGeometryPoints(const QString& cameraId, const QVector<Ge
 
   QJsonObject tools = root.value("tools").toObject();
   QJsonObject geometries = tools.value("geometries").toObject();
-  geometries["enabled"] = true;
 
   QJsonArray points;
   for (const GeometryPointRecipeConfig& config : configs)
@@ -1505,8 +1582,8 @@ bool RecipeManager::saveGeometryPoints(const QString& cameraId, const QVector<Ge
     points.append(point);
   }
 
-  geometries["points"] = points;
-  tools["geometries"] = geometries;
+  setGeometryArray(geometries, "points", points);
+  writeGeometriesTool(tools, geometries);
   root["tools"] = tools;
   return saveJsonObject(path, root, errorMessage);
 }
@@ -1584,7 +1661,6 @@ bool RecipeManager::saveGeometryCircles(const QString& cameraId, const QVector<G
 
   QJsonObject tools = root.value("tools").toObject();
   QJsonObject geometries = tools.value("geometries").toObject();
-  geometries["enabled"] = true;
 
   QJsonArray circles;
   for (const GeometryCircleRecipeConfig& config : configs)
@@ -1607,8 +1683,8 @@ bool RecipeManager::saveGeometryCircles(const QString& cameraId, const QVector<G
     circles.append(circle);
   }
 
-  geometries["circles"] = circles;
-  tools["geometries"] = geometries;
+  setGeometryArray(geometries, "circles", circles);
+  writeGeometriesTool(tools, geometries);
   root["tools"] = tools;
   return saveJsonObject(path, root, errorMessage);
 }
