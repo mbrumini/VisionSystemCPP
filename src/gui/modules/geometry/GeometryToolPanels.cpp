@@ -5,6 +5,7 @@
 #include "gui/modules/MainWindowImagingModule.h"
 #include "gui/modules/MainWindowContext.h"
 #include "gui/modules/MainWindowSetupModule.h"
+#include "gui/modules/geometry/GeometryPanelNavigation.h"
 
 #include "gui/geometry/GeometryDiagnosticDrawing.h"
 #include "processing/geometry/EdgePointDetector.h"
@@ -56,8 +57,15 @@ void MainWindowGeometryModule::showGeometryPanel(const CameraConfig& camera)
   QObject::connect(arcButton, &QPushButton::clicked, window(), [this, camera]() { showGeometryArcPanel(camera); });
   layout->addWidget(arcButton);
 
-  auto* backButton = new QPushButton(tr("commands.backToCameraTools"), panel);
-  QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() { context().showCameraToolList(camera); });
+  auto* backButton = new QPushButton(
+    GeometryPanelNavigation::backLabel(context(), camera, tr("commands.backToCameraTools")),
+    panel);
+  QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() {
+    if (!GeometryPanelNavigation::returnToSetup(context(), camera))
+    {
+      context().showCameraToolList(camera);
+    }
+  });
   layout->addWidget(backButton);
   layout->addStretch(1);
 
@@ -204,10 +212,17 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
   });
 
   auto* testButton = new QPushButton(tr("actions.testGeometry"), panel);
-  auto* backButton = new QPushButton(tr("commands.backToCameraTools"), panel);
+  auto* backButton = new QPushButton(
+    GeometryPanelNavigation::backLabel(context(), camera, tr("commands.backToCameraTools")),
+    panel);
 
   QObject::connect(testButton, &QPushButton::clicked, window(), [this, camera]() { testGeometryPoint(camera); });
-  QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() { showGeometryPanel(camera); });
+  QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() {
+    if (!GeometryPanelNavigation::returnToSetup(context(), camera))
+    {
+      showGeometryPanel(camera);
+    }
+  });
 
   auto* buttons = new QWidget(panel);
   auto* buttonsLayout = new QGridLayout(buttons);
@@ -447,10 +462,17 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
   });
 
   auto* testButton = new QPushButton(tr("actions.testGeometry"), panel);
-  auto* backButton = new QPushButton(tr("commands.backToCameraTools"), panel);
+  auto* backButton = new QPushButton(
+    GeometryPanelNavigation::backLabel(context(), camera, tr("commands.backToCameraTools")),
+    panel);
 
   QObject::connect(testButton, &QPushButton::clicked, window(), [this, camera]() { testGeometryLine(camera); });
-  QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() { showGeometryPanel(camera); });
+  QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() {
+    if (!GeometryPanelNavigation::returnToSetup(context(), camera))
+    {
+      showGeometryPanel(camera);
+    }
+  });
 
   auto* buttons = new QWidget(panel);
   auto* buttonsLayout = new QGridLayout(buttons);
@@ -574,6 +596,10 @@ void MainWindowGeometryModule::showGeometryCirclePanel(const CameraConfig& camer
   statFilter->setValue(circleConfig.edgeStatisticalFilter);
   auto* subpixel = new QCheckBox(tr("labels.subpixelEdge"), form);
   subpixel->setChecked(circleConfig.useSubpixel);
+  auto* scanDirection = new QComboBox(form);
+  scanDirection->addItem(tr("labels.scanNormalPositive"), "normal_positive");
+  scanDirection->addItem(tr("labels.scanNormalNegative"), "normal_negative");
+  scanDirection->setCurrentIndex(circleConfig.scanDirection == EdgeLineScanDirection::NormalNegative ? 1 : 0);
   auto* transition = new QComboBox(form);
   transition->addItem(tr("labels.transitionLightToDark"), "light_to_dark");
   transition->addItem(tr("labels.transitionDarkToLight"), "dark_to_light");
@@ -599,10 +625,12 @@ void MainWindowGeometryModule::showGeometryCirclePanel(const CameraConfig& camer
   {
     formLayout->addWidget(subpixel, row++, 0, 1, 4);
   }
-  formLayout->addWidget(new QLabel(tr("labels.edgeTransition"), form), row, 0);
-  formLayout->addWidget(transition, row, 1);
-  formLayout->addWidget(new QLabel(tr("labels.edgePickMode"), form), row, 2);
-  formLayout->addWidget(pickMode, row++, 3);
+  formLayout->addWidget(new QLabel(tr("labels.scanDirection"), form), row, 0);
+  formLayout->addWidget(scanDirection, row, 1);
+  formLayout->addWidget(new QLabel(tr("labels.edgeTransition"), form), row, 2);
+  formLayout->addWidget(transition, row++, 3);
+  formLayout->addWidget(new QLabel(tr("labels.edgePickMode"), form), row, 0);
+  formLayout->addWidget(pickMode, row++, 1, 1, 3);
   layout->addWidget(form);
 
   QObject::connect(circleSelector, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
@@ -625,11 +653,13 @@ void MainWindowGeometryModule::showGeometryCirclePanel(const CameraConfig& camer
     activeGeometryCircleConfig(camera.id).innerBand = value;
     saveGeometryCirclesRecipe(camera);
     showConfiguredGeometryCircles(camera);
+    testGeometryCircle(camera);
   });
   QObject::connect(outerBand, qOverload<int>(&QSpinBox::valueChanged), window(), [this, camera](int value) {
     activeGeometryCircleConfig(camera.id).outerBand = value;
     saveGeometryCirclesRecipe(camera);
     showConfiguredGeometryCircles(camera);
+    testGeometryCircle(camera);
   });
   QObject::connect(sensitivity, qOverload<int>(&QSpinBox::valueChanged), window(), [this, camera](int value) {
     activeGeometryCircleConfig(camera.id).edgeSensitivity = value;
@@ -651,6 +681,12 @@ void MainWindowGeometryModule::showGeometryCirclePanel(const CameraConfig& camer
     saveGeometryCirclesRecipe(camera);
     testGeometryCircle(camera);
   });
+  QObject::connect(scanDirection, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
+    activeGeometryCircleConfig(camera.id).scanDirection =
+      index == 1 ? EdgeLineScanDirection::NormalNegative : EdgeLineScanDirection::NormalPositive;
+    saveGeometryCirclesRecipe(camera);
+    testGeometryCircle(camera);
+  });
   QObject::connect(transition, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
     activeGeometryCircleConfig(camera.id).transition = index == 1 ? EdgeLineTransition::DarkToLight : EdgeLineTransition::LightToDark;
     saveGeometryCirclesRecipe(camera);
@@ -663,9 +699,16 @@ void MainWindowGeometryModule::showGeometryCirclePanel(const CameraConfig& camer
   });
 
   auto* testButton = new QPushButton(tr("actions.testGeometry"), panel);
-  auto* backButton = new QPushButton(tr("commands.backToCameraTools"), panel);
+  auto* backButton = new QPushButton(
+    GeometryPanelNavigation::backLabel(context(), camera, tr("commands.backToCameraTools")),
+    panel);
   QObject::connect(testButton, &QPushButton::clicked, window(), [this, camera]() { testGeometryCircle(camera); });
-  QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() { showGeometryPanel(camera); });
+  QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() {
+    if (!GeometryPanelNavigation::returnToSetup(context(), camera))
+    {
+      showGeometryPanel(camera);
+    }
+  });
   layout->addWidget(testButton);
   layout->addWidget(backButton);
   layout->addStretch(1);

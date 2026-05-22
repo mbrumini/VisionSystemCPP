@@ -21,6 +21,7 @@ public:
   void stepCameraSimulation(const CameraConfig& camera);
   void advanceCameraFrame(const CameraConfig& camera);
   void processCurrentCameraFrame(const CameraConfig& camera);
+  void refreshSetupGeometryResults(const CameraConfig& camera);
   void refreshPoseForCurrentFrame(const CameraConfig& camera);
   void updateCameraSetupDetails(const CameraConfig& camera);
   QString cameraSetupDetailsText(const CameraConfig& camera) const;

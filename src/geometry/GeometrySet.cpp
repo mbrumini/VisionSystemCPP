@@ -6,6 +6,7 @@ void GeometrySet::clear()
   lines.clear();
   circles.clear();
   arcs.clear();
+  constructedPoints.clear();
   edges.clear();
   contours.clear();
 }
@@ -16,6 +17,7 @@ bool GeometrySet::empty() const
     lines.empty() &&
     circles.empty() &&
     arcs.empty() &&
+    constructedPoints.empty() &&
     edges.empty() &&
     contours.empty();
 }

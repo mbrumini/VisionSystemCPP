@@ -266,6 +266,7 @@ QVector<GeometryCircleRecipeConfig> RecipeManager::loadGeometryCircles(const QSt
     config.edgeCleanupDerivative = circle.value("edgeCleanupDerivative").toInt(config.edgeCleanupDerivative);
     config.edgeStatisticalFilter = circle.value("edgeStatisticalFilter").toInt(config.edgeStatisticalFilter);
     config.useSubpixel = circle.value("useSubpixel").toBool(config.useSubpixel);
+    config.scanDirection = circle.value("scanDirection").toString(config.scanDirection);
     config.transition = circle.value("transition").toString(config.transition);
     config.pickMode = circle.value("pickMode").toString(config.pickMode);
     configs.append(config);
@@ -301,6 +302,7 @@ bool RecipeManager::saveGeometryCircles(const QString& cameraId, const QVector<G
     circle["edgeCleanupDerivative"] = qBound(0, config.edgeCleanupDerivative, 100);
     circle["edgeStatisticalFilter"] = qBound(0, config.edgeStatisticalFilter, 100);
     circle["useSubpixel"] = config.useSubpixel;
+    circle["scanDirection"] = config.scanDirection == "normal_negative" ? "normal_negative" : "normal_positive";
     circle["transition"] = config.transition == "dark_to_light" ? "dark_to_light" : "light_to_dark";
     circle["pickMode"] = config.pickMode == "last" || config.pickMode == "best" ? config.pickMode : "first";
     circles.append(circle);
@@ -349,6 +351,7 @@ QVector<GeometryArcRecipeConfig> RecipeManager::loadGeometryArcs(const QString& 
     config.edgeCleanupDerivative = arc.value("edgeCleanupDerivative").toInt(config.edgeCleanupDerivative);
     config.edgeStatisticalFilter = arc.value("edgeStatisticalFilter").toInt(config.edgeStatisticalFilter);
     config.useSubpixel = arc.value("useSubpixel").toBool(config.useSubpixel);
+    config.scanDirection = arc.value("scanDirection").toString(config.scanDirection);
     config.transition = arc.value("transition").toString(config.transition);
     config.pickMode = arc.value("pickMode").toString(config.pickMode);
     configs.append(config);
@@ -388,6 +391,7 @@ bool RecipeManager::saveGeometryArcs(const QString& cameraId, const QVector<Geom
     arc["edgeCleanupDerivative"] = qBound(0, config.edgeCleanupDerivative, 100);
     arc["edgeStatisticalFilter"] = qBound(0, config.edgeStatisticalFilter, 100);
     arc["useSubpixel"] = config.useSubpixel;
+    arc["scanDirection"] = config.scanDirection == "normal_negative" ? "normal_negative" : "normal_positive";
     arc["transition"] = config.transition == "dark_to_light" ? "dark_to_light" : "light_to_dark";
     arc["pickMode"] = config.pickMode == "last" || config.pickMode == "best" ? config.pickMode : "first";
     arcs.append(arc);

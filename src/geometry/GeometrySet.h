@@ -2,6 +2,7 @@
 
 #include "geometry/ArcGeometry.h"
 #include "geometry/CircleGeometry.h"
+#include "geometry/ConstructedGeometry.h"
 #include "geometry/ContourGeometry.h"
 #include "geometry/EdgeGeometry.h"
 #include "geometry/LineGeometry.h"
@@ -15,6 +16,7 @@ struct GeometrySet
   QVector<LineGeometry> lines;
   QVector<CircleGeometry> circles;
   QVector<ArcGeometry> arcs;
+  QVector<ConstructedPointGeometry> constructedPoints;
   QVector<EdgeGeometry> edges;
   QVector<ContourGeometry> contours;
 

@@ -112,6 +112,7 @@ struct GeometryCircleRecipeConfig
   int edgeCleanupDerivative = 12;
   int edgeStatisticalFilter = 0;
   bool useSubpixel = false;
+  QString scanDirection = "normal_positive";
   QString transition = "light_to_dark";
   QString pickMode = "first";
 };
@@ -132,6 +133,7 @@ struct GeometryArcRecipeConfig
   int edgeCleanupDerivative = 12;
   int edgeStatisticalFilter = 0;
   bool useSubpixel = false;
+  QString scanDirection = "normal_positive";
   QString transition = "light_to_dark";
   QString pickMode = "first";
 };

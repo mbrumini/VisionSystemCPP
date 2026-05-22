@@ -585,10 +585,6 @@ void MainWindow::buildUi()
   m_systemStatus->setObjectName("panelStatus");
   panelLayout->addWidget(m_systemStatus);
 
-  m_metricsPanel = new MetricsPanelWidget(panel);
-  m_metricsPanel->setFixedHeight(120);
-  panelLayout->addWidget(m_metricsPanel);
-
   auto* cameraBox = new QGroupBox(trText("groups.selectedCamera"), panel);
   auto* cameraLayout = new QVBoxLayout(cameraBox);
   m_cameraDetails = new QLabel(trText("labels.selectThumbnail"), cameraBox);
@@ -669,6 +665,12 @@ void MainWindow::buildMenu()
   systemMenu->addAction(trText("commands.reloadConfig"), this, [this]() { loadConfiguration(); });
   systemMenu->addAction(trText("commands.toggleFullScreen"), this, [this]() { toggleFullScreen(); });
   systemMenu->addAction(trText("commands.setMaxThreads"), this, [this]() { setThreadLimitPrompt(); });
+  QAction* detailedLogAction = systemMenu->addAction(trText("commands.enableDetailedLog"));
+  detailedLogAction->setCheckable(true);
+  detailedLogAction->setChecked(m_detailedLogger.enabled());
+  connect(detailedLogAction, &QAction::toggled, this, [this](bool checked) {
+    setDetailedLogEnabled(checked);
+  });
   systemMenu->addSeparator();
   systemMenu->addAction(trText("commands.exit"), qApp, &QApplication::quit);
 }
@@ -714,10 +716,6 @@ void MainWindow::incPendingJobs(const QString& cameraId)
   const int v = m_cameraPendingJobs.value(cameraId, 0) + 1;
   m_cameraPendingJobs[cameraId] = v;
   m_cameraProcessingBusy[cameraId] = true;
-  if (m_metricsPanel)
-  {
-    m_metricsPanel->addMetric(QString("pendingJobs_%1").arg(cameraId), v);
-  }
 }
 
 void MainWindow::decPendingJobs(const QString& cameraId)
@@ -729,10 +727,6 @@ void MainWindow::decPendingJobs(const QString& cameraId)
   }
   m_cameraPendingJobs[cameraId] = v;
   m_cameraProcessingBusy[cameraId] = (v > 0);
-  if (m_metricsPanel)
-  {
-    m_metricsPanel->addMetric(QString("pendingJobs_%1").arg(cameraId), v);
-  }
 }
 
 void MainWindow::rebuildUi()
@@ -943,6 +937,7 @@ void MainWindow::deactivateImageDrawingTools()
 void MainWindow::showCameraToolList(const CameraConfig& camera)
 {
   deactivateImageDrawingTools();
+  m_returnToSetupCameraId.clear();
   clearToolPanel();
 
   auto* gridButton = new QPushButton(trText("commands.gridView"), m_toolsContainer);
@@ -954,6 +949,13 @@ void MainWindow::showCameraToolList(const CameraConfig& camera)
   setupButton->setMinimumHeight(38);
   connect(setupButton, &QPushButton::clicked, this, [this, camera]() { m_setup.showCameraSetupPanel(camera); });
   m_toolsLayout->addWidget(setupButton);
+
+  auto* constructedGeometryButton = new QPushButton(trText("tools.constructedGeometries"), m_toolsContainer);
+  constructedGeometryButton->setMinimumHeight(38);
+  connect(constructedGeometryButton, &QPushButton::clicked, this, [this, camera]() {
+    m_constructedGeometry.showConstructedGeometryPanel(camera);
+  });
+  m_toolsLayout->addWidget(constructedGeometryButton);
 
   if (MainWindowCameraProfile::isGrayscaleLocalization(camera, m_config))
   {
@@ -1041,13 +1043,40 @@ void MainWindow::clearToolPanel()
 
 void MainWindow::appendLog(const QString& message)
 {
+  const QString timestamp = QDateTime::currentDateTime().toString("HH:mm:ss");
+  const QString line = QString("[%1] %2").arg(timestamp, message);
+  m_detailedLogger.logLine(message);
+
   if (!m_log)
   {
     return;
   }
 
-  const QString timestamp = QDateTime::currentDateTime().toString("HH:mm:ss");
-  m_log->append(QString("[%1] %2").arg(timestamp, message));
+  m_log->append(line);
+}
+
+void MainWindow::setDetailedLogEnabled(bool enabled)
+{
+  QSettings settings;
+  if (!enabled)
+  {
+    appendLog(trText("log.detailedLogDisabled"));
+    m_detailedLogger.setEnabled(false, {});
+    settings.setValue("system/detailedLogEnabled", false);
+    return;
+  }
+
+  QString error;
+  const QString logRoot = QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath("logs");
+  if (!m_detailedLogger.setEnabled(true, logRoot, &error))
+  {
+    appendLog(error);
+    settings.setValue("system/detailedLogEnabled", false);
+    return;
+  }
+
+  settings.setValue("system/detailedLogEnabled", true);
+  appendLog(QString("%1: %2").arg(trText("log.detailedLogEnabled"), m_detailedLogger.filePath()));
 }
 
 void MainWindow::updateLargePreview()

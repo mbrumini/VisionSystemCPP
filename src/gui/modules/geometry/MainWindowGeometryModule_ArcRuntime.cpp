@@ -119,6 +119,16 @@ EdgeLinePickMode pickModeFromRecipeLocal(const QString& value)
   return EdgeLinePickMode::First;
 }
 
+QString scanDirectionToRecipeLocal(EdgeLineScanDirection direction)
+{
+  return direction == EdgeLineScanDirection::NormalNegative ? "normal_negative" : "normal_positive";
+}
+
+EdgeLineScanDirection scanDirectionFromRecipeLocal(const QString& value)
+{
+  return value == "normal_negative" ? EdgeLineScanDirection::NormalNegative : EdgeLineScanDirection::NormalPositive;
+}
+
 void appendArcPolyline(
   GeometryOverlay& overlay,
   const cv::Point2d& center,
@@ -189,6 +199,7 @@ void MainWindowGeometryModule::loadGeometryArcsRecipe(const CameraConfig& camera
     arc.edgeCleanupDerivative = recipe.edgeCleanupDerivative;
     arc.edgeStatisticalFilter = recipe.edgeStatisticalFilter;
     arc.useSubpixel = recipe.useSubpixel;
+    arc.scanDirection = scanDirectionFromRecipeLocal(recipe.scanDirection);
     arc.transition = transitionFromRecipeLocal(recipe.transition);
     arc.pickMode = pickModeFromRecipeLocal(recipe.pickMode);
     arc.hasArc = true;
@@ -229,6 +240,7 @@ void MainWindowGeometryModule::saveGeometryArcsRecipe(const CameraConfig& camera
     recipe.edgeCleanupDerivative = arc.edgeCleanupDerivative;
     recipe.edgeStatisticalFilter = arc.edgeStatisticalFilter;
     recipe.useSubpixel = arc.useSubpixel;
+    recipe.scanDirection = scanDirectionToRecipeLocal(arc.scanDirection);
     recipe.transition = transitionToRecipeLocal(arc.transition);
     recipe.pickMode = pickModeToRecipeLocal(arc.pickMode);
     recipeList.append(recipe);
@@ -363,9 +375,9 @@ void MainWindowGeometryModule::showConfiguredGeometryArcs(const CameraConfig& ca
   appendCurrentPartPoseOverlay(camera, overlay);
   if ((usePartArc || arc.hasImageArc) && arc.radius > arc.innerBand)
   {
-    appendArcPolyline(overlay, center, std::max(1.0, radius - arc.innerBand), startAngle, endAngle, QColor("#00d2ff"), 2);
-    appendArcPolyline(overlay, center, radius, startAngle, endAngle, QColor("#ff4fd8"), 3);
-    appendArcPolyline(overlay, center, radius + arc.outerBand, startAngle, endAngle, QColor("#00d2ff"), 2);
+    appendArcPolyline(overlay, center, std::max(1.0, radius - arc.innerBand), startAngle, endAngle, QColor(0, 210, 255, 90), 2);
+    appendArcPolyline(overlay, center, radius, startAngle, endAngle, QColor("#ff4fd8"), 5);
+    appendArcPolyline(overlay, center, radius + arc.outerBand, startAngle, endAngle, QColor(0, 210, 255, 90), 2);
     overlay.lines.append({QPointF(start.x, start.y), QPointF(end.x, end.y), QColor("#808a93"), 1});
   }
   largeImage()->setGeometryOverlay(overlay);
@@ -421,11 +433,27 @@ void MainWindowGeometryModule::testGeometryArc(const CameraConfig& camera)
   config.edgeCleanupDerivative = arcConfig.edgeCleanupDerivative;
   config.edgeStatisticalFilter = arcConfig.edgeStatisticalFilter;
   config.useSubpixel = MainWindowCameraProfile::isBwDimensional(camera, MainWindowModuleBase::config()) && arcConfig.useSubpixel;
+  config.scanDirection = arcConfig.scanDirection;
   config.transition = arcConfig.transition;
   config.pickMode = arcConfig.pickMode;
   config.useArc = true;
   config.startAngleRadians = normalizedAngle(std::atan2(guideStart.y - guideCenter.y, guideStart.x - guideCenter.x));
   config.endAngleRadians = normalizedAngle(std::atan2(guideEnd.y - guideCenter.y, guideEnd.x - guideCenter.x));
+
+  log(QString("geometry arc detect: %1 id=%2 center=%3,%4 r=%5 band=%6/%7 sensitivity=%8 cleanup=%9 stat=%10 scan=%11 transition=%12 pick=%13")
+        .arg(camera.id)
+        .arg(arcConfig.id)
+        .arg(guideCenter.x, 0, 'f', 1)
+        .arg(guideCenter.y, 0, 'f', 1)
+        .arg(guideRadius, 0, 'f', 1)
+        .arg(arcConfig.innerBand)
+        .arg(arcConfig.outerBand)
+        .arg(arcConfig.edgeSensitivity)
+        .arg(arcConfig.edgeCleanupDerivative)
+        .arg(arcConfig.edgeStatisticalFilter)
+        .arg(arcConfig.scanDirection == EdgeLineScanDirection::NormalNegative ? "normal_negative" : "normal_positive")
+        .arg(arcConfig.transition == EdgeLineTransition::DarkToLight ? "dark_to_light" : "light_to_dark")
+        .arg(arcConfig.pickMode == EdgeLinePickMode::Last ? "last" : (arcConfig.pickMode == EdgeLinePickMode::Best ? "best" : "first")));
 
   EdgeCircleDetector detector;
   const EdgeCircleDetectorResult result = detector.detect(input, config);
@@ -454,6 +482,10 @@ void MainWindowGeometryModule::testGeometryArc(const CameraConfig& camera)
     }
   }
   geometries.arcs.append(result.arc);
+  GeometryOverlay arcOverlay;
+  appendArcPolyline(arcOverlay, result.arc.center, result.arc.radius, result.arc.startAngleRadians, result.arc.endAngleRadians, QColor("#ff4fd8"), 7);
+  appendCurrentPartPoseOverlay(camera, arcOverlay);
+  largeImage()->setGeometryOverlay(arcOverlay);
   log(QString("%1: %2 cx=%3 cy=%4 r=%5")
               .arg(tr("log.geometryArcFound"))
               .arg(camera.id)

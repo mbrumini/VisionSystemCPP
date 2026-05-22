@@ -23,7 +23,9 @@
     "fullScreen": "Fullscreen",
     "maximized": "Finestra massimizzata",
     "exit": "Esci",
-    "backToCameraTools": "Torna ai tool camera"
+    "backToCameraTools": "Torna ai tool camera",
+    "backToSetup": "Torna al Set-up",
+    "enableDetailedLog": "Attiva log dettagliato"
   },
   "groups": {
     "generalCommands": "Comandi generali",
@@ -100,7 +102,14 @@
     "thresholdMax": "Soglia massima",
     "placeholderNote": "Placeholder: questi pulsanti verranno collegati alle funzioni operative.",
     "strategyPlanned": "Strategia pianificata: i controlli dedicati verranno implementati nel prossimo step.",
-    "surfaceLocalizationNote": "Soglia: usa la corona esterno/interno. Bordo: imposta una guida e il sistema cerca il bordo reale dentro la fascia."
+    "surfaceLocalizationNote": "Soglia: usa la corona esterno/interno. Bordo: imposta una guida e il sistema cerca il bordo reale dentro la fascia.",
+    "constructedGeometryNote": "Crea geometrie calcolate partendo dalle geometrie misurate dagli edge.",
+    "sourceLineA": "Linea A",
+    "sourceLineB": "Linea B",
+    "sourceLine": "Linea",
+    "sourceCircle": "Cerchio",
+    "sourceCircleA": "Cerchio A",
+    "sourceCircleB": "Cerchio B"
   },
   "strategies": {
     "threshold": "Soglia",
@@ -200,7 +209,20 @@
     "geometryPointGuideSaved": "Scansione punto salvata",
     "geometryPointFailed": "Rilevamento punto fallito",
     "geometryPointNotFound": "Punto non trovato",
-    "geometryPointFound": "Punto trovato"
+    "geometryPointFound": "Punto trovato",
+    "detailedLogEnabled": "Log dettagliato attivo",
+    "detailedLogDisabled": "Log dettagliato disattivato",
+    "constructedGeometryPanel": "Pannello geometrie calcolate",
+    "constructedGeometryAction": "Geometria calcolata",
+    "constructedLineIntersectionMissing": "Intersezione linee non disponibile: servono almeno 2 linee trovate",
+    "constructedLineIntersectionParallel": "Intersezione linee non disponibile: linee parallele",
+    "constructedLineIntersectionCreated": "Intersezione linee creata",
+    "constructedLineCircleIntersectionMissing": "Intersezione linea/cerchio non disponibile: scegli una linea e un cerchio trovati",
+    "constructedLineCircleIntersectionNone": "Intersezione linea/cerchio non disponibile: nessun punto trovato",
+    "constructedLineCircleIntersectionCreated": "Intersezione linea/cerchio creata",
+    "constructedCircleIntersectionMissing": "Intersezione cerchi non disponibile: servono almeno 2 cerchi trovati",
+    "constructedCircleIntersectionNone": "Intersezione cerchi non disponibile: nessun punto trovato",
+    "constructedCircleIntersectionCreated": "Intersezione cerchi creata"
   },
   "messages": {
     "noRecipes": "Nessuna ricetta disponibile."
@@ -209,6 +231,7 @@
     "setup": "Set-up",
     "localization": "Localizzazione",
     "geometries": "Geometrie",
+    "constructedGeometries": "Geometrie calcolate",
     "measurements": "Misure",
     "dimensions": "Dimensioni",
     "threshold": "Soglia",
@@ -250,6 +273,14 @@
     "geometryLinePoints": "Disegna linea 2 punti",
     "geometryPointScan": "Disegna scansione punto",
     "testGeometry": "Prova geometria",
+    "lineLineIntersection": "Intersezione linee",
+    "lineCircleIntersection": "Intersezione linea/cerchio",
+    "circleCircleIntersection": "Intersezione cerchi",
+    "midpoint": "Punto medio",
+    "offsetLine": "Linea offset",
+    "angleBisector": "Bisettrice",
+    "tangentLine": "Tangente",
+    "projectPoint": "Proietta punto",
     "searchRoi": "AOE ricerca",
     "addExclusion": "Aggiungi esclusione",
     "clearExclusions": "Cancella esclusioni",

@@ -5,29 +5,30 @@
             "arcs": [
                 {
                     "coordinateSpace": "part",
-                    "edgeCleanupDerivative": 12,
-                    "edgeSensitivity": 60,
-                    "edgeStatisticalFilter": 0,
+                    "edgeCleanupDerivative": 2,
+                    "edgeSensitivity": 59,
+                    "edgeStatisticalFilter": 2,
                     "enabled": true,
-                    "endAngleRadians": 5.421535308293509,
+                    "endAngleRadians": 5.102254031556028,
                     "id": "arc_2",
                     "innerBand": 20,
                     "outerBand": 20,
                     "partCenter": {
-                        "x": -1.4814069172391555,
-                        "y": 3.7925368058600952
+                        "x": -10.498110016266764,
+                        "y": -13.908268522018147
                     },
                     "partEnd": {
-                        "x": 204.2989190266103,
-                        "y": -236.03198370796406
+                        "x": 100.00188998373324,
+                        "y": -282.8319973355775
                     },
                     "partStart": {
-                        "x": -193.7010809733897,
-                        "y": -247.03198370796406
+                        "x": -258.99811001626676,
+                        "y": -164.8319973355775
                     },
                     "pickMode": "best",
-                    "radius": 316.00845429393587,
-                    "startAngleRadians": 4.058504966183386,
+                    "radius": 290.7408157087491,
+                    "scanDirection": "normal_negative",
+                    "startAngleRadians": 3.6873909724242164,
                     "transition": "light_to_dark",
                     "type": "edge_arc",
                     "useSubpixel": true
@@ -80,18 +81,6 @@
             ]
         },
         "surfaceLocalization": {
-            "annulus": {
-                "innerCircle": {
-                    "centerX": 1272,
-                    "centerY": 673,
-                    "radius": 280
-                },
-                "outerCircle": {
-                    "centerX": 1272,
-                    "centerY": 673,
-                    "radius": 320
-                }
-            },
             "edge": {
                 "band": {
                     "inner": 31,
@@ -106,12 +95,7 @@
                 "sensitivity": 153
             },
             "enabled": true,
-            "method": "edge",
-            "threshold": {
-                "max": 80,
-                "min": 0,
-                "value": 80
-            }
+            "method": "edge"
         }
     }
 }

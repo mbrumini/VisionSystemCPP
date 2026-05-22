@@ -23,7 +23,9 @@
     "fullScreen": "Fullscreen",
     "maximized": "Maximized window",
     "exit": "Exit",
-    "backToCameraTools": "Back to camera tools"
+    "backToCameraTools": "Back to camera tools",
+    "backToSetup": "Back to Set-up",
+    "enableDetailedLog": "Enable detailed log"
   },
   "groups": {
     "generalCommands": "General commands",
@@ -100,7 +102,14 @@
     "thresholdMax": "Maximum threshold",
     "placeholderNote": "Placeholder: these buttons will be connected to operating functions.",
     "strategyPlanned": "Planned strategy: dedicated controls will be implemented in the next step.",
-    "surfaceLocalizationNote": "Threshold: use the outer/inner ring. Edge: set a guide and the system searches for the real edge inside the band."
+    "surfaceLocalizationNote": "Threshold: use the outer/inner ring. Edge: set a guide and the system searches for the real edge inside the band.",
+    "constructedGeometryNote": "Create calculated geometries from edge-measured geometries.",
+    "sourceLineA": "Line A",
+    "sourceLineB": "Line B",
+    "sourceLine": "Line",
+    "sourceCircle": "Circle",
+    "sourceCircleA": "Circle A",
+    "sourceCircleB": "Circle B"
   },
   "strategies": {
     "threshold": "Threshold",
@@ -200,7 +209,20 @@
     "geometryPointGuideSaved": "Point scan saved",
     "geometryPointFailed": "Point detection failed",
     "geometryPointNotFound": "Point not found",
-    "geometryPointFound": "Point found"
+    "geometryPointFound": "Point found",
+    "detailedLogEnabled": "Detailed log enabled",
+    "detailedLogDisabled": "Detailed log disabled",
+    "constructedGeometryPanel": "Constructed geometries panel",
+    "constructedGeometryAction": "Constructed geometry",
+    "constructedLineIntersectionMissing": "Line intersection unavailable: at least 2 found lines are required",
+    "constructedLineIntersectionParallel": "Line intersection unavailable: lines are parallel",
+    "constructedLineIntersectionCreated": "Line intersection created",
+    "constructedLineCircleIntersectionMissing": "Line/circle intersection unavailable: choose a found line and circle",
+    "constructedLineCircleIntersectionNone": "Line/circle intersection unavailable: no point found",
+    "constructedLineCircleIntersectionCreated": "Line/circle intersection created",
+    "constructedCircleIntersectionMissing": "Circle intersection unavailable: at least 2 found circles are required",
+    "constructedCircleIntersectionNone": "Circle intersection unavailable: no point found",
+    "constructedCircleIntersectionCreated": "Circle intersection created"
   },
   "messages": {
     "noRecipes": "No recipes available."
@@ -209,6 +231,7 @@
     "setup": "Set-up",
     "localization": "Localization",
     "geometries": "Geometries",
+    "constructedGeometries": "Constructed geometries",
     "measurements": "Measurements",
     "dimensions": "Dimensions",
     "threshold": "Threshold",
@@ -249,6 +272,14 @@
     "geometryLinePoints": "Draw 2-point line",
     "geometryPointScan": "Draw point scan",
     "testGeometry": "Test geometry",
+    "lineLineIntersection": "Line intersection",
+    "lineCircleIntersection": "Line/circle intersection",
+    "circleCircleIntersection": "Circle intersection",
+    "midpoint": "Midpoint",
+    "offsetLine": "Offset line",
+    "angleBisector": "Angle bisector",
+    "tangentLine": "Tangent line",
+    "projectPoint": "Project point",
     "searchRoi": "Search AOE",
     "addExclusion": "Add exclusion",
     "clearExclusions": "Clear exclusions",

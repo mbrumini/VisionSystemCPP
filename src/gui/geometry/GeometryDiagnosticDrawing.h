@@ -8,4 +8,6 @@ namespace GeometryDiagnosticDrawing
 {
 void drawCyanPointCross(cv::Mat& image, const cv::Point2d& point);
 void appendCyanPointCross(GeometryOverlay& overlay, const cv::Point2d& point);
+void drawOrangePointCross(cv::Mat& image, const cv::Point2d& point);
+void appendOrangePointCross(GeometryOverlay& overlay, const cv::Point2d& point);
 }

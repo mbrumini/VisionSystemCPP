@@ -46,20 +46,20 @@ void drawCyanCross(cv::Mat& image, const cv::Point2d& point)
 {
   const cv::Point center = surfacePoint(point);
   const int size = 8;
-  const cv::Scalar cyan(255, 255, 0);
+  const cv::Scalar orange(0, 140, 255);
   cv::line(
     image,
     cv::Point(center.x - size, center.y - size),
     cv::Point(center.x + size, center.y + size),
-    cyan,
-    2,
+    orange,
+    4,
     cv::LINE_AA);
   cv::line(
     image,
     cv::Point(center.x - size, center.y + size),
     cv::Point(center.x + size, center.y - size),
-    cyan,
-    2,
+    orange,
+    4,
     cv::LINE_AA);
 }
 }

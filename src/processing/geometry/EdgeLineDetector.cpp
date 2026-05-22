@@ -307,7 +307,7 @@ EdgeLineDetectorResult EdgeLineDetector::detect(const cv::Mat& input, const Edge
     surfacePoint(result.line.start),
     surfacePoint(result.line.end),
     cv::Scalar(0, 255, 0),
-    2,
+    4,
     cv::LINE_AA);
   return result;
 }

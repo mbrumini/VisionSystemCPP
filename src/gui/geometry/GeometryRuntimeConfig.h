@@ -55,6 +55,7 @@ struct GeometryCircleRuntimeConfig
   int edgeCleanupDerivative = 12;
   int edgeStatisticalFilter = 0;
   bool useSubpixel = true;
+  EdgeLineScanDirection scanDirection = EdgeLineScanDirection::NormalPositive;
   EdgeLineTransition transition = EdgeLineTransition::LightToDark;
   EdgeLinePickMode pickMode = EdgeLinePickMode::First;
   bool hasImageCircle = false;
@@ -80,6 +81,7 @@ struct GeometryArcRuntimeConfig
   int edgeCleanupDerivative = 12;
   int edgeStatisticalFilter = 0;
   bool useSubpixel = true;
+  EdgeLineScanDirection scanDirection = EdgeLineScanDirection::NormalPositive;
   EdgeLineTransition transition = EdgeLineTransition::LightToDark;
   EdgeLinePickMode pickMode = EdgeLinePickMode::First;
   bool hasImageArc = false;

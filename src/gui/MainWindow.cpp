@@ -18,6 +18,7 @@ MainWindow::MainWindow(QWidget* parent)
   , m_surface(m_ctx)
   , m_localization(m_ctx)
   , m_cameraConfig(m_ctx)
+  , m_constructedGeometry(m_ctx)
   , m_setup(m_ctx)
 {
   m_recipeManager.setRecipeId(RecipeManager::loadActiveRecipeId());
@@ -50,21 +51,19 @@ MainWindow::MainWindow(QWidget* parent)
   }
 
   AsyncExecutor::setMetricsHandler([this](const QString& name, qint64 ms) {
-    if (m_metricsPanel)
-    {
-      m_metricsPanel->addMetric(name, ms);
-      return;
-    }
-
-    if (name.isEmpty())
-    {
-      appendLog(QString("metric: %1 ms").arg(ms));
-    }
-    else
-    {
-      appendLog(QString("metric %1: %2 ms").arg(name).arg(ms));
-    }
+    appendLog(name.isEmpty()
+      ? QString("metric: %1 ms").arg(ms)
+      : QString("metric %1: %2 ms").arg(name).arg(ms));
   });
+
+  {
+    QSettings settings;
+    const bool detailedLogEnabled = settings.value("system/detailedLogEnabled", false).toBool();
+    if (detailedLogEnabled)
+    {
+      setDetailedLogEnabled(true);
+    }
+  }
 
   loadConfiguration();
 }
@@ -141,10 +140,10 @@ void MainWindow::bindModules()
   m_ctx.cameraDetails = m_cameraDetails;
   m_ctx.setupPanel = &m_setupPanel;
   m_ctx.setupCameraId = &m_setupCameraId;
+  m_ctx.returnToSetupCameraId = &m_returnToSetupCameraId;
   m_ctx.toolsContainer = m_toolsContainer;
   m_ctx.toolsLayout = m_toolsLayout;
   m_ctx.log = m_log;
-  m_ctx.metricsPanel = m_metricsPanel;
   m_ctx.selectedCameraId = &m_selectedCameraId;
   m_ctx.selectedCamera = &m_selectedCamera;
   m_ctx.selectedPreview = &m_selectedPreview;
@@ -166,6 +165,7 @@ void MainWindow::bindModules()
   m_ctx.recipeModule = &m_recipes;
   m_ctx.setup = &m_setup;
   m_ctx.cameraConfig = &m_cameraConfig;
+  m_ctx.constructedGeometry = &m_constructedGeometry;
 
   m_ctx.trText = [this](const QString& key) { return trText(key); };
   m_ctx.appendLog = [this](const QString& message) { appendLog(message); };

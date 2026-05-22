@@ -21,6 +21,7 @@ struct EdgeCircleDetectorConfig
   double startAngleRadians = 0.0;
   double endAngleRadians = 0.0;
   bool useSubpixel = false;
+  EdgeLineScanDirection scanDirection = EdgeLineScanDirection::NormalPositive;
   EdgeLineTransition transition = EdgeLineTransition::LightToDark;
   EdgeLinePickMode pickMode = EdgeLinePickMode::First;
 };

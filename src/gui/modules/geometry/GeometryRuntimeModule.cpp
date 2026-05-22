@@ -39,6 +39,67 @@ double normalizedSetupArcAngle(double angle)
   }
   return angle;
 }
+
+void appendCirclePolyline(
+  GeometryOverlay& overlay,
+  const cv::Point2d& center,
+  double radius,
+  const QColor& color,
+  int width)
+{
+  if (radius <= 1.0)
+  {
+    return;
+  }
+
+  constexpr int segments = 96;
+  QPointF previous(center.x + radius, center.y);
+  for (int i = 1; i <= segments; ++i)
+  {
+    const double angle = 2.0 * CV_PI * static_cast<double>(i) / static_cast<double>(segments);
+    const QPointF current(center.x + std::cos(angle) * radius, center.y + std::sin(angle) * radius);
+    overlay.lines.append({previous, current, color, width});
+    previous = current;
+  }
+}
+
+void appendArcPolyline(
+  GeometryOverlay& overlay,
+  const cv::Point2d& center,
+  double radius,
+  double startAngle,
+  double endAngle,
+  const QColor& color,
+  int width)
+{
+  if (radius <= 1.0)
+  {
+    return;
+  }
+
+  double span = endAngle - startAngle;
+  while (span < 0.0)
+  {
+    span += 2.0 * CV_PI;
+  }
+  if (span < 0.001)
+  {
+    span = 2.0 * CV_PI;
+  }
+
+  const int segments = std::max(8, static_cast<int>(std::round(64.0 * span / (2.0 * CV_PI))));
+  QPointF previous;
+  for (int i = 0; i <= segments; ++i)
+  {
+    const double angle = startAngle + span * static_cast<double>(i) / static_cast<double>(segments);
+    const QPointF current(center.x + std::cos(angle) * radius, center.y + std::sin(angle) * radius);
+    if (i > 0)
+    {
+      overlay.lines.append({previous, current, color, width});
+    }
+    previous = current;
+  }
+}
 }
 
 void MainWindowGeometryModule::activateGeometryLineDrawing(const CameraConfig& camera)
@@ -244,6 +305,10 @@ void MainWindowGeometryModule::restoreCleanGeometryImage(const CameraConfig& cam
   largeImage()->clearRoi();
   largeImage()->clearExclusionRects();
   largeImage()->clearCircles();
+  largeImage()->clearGeometryArea();
+  largeImage()->clearGeometryPoints();
+  largeImage()->clearGeometryLines();
+  largeImage()->clearGeometryOverlay();
 }
 
 void MainWindowGeometryModule::testGeometryLine(const CameraConfig& camera)
@@ -338,7 +403,7 @@ void MainWindowGeometryModule::testGeometryLine(const CameraConfig& camera)
       QPointF(result.line.start.x, result.line.start.y),
       QPointF(result.line.end.x, result.line.end.y),
       QColor("#35c46a"),
-      3
+      6
     });
     updateGeometryLineOverlay(camera, detectedOverlay);
 
@@ -440,13 +505,13 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
       cv::Point(static_cast<int>(std::round(result.line.start.x)), static_cast<int>(std::round(result.line.start.y))),
       cv::Point(static_cast<int>(std::round(result.line.end.x)), static_cast<int>(std::round(result.line.end.y))),
       cv::Scalar(0, 255, 0),
-      2,
+      4,
       cv::LINE_AA);
     detectedOverlay.lines.append({
       QPointF(result.line.start.x, result.line.start.y),
       QPointF(result.line.end.x, result.line.end.y),
       QColor("#35c46a"),
-      3
+      6
     });
   }
 
@@ -478,8 +543,8 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
     if (result.processed && result.found)
     {
       geometries.points.append(result.point);
-      GeometryDiagnosticDrawing::drawCyanPointCross(diagnostic, result.point.point);
-      GeometryDiagnosticDrawing::appendCyanPointCross(detectedOverlay, result.point.point);
+      GeometryDiagnosticDrawing::drawOrangePointCross(diagnostic, result.point.point);
+      GeometryDiagnosticDrawing::appendOrangePointCross(detectedOverlay, result.point.point);
     }
   }
 
@@ -512,6 +577,10 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
       continue;
     }
 
+    appendCirclePolyline(detectedOverlay, guideCenter, std::max(1.0, circle.radius - circle.innerBand), QColor(0, 210, 255, 90), 1);
+    appendCirclePolyline(detectedOverlay, guideCenter, circle.radius, QColor(0, 210, 255, 170), 2);
+    appendCirclePolyline(detectedOverlay, guideCenter, circle.radius + circle.outerBand, QColor(0, 210, 255, 90), 1);
+
     EdgeCircleDetectorConfig config;
     config.id = circle.id;
     config.label = circle.id;
@@ -523,6 +592,7 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
     config.edgeCleanupDerivative = circle.edgeCleanupDerivative;
     config.edgeStatisticalFilter = circle.edgeStatisticalFilter;
     config.useSubpixel = MainWindowCameraProfile::isBwDimensional(camera, MainWindowModuleBase::config()) && circle.useSubpixel;
+    config.scanDirection = circle.scanDirection;
     config.transition = circle.transition;
     config.pickMode = circle.pickMode;
 
@@ -539,12 +609,13 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
     }
 
     geometries.circles.append(result.circle);
+    appendCirclePolyline(detectedOverlay, result.circle.center, result.circle.radius, QColor("#00d2ff"), 7);
     cv::circle(
       diagnostic,
       cv::Point(static_cast<int>(std::round(result.circle.center.x)), static_cast<int>(std::round(result.circle.center.y))),
       static_cast<int>(std::round(result.circle.radius)),
-      cv::Scalar(0, 255, 0),
-      2,
+      cv::Scalar(255, 255, 0),
+      4,
       cv::LINE_AA);
   }
 
@@ -581,6 +652,12 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
       continue;
     }
 
+    const double guideStartAngle = normalizedSetupArcAngle(std::atan2(guideStart.y - guideCenter.y, guideStart.x - guideCenter.x));
+    const double guideEndAngle = normalizedSetupArcAngle(std::atan2(guideEnd.y - guideCenter.y, guideEnd.x - guideCenter.x));
+    appendArcPolyline(detectedOverlay, guideCenter, std::max(1.0, guideRadius - arc.innerBand), guideStartAngle, guideEndAngle, QColor(255, 79, 216, 90), 1);
+    appendArcPolyline(detectedOverlay, guideCenter, guideRadius, guideStartAngle, guideEndAngle, QColor(255, 79, 216, 170), 2);
+    appendArcPolyline(detectedOverlay, guideCenter, guideRadius + arc.outerBand, guideStartAngle, guideEndAngle, QColor(255, 79, 216, 90), 1);
+
     EdgeCircleDetectorConfig config;
     config.id = arc.id;
     config.label = arc.id;
@@ -592,11 +669,12 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
     config.edgeCleanupDerivative = arc.edgeCleanupDerivative;
     config.edgeStatisticalFilter = arc.edgeStatisticalFilter;
     config.useSubpixel = MainWindowCameraProfile::isBwDimensional(camera, MainWindowModuleBase::config()) && arc.useSubpixel;
+    config.scanDirection = arc.scanDirection;
     config.transition = arc.transition;
     config.pickMode = arc.pickMode;
     config.useArc = true;
-    config.startAngleRadians = normalizedSetupArcAngle(std::atan2(guideStart.y - guideCenter.y, guideStart.x - guideCenter.x));
-    config.endAngleRadians = normalizedSetupArcAngle(std::atan2(guideEnd.y - guideCenter.y, guideEnd.x - guideCenter.x));
+    config.startAngleRadians = guideStartAngle;
+    config.endAngleRadians = guideEndAngle;
 
     EdgeCircleDetector detector;
     const EdgeCircleDetectorResult result = detector.detect(input, config);
@@ -606,6 +684,7 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
     }
 
     geometries.arcs.append(result.arc);
+    appendArcPolyline(detectedOverlay, result.arc.center, result.arc.radius, result.arc.startAngleRadians, result.arc.endAngleRadians, QColor("#ff4fd8"), 7);
     double startDegrees = config.startAngleRadians * 180.0 / CV_PI;
     double endDegrees = config.endAngleRadians * 180.0 / CV_PI;
     if (endDegrees < startDegrees)
@@ -619,8 +698,8 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
       0.0,
       startDegrees,
       endDegrees,
-      cv::Scalar(0, 255, 0),
-      2,
+      cv::Scalar(216, 79, 255),
+      4,
       cv::LINE_AA);
   }
 
@@ -628,15 +707,7 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
   largeImage()->setImage(selectedPreview());
   largeImage()->clearRoi();
   largeImage()->clearCircles();
-  GeometryOverlay setupOverlay;
-  for (const GeometryOverlayLine& line : detectedOverlay.lines)
-  {
-    setupOverlay.lines.append(line);
-  }
-  for (const GeometryOverlayPoint& point : detectedOverlay.points)
-  {
-    setupOverlay.points.append(point);
-  }
+  GeometryOverlay setupOverlay = detectedOverlay;
   appendCurrentPartPoseOverlay(camera, setupOverlay);
   largeImage()->setGeometryOverlay(setupOverlay);
 }
@@ -713,8 +784,18 @@ void MainWindowGeometryModule::handleGeometryCirclePoints(const CameraConfig& ca
 
 void MainWindowGeometryModule::showConfiguredGeometryCircles(const CameraConfig& camera)
 {
+  GeometryCircleRuntimeConfig& circle = activeGeometryCircleConfig(camera.id);
   GeometryOverlay overlay;
   largeImage()->clearCircles();
+  const PartPose& pose = cameraRuntime()[camera.id].currentPose();
+  const bool usePartCircle = pose.valid && circle.hasCircle;
+  if (usePartCircle || circle.hasImageCircle)
+  {
+    const cv::Point2d center = usePartCircle ? partToImage(pose, circle.partCenter) : circle.imageCenter;
+    appendCirclePolyline(overlay, center, std::max(1.0, circle.radius - circle.innerBand), QColor(0, 210, 255, 90), 1);
+    appendCirclePolyline(overlay, center, circle.radius, QColor("#00d2ff"), 5);
+    appendCirclePolyline(overlay, center, circle.radius + circle.outerBand, QColor(0, 210, 255, 90), 1);
+  }
   appendCurrentPartPoseOverlay(camera, overlay);
   largeImage()->setGeometryOverlay(overlay);
 }
@@ -763,8 +844,24 @@ void MainWindowGeometryModule::testGeometryCircle(const CameraConfig& camera)
   config.edgeCleanupDerivative = circleConfig.edgeCleanupDerivative;
   config.edgeStatisticalFilter = circleConfig.edgeStatisticalFilter;
   config.useSubpixel = MainWindowCameraProfile::isBwDimensional(camera, MainWindowModuleBase::config()) && circleConfig.useSubpixel;
+  config.scanDirection = circleConfig.scanDirection;
   config.transition = circleConfig.transition;
   config.pickMode = circleConfig.pickMode;
+
+  log(QString("geometry circle detect: %1 id=%2 center=%3,%4 r=%5 band=%6/%7 sensitivity=%8 cleanup=%9 stat=%10 scan=%11 transition=%12 pick=%13")
+        .arg(camera.id)
+        .arg(circleConfig.id)
+        .arg(guideCenter.x, 0, 'f', 1)
+        .arg(guideCenter.y, 0, 'f', 1)
+        .arg(circleConfig.radius, 0, 'f', 1)
+        .arg(circleConfig.innerBand)
+        .arg(circleConfig.outerBand)
+        .arg(circleConfig.edgeSensitivity)
+        .arg(circleConfig.edgeCleanupDerivative)
+        .arg(circleConfig.edgeStatisticalFilter)
+        .arg(circleConfig.scanDirection == EdgeLineScanDirection::NormalNegative ? "normal_negative" : "normal_positive")
+        .arg(circleConfig.transition == EdgeLineTransition::DarkToLight ? "dark_to_light" : "light_to_dark")
+        .arg(circleConfig.pickMode == EdgeLinePickMode::Last ? "last" : (circleConfig.pickMode == EdgeLinePickMode::Best ? "best" : "first")));
 
   EdgeCircleDetector detector;
   const EdgeCircleDetectorResult result = detector.detect(input, config);
@@ -793,6 +890,10 @@ void MainWindowGeometryModule::testGeometryCircle(const CameraConfig& camera)
     }
   }
   geometries.circles.append(result.circle);
+  GeometryOverlay circleOverlay;
+  appendCirclePolyline(circleOverlay, result.circle.center, result.circle.radius, QColor("#00d2ff"), 7);
+  appendCurrentPartPoseOverlay(camera, circleOverlay);
+  largeImage()->setGeometryOverlay(circleOverlay);
   log(QString("%1: %2 cx=%3 cy=%4 r=%5")
               .arg(tr("log.geometryCircleFound"))
               .arg(camera.id)
@@ -1036,7 +1137,7 @@ void MainWindowGeometryModule::testGeometryPoint(const CameraConfig& camera)
   GeometryOverlay detectedOverlay;
   if (result.found)
   {
-    GeometryDiagnosticDrawing::appendCyanPointCross(detectedOverlay, result.point.point);
+    GeometryDiagnosticDrawing::appendOrangePointCross(detectedOverlay, result.point.point);
   }
   updateGeometryPointOverlay(camera, detectedOverlay);
 

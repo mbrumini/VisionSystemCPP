@@ -37,6 +37,12 @@ add_executable(VisionSystemCPP
     src/gui/MainWindow.cpp
     src/gui/MainWindowUi.cpp
     src/gui/modules/MainWindowCameraProfile.cpp
+    src/gui/modules/ConstructedGeometryLineSource.h
+    src/gui/modules/ConstructedGeometryLineSource.cpp
+    src/gui/modules/ConstructedGeometryCircleSource.h
+    src/gui/modules/ConstructedGeometryCircleSource.cpp
+    src/gui/modules/MainWindowConstructedGeometryModule.h
+    src/gui/modules/MainWindowConstructedGeometryModule.cpp
     src/gui/modules/MainWindowImagingModule.cpp
     src/gui/modules/MainWindowRecipeModule.cpp
     src/gui/modules/MainWindowLocalizationModule.cpp
@@ -52,8 +58,6 @@ add_executable(VisionSystemCPP
     src/gui/modules/surface/MainWindowSurfaceModule_Model.cpp
     src/gui/modules/MainWindowSetupModule.cpp
     src/gui/modules/MainWindowCameraConfigModule.cpp
-    src/gui/MetricsPanelWidget.h
-    src/gui/MetricsPanelWidget.cpp
     src/gui/SurfaceLocalizationPanelWidget.h
     src/gui/SurfaceLocalizationPanelWidget.cpp
     src/gui/SurfaceLocalizationAdapters.h
@@ -86,6 +90,10 @@ add_executable(VisionSystemCPP
     src/geometry/CircleGeometry.cpp
     src/geometry/ArcGeometry.h
     src/geometry/ArcGeometry.cpp
+    src/geometry/ConstructedGeometry.h
+    src/geometry/ConstructedGeometry.cpp
+    src/geometry/ConstructedGeometryMath.h
+    src/geometry/ConstructedGeometryMath.cpp
     src/geometry/EdgeGeometry.h
     src/geometry/EdgeGeometry.cpp
     src/geometry/ContourGeometry.h
@@ -131,6 +139,8 @@ add_executable(VisionSystemCPP
     src/runtime/CameraRuntime.h
     src/runtime/CameraRuntime.cpp
     src/runtime/PartPose.h
+    src/util/DetailedLogger.h
+    src/util/DetailedLogger.cpp
     src/utils/Timer.h
 )
 

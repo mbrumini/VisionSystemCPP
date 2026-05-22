@@ -112,7 +112,16 @@
 - [ ] Disegnare overlay diagnostici delle geometrie rilevate.
 - [ ] Implementare misure che usano geometrie gia' rilevate, per esempio distanza punto-linea.
 - [ ] Implementare tolleranze/criteri su misure e relazioni tra geometrie, per esempio concentricita' tra due cerchi.
-- [ ] Aggingere la possibilità di inserire punti relativi all'intersezione di 2 linee o altre geometrie
+- [x] Aggiungere pannello `Geometrie calcolate` con sorgenti da geometrie edge gia' trovate a runtime.
+- [x] Geometrie calcolate: intersezione linea-linea con creazione punto runtime e overlay diagnostico.
+- [x] Geometrie calcolate: intersezione linea-cerchio con creazione punti runtime e overlay diagnostico.
+- [x] Geometrie calcolate: intersezione cerchio-cerchio.
+- [ ] Geometrie calcolate: punto medio tra due punti/geometrie compatibili.
+- [ ] Geometrie calcolate: linea offset da una linea sorgente.
+- [ ] Geometrie calcolate: bisettrice tra due linee.
+- [ ] Geometrie calcolate: tangente a cerchio.
+- [ ] Geometrie calcolate: proiezione punto su linea o altra geometria compatibile.
+- [ ] Salvare/ricaricare la configurazione delle geometrie calcolate in ricetta camera.
 
 
 ## Ricette

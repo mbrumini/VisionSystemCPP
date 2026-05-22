@@ -82,13 +82,26 @@ void MainWindowSetupModule::showCameraSetupPanel(const CameraConfig& camera)
     [this, camera]() { stopCameraSimulation(camera); },
     [this, camera]() { stepCameraSimulation(camera); },
     {
-      [this, camera]() { context().geometry->showGeometryPointPanel(camera); },
-      [this, camera]() { context().geometry->showGeometryLinePanel(camera); },
-      [this, camera]() { context().geometry->showGeometryCirclePanel(camera); },
-      [this, camera]() { context().geometry->showGeometryArcPanel(camera); }
+      [this, camera]() {
+        *context().returnToSetupCameraId = camera.id;
+        context().geometry->showGeometryPointPanel(camera);
+      },
+      [this, camera]() {
+        *context().returnToSetupCameraId = camera.id;
+        context().geometry->showGeometryLinePanel(camera);
+      },
+      [this, camera]() {
+        *context().returnToSetupCameraId = camera.id;
+        context().geometry->showGeometryCirclePanel(camera);
+      },
+      [this, camera]() {
+        *context().returnToSetupCameraId = camera.id;
+        context().geometry->showGeometryArcPanel(camera);
+      }
     },
     [this, camera]() {
       stopCameraSimulation(camera);
+      context().returnToSetupCameraId->clear();
       context().imaging->reloadCameraReferenceImage(camera);
       context().showCameraToolList(camera);
     },
@@ -96,6 +109,7 @@ void MainWindowSetupModule::showCameraSetupPanel(const CameraConfig& camera)
   *context().setupPanel = panel;
   *context().setupCameraId = camera.id;
   toolsLayout()->addWidget(panel);
+  refreshSetupGeometryResults(camera);
 }
 
 void MainWindowSetupModule::showToolPanel(const CameraConfig& camera, const QString& toolId)
@@ -316,6 +330,7 @@ void MainWindowSetupModule::advanceCameraFrame(const CameraConfig& camera)
     return;
   }
 
+  log(QString("pipeline frame begin: %1 frame=%2").arg(camera.id).arg(runtime.frameIndex()));
   selectedPreview() = context().imaging->matToPixmap(runtime.currentFrame());
   for (CameraTileWidget* tile : *context().tiles)
   {
@@ -330,6 +345,11 @@ void MainWindowSetupModule::advanceCameraFrame(const CameraConfig& camera)
   scanTimer.start();
   processCurrentCameraFrame(camera);
   (*context().lastSetupScanElapsedMs)[camera.id] = scanTimer.elapsed();
+  log(QString("pipeline frame end: %1 frame=%2 elapsedMs=%3 pendingJobs=%4")
+        .arg(camera.id)
+        .arg(runtime.frameIndex())
+        .arg((*context().lastSetupScanElapsedMs)[camera.id])
+        .arg(context().cameraPendingJobs->value(camera.id, 0)));
   updateCameraSetupDetails(camera);
 }
 
@@ -337,6 +357,7 @@ void MainWindowSetupModule::advanceCameraFrame(const CameraConfig& camera)
 void MainWindowSetupModule::processCurrentCameraFrame(const CameraConfig& camera)
 {
   auto runConfiguredGeometry = [this, camera]() {
+    log(QString("pipeline geometries begin: %1").arg(camera.id));
     context().geometry->testConfiguredGeometryLines(camera);
     if (context().geometry->drawingTarget() == MainWindowGeometryModule::DrawingTarget::Point)
     {
@@ -350,10 +371,12 @@ void MainWindowSetupModule::processCurrentCameraFrame(const CameraConfig& camera
     {
       context().geometry->testGeometryArc(camera);
     }
+    log(QString("pipeline geometries queued: %1").arg(camera.id));
   };
 
   if (MainWindowCameraProfile::isBwDimensional(camera, config()))
   {
+    log(QString("pipeline localization begin: %1 mode=bw").arg(camera.id));
     context().localization->testLocalization(camera);
     runConfiguredGeometry();
     return;
@@ -361,6 +384,7 @@ void MainWindowSetupModule::processCurrentCameraFrame(const CameraConfig& camera
 
   if (!MainWindowCameraProfile::isGrayscaleLocalization(camera, config()))
   {
+    log(QString("pipeline localization skipped: %1 profile=%2").arg(camera.id, camera.profile.id));
     return;
   }
 
@@ -368,6 +392,7 @@ void MainWindowSetupModule::processCurrentCameraFrame(const CameraConfig& camera
   if ((annulus.method == "edge" && annulus.hasEdgeCircle && annulus.edgeRadius > annulus.edgeBandInner) ||
       (annulus.method != "edge" && annulus.hasOuterCircle && annulus.hasInnerCircle && annulus.outerRadius > annulus.innerRadius))
   {
+    log(QString("pipeline surface localization begin: %1 method=%2").arg(camera.id, annulus.method));
     context().surface->testSurfaceAnnulusLocalization(camera);
     runConfiguredGeometry();
     return;
@@ -376,9 +401,28 @@ void MainWindowSetupModule::processCurrentCameraFrame(const CameraConfig& camera
   QRect roi;
   if (recipes().loadSurfaceDefectRoi(camera.id, roi))
   {
+    log(QString("pipeline surface pca begin: %1 roi=%2,%3 %4x%5")
+          .arg(camera.id)
+          .arg(roi.x())
+          .arg(roi.y())
+          .arg(roi.width())
+          .arg(roi.height()));
     context().surface->testSurfaceEdgePcaLocalization(camera);
     runConfiguredGeometry();
+    return;
   }
+
+  log(QString("pipeline localization missing setup: %1").arg(camera.id));
+}
+
+void MainWindowSetupModule::refreshSetupGeometryResults(const CameraConfig& camera)
+{
+  if (camera.id != selectedCamera().id || !context().geometry)
+  {
+    return;
+  }
+
+  context().geometry->testConfiguredGeometryLines(camera);
 }
 
 

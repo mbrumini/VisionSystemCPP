@@ -6,9 +6,9 @@
 #include "gui/CameraSetupPanelWidget.h"
 #include "gui/CameraTileWidget.h"
 #include "gui/ImageViewWidget.h"
-#include "gui/MetricsPanelWidget.h"
 #include "gui/modules/MainWindowContext.h"
 #include "gui/modules/MainWindowCameraConfigModule.h"
+#include "gui/modules/MainWindowConstructedGeometryModule.h"
 #include "gui/modules/MainWindowGeometryModule.h"
 #include "gui/modules/MainWindowImagingModule.h"
 #include "gui/modules/MainWindowLocalizationModule.h"
@@ -18,6 +18,7 @@
 #include "processing/LocalizationProcessor.h"
 #include "processing/SurfaceDefectProcessor.h"
 #include "runtime/CameraRuntime.h"
+#include "util/DetailedLogger.h"
 
 #include <QGridLayout>
 #include <QHash>
@@ -55,6 +56,7 @@ private:
   void showLocalizationStrategyList(const CameraConfig& camera);
   void clearToolPanel();
   void appendLog(const QString& message);
+  void setDetailedLogEnabled(bool enabled);
   void updateLargePreview();
   void setThreadLimitPrompt();
   void incPendingJobs(const QString& cameraId);
@@ -64,6 +66,7 @@ private:
   AppConfig m_config;
   RecipeManager m_recipeManager;
   TranslationManager m_translations;
+  DetailedLogger m_detailedLogger;
 
   MainWindowContext m_ctx;
   MainWindowImagingModule m_imaging;
@@ -72,6 +75,7 @@ private:
   MainWindowSurfaceModule m_surface;
   MainWindowLocalizationModule m_localization;
   MainWindowCameraConfigModule m_cameraConfig;
+  MainWindowConstructedGeometryModule m_constructedGeometry;
   MainWindowSetupModule m_setup;
 
   QVector<CameraTileWidget*> m_tiles;
@@ -85,10 +89,10 @@ private:
   QLabel* m_cameraDetails = nullptr;
   CameraSetupPanelWidget* m_setupPanel = nullptr;
   QString m_setupCameraId;
+  QString m_returnToSetupCameraId;
   QWidget* m_toolsContainer = nullptr;
   QVBoxLayout* m_toolsLayout = nullptr;
   QTextEdit* m_log = nullptr;
-  MetricsPanelWidget* m_metricsPanel = nullptr;
   QString m_selectedCameraId;
   CameraConfig m_selectedCamera;
   QPixmap m_selectedPreview;

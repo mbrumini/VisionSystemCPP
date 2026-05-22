@@ -5,59 +5,31 @@
             "arcs": [
                 {
                     "coordinateSpace": "part",
-                    "edgeCleanupDerivative": 5,
-                    "edgeSensitivity": 255,
+                    "edgeCleanupDerivative": 4,
+                    "edgeSensitivity": 195,
                     "edgeStatisticalFilter": 2,
                     "enabled": true,
-                    "endAngleRadians": 0.5181280433185934,
+                    "endAngleRadians": 0.05582558075379559,
                     "id": "arc_2",
-                    "innerBand": 51,
-                    "outerBand": 51,
+                    "innerBand": 49,
+                    "outerBand": 49,
                     "partCenter": {
-                        "x": -17.474692172705886,
-                        "y": -7.859426219140801
+                        "x": 5.568260808925402,
+                        "y": 0.765968574727026
                     },
                     "partEnd": {
-                        "x": 323.0917030314565,
-                        "y": 186.29027404101078
+                        "x": 380.82713487630053,
+                        "y": 21.736802850105732
                     },
                     "partStart": {
-                        "x": 300.0917030314565,
-                        "y": -237.70972595898922
+                        "x": -19.172865123699466,
+                        "y": -374.26319714989427
                     },
                     "pickMode": "best",
-                    "radius": 392.0198664015185,
-                    "startAngleRadians": 5.656672923339939,
-                    "transition": "dark_to_light",
-                    "type": "edge_arc",
-                    "useSubpixel": true
-                },
-                {
-                    "coordinateSpace": "part",
-                    "edgeCleanupDerivative": 0,
-                    "edgeSensitivity": 128,
-                    "edgeStatisticalFilter": 0,
-                    "enabled": true,
-                    "endAngleRadians": 0.5534306063657654,
-                    "id": "arc_3",
-                    "innerBand": 20,
-                    "outerBand": 20,
-                    "partCenter": {
-                        "x": -16.99368170513253,
-                        "y": -3.6213182767918397
-                    },
-                    "partEnd": {
-                        "x": 314.4734225537593,
-                        "y": 201.1707745334661
-                    },
-                    "partStart": {
-                        "x": 306.4734225537593,
-                        "y": -220.8292254665339
-                    },
-                    "pickMode": "best",
-                    "radius": 389.62833891207197,
-                    "startAngleRadians": 5.6918445498311145,
-                    "transition": "dark_to_light",
+                    "radius": 375.84438063714543,
+                    "scanDirection": "normal_negative",
+                    "startAngleRadians": 4.646513232969269,
+                    "transition": "light_to_dark",
                     "type": "edge_arc",
                     "useSubpixel": true
                 }
@@ -65,20 +37,41 @@
             "circles": [
                 {
                     "coordinateSpace": "part",
-                    "edgeCleanupDerivative": 2,
-                    "edgeSensitivity": 226,
-                    "edgeStatisticalFilter": 2,
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
                     "enabled": true,
                     "id": "circle_1",
-                    "innerBand": 28,
-                    "outerBand": 31,
+                    "innerBand": 33,
+                    "outerBand": 29,
                     "partCenter": {
-                        "x": -2.526577446240708,
-                        "y": 0.17077453346610127
+                        "x": 4.8271348763005335,
+                        "y": -3.2631971498942676
                     },
-                    "pickMode": "best",
-                    "radius": 377,
-                    "transition": "dark_to_light",
+                    "pickMode": "first",
+                    "radius": 380,
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_circle",
+                    "useSubpixel": true
+                },
+                {
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 128,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "circle_2",
+                    "innerBand": 33,
+                    "outerBand": 29,
+                    "partCenter": {
+                        "x": -0.1728651236994665,
+                        "y": 0.7368028501057324
+                    },
+                    "pickMode": "first",
+                    "radius": 375,
+                    "scanDirection": "normal_negative",
+                    "transition": "light_to_dark",
                     "type": "edge_circle",
                     "useSubpixel": true
                 }
@@ -86,63 +79,47 @@
             "enabled": true,
             "lines": [
                 {
-                    "bandHalfWidth": 49,
+                    "bandHalfWidth": 20,
                     "coordinateSpace": "part",
-                    "edgeCleanupDerivative": 4,
-                    "edgeSensitivity": 70,
-                    "edgeStatisticalFilter": 3,
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
                     "enabled": true,
                     "id": "line_1",
                     "partEnd": {
-                        "x": 723.6334225537594,
-                        "y": 221.25036932362525
+                        "x": 690.7471348763006,
+                        "y": 211.85547144634302
                     },
                     "partStart": {
-                        "x": 385.7134225537593,
-                        "y": 235.32851693578152
+                        "x": 444.3471348763005,
+                        "y": 217.1347768009017
                     },
-                    "pickMode": "best",
+                    "pickMode": "first",
                     "scanDirection": "normal_positive",
                     "transition": "light_to_dark",
                     "type": "edge_line",
                     "useSubpixel": true
-                }
-            ],
-            "points": [
-                {
-                    "coordinateSpace": "part",
-                    "edgeSensitivity": 157,
-                    "enabled": true,
-                    "id": "point_1",
-                    "partEnd": {
-                        "x": -273.9071731304309,
-                        "y": -80.02190212013807
-                    },
-                    "partStart": {
-                        "x": -462.22717313043097,
-                        "y": -159.21148243851724
-                    },
-                    "pickMode": "best",
-                    "transition": "light_to_dark",
-                    "type": "edge_point",
-                    "useSubpixel": true
                 },
                 {
+                    "bandHalfWidth": 20,
                     "coordinateSpace": "part",
-                    "edgeSensitivity": 157,
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
                     "enabled": true,
-                    "id": "point_2",
+                    "id": "line_2",
                     "partEnd": {
-                        "x": 278.3534225537594,
-                        "y": 124.4631044900508
+                        "x": -483.17286512369947,
+                        "y": 211.85547144634302
                     },
                     "partStart": {
-                        "x": 422.67342255375934,
-                        "y": 193.0940740993127
+                        "x": -822.8528651236995,
+                        "y": 181.9394077705109
                     },
-                    "pickMode": "best",
+                    "pickMode": "first",
+                    "scanDirection": "normal_positive",
                     "transition": "light_to_dark",
-                    "type": "edge_point",
+                    "type": "edge_line",
                     "useSubpixel": true
                 }
             ]
@@ -150,19 +127,18 @@
         "surfaceLocalization": {
             "edge": {
                 "band": {
-                    "inner": 69,
-                    "outer": 20
+                    "inner": 43,
+                    "outer": 65
                 },
                 "circle": {
-                    "centerX": 970,
-                    "centerY": 707,
+                    "centerX": 966,
+                    "centerY": 700,
                     "radius": 376
                 },
-                "sensitivity": 147
+                "fitMaxError": 6,
+                "sensitivity": 122
             },
             "enabled": true,
-            "exclusionRects": [
-            ],
             "method": "edge"
         }
     }

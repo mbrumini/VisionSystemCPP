@@ -6,7 +6,6 @@
 #include "gui/CameraSetupPanelWidget.h"
 #include "gui/CameraTileWidget.h"
 #include "gui/ImageViewWidget.h"
-#include "gui/MetricsPanelWidget.h"
 #include "processing/LocalizationProcessor.h"
 #include "processing/SurfaceDefectProcessor.h"
 #include "runtime/CameraRuntime.h"
@@ -33,6 +32,7 @@ class MainWindowImagingModule;
 class MainWindowRecipeModule;
 class MainWindowSetupModule;
 class MainWindowCameraConfigModule;
+class MainWindowConstructedGeometryModule;
 
 enum class MainWindowActiveDrawingRecipe
 {
@@ -61,10 +61,10 @@ struct MainWindowContext
   QLabel* cameraDetails = nullptr;
   CameraSetupPanelWidget** setupPanel = nullptr;
   QString* setupCameraId = nullptr;
+  QString* returnToSetupCameraId = nullptr;
   QWidget* toolsContainer = nullptr;
   QVBoxLayout* toolsLayout = nullptr;
   QTextEdit* log = nullptr;
-  MetricsPanelWidget* metricsPanel = nullptr;
 
   QString* selectedCameraId = nullptr;
   CameraConfig* selectedCamera = nullptr;
@@ -89,6 +89,7 @@ struct MainWindowContext
   MainWindowRecipeModule* recipeModule = nullptr;
   MainWindowSetupModule* setup = nullptr;
   MainWindowCameraConfigModule* cameraConfig = nullptr;
+  MainWindowConstructedGeometryModule* constructedGeometry = nullptr;
 
   std::function<QString(const QString&)> trText;
   std::function<void(const CameraConfig&)> showLocalizationStrategyList;

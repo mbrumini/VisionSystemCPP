@@ -71,8 +71,9 @@ std::vector<cv::Point2d> scanCircleEdges(const cv::Mat& gray, const EdgeCircleDe
   const int angleSamples = config.useArc
     ? std::max(12, static_cast<int>(std::round(fullCircleSamples * span / (2.0 * CV_PI))))
     : fullCircleSamples;
-  const double startOffset = -static_cast<double>(config.innerBand);
-  const double endOffset = static_cast<double>(config.outerBand);
+  const bool outwardScan = config.scanDirection == EdgeLineScanDirection::NormalPositive;
+  const double startOffset = outwardScan ? -static_cast<double>(config.innerBand) : static_cast<double>(config.outerBand);
+  const double endOffset = outwardScan ? static_cast<double>(config.outerBand) : -static_cast<double>(config.innerBand);
 
   for (int i = 0; i < angleSamples; ++i)
   {
@@ -139,6 +140,21 @@ std::vector<cv::Point2d> scanCircleEdges(const cv::Mat& gray, const EdgeCircleDe
   }
 
   return points;
+}
+
+double configuredArcSpanRadians(const EdgeCircleDetectorConfig& config)
+{
+  if (!config.useArc)
+  {
+    return 2.0 * CV_PI;
+  }
+
+  double span = config.endAngleRadians - config.startAngleRadians;
+  while (span < 0.0)
+  {
+    span += 2.0 * CV_PI;
+  }
+  return span < 0.001 ? 2.0 * CV_PI : span;
 }
 
 std::vector<cv::Point2d> filterByRadialDerivative(const std::vector<cv::Point2d>& points, const EdgeCircleDetectorConfig& config)
@@ -270,9 +286,13 @@ EdgeCircleDetectorResult EdgeCircleDetector::detect(const cv::Mat& input, const 
     cv::circle(result.diagnosticImage, imagePoint, 5, cv::Scalar(0, 0, 255), cv::FILLED, cv::LINE_AA);
   }
 
-  if (static_cast<int>(result.edgePoints.size()) < config.minPoints)
+  const double span = configuredArcSpanRadians(config);
+  const int requiredMinPoints = config.useArc
+    ? std::max(8, static_cast<int>(std::round(static_cast<double>(config.minPoints) * span / (2.0 * CV_PI))))
+    : config.minPoints;
+  if (static_cast<int>(result.edgePoints.size()) < requiredMinPoints)
   {
-    result.message = QString("Punti edge cerchio insufficienti: %1").arg(result.edgePoints.size());
+    result.message = QString("Punti edge cerchio insufficienti: %1/%2").arg(result.edgePoints.size()).arg(requiredMinPoints);
     return result;
   }
 
@@ -307,11 +327,11 @@ EdgeCircleDetectorResult EdgeCircleDetector::detect(const cv::Mat& input, const 
     result.arc.meanError = fit.meanError;
     cv::ellipse(result.diagnosticImage, surfacePoint(fit.center),
       cv::Size(static_cast<int>(std::round(fit.radius)), static_cast<int>(std::round(fit.radius))),
-      0.0, startDegrees, endDegrees, cv::Scalar(0, 255, 0), 2, cv::LINE_AA);
+      0.0, startDegrees, endDegrees, cv::Scalar(216, 79, 255), 4, cv::LINE_AA);
   }
   else
   {
-    cv::circle(result.diagnosticImage, surfacePoint(fit.center), static_cast<int>(std::round(fit.radius)), cv::Scalar(0, 255, 0), 2, cv::LINE_AA);
+    cv::circle(result.diagnosticImage, surfacePoint(fit.center), static_cast<int>(std::round(fit.radius)), cv::Scalar(255, 255, 0), 4, cv::LINE_AA);
   }
   return result;
 }

@@ -256,6 +256,7 @@ void MainWindowGeometryModule::loadGeometryCirclesRecipe(const CameraConfig& cam
     circle.edgeCleanupDerivative = recipe.edgeCleanupDerivative;
     circle.edgeStatisticalFilter = recipe.edgeStatisticalFilter;
     circle.useSubpixel = recipe.useSubpixel;
+    circle.scanDirection = scanDirectionFromRecipe(recipe.scanDirection);
     circle.transition = transitionFromRecipe(recipe.transition);
     circle.pickMode = pickModeFromRecipe(recipe.pickMode);
     circle.hasCircle = true;
@@ -321,6 +322,7 @@ void MainWindowGeometryModule::saveGeometryCirclesRecipe(const CameraConfig& cam
     recipe.edgeCleanupDerivative = circle.edgeCleanupDerivative;
     recipe.edgeStatisticalFilter = circle.edgeStatisticalFilter;
     recipe.useSubpixel = circle.useSubpixel;
+    recipe.scanDirection = scanDirectionToRecipe(circle.scanDirection);
     recipe.transition = transitionToRecipe(circle.transition);
     recipe.pickMode = pickModeToRecipe(circle.pickMode);
     recipeList.append(recipe);
