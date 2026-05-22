@@ -59,6 +59,7 @@ protected:
   void mousePressEvent(QMouseEvent* event) override;
   void mouseMoveEvent(QMouseEvent* event) override;
   void mouseReleaseEvent(QMouseEvent* event) override;
+  void wheelEvent(QWheelEvent* event) override;
 
 private:
   enum class ExclusionHandle
@@ -81,7 +82,9 @@ private:
     Rotate
   };
 
+  QRect baseImageDrawRect() const;
   QRect imageDrawRect() const;
+  void clampZoomPan();
   QPoint widgetToImage(const QPoint& widgetPoint) const;
   QRect widgetRectToImageRect(const QRect& widgetRect) const;
   QRect imageRectToWidgetRect(const QRect& imageRect) const;
@@ -115,6 +118,8 @@ private:
   };
 
   QPixmap m_image;
+  double m_zoomFactor = 1.0;
+  QPointF m_panOffset;
   QRect m_roi;
   QVector<QRect> m_exclusionRects;
   QVector<ImageCircle> m_circles;

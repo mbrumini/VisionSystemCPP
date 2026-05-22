@@ -6,6 +6,7 @@
 
 #include "gui/SurfaceLocalizationPanelWidget.h"
 #include "gui/SurfaceLocalizationStrategies.h"
+#include "gui/TouchIconButton.h"
 #include "gui/ToolCatalog.h"
 
 #include <QGridLayout>
@@ -72,14 +73,10 @@ void MainWindowSurfaceModule::showSurfaceLocalizationStrategyPanel(const CameraC
     buttonsLayout->setContentsMargins(0, 0, 0, 0);
     buttonsLayout->setSpacing(6);
 
-    auto* roiButton = new QPushButton(tr("actions.surfaceSearchRoi"), buttons);
-    auto* maskButton = new QPushButton(tr("actions.surfaceAddExclusion"), buttons);
-    auto* clearButton = new QPushButton(tr("actions.surfaceClearExclusions"), buttons);
-    auto* testButton = new QPushButton(tr("actions.testStrategy"), buttons);
-    for (QPushButton* button : {roiButton, maskButton, clearButton, testButton})
-    {
-      button->setMinimumHeight(34);
-    }
+    auto* roiButton = createTouchIconButton("surfaceSearchRoi", tr("actions.surfaceSearchRoi"), buttons);
+    auto* maskButton = createTouchIconButton("surfaceAddExclusion", tr("actions.surfaceAddExclusion"), buttons);
+    auto* clearButton = createTouchIconButton("surfaceClearExclusions", tr("actions.surfaceClearExclusions"), buttons);
+    auto* testButton = createTouchIconButton("testStrategy", tr("actions.testStrategy"), buttons);
     QObject::connect(roiButton, &QPushButton::clicked, window(), [this, camera]() { activateSurfaceDefectRoiDrawing(camera); });
     QObject::connect(maskButton, &QPushButton::clicked, window(), [this, camera]() { activateSurfaceDefectExclusionDrawing(camera); });
     QObject::connect(clearButton, &QPushButton::clicked, window(), [this, camera]() { clearSurfaceDefectExclusions(camera); });
@@ -112,7 +109,7 @@ void MainWindowSurfaceModule::showSurfaceLocalizationStrategyPanel(const CameraC
     });
     layout->addWidget(sensitivityBox);
 
-    auto* backButton = new QPushButton(tr("groups.localizationStrategies"), panel);
+    auto* backButton = createTouchIconButton("back", tr("groups.localizationStrategies"), panel);
     QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() {
       context().showLocalizationStrategyList(camera);
       log(tr("log.backToCameraTools") + ": " + camera.id);
@@ -158,15 +155,11 @@ void MainWindowSurfaceModule::showSurfaceLocalizationStrategyPanel(const CameraC
     buttonsLayout->setContentsMargins(0, 0, 0, 0);
     buttonsLayout->setSpacing(6);
 
-    auto* roiButton = new QPushButton(tr("actions.surfaceSearchRoi"), buttons);
-    auto* previewButton = new QPushButton(tr("actions.previewModel"), buttons);
-    auto* acquireButton = new QPushButton(tr("actions.acquireModel"), buttons);
-    auto* shapeButton = new QPushButton(tr("actions.testShapeModel"), buttons);
-    auto* templateButton = new QPushButton(tr("actions.testTemplateModel"), buttons);
-    for (QPushButton* button : {roiButton, previewButton, acquireButton, shapeButton, templateButton})
-    {
-      button->setMinimumHeight(34);
-    }
+    auto* roiButton = createTouchIconButton("surfaceSearchRoi", tr("actions.surfaceSearchRoi"), buttons);
+    auto* previewButton = createTouchIconButton("previewModel", tr("actions.previewModel"), buttons);
+    auto* acquireButton = createTouchIconButton("acquireModel", tr("actions.acquireModel"), buttons);
+    auto* shapeButton = createTouchIconButton("testShapeModel", tr("actions.testShapeModel"), buttons);
+    auto* templateButton = createTouchIconButton("testTemplateModel", tr("actions.testTemplateModel"), buttons);
     QObject::connect(roiButton, &QPushButton::clicked, window(), [this, camera]() { activateSurfaceDefectRoiDrawing(camera); });
     QObject::connect(previewButton, &QPushButton::clicked, window(), [this, camera]() { previewSurfaceModel(camera); });
     QObject::connect(acquireButton, &QPushButton::clicked, window(), [this, camera]() { acquireSurfaceModel(camera); });
@@ -250,7 +243,7 @@ void MainWindowSurfaceModule::showSurfaceLocalizationStrategyPanel(const CameraC
     });
     layout->addWidget(modelBox);
 
-    auto* backButton = new QPushButton(tr("groups.localizationStrategies"), panel);
+    auto* backButton = createTouchIconButton("back", tr("groups.localizationStrategies"), panel);
     QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() {
       context().showLocalizationStrategyList(camera);
       log(tr("log.backToCameraTools") + ": " + camera.id);
@@ -285,11 +278,11 @@ void MainWindowSurfaceModule::showSurfaceLocalizationStrategyPanel(const CameraC
   auto* controlsLayout = new QVBoxLayout(controlsBox);
   controlsLayout->setSpacing(8);
   controlsLayout->addWidget(new QLabel(tr("labels.strategyPlanned"), controlsBox));
-  controlsLayout->addWidget(new QPushButton(tr("actions.configureStrategy"), controlsBox));
-  controlsLayout->addWidget(new QPushButton(tr("actions.testStrategy"), controlsBox));
+  controlsLayout->addWidget(createTouchIconButton("configureStrategy", tr("actions.configureStrategy"), controlsBox));
+  controlsLayout->addWidget(createTouchIconButton("testStrategy", tr("actions.testStrategy"), controlsBox));
   layout->addWidget(controlsBox);
 
-  auto* backButton = new QPushButton(tr("groups.localizationStrategies"), panel);
+  auto* backButton = createTouchIconButton("back", tr("groups.localizationStrategies"), panel);
   QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() {
     context().showLocalizationStrategyList(camera);
     log(tr("log.backToCameraTools") + ": " + camera.id);

@@ -30,11 +30,32 @@ struct GeometryOverlayBand
   QColor fillColor = QColor(0, 210, 255, 35);
 };
 
+struct GeometryOverlayDimension
+{
+  QPointF imageStart;
+  QPointF imageEnd;
+  QString label;
+  QColor color = QColor("#ff8a00");
+  int width = 3;
+};
+
+struct GeometryOverlayAngle
+{
+  QPointF imageCenter;
+  QPointF imageArmA;
+  QPointF imageArmB;
+  QString label;
+  QColor color = QColor("#ff8a00");
+  int width = 3;
+};
+
 struct GeometryOverlay
 {
   QVector<GeometryOverlayPoint> points;
   QVector<GeometryOverlayLine> lines;
   QVector<GeometryOverlayBand> bands;
+  QVector<GeometryOverlayDimension> dimensions;
+  QVector<GeometryOverlayAngle> angles;
 
   void clear();
   bool empty() const;

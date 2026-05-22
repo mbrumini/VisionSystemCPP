@@ -110,7 +110,18 @@
 - [ ] Salvare configurazione geometrie in ricetta camera.
 - [x] Aggiungere arco nelle geometrie, si possono anche unire archi per formare un cerchio
 - [ ] Disegnare overlay diagnostici delle geometrie rilevate.
-- [ ] Implementare misure che usano geometrie gia' rilevate, per esempio distanza punto-linea.
+- [x] Implementare prima misura che usa geometrie gia' rilevate: distanza punto-linea.
+- [x] Disegnare overlay quota per distanza punto-linea: freccia a 2 punte e valore in pixel sull'immagine.
+- [x] Riordinare il modulo `Misure` come le geometrie calcolate: menu principale e una pagina separata per ogni misura.
+- [x] Separare i file del modulo misure: pannelli UI, azioni/creazione misure, rebuild da ricetta e matematica in file dedicati.
+- [x] Aggiungere misura distanza punto-punto.
+- [x] Aggiungere misura distanza linea-linea, valida per linee parallele.
+- [x] Aggiungere misura diametro cerchio.
+- [x] Aggiungere misura angolo linea-linea.
+- [x] Salvare/ricaricare tutte le misure in ricetta camera (`tools.measurements.items`).
+- [x] Disegnare overlay diagnostico per tutte le misure: sorgenti evidenziate, freccia/angolo e valore in pixel o gradi.
+- [x] Compilare il flusso completo `Misure` dopo il riordino.
+- [ ] Provare in GUI il flusso completo `Misure` con immagini reali.
 - [ ] Implementare tolleranze/criteri su misure e relazioni tra geometrie, per esempio concentricita' tra due cerchi.
 - [x] Aggiungere pannello `Geometrie calcolate` con sorgenti da geometrie edge gia' trovate a runtime.
 - [x] Geometrie calcolate: intersezione linea-linea con creazione punto runtime e overlay diagnostico.

@@ -5,6 +5,7 @@ project(VisionSystemCPP LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_AUTORCC ON)
 
 find_package(OpenCV REQUIRED)
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
@@ -16,6 +17,7 @@ add_executable(VisionSystemCPP
     src/config/RecipeManager.h
     src/config/RecipeManager.cpp
     src/config/RecipeManagerGeometry.cpp
+    src/config/RecipeManagerMeasurement.cpp
     src/config/RecipeManagerStorage.cpp
     src/config/RecipeJsonUtils.h
     src/config/RecipeJsonUtils.cpp
@@ -26,11 +28,23 @@ add_executable(VisionSystemCPP
     src/camera/FileCamera.cpp
     src/gui/CameraTileWidget.h
     src/gui/CameraTileWidget.cpp
+    src/gui/CameraStripWidget.h
+    src/gui/CameraStripWidget.cpp
     src/gui/CameraSetupPanelWidget.h
     src/gui/CameraSetupPanelWidget.cpp
+    src/gui/CommandToolbarWidget.h
+    src/gui/CommandToolbarWidget.cpp
+    src/gui/IconCatalog.h
+    src/gui/IconCatalog.cpp
     src/gui/ImagePrimitives.h
     src/gui/ImageViewWidget.h
     src/gui/ImageViewWidget.cpp
+    src/gui/MeasurementResultsWidget.h
+    src/gui/MeasurementResultsWidget.cpp
+    src/gui/ToolIconBarWidget.h
+    src/gui/ToolIconBarWidget.cpp
+    src/gui/TouchIconButton.h
+    src/gui/TouchIconButton.cpp
     src/gui/ImageViewWidgetInteraction.cpp
     src/gui/ImageViewWidgetPainting.cpp
     src/gui/MainWindow.h
@@ -45,10 +59,16 @@ add_executable(VisionSystemCPP
     src/gui/modules/ConstructedGeometryPointSource.cpp
     src/gui/modules/MainWindowConstructedGeometryModule.h
     src/gui/modules/MainWindowConstructedGeometryModule.cpp
+    src/gui/modules/MainWindowConstructedGeometryPanels.cpp
     src/gui/modules/MainWindowConstructedGeometryRecipe.cpp
     src/gui/modules/MainWindowImagingModule.cpp
     src/gui/modules/MainWindowRecipeModule.cpp
     src/gui/modules/MainWindowLocalizationModule.cpp
+    src/gui/modules/MainWindowMeasurementModule.h
+    src/gui/modules/MainWindowMeasurementModule.cpp
+    src/gui/modules/MainWindowMeasurementPanels.cpp
+    src/gui/modules/MainWindowMeasurementActions.cpp
+    src/gui/modules/MainWindowMeasurementRecipe.cpp
     src/gui/modules/MainWindowGeometryModule.h
     src/gui/modules/geometry/MainWindowGeometryModule_Recipe.cpp
     src/gui/modules/geometry/GeometryToolPanels.cpp
@@ -103,6 +123,9 @@ add_executable(VisionSystemCPP
     src/geometry/ContourGeometry.cpp
     src/geometry/GeometrySet.h
     src/geometry/GeometrySet.cpp
+    src/measurement/MeasurementGeometry.h
+    src/measurement/MeasurementGeometryMath.h
+    src/measurement/MeasurementGeometryMath.cpp
     src/processing/ImageProcessor.h
     src/processing/ImageProcessor.cpp
     src/processing/CircleFit.h
@@ -145,6 +168,7 @@ add_executable(VisionSystemCPP
     src/util/DetailedLogger.h
     src/util/DetailedLogger.cpp
     src/utils/Timer.h
+    resources/icons.qrc
 )
 
 target_link_libraries(VisionSystemCPP PRIVATE

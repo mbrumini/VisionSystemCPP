@@ -33,6 +33,7 @@ class MainWindowRecipeModule;
 class MainWindowSetupModule;
 class MainWindowCameraConfigModule;
 class MainWindowConstructedGeometryModule;
+class MainWindowMeasurementModule;
 
 enum class MainWindowActiveDrawingRecipe
 {
@@ -90,6 +91,7 @@ struct MainWindowContext
   MainWindowSetupModule* setup = nullptr;
   MainWindowCameraConfigModule* cameraConfig = nullptr;
   MainWindowConstructedGeometryModule* constructedGeometry = nullptr;
+  MainWindowMeasurementModule* measurement = nullptr;
 
   std::function<QString(const QString&)> trText;
   std::function<void(const CameraConfig&)> showLocalizationStrategyList;
@@ -98,6 +100,7 @@ struct MainWindowContext
   std::function<void(const QString&)> decPendingJobs;
   std::function<void(const QString&)> appendLog;
   std::function<void()> updateLargePreview;
+  std::function<void()> updateMeasurementResults;
   std::function<void(const CameraConfig&)> reloadCameraReferenceImage;
   std::function<void(const CameraConfig*)> updateControlPanel;
   std::function<void()> clearToolPanel;

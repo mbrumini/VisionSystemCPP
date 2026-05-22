@@ -4,14 +4,19 @@
 #include "config/RecipeManager.h"
 #include "config/TranslationManager.h"
 #include "gui/CameraSetupPanelWidget.h"
+#include "gui/CameraStripWidget.h"
+#include "gui/CommandToolbarWidget.h"
 #include "gui/CameraTileWidget.h"
 #include "gui/ImageViewWidget.h"
+#include "gui/MeasurementResultsWidget.h"
+#include "gui/ToolIconBarWidget.h"
 #include "gui/modules/MainWindowContext.h"
 #include "gui/modules/MainWindowCameraConfigModule.h"
 #include "gui/modules/MainWindowConstructedGeometryModule.h"
 #include "gui/modules/MainWindowGeometryModule.h"
 #include "gui/modules/MainWindowImagingModule.h"
 #include "gui/modules/MainWindowLocalizationModule.h"
+#include "gui/modules/MainWindowMeasurementModule.h"
 #include "gui/modules/MainWindowRecipeModule.h"
 #include "gui/modules/MainWindowSetupModule.h"
 #include "gui/modules/MainWindowSurfaceModule.h"
@@ -50,7 +55,11 @@ private:
   void loadConfiguration();
   void showGridView();
   void selectCamera(const CameraConfig& camera);
+  void startMachine();
+  void stopMachine();
   void updateControlPanel(const CameraConfig* camera);
+  void updateMeasurementResults();
+  void updateCameraStripStatus(const QString& cameraId);
   void deactivateImageDrawingTools();
   void showCameraToolList(const CameraConfig& camera);
   void showLocalizationStrategyList(const CameraConfig& camera);
@@ -76,6 +85,7 @@ private:
   MainWindowLocalizationModule m_localization;
   MainWindowCameraConfigModule m_cameraConfig;
   MainWindowConstructedGeometryModule m_constructedGeometry;
+  MainWindowMeasurementModule m_measurement;
   MainWindowSetupModule m_setup;
 
   QVector<CameraTileWidget*> m_tiles;
@@ -83,6 +93,10 @@ private:
   QWidget* m_gridPage = nullptr;
   QWidget* m_gridContent = nullptr;
   QGridLayout* m_gridLayout = nullptr;
+  CommandToolbarWidget* m_commandToolbar = nullptr;
+  CameraStripWidget* m_cameraStrip = nullptr;
+  ToolIconBarWidget* m_toolIconBar = nullptr;
+  MeasurementResultsWidget* m_measurementResults = nullptr;
   ImageViewWidget* m_largeImage = nullptr;
   QLabel* m_largeTitle = nullptr;
   QLabel* m_systemStatus = nullptr;
@@ -105,6 +119,7 @@ private:
   QHash<QString, bool> m_cameraProcessingBusy;
   QHash<QString, int> m_cameraDroppedFrames;
   QHash<QString, int> m_cameraPendingJobs;
+  bool m_machineRunning = false;
 
   MainWindowActiveDrawingRecipe m_activeDrawingRecipe = MainWindowActiveDrawingRecipe::None;
 };

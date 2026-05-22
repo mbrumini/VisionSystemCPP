@@ -4,6 +4,7 @@
 #include "gui/modules/MainWindowContext.h"
 #include "gui/modules/MainWindowSetupModule.h"
 #include "gui/modules/geometry/GeometryPanelNavigation.h"
+#include "gui/TouchIconButton.h"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -47,8 +48,8 @@ void MainWindowGeometryModule::showGeometryArcPanel(const CameraConfig& camera)
     arcSelector->addItem(arcConfigs[i].id, i);
   }
   arcSelector->setCurrentIndex(qBound(0, m_activeArcIndexes.value(camera.id, 0), arcConfigs.size() - 1));
-  auto* newArcButton = new QPushButton(tr("actions.newGeometryArc"), panel);
-  auto* deleteArcButton = new QPushButton(tr("actions.deleteGeometryArc"), panel);
+  auto* newArcButton = createTouchIconButton("arcGeometry", tr("actions.newGeometryArc"), panel);
+  auto* deleteArcButton = createTouchIconButton("delete", tr("actions.deleteGeometryArc"), panel);
 
   auto* top = new QWidget(panel);
   auto* topLayout = new QGridLayout(top);
@@ -189,8 +190,9 @@ void MainWindowGeometryModule::showGeometryArcPanel(const CameraConfig& camera)
     testGeometryArc(camera);
   });
 
-  auto* testButton = new QPushButton(tr("actions.testGeometry"), panel);
-  auto* backButton = new QPushButton(
+  auto* testButton = createTouchIconButton("testGeometry", tr("actions.testGeometry"), panel);
+  auto* backButton = createTouchIconButton(
+    "back",
     GeometryPanelNavigation::backLabel(context(), camera, tr("commands.backToCameraTools")),
     panel);
   QObject::connect(testButton, &QPushButton::clicked, window(), [this, camera]() { testGeometryArc(camera); });

@@ -1,22 +1,60 @@
 #include "CameraSetupPanelWidget.h"
 
+#include "gui/IconCatalog.h"
+
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QLabel>
-#include <QPushButton>
 #include <QSpinBox>
+#include <QToolButton>
 #include <QVBoxLayout>
 
 namespace
 {
-void connectButton(QPushButton* button, const std::function<void()>& handler)
+void connectButton(QToolButton* button, const std::function<void()>& handler)
 {
-  QObject::connect(button, &QPushButton::clicked, button, [handler]() {
+  QObject::connect(button, &QToolButton::clicked, button, [handler]() {
     if (handler)
     {
       handler();
     }
   });
+}
+
+QToolButton* createTouchButton(const QString& iconId, const QString& label, QWidget* parent)
+{
+  auto* button = new QToolButton(parent);
+  button->setObjectName("touchIconButton");
+  button->setIcon(IconCatalog::icon(iconId));
+  button->setIconSize(QSize(28, 28));
+  button->setToolTip(label);
+  button->setAccessibleName(label);
+  button->setMinimumSize(58, 58);
+  button->setMaximumSize(68, 68);
+  button->setAutoRaise(false);
+  return button;
+}
+
+QString toolIconId(const QString& label)
+{
+  const QString text = label.toLower();
+  if (text.contains("punto"))
+  {
+    return "pointGeometry";
+  }
+  if (text.contains("linea"))
+  {
+    return "lineGeometry";
+  }
+  if (text.contains("cerchio"))
+  {
+    return "circleGeometry";
+  }
+  if (text.contains("arco"))
+  {
+    return "arcGeometry";
+  }
+  return "geometries";
 }
 }
 
@@ -73,9 +111,8 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
     toolsLayout->setSpacing(6);
     for (int i = 0; i < texts.toolLabels.size(); ++i)
     {
-      auto* button = new QPushButton(texts.toolLabels[i], toolsBox);
-      button->setMinimumHeight(34);
-      toolsLayout->addWidget(button, i / 2, i % 2);
+      auto* button = createTouchButton(toolIconId(texts.toolLabels[i]), texts.toolLabels[i], toolsBox);
+      toolsLayout->addWidget(button, i / 4, i % 4);
       if (i < toolHandlers.size())
       {
         connectButton(button, toolHandlers[i]);
@@ -89,23 +126,23 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
   buttonsLayout->setContentsMargins(0, 0, 0, 0);
   buttonsLayout->setSpacing(6);
 
-  auto* acquireSampleButton = new QPushButton(texts.acquireSample, buttons);
-  auto* sampleButton = new QPushButton(texts.importSample, buttons);
-  auto* testImagesButton = new QPushButton(texts.importTests, buttons);
-  auto* sourceButton = new QPushButton(texts.assignImageFolder, buttons);
-  auto* startButton = new QPushButton(texts.start, buttons);
-  auto* stopButton = new QPushButton(texts.stop, buttons);
-  auto* stepButton = new QPushButton(texts.nextFrame, buttons);
-  auto* backButton = new QPushButton(texts.back, buttons);
+  auto* acquireSampleButton = createTouchButton("acquireSample", texts.acquireSample, buttons);
+  auto* sampleButton = createTouchButton("assignSampleImage", texts.importSample, buttons);
+  auto* testImagesButton = createTouchButton("assignTestImages", texts.importTests, buttons);
+  auto* sourceButton = createTouchButton("assignImageFolder", texts.assignImageFolder, buttons);
+  auto* startButton = createTouchButton("start", texts.start, buttons);
+  auto* stopButton = createTouchButton("stop", texts.stop, buttons);
+  auto* stepButton = createTouchButton("nextFrame", texts.nextFrame, buttons);
+  auto* backButton = createTouchButton("back", texts.back, buttons);
 
-  buttonsLayout->addWidget(acquireSampleButton, 0, 0, 1, 2);
-  buttonsLayout->addWidget(sampleButton, 1, 0);
-  buttonsLayout->addWidget(testImagesButton, 1, 1);
-  buttonsLayout->addWidget(sourceButton, 2, 0, 1, 2);
-  buttonsLayout->addWidget(startButton, 3, 0);
-  buttonsLayout->addWidget(stopButton, 3, 1);
-  buttonsLayout->addWidget(stepButton, 4, 0, 1, 2);
-  buttonsLayout->addWidget(backButton, 5, 0, 1, 2);
+  buttonsLayout->addWidget(acquireSampleButton, 0, 0);
+  buttonsLayout->addWidget(sampleButton, 0, 1);
+  buttonsLayout->addWidget(testImagesButton, 0, 2);
+  buttonsLayout->addWidget(sourceButton, 0, 3);
+  buttonsLayout->addWidget(startButton, 1, 0);
+  buttonsLayout->addWidget(stopButton, 1, 1);
+  buttonsLayout->addWidget(stepButton, 1, 2);
+  buttonsLayout->addWidget(backButton, 1, 3);
   layout->addWidget(buttons);
 
   connectButton(acquireSampleButton, acquireSample);

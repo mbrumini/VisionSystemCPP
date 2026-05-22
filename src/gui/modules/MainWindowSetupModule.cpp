@@ -5,6 +5,7 @@
 #include "gui/modules/MainWindowConstructedGeometryModule.h"
 #include "gui/modules/MainWindowSurfaceModule.h"
 #include "gui/modules/MainWindowLocalizationModule.h"
+#include "gui/modules/MainWindowMeasurementModule.h"
 #include "gui/modules/MainWindowContext.h"
 #include "gui/modules/MainWindowCameraConfigModule.h"
 #include "gui/ToolCatalog.h"
@@ -126,6 +127,12 @@ void MainWindowSetupModule::showToolPanel(const CameraConfig& camera, const QStr
   if (toolId == "surfaceLocalization")
   {
     context().surface->showSurfaceLocalizationPanel(camera);
+    return;
+  }
+
+  if (toolId == "measurements")
+  {
+    context().measurement->showMeasurementPanel(camera);
     return;
   }
 
@@ -346,6 +353,10 @@ void MainWindowSetupModule::advanceCameraFrame(const CameraConfig& camera)
   scanTimer.start();
   processCurrentCameraFrame(camera);
   (*context().lastSetupScanElapsedMs)[camera.id] = scanTimer.elapsed();
+  if (context().updateMeasurementResults)
+  {
+    context().updateMeasurementResults();
+  }
   log(QString("pipeline frame end: %1 frame=%2 elapsedMs=%3 pendingJobs=%4")
         .arg(camera.id)
         .arg(runtime.frameIndex())
@@ -375,6 +386,10 @@ void MainWindowSetupModule::processCurrentCameraFrame(const CameraConfig& camera
     if (context().constructedGeometry)
     {
       context().constructedGeometry->rebuildConstructedGeometryRecipe(camera);
+    }
+    if (context().measurement)
+    {
+      context().measurement->rebuildMeasurementRecipe(camera);
     }
     log(QString("pipeline geometries queued: %1").arg(camera.id));
   };
@@ -431,6 +446,10 @@ void MainWindowSetupModule::refreshSetupGeometryResults(const CameraConfig& came
   if (context().constructedGeometry)
   {
     context().constructedGeometry->rebuildConstructedGeometryRecipe(camera);
+  }
+  if (context().measurement)
+  {
+    context().measurement->rebuildMeasurementRecipe(camera);
   }
 }
 

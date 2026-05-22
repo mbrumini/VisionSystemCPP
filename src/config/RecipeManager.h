@@ -148,6 +148,15 @@ struct ConstructedGeometryRecipeConfig
   double offset = 0.0;
 };
 
+struct MeasurementRecipeConfig
+{
+  bool enabled = true;
+  QString id;
+  QString type;
+  QString sourceAId;
+  QString sourceBId;
+};
+
 class RecipeManager
 {
 public:
@@ -211,6 +220,9 @@ public:
   QVector<ConstructedGeometryRecipeConfig> loadConstructedGeometries(const QString& cameraId) const;
   bool saveConstructedGeometries(const QString& cameraId, const QVector<ConstructedGeometryRecipeConfig>& configs, QString* errorMessage = nullptr) const;
   bool appendConstructedGeometry(const QString& cameraId, const ConstructedGeometryRecipeConfig& config, QString* errorMessage = nullptr) const;
+  QVector<MeasurementRecipeConfig> loadMeasurements(const QString& cameraId) const;
+  bool saveMeasurements(const QString& cameraId, const QVector<MeasurementRecipeConfig>& configs, QString* errorMessage = nullptr) const;
+  bool appendMeasurement(const QString& cameraId, const MeasurementRecipeConfig& config, QString* errorMessage = nullptr) const;
   QString cameraSampleImagesPath(const QString& cameraId) const;
   QString cameraTestImagesPath(const QString& cameraId) const;
   QString firstCameraSampleImagePath(const QString& cameraId) const;

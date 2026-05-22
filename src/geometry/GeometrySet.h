@@ -7,6 +7,7 @@
 #include "geometry/EdgeGeometry.h"
 #include "geometry/LineGeometry.h"
 #include "geometry/PointGeometry.h"
+#include "measurement/MeasurementGeometry.h"
 
 #include <QVector>
 
@@ -20,6 +21,7 @@ struct GeometrySet
   QVector<ConstructedLineGeometry> constructedLines;
   QVector<EdgeGeometry> edges;
   QVector<ContourGeometry> contours;
+  QVector<MeasurementResult> measurements;
 
   void clear();
   bool empty() const;

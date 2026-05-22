@@ -22,6 +22,8 @@ void ImageViewWidget::setImage(const QPixmap& image)
 void ImageViewWidget::clearImage()
 {
   m_image = {};
+  m_zoomFactor = 1.0;
+  m_panOffset = {};
   m_hasRoi = false;
   m_hasGeometryArea = false;
   m_exclusionRects.clear();
@@ -329,7 +331,7 @@ void ImageViewWidget::setTwoPointLineHandler(std::function<void(const QVector<QP
   m_twoPointLineHandler = std::move(handler);
 }
 
-QRect ImageViewWidget::imageDrawRect() const
+QRect ImageViewWidget::baseImageDrawRect() const
 {
   if (m_image.isNull())
   {
@@ -341,6 +343,59 @@ QRect ImageViewWidget::imageDrawRect() const
     (width() - scaledSize.width()) / 2,
     (height() - scaledSize.height()) / 2);
   return QRect(topLeft, scaledSize);
+}
+
+QRect ImageViewWidget::imageDrawRect() const
+{
+  const QRect baseRect = baseImageDrawRect();
+  if (baseRect.isEmpty())
+  {
+    return {};
+  }
+
+  const QSize scaledSize(
+    std::max(1, static_cast<int>(std::round(baseRect.width() * m_zoomFactor))),
+    std::max(1, static_cast<int>(std::round(baseRect.height() * m_zoomFactor))));
+  const QPointF center = QPointF(baseRect.center()) + m_panOffset;
+  const QPoint topLeft(
+    static_cast<int>(std::round(center.x() - scaledSize.width() * 0.5)),
+    static_cast<int>(std::round(center.y() - scaledSize.height() * 0.5)));
+  return QRect(topLeft, scaledSize);
+}
+
+void ImageViewWidget::clampZoomPan()
+{
+  if (m_image.isNull())
+  {
+    m_zoomFactor = 1.0;
+    m_panOffset = {};
+    return;
+  }
+
+  m_zoomFactor = std::clamp(m_zoomFactor, 1.0, 20.0);
+  if (m_zoomFactor <= 1.0001)
+  {
+    m_zoomFactor = 1.0;
+    m_panOffset = {};
+    return;
+  }
+
+  const QRect baseRect = baseImageDrawRect();
+  const QSizeF scaledSize(baseRect.width() * m_zoomFactor, baseRect.height() * m_zoomFactor);
+  QPointF center = QPointF(baseRect.center()) + m_panOffset;
+  const QRectF viewport = rect();
+
+  auto clampAxis = [](double value, double halfSize, double viewportSize, double baseCenter) {
+    if (halfSize * 2.0 <= viewportSize)
+    {
+      return baseCenter;
+    }
+    return std::clamp(value, viewportSize - halfSize, halfSize);
+  };
+
+  center.setX(clampAxis(center.x(), scaledSize.width() * 0.5, viewport.width(), baseRect.center().x()));
+  center.setY(clampAxis(center.y(), scaledSize.height() * 0.5, viewport.height(), baseRect.center().y()));
+  m_panOffset = center - QPointF(baseRect.center());
 }
 
 QPoint ImageViewWidget::widgetToImage(const QPoint& widgetPoint) const

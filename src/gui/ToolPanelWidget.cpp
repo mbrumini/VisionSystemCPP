@@ -1,9 +1,28 @@
 #include "ToolPanelWidget.h"
 
+#include "gui/IconCatalog.h"
+
 #include <QGridLayout>
 #include <QLabel>
-#include <QPushButton>
+#include <QToolButton>
 #include <QVBoxLayout>
+
+namespace
+{
+QToolButton* createTouchButton(const QString& iconId, const QString& label, QWidget* parent)
+{
+  auto* button = new QToolButton(parent);
+  button->setObjectName("touchIconButton");
+  button->setIcon(IconCatalog::icon(iconId));
+  button->setIconSize(QSize(28, 28));
+  button->setToolTip(label);
+  button->setAccessibleName(label);
+  button->setMinimumSize(58, 58);
+  button->setMaximumSize(68, 68);
+  button->setAutoRaise(false);
+  return button;
+}
+}
 
 ToolPanelWidget::ToolPanelWidget(
   const ToolDefinition& tool,
@@ -32,15 +51,14 @@ ToolPanelWidget::ToolPanelWidget(
   for (int i = 0; i < tool.actions.size(); ++i)
   {
     const ToolActionDefinition action = tool.actions[i];
-    auto* button = new QPushButton(action.label, actions);
-    button->setMinimumHeight(38);
-    QObject::connect(button, &QPushButton::clicked, this, [actionHandler, action]() {
+    auto* button = createTouchButton(action.id, action.label, actions);
+    QObject::connect(button, &QToolButton::clicked, this, [actionHandler, action]() {
       if (actionHandler)
       {
         actionHandler(action);
       }
     });
-    actionsLayout->addWidget(button, i / 2, i % 2);
+    actionsLayout->addWidget(button, i / 4, i % 4);
   }
 
   layout->addWidget(actions);
@@ -50,8 +68,8 @@ ToolPanelWidget::ToolPanelWidget(
   note->setObjectName("toolPanelNote");
   layout->addWidget(note);
 
-  auto* backButton = new QPushButton(backText, this);
-  QObject::connect(backButton, &QPushButton::clicked, this, [backHandler]() {
+  auto* backButton = createTouchButton("back", backText, this);
+  QObject::connect(backButton, &QToolButton::clicked, this, [backHandler]() {
     if (backHandler)
     {
       backHandler();

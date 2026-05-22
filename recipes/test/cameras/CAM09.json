@@ -9,13 +9,10 @@
                     "radius": 164
                 }
             },
-            "edge": {
-                "sensitivity": 54
-            },
             "enabled": true,
             "exclusionRects": [
             ],
-            "method": "edge",
+            "method": "threshold",
             "threshold": {
                 "max": 80,
                 "min": 0,

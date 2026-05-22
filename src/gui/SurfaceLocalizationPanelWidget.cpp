@@ -1,5 +1,7 @@
 #include "SurfaceLocalizationPanelWidget.h"
 
+#include "gui/TouchIconButton.h"
+
 #include <QComboBox>
 #include <QGridLayout>
 #include <QHBoxLayout>
@@ -38,13 +40,11 @@ SurfaceLocalizationPanelWidget::SurfaceLocalizationPanelWidget(
   drawingLayout->setContentsMargins(0, 0, 0, 0);
   drawingLayout->setSpacing(6);
 
-  auto* centerRadiusButton = new QPushButton(trText("labels.circleDrawingCenterRadius"), drawingMode);
+  auto* centerRadiusButton = createTouchIconButton("circleGeometry", trText("labels.circleDrawingCenterRadius"), drawingMode);
   centerRadiusButton->setCheckable(true);
   centerRadiusButton->setChecked(true);
-  centerRadiusButton->setMinimumHeight(30);
-  auto* threePointButton = new QPushButton(trText("labels.circleDrawingThreePoints"), drawingMode);
+  auto* threePointButton = createTouchIconButton("arcGeometry", trText("labels.circleDrawingThreePoints"), drawingMode);
   threePointButton->setCheckable(true);
-  threePointButton->setMinimumHeight(30);
 
   connect(centerRadiusButton, &QPushButton::clicked, this, [centerRadiusButton, threePointButton]() {
     centerRadiusButton->setChecked(true);
@@ -68,8 +68,14 @@ SurfaceLocalizationPanelWidget::SurfaceLocalizationPanelWidget(
   buttonsLayout->setContentsMargins(0, 0, 0, 0);
   buttonsLayout->setSpacing(6);
 
-  const QVector<QPair<QString, std::function<void()>>> actions = {
-    {trText("actions.surfaceOuterCircle"), [handlers, threePointButton]() {
+  struct Action
+  {
+    QString label;
+    QString iconId;
+    std::function<void()> handler;
+  };
+  const QVector<Action> actions = {
+    {trText("actions.surfaceOuterCircle"), "surfaceOuterCircle", [handlers, threePointButton]() {
       if (threePointButton->isChecked())
       {
         if (handlers.drawThreePointCircle)
@@ -83,7 +89,7 @@ SurfaceLocalizationPanelWidget::SurfaceLocalizationPanelWidget(
         handlers.drawOuterCircle();
       }
     }},
-    {trText("actions.surfaceInnerCircle"), [handlers, threePointButton]() {
+    {trText("actions.surfaceInnerCircle"), "surfaceInnerCircle", [handlers, threePointButton]() {
       if (threePointButton->isChecked())
       {
         if (handlers.drawThreePointCircle)
@@ -97,7 +103,7 @@ SurfaceLocalizationPanelWidget::SurfaceLocalizationPanelWidget(
         handlers.drawInnerCircle();
       }
     }},
-    {trText("actions.surfaceEdgeCircle"), [handlers, threePointButton]() {
+    {trText("actions.surfaceEdgeCircle"), "surfaceEdgeCircle", [handlers, threePointButton]() {
       if (threePointButton->isChecked())
       {
         if (handlers.drawThreePointCircle)
@@ -111,13 +117,13 @@ SurfaceLocalizationPanelWidget::SurfaceLocalizationPanelWidget(
         handlers.drawEdgeCircle();
       }
     }},
-    {trText("actions.surfaceAddExclusion"), [handlers]() {
+    {trText("actions.surfaceAddExclusion"), "surfaceAddExclusion", [handlers]() {
       if (handlers.addExclusion)
       {
         handlers.addExclusion();
       }
     }},
-    {trText("actions.surfaceClearExclusions"), [handlers]() {
+    {trText("actions.surfaceClearExclusions"), "surfaceClearExclusions", [handlers]() {
       if (handlers.clearExclusions)
       {
         handlers.clearExclusions();
@@ -127,10 +133,9 @@ SurfaceLocalizationPanelWidget::SurfaceLocalizationPanelWidget(
 
   for (int i = 0; i < actions.size(); ++i)
   {
-    auto* button = new QPushButton(actions[i].first, buttons);
-    button->setMinimumHeight(34);
+    auto* button = createTouchIconButton(actions[i].iconId, actions[i].label, buttons);
     button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    connect(button, &QPushButton::clicked, this, actions[i].second);
+    connect(button, &QPushButton::clicked, this, actions[i].handler);
     buttonsLayout->addWidget(button, i / 3, i % 3);
   }
 
@@ -259,8 +264,7 @@ SurfaceLocalizationPanelWidget::SurfaceLocalizationPanelWidget(
   });
   layout->addWidget(methodBox);
 
-  auto* backButton = new QPushButton(trText("commands.backToCameraTools"), this);
-  backButton->setMinimumHeight(32);
+  auto* backButton = createTouchIconButton("back", trText("commands.backToCameraTools"), this);
   connect(backButton, &QPushButton::clicked, this, [handlers]() {
     if (handlers.back)
     {

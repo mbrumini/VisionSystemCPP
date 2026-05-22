@@ -6,6 +6,7 @@
 #include "gui/SurfaceLocalizationStrategies.h"
 #include "gui/ToolCatalog.h"
 #include "gui/ToolPanelWidget.h"
+#include "gui/TouchIconButton.h"
 #include "gui/geometry/GeometryDiagnosticDrawing.h"
 #include "gui/geometry/GeometryMath.h"
 #include "processing/SurfaceModelTrainer.h"
@@ -76,37 +77,42 @@ void MainWindow::buildUi()
   }
 
   auto* root = new QWidget(this);
-  auto* rootLayout = new QHBoxLayout(root);
-  rootLayout->setContentsMargins(0, 0, 0, 0);
-  rootLayout->setSpacing(0);
+  auto* rootLayout = new QGridLayout(root);
+  rootLayout->setContentsMargins(8, 8, 8, 8);
+  rootLayout->setHorizontalSpacing(8);
+  rootLayout->setVerticalSpacing(8);
 
-  auto* splitter = new QSplitter(Qt::Horizontal, root);
-  splitter->setChildrenCollapsible(false);
+  m_commandToolbar = new CommandToolbarWidget(root);
+  m_commandToolbar->setLabels(trText("commands.start"),
+                              trText("commands.stop"),
+                              trText("commands.gridView"),
+                              trText("commands.reloadConfig"),
+                              trText("commands.toggleFullScreen"));
+  m_commandToolbar->setStartHandler([this]() { startMachine(); });
+  m_commandToolbar->setStopHandler([this]() { stopMachine(); });
+  m_commandToolbar->setGridHandler([this]() { showGridView(); });
+  m_commandToolbar->setReloadHandler([this]() { loadConfiguration(); });
+  m_commandToolbar->setFullscreenHandler([this]() { toggleFullScreen(); });
+  rootLayout->addWidget(m_commandToolbar, 0, 0, 1, 2);
 
-  m_imageStack = new QStackedWidget(splitter);
-  m_gridPage = new QWidget(m_imageStack);
-
-  auto* gridScrollArea = new QScrollArea(m_gridPage);
-  gridScrollArea->setWidgetResizable(true);
-  gridScrollArea->setFrameShape(QFrame::NoFrame);
-
-  m_gridContent = new QWidget(gridScrollArea);
+  m_gridPage = new QWidget(root);
+  m_gridPage->hide();
+  m_gridContent = new QWidget(m_gridPage);
+  m_gridContent->hide();
   m_gridLayout = new QGridLayout(m_gridContent);
-  m_gridLayout->setContentsMargins(12, 12, 12, 12);
-  m_gridLayout->setSpacing(10);
-  m_gridLayout->setSizeConstraint(QLayout::SetMinAndMaxSize);
+  m_gridLayout->setContentsMargins(0, 0, 0, 0);
+  m_gridLayout->setSpacing(0);
 
-  for (int i = 0; i < 4; ++i)
-  {
-    m_gridLayout->setColumnStretch(i, 1);
-    m_gridLayout->setRowStretch(i, 1);
-  }
+  m_imageStack = new QStackedWidget(root);
 
-  gridScrollArea->setWidget(m_gridContent);
-  auto* gridPageLayout = new QVBoxLayout(m_gridPage);
-  gridPageLayout->setContentsMargins(0, 0, 0, 0);
-  gridPageLayout->addWidget(gridScrollArea);
-  m_imageStack->addWidget(m_gridPage);
+  auto* overviewPage = new QWidget(m_imageStack);
+  auto* overviewLayout = new QVBoxLayout(overviewPage);
+  overviewLayout->setContentsMargins(16, 16, 16, 16);
+  overviewLayout->setSpacing(10);
+  m_measurementResults = new MeasurementResultsWidget(overviewPage);
+  m_measurementResults->setTitle(trText("tools.measurements"));
+  overviewLayout->addWidget(m_measurementResults, 1);
+  m_imageStack->addWidget(overviewPage);
 
   auto* largePage = new QWidget(m_imageStack);
   auto* largeLayout = new QVBoxLayout(largePage);
@@ -569,14 +575,67 @@ void MainWindow::buildUi()
   largeLayout->addWidget(m_largeImage, 1);
   m_imageStack->addWidget(largePage);
 
-  auto* panelScrollArea = new QScrollArea(splitter);
+  m_cameraStrip = new CameraStripWidget(root);
+  m_cameraStrip->setCameraClickHandler([this](const CameraConfig& camera) {
+    if (camera.id == m_selectedCameraId)
+    {
+      showGridView();
+      return;
+    }
+    selectCamera(camera);
+  });
+
+  auto* rightPanel = new QWidget(root);
+  rightPanel->setMinimumWidth(480);
+  rightPanel->setMaximumWidth(560);
+  auto* rightLayout = new QHBoxLayout(rightPanel);
+  rightLayout->setContentsMargins(0, 0, 0, 0);
+  rightLayout->setSpacing(8);
+
+  m_toolIconBar = new ToolIconBarWidget(rightPanel);
+  m_toolIconBar->setToolClickHandler([this](const QString& toolId) {
+    if (m_selectedCameraId.isEmpty())
+    {
+      return;
+    }
+    if (m_machineRunning)
+    {
+      appendLog("START: pannelli modifica disabilitati");
+      updateControlPanel(&m_selectedCamera);
+      return;
+    }
+    m_toolIconBar->setActiveTool(toolId);
+    if (toolId == "setup")
+    {
+      m_setup.showCameraSetupPanel(m_selectedCamera);
+    }
+    else if (toolId == "constructedGeometries")
+    {
+      m_constructedGeometry.showConstructedGeometryPanel(m_selectedCamera);
+    }
+    else if (toolId == "measurements")
+    {
+      m_measurement.showMeasurementPanel(m_selectedCamera);
+    }
+    else if (toolId == "localization")
+    {
+      showLocalizationStrategyList(m_selectedCamera);
+    }
+    else
+    {
+      m_setup.showToolPanel(m_selectedCamera, toolId);
+    }
+  });
+  rightLayout->addWidget(m_toolIconBar);
+
+  auto* panelScrollArea = new QScrollArea(rightPanel);
   panelScrollArea->setWidgetResizable(true);
   panelScrollArea->setFrameShape(QFrame::NoFrame);
-  panelScrollArea->setMinimumWidth(390);
-  panelScrollArea->setMaximumWidth(540);
+  panelScrollArea->setMinimumWidth(370);
+  panelScrollArea->setMaximumWidth(470);
 
   auto* panel = new QWidget(panelScrollArea);
-  panel->setMinimumWidth(390);
+  panel->setMinimumWidth(370);
   auto* panelLayout = new QVBoxLayout(panel);
   panelLayout->setContentsMargins(10, 10, 10, 10);
   panelLayout->setSpacing(8);
@@ -596,14 +655,24 @@ void MainWindow::buildUi()
   m_toolsLayout = new QVBoxLayout(toolsBox);
   m_toolsContainer = toolsBox;
   panelLayout->addWidget(toolsBox, 1);
+
+  auto* logBox = new QGroupBox(trText("groups.eventLog"), panel);
+  auto* logLayout = new QVBoxLayout(logBox);
+  m_log = new QTextEdit(logBox);
+  m_log->setReadOnly(true);
+  m_log->setMaximumHeight(130);
+  logLayout->addWidget(m_log);
+  panelLayout->addWidget(logBox);
   panelScrollArea->setWidget(panel);
 
-  splitter->addWidget(m_imageStack);
-  splitter->addWidget(panelScrollArea);
-  splitter->setStretchFactor(0, 3);
-  splitter->setStretchFactor(1, 1);
+  rightLayout->addWidget(panelScrollArea, 1);
 
-  rootLayout->addWidget(splitter);
+  rootLayout->addWidget(m_imageStack, 1, 0);
+  rootLayout->addWidget(rightPanel, 1, 1, 3, 1);
+  rootLayout->addWidget(m_cameraStrip, 2, 0);
+  rootLayout->setColumnStretch(0, 1);
+  rootLayout->setColumnStretch(1, 0);
+  rootLayout->setRowStretch(1, 1);
   setCentralWidget(root);
 
   setStyleSheet(
@@ -612,7 +681,24 @@ void MainWindow::buildUi()
     "QGroupBox::title{subcontrol-origin:margin;left:8px;padding:0 4px;color:#cdd6df;}"
     "QPushButton{background:#24313d;border:1px solid #3b4652;border-radius:5px;padding:6px;color:#f5f7fa;}"
     "QPushButton:hover{background:#2e3d4b;}"
+    "QPushButton#touchIconButton{min-width:58px;min-height:58px;max-width:68px;max-height:68px;border-radius:6px;padding:5px;}"
+    "QToolButton{background:#24313d;border:1px solid #3b4652;border-radius:5px;padding:5px;color:#f5f7fa;}"
+    "QToolButton:hover{background:#2e3d4b;}"
+    "QToolButton:checked{background:#244a78;border:1px solid #4d9cff;}"
+    "#cameraStrip QToolButton{min-width:78px;min-height:70px;max-height:78px;font-weight:700;padding:4px;}"
+    "#cameraStrip QToolButton[state='READY']{border-color:#35c46a;}"
+    "#cameraStrip QToolButton[state='OK']{border-color:#35c46a;}"
+    "#cameraStrip QToolButton[state='BUSY']{border-color:#f5d547;}"
+    "#cameraStrip QToolButton[state='NOK'],#cameraStrip QToolButton[state='ERROR']{border-color:#ff4f5e;}"
+    "#cameraStrip QToolButton:checked{background:#244a78;border:2px solid #4d9cff;}"
+    "QToolButton#touchIconButton{min-width:58px;min-height:58px;max-width:68px;max-height:68px;border-radius:6px;}"
     "QTextEdit{background:#111820;border:1px solid #313b46;border-radius:5px;color:#d7dee6;}"
+    "QTableWidget{background:#111820;alternate-background-color:#151e27;border:1px solid #313b46;border-radius:5px;color:#d7dee6;gridline-color:#2d3741;}"
+    "QHeaderView::section{background:#1d2731;color:#eef2f6;border:0;padding:4px;font-weight:600;}"
+    "#commandToolbar,#cameraStrip,#measurementResults,#toolIconBar{background:#151c23;border:1px solid #303a45;border-radius:6px;}"
+    "#toolbarRecipe{color:#cdd6df;font-weight:600;padding-right:12px;}"
+    "#toolbarStatus{color:#35c46a;font-weight:700;}"
+    "#measurementResultsTitle{font-weight:700;color:#f4f7fb;}"
     "#largeTitle{font-size:20px;font-weight:700;color:#f4f7fb;}"
     "#panelStatus{font-size:17px;font-weight:700;color:#f4f7fb;}"
     "#toolPanelTitle{font-size:15px;font-weight:700;color:#f4f7fb;}"
@@ -656,10 +742,10 @@ void MainWindow::buildMenu()
 
   QMenu* systemMenu = menuBar()->addMenu(trText("menu.system"));
   systemMenu->addAction(trText("commands.start"), this, [this]() {
-    appendLog(trText("log.command") + ": " + trText("commands.start"));
+    startMachine();
   });
   systemMenu->addAction(trText("commands.stop"), this, [this]() {
-    appendLog(trText("log.command") + ": " + trText("commands.stop"));
+    stopMachine();
   });
   systemMenu->addAction(trText("commands.gridView"), this, [this]() { showGridView(); });
   systemMenu->addAction(trText("commands.reloadConfig"), this, [this]() { loadConfiguration(); });
@@ -716,6 +802,7 @@ void MainWindow::incPendingJobs(const QString& cameraId)
   const int v = m_cameraPendingJobs.value(cameraId, 0) + 1;
   m_cameraPendingJobs[cameraId] = v;
   m_cameraProcessingBusy[cameraId] = true;
+  updateCameraStripStatus(cameraId);
 }
 
 void MainWindow::decPendingJobs(const QString& cameraId)
@@ -727,6 +814,11 @@ void MainWindow::decPendingJobs(const QString& cameraId)
   }
   m_cameraPendingJobs[cameraId] = v;
   m_cameraProcessingBusy[cameraId] = (v > 0);
+  updateCameraStripStatus(cameraId);
+  if (cameraId == m_selectedCameraId)
+  {
+    updateMeasurementResults();
+  }
 }
 
 void MainWindow::rebuildUi()
@@ -785,14 +877,62 @@ void MainWindow::showGridView()
   m_selectedCamera = {};
   m_selectedPreview = {};
   m_selectedImagePath.clear();
+  m_largeTitle->setText("Overview produzione");
+  m_largeImage->clearImage();
+  m_largeImage->clearRoi();
+  m_largeImage->clearExclusionRects();
+  m_largeImage->clearCircles();
+  m_largeImage->clearGeometryOverlay();
+  m_largeImage->hide();
 
   for (CameraTileWidget* tile : m_tiles)
   {
     tile->setSelected(false);
   }
+  if (m_cameraStrip)
+  {
+    m_cameraStrip->setSelectedCamera({});
+  }
+  updateMeasurementResults();
 
   updateControlPanel(nullptr);
   appendLog(trText("log.gridView"));
+}
+
+void MainWindow::startMachine()
+{
+  m_machineRunning = true;
+  deactivateImageDrawingTools();
+  if (m_systemStatus)
+  {
+    m_systemStatus->setText(QString("START | %1 %2")
+                              .arg(m_config.activeCameras().size())
+                              .arg(trText("status.activeCameras")));
+  }
+  if (m_commandToolbar)
+  {
+    m_commandToolbar->setStatusText(m_systemStatus ? m_systemStatus->text() : "START");
+  }
+  updateControlPanel(m_selectedCameraId.isEmpty() ? nullptr : &m_selectedCamera);
+  appendLog(trText("log.command") + ": " + trText("commands.start"));
+}
+
+void MainWindow::stopMachine()
+{
+  m_machineRunning = false;
+  if (m_systemStatus)
+  {
+    m_systemStatus->setText(QString("%1 | %2 %3")
+                              .arg(trText("status.systemReady"))
+                              .arg(m_config.activeCameras().size())
+                              .arg(trText("status.activeCameras")));
+  }
+  if (m_commandToolbar)
+  {
+    m_commandToolbar->setStatusText(m_systemStatus ? m_systemStatus->text() : trText("status.systemReady"));
+  }
+  updateControlPanel(m_selectedCameraId.isEmpty() ? nullptr : &m_selectedCamera);
+  appendLog(trText("log.command") + ": " + trText("commands.stop"));
 }
 
 void MainWindow::selectCamera(const CameraConfig& camera)
@@ -801,6 +941,7 @@ void MainWindow::selectCamera(const CameraConfig& camera)
   m_selectedCamera = camera;
   m_selectedImagePath = m_imaging.cameraSampleImagePath(camera);
   deactivateImageDrawingTools();
+  m_largeImage->show();
   m_largeImage->clearRoi();
   m_largeImage->clearExclusionRects();
   m_largeImage->clearCircles();
@@ -809,6 +950,10 @@ void MainWindow::selectCamera(const CameraConfig& camera)
   for (CameraTileWidget* tile : m_tiles)
   {
     tile->setSelected(tile->camera().id == camera.id);
+  }
+  if (m_cameraStrip)
+  {
+    m_cameraStrip->setSelectedCamera(camera.id);
   }
 
   auto runtimeIt = m_cameraRuntime.find(camera.id);
@@ -856,6 +1001,7 @@ void MainWindow::selectCamera(const CameraConfig& camera)
   QApplication::processEvents();
   updateLargePreview();
   updateControlPanel(&camera);
+  updateMeasurementResults();
   appendLog(trText("log.cameraSelected") + ": " + camera.id);
 }
 
@@ -865,42 +1011,41 @@ void MainWindow::updateControlPanel(const CameraConfig* camera)
 
   if (!camera)
   {
-    m_cameraDetails->setText(trText("labels.selectThumbnail"));
-
-    auto* commands = new QGroupBox(trText("groups.generalCommands"), m_toolsContainer);
-    auto* commandsLayout = new QGridLayout(commands);
-    const QVector<QPair<QString, QString>> commandsList = {
-      {"start", "commands.start"},
-      {"stop", "commands.stop"},
-      {"resetErrors", "commands.resetErrors"},
-      {"reloadConfig", "commands.reloadConfig"}
-    };
-
-    for (int i = 0; i < commandsList.size(); ++i)
+    if (m_measurementResults)
     {
-      const QString commandId = commandsList[i].first;
-      const QString commandLabel = trText(commandsList[i].second);
-      auto* button = new QPushButton(commandLabel, commands);
-      button->setMinimumHeight(38);
-      commandsLayout->addWidget(button, i / 2, i % 2);
-
-      if (commandId == "gridView")
+      m_measurementResults->show();
+    }
+    m_cameraDetails->setText("Overview produzione: misure aggregate di tutte le telecamere attive.");
+    if (m_toolIconBar)
+    {
+      m_toolIconBar->setTools({});
+    }
+    const QVector<CameraConfig> activeCameras = m_config.activeCameras();
+    int busyCount = 0;
+    for (const CameraConfig& activeCamera : activeCameras)
+    {
+      if (m_cameraProcessingBusy.value(activeCamera.id, false))
       {
-        connect(button, &QPushButton::clicked, this, [this]() { showGridView(); });
-      }
-      else if (commandId == "reloadConfig")
-      {
-        connect(button, &QPushButton::clicked, this, [this]() { loadConfiguration(); });
-      }
-      else
-      {
-        connect(button, &QPushButton::clicked, this, [this, commandLabel]() {
-          appendLog(trText("log.command") + ": " + commandLabel);
-        });
+        ++busyCount;
       }
     }
 
-    m_toolsLayout->addWidget(commands);
+    auto* title = new QLabel("Statistiche produzione", m_toolsContainer);
+    title->setObjectName("toolPanelTitle");
+    title->setWordWrap(true);
+    m_toolsLayout->addWidget(title);
+
+    auto* stats = new QLabel(
+      QString("Telecamere attive: %1\nTelecamere occupate: %2\nTelecamere pronte: %3\nModalita: %4")
+        .arg(activeCameras.size())
+        .arg(busyCount)
+        .arg(qMax(0, activeCameras.size() - busyCount))
+        .arg(m_machineRunning ? "START" : "STOP"),
+      m_toolsContainer);
+    stats->setObjectName("toolPanelNote");
+    stats->setWordWrap(true);
+    m_toolsLayout->addWidget(stats);
+
     m_toolsLayout->addStretch(1);
     return;
   }
@@ -910,7 +1055,88 @@ void MainWindow::updateControlPanel(const CameraConfig* camera)
     .arg(camera->slot)
     .arg(camera->displayName));
 
+  if (m_measurementResults)
+  {
+    m_measurementResults->setVisible(m_machineRunning);
+  }
+
+  if (m_machineRunning)
+  {
+    if (m_toolIconBar)
+    {
+      m_toolIconBar->setTools({});
+    }
+    auto* title = new QLabel("Monitoraggio camera", m_toolsContainer);
+    title->setObjectName("toolPanelTitle");
+    title->setWordWrap(true);
+    m_toolsLayout->addWidget(title);
+    auto* note = new QLabel("Macchina in START: immagine, overlay e misure sono consultabili; setup, geometrie, misure e parametri non sono modificabili.", m_toolsContainer);
+    note->setObjectName("toolPanelNote");
+    note->setWordWrap(true);
+    m_toolsLayout->addWidget(note);
+    const bool busy = m_cameraProcessingBusy.value(camera->id, false);
+    auto* stats = new QLabel(
+      QString("Stato camera: %1\nFrame pending: %2\nUltimo scan: %3 ms")
+        .arg(busy ? "BUSY" : "READY")
+        .arg(m_cameraPendingJobs.value(camera->id, 0))
+        .arg(m_lastSetupScanElapsedMs.value(camera->id, 0)),
+      m_toolsContainer);
+    stats->setObjectName("toolPanelNote");
+    stats->setWordWrap(true);
+    m_toolsLayout->addWidget(stats);
+    m_toolsLayout->addStretch(1);
+    return;
+  }
+
   showCameraToolList(*camera);
+}
+
+void MainWindow::updateMeasurementResults()
+{
+  if (!m_measurementResults)
+  {
+    return;
+  }
+
+  if (m_selectedCameraId.isEmpty())
+  {
+    QVector<CameraMeasurementResultRow> rows;
+    for (const CameraConfig& camera : m_config.activeCameras())
+    {
+      const auto runtimeIt = m_cameraRuntime.find(camera.id);
+      if (runtimeIt == m_cameraRuntime.end())
+      {
+        continue;
+      }
+
+      const QVector<MeasurementResult>& measurements = runtimeIt->second.geometries().measurements;
+      for (const MeasurementResult& measurement : measurements)
+      {
+        rows.append({camera.id, measurement});
+      }
+    }
+    m_measurementResults->setAllCameraMeasurements(rows);
+    return;
+  }
+
+  m_measurementResults->setMeasurements(
+    m_selectedCameraId,
+    m_cameraRuntime[m_selectedCameraId].geometries().measurements);
+}
+
+void MainWindow::updateCameraStripStatus(const QString& cameraId)
+{
+  if (!m_cameraStrip || cameraId.isEmpty())
+  {
+    return;
+  }
+
+  const bool busy = m_cameraProcessingBusy.value(cameraId, false);
+  m_cameraStrip->setCameraBusy(cameraId, busy);
+  if (!busy)
+  {
+    m_cameraStrip->setCameraResult(cameraId, "READY");
+  }
 }
 
 void MainWindow::deactivateImageDrawingTools()
@@ -940,31 +1166,15 @@ void MainWindow::showCameraToolList(const CameraConfig& camera)
   m_returnToSetupCameraId.clear();
   clearToolPanel();
 
-  auto* gridButton = new QPushButton(trText("commands.gridView"), m_toolsContainer);
-  gridButton->setMinimumHeight(38);
-  connect(gridButton, &QPushButton::clicked, this, [this]() { showGridView(); });
-  m_toolsLayout->addWidget(gridButton);
-
-  auto* setupButton = new QPushButton(trText("tools.setup"), m_toolsContainer);
-  setupButton->setMinimumHeight(38);
-  connect(setupButton, &QPushButton::clicked, this, [this, camera]() { m_setup.showCameraSetupPanel(camera); });
-  m_toolsLayout->addWidget(setupButton);
-
-  auto* constructedGeometryButton = new QPushButton(trText("tools.constructedGeometries"), m_toolsContainer);
-  constructedGeometryButton->setMinimumHeight(38);
-  connect(constructedGeometryButton, &QPushButton::clicked, this, [this, camera]() {
-    m_constructedGeometry.showConstructedGeometryPanel(camera);
-  });
-  m_toolsLayout->addWidget(constructedGeometryButton);
+  QVector<ToolIconDefinition> tools = {
+    {"setup", trText("tools.setup"), "setup"},
+    {"constructedGeometries", trText("tools.constructedGeometries"), "constructedGeometries"},
+    {"measurements", trText("tools.measurements"), "measurements"}
+  };
 
   if (MainWindowCameraProfile::isGrayscaleLocalization(camera, m_config))
   {
-    auto* localizationButton = new QPushButton(trText("tools.localization"), m_toolsContainer);
-    localizationButton->setMinimumHeight(40);
-    connect(localizationButton, &QPushButton::clicked, this, [this, camera]() {
-      showLocalizationStrategyList(camera);
-    });
-    m_toolsLayout->addWidget(localizationButton);
+    tools.prepend({"localization", trText("tools.localization"), "localization"});
   }
 
   for (const QString& tool : camera.profile.guiTools)
@@ -973,14 +1183,23 @@ void MainWindow::showCameraToolList(const CameraConfig& camera)
     {
       continue;
     }
-
-    auto* button = new QPushButton(ToolCatalog::label(tool, m_translations), m_toolsContainer);
-    connect(button, &QPushButton::clicked, this, [this, camera, tool]() {
-      m_setup.showToolPanel(camera, tool);
-    });
-    m_toolsLayout->addWidget(button);
+    if (tool == "measurements")
+    {
+      continue;
+    }
+    tools.append({tool, ToolCatalog::label(tool, m_translations), tool});
   }
 
+  if (m_toolIconBar)
+  {
+    m_toolIconBar->setTools(tools);
+    m_toolIconBar->setActiveTool({});
+  }
+
+  auto* note = new QLabel(trText("labels.noToolSelected"), m_toolsContainer);
+  note->setWordWrap(true);
+  note->setObjectName("toolPanelNote");
+  m_toolsLayout->addWidget(note);
   m_toolsLayout->addStretch(1);
 }
 
@@ -1004,17 +1223,28 @@ void MainWindow::showLocalizationStrategyList(const CameraConfig& camera)
   strategyTitle->setWordWrap(true);
   layout->addWidget(strategyTitle);
 
+  auto* strategyGrid = new QWidget(panel);
+  auto* strategyLayout = new QGridLayout(strategyGrid);
+  strategyLayout->setContentsMargins(0, 0, 0, 0);
+  strategyLayout->setSpacing(6);
+
+  int strategyIndex = 0;
   for (const SurfaceLocalizationStrategyDefinition& strategy : SurfaceLocalizationStrategies::all(m_translations))
   {
-    auto* button = new QPushButton(strategy.label, panel);
-    button->setMinimumHeight(40);
+    const QString iconId = strategy.id == "threshold" ? "surfaceThreshold" :
+      (strategy.id == "edge" ? "surfaceEdge" :
+       (strategy.id == "edgePca" ? "surfacePca" :
+        (strategy.id == "model" ? "surfaceModel" : "aiModel")));
+    auto* button = createTouchIconButton(iconId, strategy.label, strategyGrid);
     connect(button, &QPushButton::clicked, this, [this, camera, strategy]() {
       m_surface.showSurfaceLocalizationStrategyPanel(camera, strategy.id);
     });
-    layout->addWidget(button);
+    strategyLayout->addWidget(button, strategyIndex / 4, strategyIndex % 4);
+    ++strategyIndex;
   }
+  layout->addWidget(strategyGrid);
 
-  auto* backButton = new QPushButton(trText("commands.backToCameraTools"), panel);
+  auto* backButton = createTouchIconButton("back", trText("commands.backToCameraTools"), panel);
   connect(backButton, &QPushButton::clicked, this, [this, camera]() {
     showCameraToolList(camera);
     appendLog(trText("log.backToCameraTools") + ": " + camera.id);

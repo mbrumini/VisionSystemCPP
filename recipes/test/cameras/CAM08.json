@@ -76,6 +76,148 @@
                     "useSubpixel": true
                 }
             ],
+            "constructed": [
+                {
+                    "enabled": true,
+                    "id": "constructed_1",
+                    "sourceAId": "line_1",
+                    "sourceBId": "line_2",
+                    "type": "line_line_intersection"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_2",
+                    "sourceAId": "line_1",
+                    "sourceBId": "circle_2",
+                    "type": "line_circle_intersection"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_3",
+                    "offset": 10,
+                    "sourceAId": "line_1",
+                    "type": "offset_line"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_4",
+                    "offset": 50,
+                    "sourceAId": "line_1",
+                    "type": "offset_line"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_5",
+                    "sourceAId": "line_1",
+                    "sourceBId": "line_2",
+                    "type": "angle_bisector"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_6",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_1_x_circle_2_2",
+                    "type": "midpoint"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_7",
+                    "offset": 10,
+                    "sourceAId": "line_2",
+                    "type": "offset_line"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_8",
+                    "sourceAId": "line_1",
+                    "sourceBId": "circle_2",
+                    "type": "line_circle_intersection"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_9",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_1_x_circle_2_2",
+                    "type": "midpoint"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_10",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_1_x_circle_2_2",
+                    "type": "midpoint"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_11",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_1_x_circle_2_2",
+                    "type": "midpoint"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_12",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_1_x_circle_2_2",
+                    "type": "midpoint"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_13",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_1_x_line_2",
+                    "type": "midpoint"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_14",
+                    "sourceAId": "line_1",
+                    "sourceBId": "line_2",
+                    "type": "line_line_intersection"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_15",
+                    "sourceAId": "line_1",
+                    "sourceBId": "line_2",
+                    "type": "line_line_intersection"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_16",
+                    "sourceAId": "line_1",
+                    "sourceBId": "line_2",
+                    "type": "line_line_intersection"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_17",
+                    "sourceAId": "line_1",
+                    "sourceBId": "circle_2",
+                    "type": "line_circle_intersection"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_18",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_1_x_line_2",
+                    "type": "midpoint"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_19",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_1",
+                    "type": "project_point_line"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_20",
+                    "sourceAId": "line_1",
+                    "sourceBId": "line_2",
+                    "type": "line_line_intersection"
+                }
+            ],
             "enabled": true,
             "lines": [
                 {
@@ -122,21 +264,196 @@
                     "type": "edge_line",
                     "useSubpixel": true
                 }
+            ],
+            "points": [
+                {
+                    "coordinateSpace": "part",
+                    "edgeSensitivity": 60,
+                    "enabled": true,
+                    "id": "point_1",
+                    "partEnd": {
+                        "x": -630.0848582044371,
+                        "y": 255.8230967986242
+                    },
+                    "partStart": {
+                        "x": -608.9648582044372,
+                        "y": 118.56115758010026
+                    },
+                    "pickMode": "first",
+                    "transition": "light_to_dark",
+                    "type": "edge_point",
+                    "useSubpixel": true
+                }
+            ]
+        },
+        "measurements": {
+            "enabled": true,
+            "items": [
+                {
+                    "enabled": true,
+                    "id": "measurement_1",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_1",
+                    "type": "point_line_distance"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_2",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_1",
+                    "type": "point_line_distance"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_3",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_2",
+                    "type": "point_line_distance"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_4",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_2",
+                    "type": "point_line_distance"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_5",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_1_offset_10.00",
+                    "type": "point_line_distance"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_6",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_1_offset_10.00",
+                    "type": "point_line_distance"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_7",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_1_offset_10.00",
+                    "type": "point_line_distance"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_8",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_1_offset_10.00",
+                    "type": "point_line_distance"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_9",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_1_offset_10.00",
+                    "type": "point_line_distance"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_10",
+                    "sourceAId": "line_1_x_line_2",
+                    "sourceBId": "line_1_offset_10.00",
+                    "type": "point_line_distance"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_11",
+                    "sourceAId": "line_1_x_line_2",
+                    "sourceBId": "line_1_offset_10.00",
+                    "type": "point_line_distance"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_12",
+                    "sourceAId": "line_1_x_line_2",
+                    "sourceBId": "line_1_offset_10.00",
+                    "type": "point_line_distance"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_13",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_1",
+                    "type": "point_line_distance"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_14",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_2",
+                    "type": "point_line_distance"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_15",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_1_offset_10.00",
+                    "type": "point_line_distance"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_16",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_1_offset_10.00",
+                    "type": "point_line_distance"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_17",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_1_offset_10.00",
+                    "type": "point_line_distance"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_18",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_1_offset_10.00",
+                    "type": "point_line_distance"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_19",
+                    "sourceAId": "circle_2",
+                    "type": "circle_diameter"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_20",
+                    "sourceAId": "circle_2",
+                    "type": "circle_diameter"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_21",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_1",
+                    "type": "point_line_distance"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_22",
+                    "sourceAId": "line_1",
+                    "sourceBId": "line_2",
+                    "type": "line_line_angle"
+                }
             ]
         },
         "surfaceLocalization": {
             "edge": {
                 "band": {
-                    "inner": 43,
-                    "outer": 65
+                    "inner": 33,
+                    "outer": 32
                 },
                 "circle": {
-                    "centerX": 966,
-                    "centerY": 700,
-                    "radius": 376
-                },
-                "fitMaxError": 6,
-                "sensitivity": 122
+                    "centerX": 971,
+                    "centerY": 706,
+                    "radius": 378
+                }
             },
             "enabled": true,
             "method": "edge"

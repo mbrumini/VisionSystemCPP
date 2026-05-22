@@ -10,6 +10,7 @@ void GeometrySet::clear()
   constructedLines.clear();
   edges.clear();
   contours.clear();
+  measurements.clear();
 }
 
 bool GeometrySet::empty() const
@@ -21,5 +22,6 @@ bool GeometrySet::empty() const
     constructedPoints.empty() &&
     constructedLines.empty() &&
     edges.empty() &&
-    contours.empty();
+    contours.empty() &&
+    measurements.empty();
 }

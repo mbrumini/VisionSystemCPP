@@ -6,6 +6,7 @@
 #include "gui/modules/MainWindowContext.h"
 #include "gui/modules/MainWindowSetupModule.h"
 #include "gui/modules/geometry/GeometryPanelNavigation.h"
+#include "gui/TouchIconButton.h"
 
 #include "gui/geometry/GeometryDiagnosticDrawing.h"
 #include "processing/geometry/EdgePointDetector.h"
@@ -41,23 +42,28 @@ void MainWindowGeometryModule::showGeometryPanel(const CameraConfig& camera)
   title->setObjectName("toolPanelTitle");
   layout->addWidget(title);
 
-  auto* pointButton = new QPushButton(tr("actions.pointGeometry"), panel);
+  auto* buttonGrid = new QWidget(panel);
+  auto* buttonLayout = new QGridLayout(buttonGrid);
+  buttonLayout->setContentsMargins(0, 0, 0, 0);
+  buttonLayout->setSpacing(6);
+
+  auto* pointButton = createTouchIconButton("pointGeometry", tr("actions.pointGeometry"), panel);
   QObject::connect(pointButton, &QPushButton::clicked, window(), [this, camera]() { showGeometryPointPanel(camera); });
-  layout->addWidget(pointButton);
+  buttonLayout->addWidget(pointButton, 0, 0);
 
-  auto* lineButton = new QPushButton(tr("actions.lineGeometry"), panel);
+  auto* lineButton = createTouchIconButton("lineGeometry", tr("actions.lineGeometry"), panel);
   QObject::connect(lineButton, &QPushButton::clicked, window(), [this, camera]() { showGeometryLinePanel(camera); });
-  layout->addWidget(lineButton);
+  buttonLayout->addWidget(lineButton, 0, 1);
 
-  auto* circleButton = new QPushButton(tr("actions.circleGeometry"), panel);
+  auto* circleButton = createTouchIconButton("circleGeometry", tr("actions.circleGeometry"), panel);
   QObject::connect(circleButton, &QPushButton::clicked, window(), [this, camera]() { showGeometryCirclePanel(camera); });
-  layout->addWidget(circleButton);
+  buttonLayout->addWidget(circleButton, 0, 2);
 
-  auto* arcButton = new QPushButton(tr("actions.arcGeometry"), panel);
+  auto* arcButton = createTouchIconButton("arcGeometry", tr("actions.arcGeometry"), panel);
   QObject::connect(arcButton, &QPushButton::clicked, window(), [this, camera]() { showGeometryArcPanel(camera); });
-  layout->addWidget(arcButton);
+  buttonLayout->addWidget(arcButton, 0, 3);
 
-  auto* backButton = new QPushButton(
+  auto* backButton = createTouchIconButton("back",
     GeometryPanelNavigation::backLabel(context(), camera, tr("commands.backToCameraTools")),
     panel);
   QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() {
@@ -66,7 +72,8 @@ void MainWindowGeometryModule::showGeometryPanel(const CameraConfig& camera)
       context().showCameraToolList(camera);
     }
   });
-  layout->addWidget(backButton);
+  buttonLayout->addWidget(backButton, 1, 0);
+  layout->addWidget(buttonGrid);
   layout->addStretch(1);
 
   toolsLayout()->addWidget(panel);
@@ -107,8 +114,8 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
     pointSelector->addItem(pointConfigs[i].id, i);
   }
   pointSelector->setCurrentIndex(qBound(0, m_activePointIndexes.value(camera.id, 0), pointConfigs.size() - 1));
-  auto* newPointButton = new QPushButton(tr("actions.newGeometryPoint"), panel);
-  auto* deletePointButton = new QPushButton(tr("actions.deleteGeometryPoint"), panel);
+  auto* newPointButton = createTouchIconButton("new", tr("actions.newGeometryPoint"), panel);
+  auto* deletePointButton = createTouchIconButton("delete", tr("actions.deleteGeometryPoint"), panel);
 
   auto* pointControls = new QWidget(panel);
   auto* pointControlsLayout = new QGridLayout(pointControls);
@@ -211,8 +218,8 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
     testGeometryPoint(camera);
   });
 
-  auto* testButton = new QPushButton(tr("actions.testGeometry"), panel);
-  auto* backButton = new QPushButton(
+  auto* testButton = createTouchIconButton("start", tr("actions.testGeometry"), panel);
+  auto* backButton = createTouchIconButton("back",
     GeometryPanelNavigation::backLabel(context(), camera, tr("commands.backToCameraTools")),
     panel);
 
@@ -229,8 +236,8 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
   buttonsLayout->setContentsMargins(0, 0, 0, 0);
   buttonsLayout->setHorizontalSpacing(8);
   buttonsLayout->setVerticalSpacing(8);
-  buttonsLayout->addWidget(testButton, 0, 0, 1, 2);
-  buttonsLayout->addWidget(backButton, 1, 0, 1, 2);
+  buttonsLayout->addWidget(testButton, 0, 0);
+  buttonsLayout->addWidget(backButton, 0, 1);
   layout->addWidget(buttons);
   layout->addStretch(1);
 
@@ -301,8 +308,8 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
     lineSelector->addItem(lineConfigs[i].id, i);
   }
   lineSelector->setCurrentIndex(qBound(0, m_activeLineIndexes.value(camera.id, 0), lineConfigs.size() - 1));
-  auto* newLineButton = new QPushButton(tr("actions.newGeometryLine"), panel);
-  auto* deleteLineButton = new QPushButton(tr("actions.deleteGeometryLine"), panel);
+  auto* newLineButton = createTouchIconButton("new", tr("actions.newGeometryLine"), panel);
+  auto* deleteLineButton = createTouchIconButton("delete", tr("actions.deleteGeometryLine"), panel);
 
   auto* bandHalfWidth = new QSpinBox(panel);
   bandHalfWidth->setRange(2, 500);
@@ -461,8 +468,8 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
     testGeometryLine(camera);
   });
 
-  auto* testButton = new QPushButton(tr("actions.testGeometry"), panel);
-  auto* backButton = new QPushButton(
+  auto* testButton = createTouchIconButton("start", tr("actions.testGeometry"), panel);
+  auto* backButton = createTouchIconButton("back",
     GeometryPanelNavigation::backLabel(context(), camera, tr("commands.backToCameraTools")),
     panel);
 
@@ -479,8 +486,8 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
   buttonsLayout->setContentsMargins(0, 0, 0, 0);
   buttonsLayout->setHorizontalSpacing(8);
   buttonsLayout->setVerticalSpacing(8);
-  buttonsLayout->addWidget(testButton, 0, 0, 1, 2);
-  buttonsLayout->addWidget(backButton, 1, 0, 1, 2);
+  buttonsLayout->addWidget(testButton, 0, 0);
+  buttonsLayout->addWidget(backButton, 0, 1);
   layout->addWidget(buttons);
   layout->addStretch(1);
 
@@ -556,8 +563,8 @@ void MainWindowGeometryModule::showGeometryCirclePanel(const CameraConfig& camer
     circleSelector->addItem(circleConfigs[i].id, i);
   }
   circleSelector->setCurrentIndex(qBound(0, m_activeCircleIndexes.value(camera.id, 0), circleConfigs.size() - 1));
-  auto* newCircleButton = new QPushButton(tr("actions.newGeometryCircle"), panel);
-  auto* deleteCircleButton = new QPushButton(tr("actions.deleteGeometryCircle"), panel);
+  auto* newCircleButton = createTouchIconButton("new", tr("actions.newGeometryCircle"), panel);
+  auto* deleteCircleButton = createTouchIconButton("delete", tr("actions.deleteGeometryCircle"), panel);
 
   auto* top = new QWidget(panel);
   auto* topLayout = new QGridLayout(top);
@@ -698,8 +705,8 @@ void MainWindowGeometryModule::showGeometryCirclePanel(const CameraConfig& camer
     testGeometryCircle(camera);
   });
 
-  auto* testButton = new QPushButton(tr("actions.testGeometry"), panel);
-  auto* backButton = new QPushButton(
+  auto* testButton = createTouchIconButton("start", tr("actions.testGeometry"), panel);
+  auto* backButton = createTouchIconButton("back",
     GeometryPanelNavigation::backLabel(context(), camera, tr("commands.backToCameraTools")),
     panel);
   QObject::connect(testButton, &QPushButton::clicked, window(), [this, camera]() { testGeometryCircle(camera); });

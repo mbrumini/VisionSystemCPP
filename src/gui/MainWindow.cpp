@@ -19,6 +19,7 @@ MainWindow::MainWindow(QWidget* parent)
   , m_localization(m_ctx)
   , m_cameraConfig(m_ctx)
   , m_constructedGeometry(m_ctx)
+  , m_measurement(m_ctx)
   , m_setup(m_ctx)
 {
   m_recipeManager.setRecipeId(RecipeManager::loadActiveRecipeId());
@@ -76,6 +77,10 @@ void MainWindow::loadConfiguration()
   if (!m_config.load(configPath, &error))
   {
     m_systemStatus->setText(trText("status.configError"));
+    if (m_commandToolbar)
+    {
+      m_commandToolbar->setStatusText(m_systemStatus->text());
+    }
     appendLog(error);
     return;
   }
@@ -94,11 +99,17 @@ void MainWindow::loadConfiguration()
   m_tiles.clear();
   const QVector<CameraConfig> cameras = m_config.activeCameras();
   m_recipes.ensureRecipeCameraFolders();
+  if (m_cameraStrip)
+  {
+    m_cameraStrip->setCameras(cameras);
+    m_cameraStrip->setSelectedCamera({});
+  }
 
   for (int i = 0; i < cameras.size(); ++i)
   {
+    const QPixmap preview = m_imaging.loadCameraPreview(cameras[i]);
     auto* tile = new CameraTileWidget(cameras[i], m_gridContent);
-    tile->setPreview(m_imaging.loadCameraPreview(cameras[i]));
+    tile->setPreview(preview);
     tile->setClickHandler([this](const CameraConfig& camera) { selectCamera(camera); });
     m_gridLayout->addWidget(tile, i / 4, i % 4);
     m_tiles.append(tile);
@@ -108,6 +119,11 @@ void MainWindow::loadConfiguration()
                             .arg(trText("status.systemReady"))
                             .arg(cameras.size())
                             .arg(trText("status.activeCameras")));
+  if (m_commandToolbar)
+  {
+    m_commandToolbar->setStatusText(m_systemStatus->text());
+    m_commandToolbar->setRecipeText(QString("%1: %2").arg(trText("labels.recipe"), m_recipeManager.recipeId()));
+  }
   appendLog(QString("%1: %2 %3 %4 %5")
               .arg(trText("log.configLoaded"))
               .arg(cameras.size())
@@ -166,10 +182,12 @@ void MainWindow::bindModules()
   m_ctx.setup = &m_setup;
   m_ctx.cameraConfig = &m_cameraConfig;
   m_ctx.constructedGeometry = &m_constructedGeometry;
+  m_ctx.measurement = &m_measurement;
 
   m_ctx.trText = [this](const QString& key) { return trText(key); };
   m_ctx.appendLog = [this](const QString& message) { appendLog(message); };
   m_ctx.updateLargePreview = [this]() { updateLargePreview(); };
+  m_ctx.updateMeasurementResults = [this]() { updateMeasurementResults(); };
   m_ctx.reloadCameraReferenceImage = [this](const CameraConfig& camera) { m_imaging.reloadCameraReferenceImage(camera); };
   m_ctx.updateControlPanel = [this](const CameraConfig* camera) { updateControlPanel(camera); };
   m_ctx.clearToolPanel = [this]() { clearToolPanel(); };

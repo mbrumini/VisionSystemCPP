@@ -13,6 +13,16 @@ public:
   void rebuildConstructedGeometryRecipe(const CameraConfig& camera);
 
 private:
+  void showLineLineIntersectionPanel(const CameraConfig& camera);
+  void showLineCircleIntersectionPanel(const CameraConfig& camera);
+  void showCircleCircleIntersectionPanel(const CameraConfig& camera);
+  void showMidpointPanel(const CameraConfig& camera);
+  void showOffsetLinePanel(const CameraConfig& camera);
+  void showAngleBisectorPanel(const CameraConfig& camera);
+  void showTangentLinePanel(const CameraConfig& camera);
+  void showProjectPointPanel(const CameraConfig& camera);
+  void refreshConstructedGeometrySources(const CameraConfig& camera);
+
   void saveConstructedGeometryRecipeAction(const CameraConfig& camera,
                                            const QString& type,
                                            const QString& sourceAId,

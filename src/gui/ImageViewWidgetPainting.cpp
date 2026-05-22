@@ -6,6 +6,85 @@
 #include <algorithm>
 #include <cmath>
 
+namespace
+{
+void drawArrowHead(QPainter& painter, const QPointF& tip, const QPointF& from, const QColor& color)
+{
+  const QPointF direction = tip - from;
+  const double length = std::hypot(direction.x(), direction.y());
+  if (length < 0.001)
+  {
+    return;
+  }
+
+  const QPointF unit(direction.x() / length, direction.y() / length);
+  const QPointF normal(-unit.y(), unit.x());
+  constexpr double arrowLength = 13.0;
+  constexpr double arrowHalfWidth = 5.5;
+  QPolygonF arrow;
+  arrow << tip
+        << tip - unit * arrowLength + normal * arrowHalfWidth
+        << tip - unit * arrowLength - normal * arrowHalfWidth;
+  painter.setPen(Qt::NoPen);
+  painter.setBrush(color);
+  painter.drawPolygon(arrow);
+}
+
+void drawAngleOverlay(QPainter& painter,
+                      const QPointF& center,
+                      const QPointF& armA,
+                      const QPointF& armB,
+                      const QString& label,
+                      const QColor& color,
+                      int width)
+{
+  const QPointF vectorA = armA - center;
+  const QPointF vectorB = armB - center;
+  const double lengthA = std::hypot(vectorA.x(), vectorA.y());
+  const double lengthB = std::hypot(vectorB.x(), vectorB.y());
+  if (lengthA < 0.001 || lengthB < 0.001)
+  {
+    return;
+  }
+
+  const double radius = std::max(18.0, std::min({48.0, lengthA * 0.35, lengthB * 0.35}));
+  const double startAngle = std::atan2(vectorA.y(), vectorA.x());
+  double delta = std::atan2(vectorB.y(), vectorB.x()) - startAngle;
+  while (delta > 3.14159265358979323846)
+  {
+    delta -= 2.0 * 3.14159265358979323846;
+  }
+  while (delta < -3.14159265358979323846)
+  {
+    delta += 2.0 * 3.14159265358979323846;
+  }
+
+  QPolygonF arc;
+  constexpr int steps = 24;
+  for (int i = 0; i <= steps; ++i)
+  {
+    const double t = static_cast<double>(i) / steps;
+    const double angle = startAngle + delta * t;
+    arc << center + QPointF(std::cos(angle), std::sin(angle)) * radius;
+  }
+
+  painter.setPen(QPen(color, width));
+  painter.setBrush(Qt::NoBrush);
+  painter.drawPolyline(arc);
+  if (arc.size() >= 2)
+  {
+    drawArrowHead(painter, arc.last(), arc[arc.size() - 2], color);
+  }
+
+  const double labelAngle = startAngle + delta * 0.5;
+  const QPointF labelPoint = center + QPointF(std::cos(labelAngle), std::sin(labelAngle)) * (radius + 14.0);
+  painter.setPen(QPen(QColor("#101418"), 5));
+  painter.drawText(labelPoint, label);
+  painter.setPen(QPen(QColor("#ffffff"), 2));
+  painter.drawText(labelPoint, label);
+}
+}
+
 void ImageViewWidget::paintEvent(QPaintEvent* event)
 {
   Q_UNUSED(event);
@@ -162,6 +241,34 @@ void ImageViewWidget::paintEvent(QPaintEvent* event)
     {
       painter.setPen(QPen(line.color, line.width));
       painter.drawLine(imagePointToWidget(line.imageStart), imagePointToWidget(line.imageEnd));
+    }
+
+    for (const GeometryOverlayDimension& dimension : m_geometryOverlay.dimensions)
+    {
+      const QPointF start = imagePointToWidget(dimension.imageStart);
+      const QPointF end = imagePointToWidget(dimension.imageEnd);
+      painter.setPen(QPen(dimension.color, dimension.width));
+      painter.setBrush(Qt::NoBrush);
+      painter.drawLine(start, end);
+      drawArrowHead(painter, start, end, dimension.color);
+      drawArrowHead(painter, end, start, dimension.color);
+
+      const QPointF labelPoint = (start + end) * 0.5 + QPointF(10, -10);
+      painter.setPen(QPen(QColor("#101418"), 5));
+      painter.drawText(labelPoint, dimension.label);
+      painter.setPen(QPen(QColor("#ffffff"), 2));
+      painter.drawText(labelPoint, dimension.label);
+    }
+
+    for (const GeometryOverlayAngle& angle : m_geometryOverlay.angles)
+    {
+      drawAngleOverlay(painter,
+                       imagePointToWidget(angle.imageCenter),
+                       imagePointToWidget(angle.imageArmA),
+                       imagePointToWidget(angle.imageArmB),
+                       angle.label,
+                       angle.color,
+                       angle.width);
     }
 
     for (const GeometryOverlayPoint& point : m_geometryOverlay.points)

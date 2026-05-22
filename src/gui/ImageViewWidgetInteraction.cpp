@@ -2,7 +2,9 @@
 
 #include <QKeyEvent>
 #include <QMouseEvent>
+#include <QWheelEvent>
 
+#include <algorithm>
 #include <cmath>
 
 void ImageViewWidget::keyPressEvent(QKeyEvent* event)
@@ -408,5 +410,52 @@ void ImageViewWidget::mouseReleaseEvent(QMouseEvent* event)
   }
 
   update();
+}
+
+void ImageViewWidget::wheelEvent(QWheelEvent* event)
+{
+  if (m_image.isNull())
+  {
+    QWidget::wheelEvent(event);
+    return;
+  }
+
+  const QPoint widgetPoint = event->position().toPoint();
+  const QRect oldDrawRect = imageDrawRect();
+  if (!oldDrawRect.contains(widgetPoint))
+  {
+    QWidget::wheelEvent(event);
+    return;
+  }
+
+  const int delta = event->angleDelta().y();
+  if (delta == 0)
+  {
+    event->accept();
+    return;
+  }
+
+  const QPointF imagePoint = widgetToImageF(widgetPoint);
+  const double zoomStep = std::pow(1.0015, static_cast<double>(delta));
+  const double previousZoom = m_zoomFactor;
+  m_zoomFactor = std::clamp(m_zoomFactor * zoomStep, 1.0, 20.0);
+  if (std::abs(m_zoomFactor - previousZoom) < 0.0001)
+  {
+    event->accept();
+    return;
+  }
+
+  const QRect baseRect = baseImageDrawRect();
+  const QSizeF newSize(baseRect.width() * m_zoomFactor, baseRect.height() * m_zoomFactor);
+  const QPointF imageRatio(
+    m_image.width() > 1 ? imagePoint.x() / static_cast<double>(m_image.width()) : 0.0,
+    m_image.height() > 1 ? imagePoint.y() / static_cast<double>(m_image.height()) : 0.0);
+  const QPointF desiredTopLeft = QPointF(widgetPoint) - QPointF(newSize.width() * imageRatio.x(), newSize.height() * imageRatio.y());
+  const QPointF desiredCenter = desiredTopLeft + QPointF(newSize.width() * 0.5, newSize.height() * 0.5);
+  m_panOffset = desiredCenter - QPointF(baseRect.center());
+  clampZoomPan();
+
+  update();
+  event->accept();
 }
 
