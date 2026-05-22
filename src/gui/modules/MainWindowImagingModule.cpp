@@ -1,5 +1,6 @@
 #include "gui/modules/MainWindowImagingModule.h"
 
+#include "config/RecipeJsonUtils.h"
 #include "processing/SurfaceDefectProcessor.h"
 
 #include <QDir>
@@ -13,7 +14,7 @@ namespace
 {
 QString projectPath(const QString& relativePath)
 {
-  return QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath(relativePath);
+  return RecipeJsonUtils::appPath(relativePath);
 }
 
 QString resolveProjectPath(const QString& path)

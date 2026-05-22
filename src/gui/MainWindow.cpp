@@ -2,6 +2,7 @@
 
 #include "gui/CameraTileWidget.h"
 #include "gui/modules/MainWindowCameraProfile.h"
+#include "config/RecipeJsonUtils.h"
 #include "util/AsyncExecutor.h"
 
 #include <QDir>
@@ -72,7 +73,7 @@ MainWindow::MainWindow(QWidget* parent)
 void MainWindow::loadConfiguration()
 {
   QString error;
-  const QString configPath = QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath("config/cameras.json");
+  const QString configPath = RecipeJsonUtils::appPath("config/cameras.json");
 
   if (!m_config.load(configPath, &error))
   {

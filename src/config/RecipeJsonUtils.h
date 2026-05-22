@@ -10,6 +10,8 @@
 
 namespace RecipeJsonUtils
 {
+QString appRootPath();
+QString appPath(const QString& relativePath);
 QString recipesRoot();
 QString appSettingsPath();
 

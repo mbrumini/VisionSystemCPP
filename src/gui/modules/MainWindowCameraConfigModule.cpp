@@ -1,5 +1,6 @@
 #include "gui/modules/MainWindowCameraConfigModule.h"
 
+#include "config/RecipeJsonUtils.h"
 #include "gui/modules/MainWindowImagingModule.h"
 #include "gui/modules/MainWindowSetupModule.h"
 
@@ -13,7 +14,7 @@ namespace
 {
 QString projectPath(const QString& relativePath)
 {
-  return QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath(relativePath);
+  return RecipeJsonUtils::appPath(relativePath);
 }
 }
 
@@ -38,7 +39,7 @@ void MainWindowCameraConfigModule::configureCameraSource(const CameraConfig& cam
     return;
   }
 
-  const QDir projectDirectory(QString::fromUtf8(PROJECT_SOURCE_DIR));
+  const QDir projectDirectory(RecipeJsonUtils::appRootPath());
   QString storedFolder = projectDirectory.relativeFilePath(selectedFolder);
   if (storedFolder.startsWith(".."))
   {

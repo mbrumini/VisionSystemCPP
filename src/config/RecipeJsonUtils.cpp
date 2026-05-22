@@ -4,17 +4,35 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonDocument>
+#include <QCoreApplication>
 
 namespace RecipeJsonUtils
 {
+QString appRootPath()
+{
+  const QString runtimeRoot = QCoreApplication::applicationDirPath();
+  if (QFile::exists(QDir(runtimeRoot).filePath("config/cameras.json")) ||
+      QFileInfo::exists(QDir(runtimeRoot).filePath("recipes")))
+  {
+    return runtimeRoot;
+  }
+
+  return QString::fromUtf8(PROJECT_SOURCE_DIR);
+}
+
+QString appPath(const QString& relativePath)
+{
+  return QDir(appRootPath()).filePath(relativePath);
+}
+
 QString recipesRoot()
 {
-  return QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath("recipes");
+  return appPath("recipes");
 }
 
 QString appSettingsPath()
 {
-  return QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath("config/app_settings.json");
+  return appPath("config/app_settings.json");
 }
 
 QJsonObject rectToJson(const QRect& rect)
