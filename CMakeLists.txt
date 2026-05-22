@@ -41,8 +41,11 @@ add_executable(VisionSystemCPP
     src/gui/modules/ConstructedGeometryLineSource.cpp
     src/gui/modules/ConstructedGeometryCircleSource.h
     src/gui/modules/ConstructedGeometryCircleSource.cpp
+    src/gui/modules/ConstructedGeometryPointSource.h
+    src/gui/modules/ConstructedGeometryPointSource.cpp
     src/gui/modules/MainWindowConstructedGeometryModule.h
     src/gui/modules/MainWindowConstructedGeometryModule.cpp
+    src/gui/modules/MainWindowConstructedGeometryRecipe.cpp
     src/gui/modules/MainWindowImagingModule.cpp
     src/gui/modules/MainWindowRecipeModule.cpp
     src/gui/modules/MainWindowLocalizationModule.cpp

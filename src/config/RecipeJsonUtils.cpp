@@ -201,7 +201,7 @@ void setGeometryArray(QJsonObject& geometries, const QString& key, const QJsonAr
 
 void writeGeometriesTool(QJsonObject& tools, QJsonObject geometries)
 {
-  static const QStringList geometryKeys = {"lines", "points", "circles", "arcs"};
+  static const QStringList geometryKeys = {"lines", "points", "circles", "arcs", "constructed"};
 
   for (const QString& key : geometryKeys)
   {

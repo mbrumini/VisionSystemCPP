@@ -17,6 +17,7 @@ struct GeometrySet
   QVector<CircleGeometry> circles;
   QVector<ArcGeometry> arcs;
   QVector<ConstructedPointGeometry> constructedPoints;
+  QVector<ConstructedLineGeometry> constructedLines;
   QVector<EdgeGeometry> edges;
   QVector<ContourGeometry> contours;
 

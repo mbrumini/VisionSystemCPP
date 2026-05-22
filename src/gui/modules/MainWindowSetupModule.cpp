@@ -2,6 +2,7 @@
 #include "gui/modules/MainWindowCameraProfile.h"
 #include "gui/modules/MainWindowImagingModule.h"
 #include "gui/modules/MainWindowGeometryModule.h"
+#include "gui/modules/MainWindowConstructedGeometryModule.h"
 #include "gui/modules/MainWindowSurfaceModule.h"
 #include "gui/modules/MainWindowLocalizationModule.h"
 #include "gui/modules/MainWindowContext.h"
@@ -371,6 +372,10 @@ void MainWindowSetupModule::processCurrentCameraFrame(const CameraConfig& camera
     {
       context().geometry->testGeometryArc(camera);
     }
+    if (context().constructedGeometry)
+    {
+      context().constructedGeometry->rebuildConstructedGeometryRecipe(camera);
+    }
     log(QString("pipeline geometries queued: %1").arg(camera.id));
   };
 
@@ -423,6 +428,10 @@ void MainWindowSetupModule::refreshSetupGeometryResults(const CameraConfig& came
   }
 
   context().geometry->testConfiguredGeometryLines(camera);
+  if (context().constructedGeometry)
+  {
+    context().constructedGeometry->rebuildConstructedGeometryRecipe(camera);
+  }
 }
 
 

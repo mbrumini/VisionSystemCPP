@@ -402,3 +402,95 @@ bool RecipeManager::saveGeometryArcs(const QString& cameraId, const QVector<Geom
   root["tools"] = tools;
   return saveJsonObject(path, root, errorMessage);
 }
+
+QVector<ConstructedGeometryRecipeConfig> RecipeManager::loadConstructedGeometries(const QString& cameraId) const
+{
+  QVector<ConstructedGeometryRecipeConfig> configs;
+
+  QJsonObject root;
+  if (!loadJsonObject(cameraRecipePath(cameraId), root))
+  {
+    return configs;
+  }
+
+  const QJsonArray constructed = root.value("tools").toObject()
+    .value("geometries").toObject()
+    .value("constructed").toArray();
+
+  for (const QJsonValue& value : constructed)
+  {
+    const QJsonObject item = value.toObject();
+    ConstructedGeometryRecipeConfig config;
+    config.id = item.value("id").toString(QString("constructed_%1").arg(configs.size() + 1));
+    config.enabled = item.value("enabled").toBool(config.enabled);
+    config.type = item.value("type").toString();
+    config.sourceAId = item.value("sourceAId").toString();
+    config.sourceBId = item.value("sourceBId").toString();
+    config.offset = item.value("offset").toDouble(config.offset);
+    if (config.id.isEmpty() || config.type.isEmpty() || config.sourceAId.isEmpty())
+    {
+      continue;
+    }
+
+    configs.append(config);
+  }
+
+  return configs;
+}
+
+bool RecipeManager::saveConstructedGeometries(const QString& cameraId,
+                                              const QVector<ConstructedGeometryRecipeConfig>& configs,
+                                              QString* errorMessage) const
+{
+  const QString path = cameraRecipePath(cameraId);
+  QJsonObject root;
+  loadJsonObject(path, root);
+
+  root["cameraId"] = cameraId;
+
+  QJsonObject tools = root.value("tools").toObject();
+  QJsonObject geometries = tools.value("geometries").toObject();
+
+  QJsonArray constructed;
+  for (const ConstructedGeometryRecipeConfig& config : configs)
+  {
+    if (config.type.isEmpty() || config.sourceAId.isEmpty())
+    {
+      continue;
+    }
+
+    QJsonObject item;
+    item["enabled"] = config.enabled;
+    item["id"] = config.id.isEmpty() ? QString("constructed_%1").arg(constructed.size() + 1) : config.id;
+    item["type"] = config.type;
+    item["sourceAId"] = config.sourceAId;
+    if (!config.sourceBId.isEmpty())
+    {
+      item["sourceBId"] = config.sourceBId;
+    }
+    if (config.type == "offset_line")
+    {
+      item["offset"] = config.offset;
+    }
+    constructed.append(item);
+  }
+
+  setGeometryArray(geometries, "constructed", constructed);
+  writeGeometriesTool(tools, geometries);
+  root["tools"] = tools;
+  return saveJsonObject(path, root, errorMessage);
+}
+
+bool RecipeManager::appendConstructedGeometry(const QString& cameraId,
+                                              const ConstructedGeometryRecipeConfig& config,
+                                              QString* errorMessage) const
+{
+  QVector<ConstructedGeometryRecipeConfig> configs = loadConstructedGeometries(cameraId);
+  ConstructedGeometryRecipeConfig saved = config;
+  if (saved.id.isEmpty())
+  {
+    saved.id = QString("constructed_%1").arg(configs.size() + 1);
+  }
+  configs.append(saved);
+  return saveConstructedGeometries(cameraId, configs, errorMessage);
+}

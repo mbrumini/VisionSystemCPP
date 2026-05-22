@@ -109,7 +109,11 @@
     "sourceLine": "Linea",
     "sourceCircle": "Cerchio",
     "sourceCircleA": "Cerchio A",
-    "sourceCircleB": "Cerchio B"
+    "sourceCircleB": "Cerchio B",
+    "sourcePoint": "Punto",
+    "sourcePointA": "Punto A",
+    "sourcePointB": "Punto B",
+    "offsetPixels": "Offset px"
   },
   "strategies": {
     "threshold": "Soglia",
@@ -222,7 +226,22 @@
     "constructedLineCircleIntersectionCreated": "Intersezione linea/cerchio creata",
     "constructedCircleIntersectionMissing": "Intersezione cerchi non disponibile: servono almeno 2 cerchi trovati",
     "constructedCircleIntersectionNone": "Intersezione cerchi non disponibile: nessun punto trovato",
-    "constructedCircleIntersectionCreated": "Intersezione cerchi creata"
+    "constructedCircleIntersectionCreated": "Intersezione cerchi creata",
+    "constructedMidpointMissing": "Punto medio non disponibile: servono 2 punti distinti",
+    "constructedMidpointCreated": "Punto medio creato",
+    "constructedOffsetLineMissing": "Linea offset non disponibile: scegli una linea trovata",
+    "constructedOffsetLineInvalid": "Linea offset non disponibile: linea sorgente non valida",
+    "constructedOffsetLineCreated": "Linea offset creata",
+    "constructedBisectorMissing": "Bisettrice non disponibile: servono 2 linee distinte",
+    "constructedBisectorInvalid": "Bisettrice non disponibile: linee parallele o non valide",
+    "constructedBisectorCreated": "Bisettrice creata",
+    "constructedTangentMissing": "Tangente non disponibile: scegli un punto e un cerchio trovati",
+    "constructedTangentInvalid": "Tangente non disponibile: punto interno o cerchio non valido",
+    "constructedTangentCreated": "Tangente creata",
+    "constructedProjectionMissing": "Proiezione non disponibile: scegli un punto e una linea trovati",
+    "constructedProjectionInvalid": "Proiezione non disponibile: linea sorgente non valida",
+    "constructedProjectionCreated": "Proiezione punto creata",
+    "constructedRecipeSaveFailed": "Salvataggio geometria calcolata fallito"
   },
   "messages": {
     "noRecipes": "Nessuna ricetta disponibile."

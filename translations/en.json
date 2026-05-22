@@ -109,7 +109,11 @@
     "sourceLine": "Line",
     "sourceCircle": "Circle",
     "sourceCircleA": "Circle A",
-    "sourceCircleB": "Circle B"
+    "sourceCircleB": "Circle B",
+    "sourcePoint": "Point",
+    "sourcePointA": "Point A",
+    "sourcePointB": "Point B",
+    "offsetPixels": "Offset px"
   },
   "strategies": {
     "threshold": "Threshold",
@@ -222,7 +226,22 @@
     "constructedLineCircleIntersectionCreated": "Line/circle intersection created",
     "constructedCircleIntersectionMissing": "Circle intersection unavailable: at least 2 found circles are required",
     "constructedCircleIntersectionNone": "Circle intersection unavailable: no point found",
-    "constructedCircleIntersectionCreated": "Circle intersection created"
+    "constructedCircleIntersectionCreated": "Circle intersection created",
+    "constructedMidpointMissing": "Midpoint unavailable: 2 distinct points are required",
+    "constructedMidpointCreated": "Midpoint created",
+    "constructedOffsetLineMissing": "Offset line unavailable: choose a found line",
+    "constructedOffsetLineInvalid": "Offset line unavailable: invalid source line",
+    "constructedOffsetLineCreated": "Offset line created",
+    "constructedBisectorMissing": "Angle bisector unavailable: 2 distinct lines are required",
+    "constructedBisectorInvalid": "Angle bisector unavailable: parallel or invalid lines",
+    "constructedBisectorCreated": "Angle bisector created",
+    "constructedTangentMissing": "Tangent unavailable: choose a found point and circle",
+    "constructedTangentInvalid": "Tangent unavailable: point is inside the circle or circle is invalid",
+    "constructedTangentCreated": "Tangent created",
+    "constructedProjectionMissing": "Projection unavailable: choose a found point and line",
+    "constructedProjectionInvalid": "Projection unavailable: invalid source line",
+    "constructedProjectionCreated": "Point projection created",
+    "constructedRecipeSaveFailed": "Constructed geometry save failed"
   },
   "messages": {
     "noRecipes": "No recipes available."

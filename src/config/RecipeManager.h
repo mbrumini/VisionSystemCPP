@@ -138,6 +138,16 @@ struct GeometryArcRecipeConfig
   QString pickMode = "first";
 };
 
+struct ConstructedGeometryRecipeConfig
+{
+  bool enabled = true;
+  QString id;
+  QString type;
+  QString sourceAId;
+  QString sourceBId;
+  double offset = 0.0;
+};
+
 class RecipeManager
 {
 public:
@@ -198,6 +208,9 @@ public:
   bool saveGeometryCircles(const QString& cameraId, const QVector<GeometryCircleRecipeConfig>& configs, QString* errorMessage = nullptr) const;
   QVector<GeometryArcRecipeConfig> loadGeometryArcs(const QString& cameraId) const;
   bool saveGeometryArcs(const QString& cameraId, const QVector<GeometryArcRecipeConfig>& configs, QString* errorMessage = nullptr) const;
+  QVector<ConstructedGeometryRecipeConfig> loadConstructedGeometries(const QString& cameraId) const;
+  bool saveConstructedGeometries(const QString& cameraId, const QVector<ConstructedGeometryRecipeConfig>& configs, QString* errorMessage = nullptr) const;
+  bool appendConstructedGeometry(const QString& cameraId, const ConstructedGeometryRecipeConfig& config, QString* errorMessage = nullptr) const;
   QString cameraSampleImagesPath(const QString& cameraId) const;
   QString cameraTestImagesPath(const QString& cameraId) const;
   QString firstCameraSampleImagePath(const QString& cameraId) const;
