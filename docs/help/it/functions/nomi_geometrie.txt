@@ -1,0 +1,15 @@
+Titolo: Nomi geometrie e misure
+Area: Ricette
+Parole chiave: nomi, id, line_1, circle_1, measurement
+
+Ogni geometria e misura ha un id.
+Esempi: line_1, circle_1, point_1, measurement_1.
+
+Perche' gli id sono importanti:
+- collegano misure alle sorgenti;
+- aiutano nel popup Risultati frame;
+- servono per geometrie costruite;
+- rendono piu' facile il debug.
+
+Buona pratica:
+Quando possibile usare nomi coerenti con la funzione, per esempio circle_foro o line_base, se il sistema lo permette.

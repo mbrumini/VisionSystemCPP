@@ -1,0 +1,19 @@
+Titolo: Tolleranze
+Area: Tolleranze
+Parole chiave: nominale, minimo, massimo, OK, NOK, scarto
+
+Le tolleranze definiscono quando una misura e' accettabile.
+Ogni misura puo' avere un valore nominale e limiti minimo/massimo.
+
+Obiettivo:
+Trasformare una misura numerica in giudizio OK/NOK.
+
+Flusso previsto:
+1. Creare la misura.
+2. Inserire nominale.
+3. Inserire tolleranza minima e massima.
+4. Attivare la regola OK/NOK.
+5. Verificare su pezzi buoni e pezzi difettosi.
+
+Nota:
+Questa sezione e' la base per il controllo produzione.

@@ -1,0 +1,18 @@
+Titolo: Fascia di ricerca edge
+Area: Rilevamento edge
+Parole chiave: fascia, banda, inner band, outer band, ROI edge
+
+La fascia di ricerca definisce dove il sistema cerca il bordo.
+Per linee e punti e' una banda intorno alla guida.
+Per cerchi e archi e' una fascia interna/esterna rispetto al raggio guida.
+
+Fascia troppo stretta:
+- il bordo puo' uscire dalla zona di ricerca;
+- alcuni pezzi non vengono trovati.
+
+Fascia troppo larga:
+- il sistema puo' trovare bordi sbagliati;
+- aumenta il rumore.
+
+Regola:
+La fascia deve coprire il movimento reale del pezzo, ma non includere dettagli inutili.

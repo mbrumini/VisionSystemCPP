@@ -62,6 +62,7 @@ struct MainWindowContext
   QLabel* cameraDetails = nullptr;
   CameraSetupPanelWidget** setupPanel = nullptr;
   QString* setupCameraId = nullptr;
+  bool* setupDetailsVisible = nullptr;
   QString* returnToSetupCameraId = nullptr;
   QWidget* toolsContainer = nullptr;
   QVBoxLayout* toolsLayout = nullptr;

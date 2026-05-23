@@ -61,6 +61,7 @@ MainWindow::MainWindow(QWidget* parent)
   {
     QSettings settings;
     const bool detailedLogEnabled = settings.value("system/detailedLogEnabled", false).toBool();
+    m_setupDetailsVisible = settings.value("ui/setupDetailsVisible", false).toBool();
     if (detailedLogEnabled)
     {
       setDetailedLogEnabled(true);
@@ -157,6 +158,7 @@ void MainWindow::bindModules()
   m_ctx.cameraDetails = m_cameraDetails;
   m_ctx.setupPanel = &m_setupPanel;
   m_ctx.setupCameraId = &m_setupCameraId;
+  m_ctx.setupDetailsVisible = &m_setupDetailsVisible;
   m_ctx.returnToSetupCameraId = &m_returnToSetupCameraId;
   m_ctx.toolsContainer = m_toolsContainer;
   m_ctx.toolsLayout = m_toolsLayout;

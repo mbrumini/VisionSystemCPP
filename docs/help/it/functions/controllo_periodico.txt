@@ -1,0 +1,20 @@
+Titolo: Controllo periodico
+Area: Manutenzione
+Parole chiave: controllo periodico, manutenzione, verifica, camera
+
+Il controllo periodico evita deriva lenta di luce, fuoco o meccanica.
+
+Checklist:
+- pulizia ottica e vetro;
+- illuminatore funzionante;
+- supporti serrati;
+- campione ancora valido;
+- misure su pezzo master;
+- nessun riflesso nuovo;
+- log senza errori ricorrenti.
+
+Frequenza:
+Dipende dall'ambiente. In ambienti sporchi o con vibrazioni, controllare piu' spesso.
+
+Regola:
+Meglio trovare una deriva in manutenzione che in produzione.

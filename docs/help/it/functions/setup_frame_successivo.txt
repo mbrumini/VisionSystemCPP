@@ -1,0 +1,16 @@
+Titolo: Frame successivo
+Area: Setup
+Parole chiave: frame, immagine successiva, test, scorrere pezzi
+
+Frame successivo carica il pezzo o l'immagine test successiva.
+Quando il frame cambia, il sistema deve aggiornare localizzazione, edge, geometrie costruite e misure.
+
+Uso tipico:
+1. Importare immagini test.
+2. Aprire Setup.
+3. Premere Frame successivo.
+4. Guardare overlay e risultati.
+5. Ripetere su molti pezzi.
+
+Diagnosi:
+Se un edge sparisce, aprire Risultati frame per capire se non e' stato trovato o se manca solo la visualizzazione.

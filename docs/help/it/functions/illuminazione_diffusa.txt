@@ -1,0 +1,25 @@
+Titolo: Illuminazione diffusa
+Area: Illuminazione / Superficie
+Parole chiave: luce diffusa, riflessi, cupola, dome, superficie uniforme
+
+La luce diffusa illumina il pezzo in modo morbido e uniforme.
+Serve a ridurre riflessi e ombre dure.
+
+Quando usarla:
+- superfici lucide;
+- metallo riflettente;
+- localizzazione grigi;
+- controlli dove serve vedere forma generale senza riflessi forti.
+
+Vantaggi:
+- riduce hotspot e saturazioni;
+- rende piu' stabile la soglia;
+- aiuta localizzazione e AI su superfici variabili.
+
+Limiti:
+- puo' nascondere graffi sottili;
+- riduce il contrasto dei rilievi;
+- non sempre evidenzia difetti bassi.
+
+Regola:
+Usare luce diffusa quando i riflessi disturbano piu' dei difetti che si vogliono vedere.

@@ -88,6 +88,17 @@ bool RecipeManager::saveMeasurements(const QString& cameraId, const QVector<Meas
 bool RecipeManager::appendMeasurement(const QString& cameraId, const MeasurementRecipeConfig& config, QString* errorMessage) const
 {
   QVector<MeasurementRecipeConfig> configs = loadMeasurements(cameraId);
+  for (MeasurementRecipeConfig& existing : configs)
+  {
+    if (existing.type == config.type &&
+        existing.sourceAId == config.sourceAId &&
+        existing.sourceBId == config.sourceBId)
+    {
+      existing.enabled = config.enabled;
+      return saveMeasurements(cameraId, configs, errorMessage);
+    }
+  }
+
   MeasurementRecipeConfig saved = config;
   if (saved.id.isEmpty())
   {

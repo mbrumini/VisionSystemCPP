@@ -1,0 +1,40 @@
+Titolo: Misure superficiali
+Area: Misure / Superficie
+Parole chiave: misure superficiali, superficie, faccia, foro, sede, tasca, incisione, riferimento, luce diretta
+
+Le misure superficiali sono quote ricavate da riferimenti visibili sulla faccia del pezzo.
+Non sono uguali alle misure di profilo esterno in silhouette.
+
+Esempi di misure superficiali:
+- diametro di un foro visto dall'alto;
+- diametro di una sede o tasca;
+- distanza tra due fori;
+- distanza foro-bordo;
+- posizione di una marcatura;
+- larghezza di una cava;
+- distanza tra incisioni, stampi o riferimenti superficiali.
+
+Obiettivo:
+Rendere stabile il riferimento sulla superficie, poi misurarlo con edge, cerchi, linee o geometrie costruite.
+
+Illuminazione:
+- usare luce diretta quando il riferimento e' sulla faccia del pezzo;
+- usare luce diffusa se ci sono riflessi;
+- usare luce coassiale per riferimenti piani o variazioni di riflettanza;
+- usare luce anulare per bordi circolari o fori visibili da piu' direzioni;
+- usare radente solo per rilievi, incisioni o graffi che devono creare ombra controllata.
+
+Attenzione:
+La retroilluminazione e' utile per il profilo esterno, ma non vede i dettagli sulla faccia superiore.
+Se la quota dipende da un foro, una sede o una incisione sulla superficie, partire da illuminazione diretta.
+
+Procedura:
+1. Bloccare esposizione e gain.
+2. Stabilizzare la localizzazione.
+3. Rendere visibile il riferimento superficiale.
+4. Configurare edge o geometria sulla zona interessata.
+5. Creare la misura.
+6. Validare su campione e immagini test.
+
+Regola:
+Prima scegliere la luce che rende ripetibile il riferimento superficiale, poi regolare edge e misura.

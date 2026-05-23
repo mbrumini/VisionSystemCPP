@@ -138,6 +138,11 @@ void ImageViewWidget::setGeometryOverlay(const GeometryOverlay& overlay)
   update();
 }
 
+const GeometryOverlay& ImageViewWidget::geometryOverlay() const
+{
+  return m_geometryOverlay;
+}
+
 void ImageViewWidget::clearGeometryOverlay()
 {
   m_geometryOverlay.clear();

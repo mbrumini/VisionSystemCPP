@@ -1,0 +1,109 @@
+HELP VisionSystemCPP
+
+Questa sezione diventera' il manuale operativo dell'applicazione.
+
+Flusso consigliato per programmare un articolo:
+1. Setup: acquisisci o importa il campione e imposta la localizzazione.
+2. Rilevamento edge: configura punti, linee, cerchi e archi da rilevare.
+3. Geometrie calcolate: costruisci intersezioni, tangenti, offset e proiezioni.
+4. Misure: crea quote dimensionali dalle geometrie trovate o costruite.
+5. Tolleranze: assegna nominali, limiti e regole OK/NOK.
+
+I prossimi file di help descriveranno i singoli comandi e i controlli camera.
+
+File funzione disponibili:
+- functions/toolbar_start_stop.txt
+- functions/toolbar_grid_reload_fullscreen_help.txt
+- functions/setup_acquisizione_campione.txt
+- functions/setup_importa_campione.txt
+- functions/setup_importa_test.txt
+- functions/setup_cartella_immagini.txt
+- functions/setup_frame_successivo.txt
+- functions/setup_risultati_frame.txt
+- functions/localizzazione_area_ricerca.txt
+- functions/localizzazione_esclusioni.txt
+- functions/localizzazione_test.txt
+- functions/edge_punto.txt
+- functions/edge_linea.txt
+- functions/edge_cerchio.txt
+- functions/edge_arco.txt
+- functions/geometrie_costruite.txt
+- functions/misure.txt
+- functions/misure_superficiali.txt
+- functions/misura_diametro_superficie.txt
+- functions/misura_distanza_fori_superficie.txt
+- functions/misura_foro_bordo_superficie.txt
+- functions/misure_superficiali_errori_comuni.txt
+- functions/tolleranze.txt
+- functions/colori_overlay.txt
+- functions/camera_selezione.txt
+- functions/scelta_camera_per_misura.txt
+- functions/campione_vs_test.txt
+- functions/coordinate_pezzo.txt
+- functions/edge_sensibilita.txt
+- functions/edge_transizione.txt
+- functions/edge_pick_mode.txt
+- functions/edge_fascia.txt
+- functions/overlay_vs_risultati.txt
+- functions/troubleshooting_edge_non_trovato.txt
+- functions/troubleshooting_misura_non_disponibile.txt
+- functions/maschere_rosse.txt
+- functions/modalita_setup.txt
+- functions/workflow_programmazione_articolo.txt
+- functions/camera_profili.txt
+- functions/ricette.txt
+- functions/reload_config.txt
+- functions/dettagli_setup.txt
+- functions/log_eventi.txt
+- functions/log_dettagliato.txt
+- functions/thread_prestazioni.txt
+- functions/calibrazione_pixel_mm.txt
+- functions/misure_pixel_mm.txt
+- functions/tolleranze_ok_nok.txt
+- functions/surface_localization_grigi.txt
+- functions/surface_due_cerchi.txt
+- functions/surface_difetti.txt
+- functions/ai_modello.txt
+- functions/dataset_capture.txt
+- functions/confidenza_ai.txt
+- functions/classi_ai.txt
+- functions/salva_campioni_ok_nok.txt
+- functions/diagnostica_tempo_scansione.txt
+- functions/diagnostica_pending_jobs.txt
+- functions/buone_pratiche_illuminazione.txt
+- functions/buone_pratiche_ricetta.txt
+- functions/troubleshooting_localizzazione_instabile.txt
+- functions/troubleshooting_overlay_mancante.txt
+- functions/backup_ricetta.txt
+- functions/nomi_geometrie.txt
+- functions/illuminazione_bn_dimensionale.txt
+- functions/illuminazione_superficie_grigi.txt
+- functions/illuminazione_ai.txt
+- functions/illuminazione_retroilluminazione.txt
+- functions/illuminazione_radente.txt
+- functions/illuminazione_diffusa.txt
+- functions/illuminazione_anulare.txt
+- functions/illuminazione_coassiale.txt
+- functions/illuminazione_esposizione_gain.txt
+- functions/illuminazione_checklist.txt
+- functions/ottica_messa_a_fuoco.txt
+- functions/ottica_profondita_campo.txt
+- functions/ottica_campo_inquadrato.txt
+- functions/ottica_distorsione.txt
+- functions/meccanica_stabilita.txt
+- functions/meccanica_posizionamento_pezzo.txt
+- functions/meccanica_vibrazioni.txt
+- functions/manutenzione_ottica_luce.txt
+- functions/pezzi_lucidi.txt
+- functions/pezzi_neri.txt
+- functions/pezzi_trasparenti.txt
+- functions/scelta_punto_linea_cerchio_arco.txt
+- functions/quando_usare_geometrie_costruite.txt
+- functions/validazione_produzione.txt
+- functions/pezzi_borderline.txt
+- functions/cambio_articolo.txt
+- functions/trigger_acquisizione.txt
+- functions/sfondo_contrasto.txt
+- functions/pulizia_pezzo.txt
+- functions/controllo_periodico.txt
+- functions/pezzo_master.txt

@@ -8,6 +8,8 @@
 #include "gui/modules/MainWindowMeasurementModule.h"
 #include "gui/modules/MainWindowContext.h"
 #include "gui/modules/MainWindowCameraConfigModule.h"
+#include "gui/modules/setup/SetupResultsDialog.h"
+#include "gui/modules/setup/SetupResultsFormatter.h"
 #include "gui/ToolCatalog.h"
 #include "gui/ToolPanelWidget.h"
 
@@ -56,6 +58,7 @@ void MainWindowSetupModule::showCameraSetupPanel(const CameraConfig& camera)
   texts.start = tr("commands.start");
   texts.stop = tr("commands.stop");
   texts.nextFrame = tr("actions.nextFrame");
+  texts.results = tr("actions.frameResults");
   texts.back = tr("commands.backToCameraTools");
   texts.toolsTitle = tr("tools.geometries");
   texts.toolLabels = {
@@ -83,6 +86,7 @@ void MainWindowSetupModule::showCameraSetupPanel(const CameraConfig& camera)
     [this, camera]() { startCameraSimulation(camera); },
     [this, camera]() { stopCameraSimulation(camera); },
     [this, camera]() { stepCameraSimulation(camera); },
+    [this, camera]() { showSetupResultsPopup(camera); },
     {
       [this, camera]() {
         *context().returnToSetupCameraId = camera.id;
@@ -109,6 +113,7 @@ void MainWindowSetupModule::showCameraSetupPanel(const CameraConfig& camera)
     },
     toolsContainer());
   *context().setupPanel = panel;
+  panel->setDetailsVisible(context().setupDetailsVisible && *context().setupDetailsVisible);
   *context().setupCameraId = camera.id;
   toolsLayout()->addWidget(panel);
   refreshSetupGeometryResults(camera);
@@ -390,6 +395,9 @@ void MainWindowSetupModule::processCurrentCameraFrame(const CameraConfig& camera
     if (context().measurement)
     {
       context().measurement->rebuildMeasurementRecipe(camera);
+      GeometryOverlay overlay = largeImage()->geometryOverlay();
+      context().measurement->appendMeasurementOverlay(camera, overlay);
+      largeImage()->setGeometryOverlay(overlay);
     }
     log(QString("pipeline geometries queued: %1").arg(camera.id));
   };
@@ -450,6 +458,13 @@ void MainWindowSetupModule::refreshSetupGeometryResults(const CameraConfig& came
   if (context().measurement)
   {
     context().measurement->rebuildMeasurementRecipe(camera);
+    GeometryOverlay overlay = largeImage()->geometryOverlay();
+    context().measurement->appendMeasurementOverlay(camera, overlay);
+    largeImage()->setGeometryOverlay(overlay);
+  }
+  if (context().updateMeasurementResults)
+  {
+    context().updateMeasurementResults();
   }
 }
 
@@ -496,6 +511,7 @@ void MainWindowSetupModule::updateCameraSetupDetails(const CameraConfig& camera)
   }
 
   (*context().setupPanel)->setDetailsText(cameraSetupDetailsText(camera));
+  updateSetupResultsPopup(camera);
 }
 
 
@@ -525,5 +541,31 @@ QString MainWindowSetupModule::cameraSetupDetailsText(const CameraConfig& camera
             .arg(pose.score, 0, 'f', 2)
         : tr("status.invalid"))
     .arg(tr("labels.scanTime"), scanElapsedMs >= 0 ? QString("%1 ms").arg(scanElapsedMs) : tr("status.invalid"));
+}
+
+void MainWindowSetupModule::showSetupResultsPopup(const CameraConfig& camera)
+{
+  if (!m_resultsDialog)
+  {
+    m_resultsDialog = new SetupResultsDialog(window());
+    m_resultsDialog->setWindowTitle(tr("actions.frameResults"));
+  }
+
+  updateSetupResultsPopup(camera);
+  m_resultsDialog->show();
+  m_resultsDialog->raise();
+  m_resultsDialog->activateWindow();
+}
+
+void MainWindowSetupModule::updateSetupResultsPopup(const CameraConfig& camera)
+{
+  if (!m_resultsDialog)
+  {
+    return;
+  }
+
+  const auto runtimeIt = cameraRuntime().find(camera.id);
+  const CameraRuntime* runtime = runtimeIt == cameraRuntime().end() ? nullptr : &runtimeIt->second;
+  m_resultsDialog->setResultsText(setupResultsText(camera, runtime, recipes(), context()));
 }
 

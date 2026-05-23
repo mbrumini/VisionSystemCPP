@@ -1,0 +1,20 @@
+Titolo: Scegliere punto linea cerchio arco
+Area: Rilevamento edge
+Parole chiave: scegliere strumento, punto, linea, cerchio, arco
+
+Scegliere lo strumento giusto rende la ricetta piu' stabile.
+
+Punto:
+Usare quando serve una posizione precisa lungo una scansione.
+
+Linea:
+Usare per bordi rettilinei o riferimenti lunghi.
+
+Cerchio:
+Usare per fori, diametri, centri o riferimenti circolari completi.
+
+Arco:
+Usare quando e' visibile solo una parte di cerchio o quando il cerchio completo contiene disturbi.
+
+Regola:
+Usare la geometria piu' semplice che descrive bene il bordo reale.

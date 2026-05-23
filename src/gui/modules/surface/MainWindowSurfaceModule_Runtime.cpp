@@ -2,6 +2,7 @@
 #include "gui/modules/MainWindowCameraProfile.h"
 #include "gui/modules/MainWindowImagingModule.h"
 #include "gui/modules/MainWindowGeometryModule.h"
+#include "gui/modules/MainWindowSetupModule.h"
 #include "gui/modules/MainWindowContext.h"
 
 #include "gui/SurfaceLocalizationAdapters.h"
@@ -78,9 +79,15 @@ void MainWindowSurfaceModule::testSurfaceAnnulusLocalization(const CameraConfig&
     return processor.locateAnnulusByGrayscaleThreshold(input, processorConfig, toCvRects(exclusionRects));
   };
   const QString __pendingCameraId_testSurfaceAnnulus = camera.id;
+  const int setupFrameIndex = cameraRuntime()[camera.id].frameIndex();
   context().incPendingJobs(__pendingCameraId_testSurfaceAnnulus);
-  runAsyncTask(decltype(job)(job), window(), [this, camera, annulus, exclusionRects, __pendingCameraId_testSurfaceAnnulus](const SurfaceDefectResult& result) {
+  runAsyncTask(decltype(job)(job), window(), [this, camera, annulus, exclusionRects, __pendingCameraId_testSurfaceAnnulus, setupFrameIndex](const SurfaceDefectResult& result) {
     auto __dec_guard = std::shared_ptr<void>(nullptr, [this, __pendingCameraId_testSurfaceAnnulus](void*) { context().decPendingJobs(__pendingCameraId_testSurfaceAnnulus); });
+    if (*context().setupCameraId == camera.id && cameraRuntime()[camera.id].frameIndex() != setupFrameIndex)
+    {
+      return;
+    }
+
     const bool suppressViewUpdate =
       camera.id == selectedCameraId() &&
       (*context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry || *context().setupCameraId == camera.id);
@@ -119,6 +126,12 @@ void MainWindowSurfaceModule::testSurfaceAnnulusLocalization(const CameraConfig&
     {
       context().lastSurfaceLocalizationResults->insert(camera.id, result.localization);
       cameraRuntime()[camera.id].setCurrentPose(context().imaging->partPoseFromSurfaceReference(camera, result.localization));
+      if (*context().setupCameraId == camera.id && *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry)
+      {
+        context().setup->refreshSetupGeometryResults(camera);
+        return;
+      }
+
       GeometryOverlay overlay;
       context().geometry->appendCurrentPartPoseOverlay(camera, overlay);
       largeImage()->setGeometryOverlay(overlay);
@@ -349,9 +362,15 @@ void MainWindowSurfaceModule::testSurfaceEdgePcaLocalization(const CameraConfig&
   };
 
   const QString __pendingCameraId_testSurfaceEdgePca = camera.id;
+  const int setupFrameIndex = cameraRuntime()[camera.id].frameIndex();
   context().incPendingJobs(__pendingCameraId_testSurfaceEdgePca);
-  runAsyncTask(decltype(job)(job), window(), [this, camera, roi, exclusionRects, __pendingCameraId_testSurfaceEdgePca](const SurfaceDefectResult& result) {
+  runAsyncTask(decltype(job)(job), window(), [this, camera, roi, exclusionRects, __pendingCameraId_testSurfaceEdgePca, setupFrameIndex](const SurfaceDefectResult& result) {
     auto __dec_guard = std::shared_ptr<void>(nullptr, [this, __pendingCameraId_testSurfaceEdgePca](void*) { context().decPendingJobs(__pendingCameraId_testSurfaceEdgePca); });
+    if (*context().setupCameraId == camera.id && cameraRuntime()[camera.id].frameIndex() != setupFrameIndex)
+    {
+      return;
+    }
+
     const bool suppressViewUpdate =
       camera.id == selectedCameraId() &&
       (*context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry || *context().setupCameraId == camera.id);
@@ -390,6 +409,12 @@ void MainWindowSurfaceModule::testSurfaceEdgePcaLocalization(const CameraConfig&
 
     context().lastSurfaceLocalizationResults->insert(camera.id, result.localization);
     cameraRuntime()[camera.id].setCurrentPose(context().imaging->partPoseFromSurfaceReference(camera, result.localization));
+    if (*context().setupCameraId == camera.id && *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry)
+    {
+      context().setup->refreshSetupGeometryResults(camera);
+      return;
+    }
+
     GeometryOverlay overlay;
     context().geometry->appendCurrentPartPoseOverlay(camera, overlay);
     largeImage()->setGeometryOverlay(overlay);

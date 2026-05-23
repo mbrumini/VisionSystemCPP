@@ -31,6 +31,7 @@ public:
   void setGeometryLines(const QVector<ImageLine>& imageLines);
   void clearGeometryLines();
   void setGeometryOverlay(const GeometryOverlay& overlay);
+  const GeometryOverlay& geometryOverlay() const;
   void clearGeometryOverlay();
   void setRoiDrawingEnabled(bool enabled);
   void setExclusionDrawingEnabled(bool enabled);

@@ -1,0 +1,20 @@
+Titolo: Maschere rosse
+Area: Localizzazione / Overlay
+Parole chiave: maschera rossa, esclusione, ignora zona, localizzazione
+
+Le maschere rosse sono zone che il sistema deve ignorare.
+Sono usate soprattutto in localizzazione per evitare parti che disturbano il calcolo.
+
+Cosa indicano:
+Rosso significa "non usare questa zona".
+
+Quando usarle:
+- riflessi;
+- scritte;
+- sporco;
+- fori o dettagli non utili;
+- parti mobili dello sfondo.
+
+Attenzione:
+Non coprire zone fondamentali per riconoscere il pezzo.
+Una maschera troppo grande puo' peggiorare la localizzazione.

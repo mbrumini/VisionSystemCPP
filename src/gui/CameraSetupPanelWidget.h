@@ -18,6 +18,7 @@ struct CameraSetupPanelTexts
   QString start;
   QString stop;
   QString nextFrame;
+  QString results;
   QString back;
   QString toolsTitle;
   QStringList toolLabels;
@@ -39,11 +40,13 @@ public:
     std::function<void()> start,
     std::function<void()> stop,
     std::function<void()> nextFrame,
+    std::function<void()> results,
     QVector<std::function<void()>> toolHandlers,
     std::function<void()> back,
     QWidget* parent = nullptr);
 
   void setDetailsText(const QString& details);
+  void setDetailsVisible(bool visible);
 
 private:
   QLabel* m_details = nullptr;

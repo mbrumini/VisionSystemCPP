@@ -1,0 +1,18 @@
+Titolo: Buone pratiche illuminazione
+Area: Immagine
+Parole chiave: illuminazione, riflessi, contrasto, stabilita
+
+Una buona illuminazione rende piu' stabile localizzazione, edge e AI.
+
+Regole:
+- evitare riflessi saturi;
+- mantenere contrasto tra bordo e sfondo;
+- non cambiare luce dopo la programmazione;
+- evitare ombre mobili;
+- pulire ottica e protezioni.
+
+Sintomi di illuminazione instabile:
+- edge che salta;
+- localizzazione variabile;
+- misure che cambiano senza motivo meccanico;
+- AI con confidenza bassa.

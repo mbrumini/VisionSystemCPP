@@ -1,0 +1,17 @@
+Titolo: Pending jobs
+Area: Diagnostica
+Parole chiave: pending jobs, asincrono, elaborazioni in coda
+
+Pending jobs indica quante elaborazioni sono ancora in corso o in coda.
+E' utile quando la macchina usa elaborazioni asincrone.
+
+Se cresce troppo:
+- il PC non riesce a stare dietro al frame rate;
+- i controlli sono troppo pesanti;
+- il tempo tra frame e' troppo breve.
+
+Azioni:
+- aumentare intervallo frame;
+- ridurre strumenti;
+- ridurre dimensioni o aree di ricerca;
+- controllare numero massimo thread.

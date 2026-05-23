@@ -1,0 +1,16 @@
+Titolo: Classi AI
+Area: AI
+Parole chiave: classi, OK, NOK, ignore, colori classi
+
+Le classi AI definiscono cosa il modello puo' riconoscere.
+Ogni classe deve avere un significato operativo chiaro.
+
+Esempi:
+- OK;
+- graffio;
+- macchia;
+- foro;
+- ignorare.
+
+Consiglio:
+Non creare troppe classi simili. Se due difetti non cambiano la decisione operativa, spesso possono stare nella stessa classe.

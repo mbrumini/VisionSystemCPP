@@ -1,8 +1,125 @@
 #include "gui/IconCatalog.h"
 
+#include <QColor>
 #include <QHash>
+#include <QPainter>
+#include <QPixmap>
 #include <QStyle>
 #include <QApplication>
+
+namespace
+{
+QColor iconColor(const QString& id)
+{
+  static const QColor acquisition("#4d9cff");
+  static const QColor geometry("#00d2ff");
+  static const QColor constructed("#ff9f3f");
+  static const QColor measurement("#f5d547");
+  static const QColor tolerance("#35c46a");
+  static const QColor danger("#ff4f5e");
+  static const QColor diagnostic("#b58cff");
+  static const QColor neutral("#eef2f6");
+
+  if (id == "delete" || id == "clear" || id == "clearRoi" ||
+      id == "surfaceAddExclusion" || id == "surfaceClearExclusions")
+  {
+    return danger;
+  }
+
+  if (id == "setup" || id == "camera" || id == "acquireSample" ||
+      id == "assignSampleImage" || id == "assignTestImages" ||
+      id == "assignImageFolder" || id == "nextFrame" ||
+      id == "start" || id == "stop" || id == "reload" ||
+      id == "grid" || id == "fullscreen" || id == "back" ||
+      id == "new" || id == "testGeometry" || id == "testLocalization" ||
+      id == "testStrategy")
+  {
+    return acquisition;
+  }
+
+  if (id == "pointGeometry" || id == "lineGeometry" ||
+      id == "circleGeometry" || id == "arcGeometry" ||
+      id == "edgeGeometry" || id == "contourGeometry" ||
+      id == "geometries" || id == "surfaceLocalization" ||
+      id == "surfaceThreshold" || id == "surfaceEdge" ||
+      id == "surfacePca" || id == "surfaceSearchRoi" ||
+      id == "surfaceOuterCircle" || id == "surfaceInnerCircle" ||
+      id == "surfaceEdgeCircle")
+  {
+    return geometry;
+  }
+
+  if (id == "constructedGeometries" || id == "lineLineIntersection" ||
+      id == "lineCircleIntersection" || id == "circleCircleIntersection" ||
+      id == "midpoint" || id == "offsetLine" ||
+      id == "angleBisector" || id == "tangentLine" ||
+      id == "projectPoint")
+  {
+    return constructed;
+  }
+
+  if (id == "measurements" || id == "dimensions" ||
+      id == "diameter" || id == "length" || id == "radius" ||
+      id == "distance" || id == "angle" ||
+      id == "pointPointDistance" || id == "pointLineDistance" ||
+      id == "lineLineDistance" || id == "circleDiameterMeasure" ||
+      id == "lineLineAngle")
+  {
+    return measurement;
+  }
+
+  if (id == "tolerances" || id == "nominal" ||
+      id == "minTolerance" || id == "maxTolerance" ||
+      id == "okNokRule")
+  {
+    return tolerance;
+  }
+
+  if (id == "help" ||
+      id == "configureStrategy" || id == "previewModel" ||
+      id == "acquireModel" || id == "testShapeModel" ||
+      id == "testTemplateModel" || id == "surfaceModel" ||
+      id == "aiModel" || id == "confidence" ||
+      id == "classes" || id == "datasetCapture" ||
+      id == "defectMap" || id == "lighting" ||
+      id == "contrast" || id == "calibration" ||
+      id == "roi" || id == "threshold" ||
+      id == "surfaceDefects")
+  {
+    return diagnostic;
+  }
+
+  return neutral;
+}
+
+QIcon tintedIcon(const QString& path, const QColor& color)
+{
+  const QIcon source(path);
+  if (!color.isValid())
+  {
+    return source;
+  }
+
+  QIcon icon;
+  const QList<QSize> sizes = {QSize(24, 24), QSize(32, 32), QSize(48, 48), QSize(64, 64)};
+  for (const QSize& size : sizes)
+  {
+    QPixmap pixmap = source.pixmap(size);
+    if (pixmap.isNull())
+    {
+      continue;
+    }
+
+    QPainter painter(&pixmap);
+    painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+    painter.fillRect(pixmap.rect(), color);
+    painter.end();
+    icon.addPixmap(pixmap);
+  }
+
+  return icon.isNull() ? source : icon;
+}
+}
 
 QIcon IconCatalog::icon(const QString& id)
 {
@@ -12,6 +129,7 @@ QIcon IconCatalog::icon(const QString& id)
     {"grid", ":/icons/grid.svg"},
     {"reload", ":/icons/refresh.svg"},
     {"fullscreen", ":/icons/maximize.svg"},
+    {"help", ":/icons/help.svg"},
     {"setup", ":/icons/tool-setup.svg"},
     {"localization", ":/icons/crosshair.svg"},
     {"geometries", ":/icons/shapes.svg"},
@@ -96,7 +214,7 @@ QIcon IconCatalog::icon(const QString& id)
   const QString path = paths.value(id);
   if (!path.isEmpty())
   {
-    return QIcon(path);
+    return tintedIcon(path, iconColor(id));
   }
 
   return QApplication::style()->standardIcon(QStyle::SP_FileIcon);

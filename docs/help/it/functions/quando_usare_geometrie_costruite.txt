@@ -1,0 +1,20 @@
+Titolo: Quando usare geometrie costruite
+Area: Geometrie calcolate
+Parole chiave: costruite, intersezione, misura indiretta, riferimento
+
+Usare geometrie costruite quando la quota non si misura bene direttamente.
+
+Esempi:
+- misurare da un'intersezione teorica;
+- proiettare un punto su una linea;
+- creare una tangente;
+- usare una linea offset come riferimento;
+- misurare tra punti derivati da altre geometrie.
+
+Vantaggi:
+- misure piu' coerenti con il disegno tecnico;
+- meno dipendenza da un singolo edge rumoroso;
+- possibilita' di creare riferimenti virtuali.
+
+Regola:
+Se il disegno parla di intersezioni o riferimenti teorici, usare geometrie costruite.

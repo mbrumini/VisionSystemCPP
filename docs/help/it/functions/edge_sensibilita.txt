@@ -1,0 +1,22 @@
+Titolo: Sensibilita' edge
+Area: Rilevamento edge
+Parole chiave: edge, sensibilita, soglia, bordo, rumore
+
+La sensibilita' edge controlla quanto facilmente il sistema accetta un cambio di intensita' come bordo.
+
+Sensibilita' alta:
+- trova bordi deboli;
+- puo' prendere rumore o texture;
+- utile con basso contrasto.
+
+Sensibilita' bassa:
+- ignora disturbi;
+- richiede bordi piu' netti;
+- utile con superfici rumorose.
+
+Procedura consigliata:
+1. Partire da un valore medio.
+2. Provare sul campione.
+3. Scorrere immagini test.
+4. Aumentare se il bordo non viene trovato.
+5. Diminuire se prende bordi sbagliati.

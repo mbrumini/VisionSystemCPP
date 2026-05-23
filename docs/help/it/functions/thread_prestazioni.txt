@@ -1,0 +1,20 @@
+Titolo: Thread e prestazioni
+Area: Sistema
+Parole chiave: thread, prestazioni, pending jobs, tempo scansione
+
+Il sistema puo' usare piu' thread per elaborare immagini e controlli.
+Il numero di thread influisce su velocita' e stabilita' del PC.
+
+Impostazione:
+Sistema -> numero massimo thread.
+
+Quando ridurre i thread:
+- PC poco potente;
+- interfaccia poco reattiva;
+- troppe camere attive;
+- elaborazioni pesanti.
+
+Quando aumentarli:
+- PC multicore;
+- molte camere;
+- controlli indipendenti e pesanti.

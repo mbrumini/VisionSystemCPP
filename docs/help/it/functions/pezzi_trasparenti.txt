@@ -1,0 +1,21 @@
+Titolo: Pezzi trasparenti
+Area: Illuminazione / Materiali
+Parole chiave: trasparente, vetro, plastica, rifrazione, profilo
+
+I pezzi trasparenti sono difficili perche' riflettono, rifrangono e mostrano lo sfondo.
+
+Strategie:
+- usare retroilluminazione per profili;
+- usare sfondo controllato;
+- evitare texture dietro il pezzo;
+- provare luce radente per bordi o difetti;
+- controllare riflessi doppi.
+
+Problemi tipici:
+- bordo doppio;
+- difetti invisibili;
+- riflessi variabili;
+- localizzazione instabile.
+
+Regola:
+Per trasparenti, lo sfondo e' parte dell'illuminazione. Deve essere controllato.

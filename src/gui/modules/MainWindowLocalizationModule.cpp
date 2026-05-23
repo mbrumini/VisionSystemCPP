@@ -5,6 +5,7 @@
 #include "gui/modules/MainWindowCameraProfile.h"
 #include "gui/modules/MainWindowGeometryModule.h"
 #include "gui/modules/MainWindowImagingModule.h"
+#include "gui/modules/MainWindowSetupModule.h"
 #include "util/AsyncExecutor.h"
 
 #include <memory>
@@ -60,6 +61,7 @@ void MainWindowLocalizationModule::testLocalization(const CameraConfig& camera)
   };
 
   const QString pendingCameraId = camera.id;
+  const int setupFrameIndex = cameraRuntime()[camera.id].frameIndex();
   if (context().incPendingJobs)
   {
     context().incPendingJobs(pendingCameraId);
@@ -68,10 +70,14 @@ void MainWindowLocalizationModule::testLocalization(const CameraConfig& camera)
   runAsyncTask(
     decltype(job)(job),
     window(),
-    [this, camera, roi, settings, pendingCameraId](const LocalizationResult& result) {
+    [this, camera, roi, settings, pendingCameraId, setupFrameIndex](const LocalizationResult& result) {
       if (context().decPendingJobs)
       {
         context().decPendingJobs(pendingCameraId);
+      }
+      if (*context().setupCameraId == camera.id && cameraRuntime()[camera.id].frameIndex() != setupFrameIndex)
+      {
+        return;
       }
 
       const bool suppressViewUpdate =
@@ -111,6 +117,12 @@ void MainWindowLocalizationModule::testLocalization(const CameraConfig& camera)
       }
 
       cameraRuntime()[camera.id].setCurrentPose(context().imaging->partPoseFromLocalizationResult(camera, result));
+      if (*context().setupCameraId == camera.id && *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry)
+      {
+        context().setup->refreshSetupGeometryResults(camera);
+        return;
+      }
+
       GeometryOverlay overlay;
       if (context().geometry)
       {

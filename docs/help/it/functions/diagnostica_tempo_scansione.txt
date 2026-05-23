@@ -1,0 +1,16 @@
+Titolo: Tempo scansione
+Area: Diagnostica
+Parole chiave: tempo scansione, prestazioni, millisecondi, setup
+
+Il tempo scansione indica quanto impiega il sistema a elaborare il frame corrente.
+In Setup e' utile per capire il peso della ricetta.
+
+Se il tempo e' alto:
+- troppe geometrie;
+- fasce troppo larghe;
+- immagini grandi;
+- molte misure o costruzioni;
+- localizzazione complessa.
+
+Obiettivo:
+Tenere il tempo stabile e compatibile con il ciclo macchina.

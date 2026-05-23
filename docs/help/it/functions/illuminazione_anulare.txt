@@ -1,0 +1,25 @@
+Titolo: Illuminazione anulare
+Area: Illuminazione
+Parole chiave: ring light, anulare, foro, cerchio, bordo, superficie
+
+L'illuminazione anulare circonda l'ottica e illumina frontalmente il pezzo.
+E' comune e semplice, ma puo' creare riflessi circolari su superfici lucide.
+
+Quando usarla:
+- pezzi opachi;
+- controlli generici;
+- riferimenti circolari;
+- superfici poco riflettenti.
+
+Vantaggi:
+- facile da installare;
+- illuminazione centrata;
+- buona per molte applicazioni semplici.
+
+Limiti:
+- riflessi su metallo lucido;
+- ombre ridotte ma non sempre eliminate;
+- puo' appiattire graffi o rilievi.
+
+Regola:
+Usare anulare come soluzione generale, ma passare a diffusa o radente se riflessi o difetti non sono stabili.

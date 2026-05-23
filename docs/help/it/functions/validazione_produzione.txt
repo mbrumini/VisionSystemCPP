@@ -1,0 +1,22 @@
+Titolo: Validazione produzione
+Area: Produzione
+Parole chiave: validazione, produzione, pezzi buoni, scarti, borderline
+
+La validazione dimostra che la ricetta funziona su pezzi reali, non solo sul campione.
+
+Set minimo consigliato:
+- pezzi buoni;
+- pezzi fuori tolleranza;
+- pezzi borderline;
+- pezzi con variazioni normali di lotto;
+- pezzi in posizioni estreme accettabili.
+
+Controllare:
+- localizzazione stabile;
+- edge trovati;
+- misure disponibili;
+- valori coerenti;
+- OK/NOK corretto.
+
+Regola:
+Una ricetta non e' pronta finche' non e' stata provata su casi facili e difficili.

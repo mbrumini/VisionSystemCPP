@@ -1,0 +1,19 @@
+Titolo: Salva campioni OK/NOK
+Area: Dataset / Salvataggio
+Parole chiave: salva OK, salva NOK, campioni, dataset
+
+Salva OK e Salva NOK servono per archiviare immagini rappresentative.
+Sono utili per analisi, debug e preparazione dataset.
+
+Quando salvare OK:
+- pezzo buono tipico;
+- varianti accettabili;
+- casi limite ma ancora accettabili.
+
+Quando salvare NOK:
+- difetti reali;
+- fuori tolleranza;
+- casi che il sistema sbaglia.
+
+Nota:
+Un dataset utile contiene sia esempi semplici sia casi difficili.

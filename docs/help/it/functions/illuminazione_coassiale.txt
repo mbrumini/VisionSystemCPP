@@ -1,0 +1,25 @@
+Titolo: Illuminazione coassiale
+Area: Illuminazione
+Parole chiave: coassiale, riflettente, piano, incisioni, contrasto
+
+La luce coassiale arriva lungo l'asse della camera.
+E' utile su superfici piane e riflettenti, soprattutto per vedere differenze di riflettanza.
+
+Quando usarla:
+- superfici piatte;
+- marcature o incisioni;
+- metalli riflettenti;
+- controlli dove serve uniformita' frontale.
+
+Vantaggi:
+- illumina in modo molto uniforme;
+- puo' evidenziare differenze di materiale o finitura;
+- riduce ombre laterali.
+
+Limiti:
+- non evidenzia bene rilievi;
+- puo' saturare superfici speculari;
+- richiede allineamento accurato.
+
+Regola:
+Usare coassiale quando il difetto cambia la riflettanza piu' che la geometria della superficie.

@@ -1,0 +1,22 @@
+Titolo: Vibrazioni
+Area: Meccanica / Diagnostica
+Parole chiave: vibrazione, mosso, blur, tempo esposizione, macchina
+
+Le vibrazioni possono rendere l'immagine mossa anche se il pezzo sembra fermo.
+Il mosso peggiora edge e AI.
+
+Sintomi:
+- bordi doppi o sfumati;
+- misure che oscillano;
+- difetti superficiali che cambiano forma;
+- immagine nitida da fermo ma peggiore in ciclo.
+
+Soluzioni:
+- ridurre tempo esposizione;
+- aumentare luce reale;
+- irrigidire supporti;
+- acquisire in momento macchina piu' stabile;
+- sincronizzare trigger e movimentazione.
+
+Regola:
+Se il problema appare solo in movimento, sospettare vibrazioni o trigger.

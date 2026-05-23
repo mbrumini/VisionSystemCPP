@@ -1,0 +1,19 @@
+Titolo: Modalita' Setup
+Area: Setup
+Parole chiave: setup, programmazione articolo, validazione, prova pezzi
+
+La modalita' Setup serve per programmare e validare un articolo.
+Non e' solo una schermata di configurazione: serve anche a provare altri pezzi.
+
+In Setup si controlla:
+- che il pezzo venga localizzato;
+- che gli edge siano trovati;
+- che le geometrie costruite siano disponibili;
+- che le misure vengano calcolate;
+- che overlay e popup risultati siano coerenti.
+
+Flusso pratico:
+1. Programmare sul campione.
+2. Importare immagini test.
+3. Scorrere i pezzi.
+4. Correggere solo cio' che non e' stabile.

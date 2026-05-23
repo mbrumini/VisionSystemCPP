@@ -1,0 +1,23 @@
+Titolo: Workflow programmazione articolo
+Area: Generale
+Parole chiave: articolo, programmazione, flusso, setup, edge, misure
+
+Sequenza consigliata per programmare un nuovo articolo.
+
+1. Setup:
+Acquisire o importare il campione e configurare la localizzazione.
+
+2. Rilevamento edge:
+Configurare punti, linee, cerchi e archi necessari.
+
+3. Geometrie costruite:
+Creare intersezioni, proiezioni, tangenti o offset.
+
+4. Misure:
+Creare le quote dimensionali usando geometrie trovate o costruite.
+
+5. Tolleranze:
+Impostare nominali, limiti e OK/NOK.
+
+6. Validazione:
+Scorrere immagini test e verificare stabilita' su piu' pezzi.

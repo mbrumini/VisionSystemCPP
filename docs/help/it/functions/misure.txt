@@ -1,0 +1,22 @@
+Titolo: Misure
+Area: Misure
+Parole chiave: quota, distanza, diametro, angolo, pixel
+
+Le misure calcolano valori dimensionali usando geometrie trovate o costruite.
+
+Misure principali:
+- Distanza punto-punto.
+- Distanza punto-linea.
+- Distanza linea-linea.
+- Diametro cerchio.
+- Angolo linea-linea.
+
+Uso tipico:
+1. Configurare edge e geometrie costruite.
+2. Entrare in Misure.
+3. Scegliere le sorgenti.
+4. Creare la misura.
+5. Verificare in Setup su piu' frame.
+
+Nota:
+Se una misura e' non disponibile, di solito manca una geometria sorgente.

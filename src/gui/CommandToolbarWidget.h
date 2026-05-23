@@ -16,7 +16,8 @@ public:
                  const QString& stop,
                  const QString& grid,
                  const QString& reload,
-                 const QString& fullscreen);
+                 const QString& fullscreen,
+                 const QString& help);
   void setStatusText(const QString& text);
   void setRecipeText(const QString& text);
 
@@ -25,6 +26,7 @@ public:
   void setGridHandler(std::function<void()> handler);
   void setReloadHandler(std::function<void()> handler);
   void setFullscreenHandler(std::function<void()> handler);
+  void setHelpHandler(std::function<void()> handler);
 
 private:
   QToolButton* addButton(const QString& iconId, const QString& tooltip);
@@ -34,6 +36,7 @@ private:
   QToolButton* m_gridButton = nullptr;
   QToolButton* m_reloadButton = nullptr;
   QToolButton* m_fullscreenButton = nullptr;
+  QToolButton* m_helpButton = nullptr;
   QLabel* m_statusLabel = nullptr;
   QLabel* m_recipeLabel = nullptr;
 };

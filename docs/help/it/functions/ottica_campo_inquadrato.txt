@@ -1,0 +1,21 @@
+Titolo: Campo inquadrato
+Area: Ottica
+Parole chiave: campo visivo, FOV, risoluzione, pixel, zoom
+
+Il campo inquadrato deve contenere tutto cio' che serve al controllo, ma non troppo spazio inutile.
+
+Campo troppo largo:
+- meno pixel sul dettaglio;
+- misure meno precise;
+- piu' sfondo e disturbi.
+
+Campo troppo stretto:
+- il pezzo puo' uscire dall'immagine;
+- localizzazione fragile;
+- impossibile validare movimenti reali.
+
+Consiglio:
+Inquadrare il pezzo con margine sufficiente per la movimentazione, mantenendo buona risoluzione sui dettagli da misurare.
+
+Regola:
+Ogni pixel perso in campo inutile e' precisione persa sulla misura.

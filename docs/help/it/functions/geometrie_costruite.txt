@@ -1,0 +1,18 @@
+Titolo: Geometrie costruite
+Area: Geometrie calcolate
+Parole chiave: intersezione, tangente, offset, proiezione, punto medio
+
+Le geometrie costruite derivano da geometrie gia' trovate.
+Non cercano direttamente edge nell'immagine: calcolano nuovi punti o linee.
+
+Esempi:
+- Intersezione linea-linea.
+- Intersezione linea-cerchio.
+- Intersezione cerchio-cerchio.
+- Punto medio.
+- Linea offset.
+- Tangente a cerchio.
+- Proiezione punto-linea.
+
+Regola:
+Prima devono essere disponibili le geometrie sorgenti. Se manca una sorgente, la costruzione non e' disponibile.

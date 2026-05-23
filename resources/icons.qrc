@@ -5,6 +5,7 @@
     <file alias="grid.svg">icons/grid.svg</file>
     <file alias="refresh.svg">icons/refresh.svg</file>
     <file alias="maximize.svg">icons/maximize.svg</file>
+    <file alias="help.svg">icons/help.svg</file>
     <file alias="sliders.svg">icons/sliders.svg</file>
     <file alias="crosshair.svg">icons/crosshair.svg</file>
     <file alias="shapes.svg">icons/shapes.svg</file>

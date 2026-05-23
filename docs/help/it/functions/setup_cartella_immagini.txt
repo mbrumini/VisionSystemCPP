@@ -1,0 +1,15 @@
+Titolo: Associa cartella immagini
+Area: Setup
+Parole chiave: cartella, immagini, sorgente file, camera
+
+Associa cartella immagini collega una camera file a una cartella di immagini.
+La cartella diventa la sorgente da cui leggere i frame in simulazione.
+
+Procedura:
+1. Selezionare la camera.
+2. Entrare in Setup.
+3. Premere Associa cartella immagini.
+4. Scegliere la cartella contenente le immagini.
+
+Nota:
+Se la camera reale non e' disponibile, la cartella immagini permette di programmare e testare offline.

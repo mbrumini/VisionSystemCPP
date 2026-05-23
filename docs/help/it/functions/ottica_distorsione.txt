@@ -1,0 +1,21 @@
+Titolo: Distorsione ottica
+Area: Ottica / Misure
+Parole chiave: distorsione, lente, bordo immagine, calibrazione
+
+La distorsione ottica fa apparire linee dritte come curve o cambia la scala tra centro e bordi immagine.
+Puo' influenzare misure e geometrie.
+
+Quando preoccuparsi:
+- misure vicino ai bordi immagine;
+- ottiche grandangolari;
+- richieste dimensionali precise;
+- confronto tra quote in zone diverse dell'immagine.
+
+Soluzioni:
+- usare ottica piu' adatta;
+- tenere il pezzo vicino al centro;
+- calibrare la camera;
+- verificare con riferimento noto.
+
+Regola:
+Se una misura cambia spostando lo stesso pezzo nell'immagine, sospettare distorsione o calibrazione.

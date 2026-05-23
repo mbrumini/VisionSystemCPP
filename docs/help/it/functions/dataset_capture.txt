@@ -1,0 +1,16 @@
+Titolo: Cattura dataset
+Area: AI / Dataset
+Parole chiave: dataset, cattura OK, cattura NOK, training
+
+Cattura dataset salva immagini da usare per addestramento o verifica AI.
+
+Categorie tipiche:
+- OK: pezzi buoni;
+- NOK: pezzi difettosi;
+- Incerti: pezzi da rivedere o classificare dopo.
+
+Buone pratiche:
+- raccogliere molti esempi;
+- includere variazioni reali di luce, posizione e superficie;
+- separare immagini di training e test;
+- non addestrare solo su casi perfetti.

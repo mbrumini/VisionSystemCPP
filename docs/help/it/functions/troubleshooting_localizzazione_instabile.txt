@@ -1,0 +1,18 @@
+Titolo: Localizzazione instabile
+Area: Diagnostica
+Parole chiave: localizzazione instabile, posa, centro, angolo
+
+Una localizzazione instabile causa errori a cascata su edge e misure.
+
+Controlli:
+1. Area ricerca abbastanza grande ma non eccessiva.
+2. Esclusioni rosse su disturbi e riflessi.
+3. Contrasto sufficiente.
+4. Pezzo sempre visibile.
+5. Soglia o strategia adatta al tipo immagine.
+
+Sintomi:
+- centro pezzo che salta;
+- angolo incoerente;
+- edge spostati tutti nella stessa direzione;
+- misure disponibili solo su alcuni frame.

@@ -1,0 +1,16 @@
+Titolo: Difetti superficie
+Area: Difetti superficie
+Parole chiave: superficie, difetti, graffi, macchie, blob
+
+Il modulo difetti superficie serve per cercare anomalie visive.
+Puo' essere usato per graffi, macchie, ammaccature o blob.
+
+Parametri tipici:
+- area minima;
+- soglia o modello;
+- esclusioni;
+- severita'.
+
+Nota:
+Prima di cercare difetti, verificare che la localizzazione superficie sia stabile.
+Un difetto apparente puo' essere causato da illuminazione o posa errata.

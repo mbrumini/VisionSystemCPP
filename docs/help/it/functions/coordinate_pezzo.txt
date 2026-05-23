@@ -1,0 +1,18 @@
+Titolo: Coordinate pezzo
+Area: Setup / Rilevamento edge
+Parole chiave: coordinate pezzo, posa, origine, assi, localizzazione
+
+Le coordinate pezzo permettono agli edge di seguire il pezzo quando si sposta nell'immagine.
+La localizzazione calcola origine, angolo e assi del pezzo corrente.
+
+Perche' servono:
+Se un cerchio, una linea o un punto vengono salvati rispetto al pezzo, il sistema li riposiziona su ogni frame.
+Questo evita di cercare sempre nello stesso punto fisso dell'immagine.
+
+Sintomi di problema:
+- gli edge sono spostati su alcuni pezzi;
+- il centro pezzo e' sbagliato;
+- la posa cambia in modo incoerente.
+
+Prima verifica:
+Controllare la localizzazione prima di modificare edge e misure.

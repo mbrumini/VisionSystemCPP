@@ -1,0 +1,21 @@
+Titolo: Profondita' di campo
+Area: Ottica
+Parole chiave: profondita campo, altezza pezzo, fuoco, diaframma
+
+La profondita' di campo indica quanto spazio in altezza resta nitido.
+Serve quando i pezzi hanno spessori diversi o non sono sempre alla stessa quota.
+
+Quando e' importante:
+- pezzi alti;
+- superfici non planari;
+- posizionamento meccanico con tolleranza;
+- controlli su bordi a quote diverse.
+
+Consigli:
+- aumentare profondita' di campo chiudendo diaframma, se possibile;
+- aumentare luce se chiudendo diaframma l'immagine diventa scura;
+- evitare gain alto per compensare poca luce;
+- verificare pezzi alti e bassi.
+
+Regola:
+Se il pezzo cambia altezza, il fuoco deve restare accettabile in tutta la zona di controllo.

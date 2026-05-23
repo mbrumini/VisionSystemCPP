@@ -1,0 +1,22 @@
+Titolo: Manutenzione ottica e luce
+Area: Manutenzione
+Parole chiave: pulizia, ottica, vetro, illuminatore, manutenzione
+
+Sporco su lente, vetro o illuminatore puo' creare falsi difetti e ridurre contrasto.
+
+Controlli periodici:
+- lente pulita;
+- vetro protettivo pulito;
+- illuminatore integro;
+- cavi fissati;
+- supporti serrati;
+- nessun alone o graffio davanti alla camera.
+
+Sintomi di sporco:
+- macchie sempre nella stessa posizione immagine;
+- contrasto ridotto;
+- AI confusa;
+- falsi difetti superficie.
+
+Regola:
+Se una macchia resta ferma anche cambiando pezzo, controllare ottica o protezione.

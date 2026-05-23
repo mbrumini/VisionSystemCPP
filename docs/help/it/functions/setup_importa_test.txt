@@ -1,0 +1,15 @@
+Titolo: Importa test
+Area: Setup
+Parole chiave: test, immagini test, sequenza, pezzi
+
+Importa test assegna una cartella o un insieme di immagini da usare per provare la ricetta su pezzi diversi.
+Serve per verificare che edge e misure funzionino anche quando il pezzo cambia posizione o aspetto.
+
+Procedura:
+1. Entrare in Setup.
+2. Premere Importa test.
+3. Selezionare le immagini di prova.
+4. Usare Frame successivo o Start per scorrerle.
+
+Obiettivo:
+Controllare che localizzazione, edge e misure siano stabili su piu' pezzi.

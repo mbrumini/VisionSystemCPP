@@ -1,0 +1,27 @@
+Titolo: Misura distanza fori su superficie
+Area: Misure / Superficie
+Parole chiave: distanza fori, interasse, fori, superficie, cerchi, centri, luce diretta, anulare, coassiale
+
+La distanza tra fori su una superficie si misura trovando i centri dei fori e calcolando la distanza centro-centro.
+
+Illuminazione consigliata:
+- luce anulare se il bordo dei fori e' visibile e continuo;
+- luce diffusa se il materiale riflette;
+- luce coassiale se il foro o la sede cambia riflettanza rispetto alla superficie;
+- evitare retroilluminazione se i fori non attraversano il pezzo o se serve vedere la faccia superiore.
+
+Procedura:
+1. Localizzare il pezzo.
+2. Impostare un edge cerchio su ciascun foro.
+3. Verificare che i cerchi siano trovati in Setup.
+4. Usare i centri dei cerchi come sorgenti.
+5. Creare una misura distanza punto-punto o centro-centro.
+6. Applicare tolleranze e validare su piu' pezzi.
+
+Sintomi di problema:
+- centro che salta: bordo foro poco visibile o riflesso;
+- diametro variabile: soglia o edge instabile;
+- misura presente solo su alcuni pezzi: localizzazione o illuminazione non robusta.
+
+Regola:
+Per interassi su superficie, la ripetibilita' del centro foro vale piu' della luminosita' generale dell'immagine.

@@ -1,0 +1,15 @@
+Titolo: Log dettagliato
+Area: Sistema / Diagnostica
+Parole chiave: log dettagliato, debug, file log, prestazioni
+
+Il log dettagliato salva informazioni piu' complete su file.
+E' pensato per debug, assistenza e analisi di problemi intermittenti.
+
+Quando attivarlo:
+- edge che ogni tanto non viene trovato;
+- tempi scansione irregolari;
+- problemi difficili da riprodurre;
+- sviluppo o assistenza tecnica.
+
+Nota:
+Non tenerlo sempre attivo se non serve. Puo' produrre molti dati.

@@ -1,0 +1,29 @@
+Titolo: Retroilluminazione
+Area: Illuminazione
+Parole chiave: retroilluminazione, backlight, silhouette, profilo, dimensionale
+
+La retroilluminazione mette la luce dietro il pezzo e crea una silhouette.
+E' molto utile per misure dimensionali su profili esterni.
+
+Quando usarla:
+- misure di larghezza, diametro esterno, altezza;
+- profili netti;
+- pezzi opachi;
+- controlli dove la texture superficiale non interessa.
+
+Vantaggi:
+- bordo molto contrastato;
+- poca influenza della superficie;
+- soglia piu' semplice;
+- edge piu' ripetibili.
+
+Limiti:
+- non vede dettagli sulla faccia superiore;
+- non e' la scelta corretta se il diametro e' un foro, una sede o un bordo circolare visibile sulla superficie;
+- puo' nascondere difetti superficiali;
+- richiede buon posizionamento meccanico;
+- puo' creare aloni se esposizione troppo alta.
+
+Regola:
+Usare retroilluminazione quando conta il profilo del pezzo piu' della sua superficie.
+Per diametri sulla faccia del pezzo usare prima illuminazione diretta, diffusa, coassiale o anulare.

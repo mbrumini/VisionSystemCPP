@@ -1,0 +1,15 @@
+Titolo: Colori overlay
+Area: Visualizzazione
+Parole chiave: colori, overlay, rosso, ciano, verde, misure
+
+I colori aiutano a capire cosa si sta guardando.
+
+Convenzioni:
+- Ciano: posa pezzo, cerchi e geometrie circolari.
+- Verde: linee o edge lineari trovati.
+- Arancio/ambra: misure, quote e punti di misura.
+- Rosso: esclusioni, maschere e zone da ignorare.
+- Viola/magenta: archi o strumenti diagnostici.
+
+Regola pratica:
+Rosso significa non usare quella zona. Ambra significa valore di misura. Ciano/verde indicano geometrie rilevate.

@@ -3,6 +3,7 @@
 #include "gui/modules/MainWindowModuleBase.h"
 
 class CameraConfig;
+class GeometryOverlay;
 
 class MainWindowMeasurementModule : public MainWindowModuleBase
 {
@@ -16,6 +17,7 @@ public:
   void showCircleDiameterPanel(const CameraConfig& camera);
   void showLineLineAnglePanel(const CameraConfig& camera);
   void rebuildMeasurementRecipe(const CameraConfig& camera);
+  void appendMeasurementOverlay(const CameraConfig& camera, GeometryOverlay& overlay) const;
 
 private:
   void refreshMeasurementSources(const CameraConfig& camera);

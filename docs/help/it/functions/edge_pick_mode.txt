@@ -1,0 +1,20 @@
+Titolo: Scelta edge first best last
+Area: Rilevamento edge
+Parole chiave: first, best, last, scelta edge, bordo multiplo
+
+Quando una scansione incontra piu' bordi, il sistema deve scegliere quale usare.
+
+First:
+Prende il primo bordo valido incontrato.
+Utile se il bordo corretto e' sempre il primo nella direzione di scansione.
+
+Best:
+Prende il bordo con risposta piu' forte.
+Utile quando il bordo corretto e' il piu' netto.
+
+Last:
+Prende l'ultimo bordo valido.
+Utile se il bordo corretto e' alla fine della fascia o della scansione.
+
+Diagnosi:
+Se il risultato salta tra bordi diversi, ridurre la fascia o cambiare pick mode.

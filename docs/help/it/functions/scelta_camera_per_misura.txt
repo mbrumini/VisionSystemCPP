@@ -1,0 +1,26 @@
+Titolo: Scelta camera per misura
+Area: Setup / Misure / Camera
+Parole chiave: scelta camera, camera candidata, profilo camera, dimensionale, superficie, misura, illuminatore
+
+Quando si chiede al sistema come misurare una quota, bisogna verificare anche quale camera puo' farlo.
+Una misura corretta in teoria puo' essere impossibile o instabile su una camera non adatta.
+
+Regole pratiche:
+- Per profili esterni BN, larghezze, altezze e diametri in silhouette usare camere dimensionali BN.
+- Per quote sulla faccia del pezzo, fori, sedi, tasche, incisioni o riferimenti superficiali usare camere in grigi adatte a misure superficie.
+- Per difetti superficie usare camere con profilo superficie/difetti.
+- Per AI usare solo camere con profilo AI e modello/dataset configurati.
+
+Illuminazione:
+Il profilo software della camera non garantisce da solo che l'illuminatore fisico sia presente.
+Se serve luce diretta, diffusa, coassiale, anulare o radente, verificare che quella camera abbia davvero quell'illuminatore o che la stazione lo possa comandare.
+
+Come rispondere:
+- indicare le camere candidate presenti in configurazione;
+- dire quali camere non sono adatte;
+- distinguere tra "adatta", "possibile ma da verificare" e "non consigliata";
+- se l'hardware illuminatore non e' dichiarato, chiedere verifica all'operatore.
+
+Esempio:
+Per un diametro su superficie, preferire una camera grigi/misura/superficie.
+Una camera BN dimensionale puo' andare solo se il diametro e' un profilo esterno o una silhouette, non se il diametro e' sulla faccia del pezzo.

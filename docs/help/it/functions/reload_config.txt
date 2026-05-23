@@ -1,0 +1,14 @@
+Titolo: Reload config
+Area: Sistema
+Parole chiave: reload config, ricarica, configurazione, camere
+
+Reload config ricarica configurazioni e dati applicativi.
+Serve dopo modifiche a file di configurazione, camere, profili o ricette.
+
+Quando usarlo:
+- dopo avere modificato config/cameras.json;
+- dopo avere importato o cambiato ricetta;
+- se la lista camere o strumenti non sembra aggiornata.
+
+Attenzione:
+Se ci sono modifiche non salvate nei pannelli, salvarle prima di ricaricare.

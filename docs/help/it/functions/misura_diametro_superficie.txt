@@ -1,0 +1,35 @@
+Titolo: Misura diametro su superficie
+Area: Misure / Illuminazione / Edge
+Parole chiave: diametro, superficie, cerchio, foro, impronta, luce diretta, illuminazione diffusa, coassiale, anulare
+
+Misurare un diametro su una superficie non significa automaticamente usare retroilluminazione.
+Prima bisogna capire quale diametro si vuole misurare.
+
+Caso 1: diametro visibile sulla faccia del pezzo
+Esempi:
+- foro visto dall'alto;
+- impronta circolare;
+- bordo circolare stampato o inciso;
+- sede o tasca visibile sulla superficie.
+
+In questo caso serve illuminazione diretta sulla superficie.
+Scelte tipiche:
+- luce diffusa se la superficie riflette;
+- luce coassiale se serve vedere dettagli piani e ridurre ombre;
+- luce anulare se il bordo circolare risponde bene da piu' direzioni;
+- luce radente solo se il diametro e' dato da un rilievo o incisione.
+
+Procedura pratica:
+1. Stabilizzare la localizzazione del pezzo.
+2. Rendere visibile il bordo circolare sulla superficie.
+3. Usare un edge cerchio o una geometria cerchio.
+4. Creare la misura diametro cerchio.
+5. Verificare in Setup su piu' pezzi.
+
+Caso 2: diametro esterno del pezzo in silhouette
+Se interessa il profilo esterno e la superficie non conta, allora la retroilluminazione puo' essere la scelta migliore.
+La retroilluminazione crea un contorno BN netto e rende il diametro esterno piu' ripetibile.
+
+Regola:
+Per diametri sulla faccia del pezzo usare illuminazione diretta.
+Per diametri esterni in silhouette valutare retroilluminazione.

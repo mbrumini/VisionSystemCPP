@@ -19,6 +19,7 @@ CommandToolbarWidget::CommandToolbarWidget(QWidget* parent)
   m_gridButton = addButton("grid", "Vista griglia");
   m_reloadButton = addButton("reload", "Reload config");
   m_fullscreenButton = addButton("fullscreen", "Fullscreen");
+  m_helpButton = addButton("help", "Help");
 
   layout->addWidget(m_startButton);
   layout->addWidget(m_stopButton);
@@ -26,6 +27,8 @@ CommandToolbarWidget::CommandToolbarWidget(QWidget* parent)
   layout->addWidget(m_gridButton);
   layout->addWidget(m_reloadButton);
   layout->addWidget(m_fullscreenButton);
+  layout->addSpacing(8);
+  layout->addWidget(m_helpButton);
   layout->addStretch(1);
 
   m_recipeLabel = new QLabel(this);
@@ -52,13 +55,15 @@ void CommandToolbarWidget::setLabels(const QString& start,
                                      const QString& stop,
                                      const QString& grid,
                                      const QString& reload,
-                                     const QString& fullscreen)
+                                     const QString& fullscreen,
+                                     const QString& help)
 {
   m_startButton->setToolTip(start);
   m_stopButton->setToolTip(stop);
   m_gridButton->setToolTip(grid);
   m_reloadButton->setToolTip(reload);
   m_fullscreenButton->setToolTip(fullscreen);
+  m_helpButton->setToolTip(help);
 }
 
 void CommandToolbarWidget::setStatusText(const QString& text)
@@ -94,4 +99,9 @@ void CommandToolbarWidget::setReloadHandler(std::function<void()> handler)
 void CommandToolbarWidget::setFullscreenHandler(std::function<void()> handler)
 {
   QObject::connect(m_fullscreenButton, &QToolButton::clicked, this, std::move(handler));
+}
+
+void CommandToolbarWidget::setHelpHandler(std::function<void()> handler)
+{
+  QObject::connect(m_helpButton, &QToolButton::clicked, this, std::move(handler));
 }

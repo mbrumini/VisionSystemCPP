@@ -69,6 +69,7 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
   std::function<void()> start,
   std::function<void()> stop,
   std::function<void()> nextFrame,
+  std::function<void()> results,
   QVector<std::function<void()>> toolHandlers,
   std::function<void()> back,
   QWidget* parent)
@@ -133,6 +134,7 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
   auto* startButton = createTouchButton("start", texts.start, buttons);
   auto* stopButton = createTouchButton("stop", texts.stop, buttons);
   auto* stepButton = createTouchButton("nextFrame", texts.nextFrame, buttons);
+  auto* resultsButton = createTouchButton("measurements", texts.results, buttons);
   auto* backButton = createTouchButton("back", texts.back, buttons);
 
   buttonsLayout->addWidget(acquireSampleButton, 0, 0);
@@ -142,7 +144,8 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
   buttonsLayout->addWidget(startButton, 1, 0);
   buttonsLayout->addWidget(stopButton, 1, 1);
   buttonsLayout->addWidget(stepButton, 1, 2);
-  buttonsLayout->addWidget(backButton, 1, 3);
+  buttonsLayout->addWidget(resultsButton, 1, 3);
+  buttonsLayout->addWidget(backButton, 2, 0);
   layout->addWidget(buttons);
 
   connectButton(acquireSampleButton, acquireSample);
@@ -152,6 +155,7 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
   connectButton(startButton, start);
   connectButton(stopButton, stop);
   connectButton(stepButton, nextFrame);
+  connectButton(resultsButton, results);
   connectButton(backButton, back);
 
   layout->addStretch(1);
@@ -162,5 +166,13 @@ void CameraSetupPanelWidget::setDetailsText(const QString& details)
   if (m_details)
   {
     m_details->setText(details);
+  }
+}
+
+void CameraSetupPanelWidget::setDetailsVisible(bool visible)
+{
+  if (m_details)
+  {
+    m_details->setVisible(visible);
   }
 }

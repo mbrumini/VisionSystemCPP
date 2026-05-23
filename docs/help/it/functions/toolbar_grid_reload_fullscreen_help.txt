@@ -1,0 +1,14 @@
+Titolo: Toolbar principale
+Area: toolbar principale
+Parole chiave: griglia, reload, fullscreen, help, ricetta
+
+Vista griglia mostra tutte le camere disponibili in una schermata generale.
+Reload config ricarica configurazione camere, profili e ricetta corrente.
+Fullscreen / finestra alterna tra finestra normale e schermo intero.
+HELP apre il manuale operativo.
+
+Quando usarli:
+- Vista griglia: per scegliere rapidamente una camera.
+- Reload config: dopo modifiche a configurazioni o ricette.
+- Fullscreen: quando l'operatore deve controllare solo immagini e overlay.
+- HELP: per consultare procedure e significato dei comandi.

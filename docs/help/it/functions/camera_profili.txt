@@ -1,0 +1,16 @@
+Titolo: Profili camera
+Area: Camere
+Parole chiave: profilo camera, bw, grayscale, dimensional, surface, AI
+
+Il profilo camera decide quali strumenti sono disponibili per una camera.
+Una camera dimensionale bianco/nero puo' avere localizzazione classica, edge, misure e tolleranze.
+Una camera grigi puo' usare localizzazione superficie, edge, misure, tolleranze o strumenti AI.
+
+Esempi:
+- DIM: controlli dimensionali.
+- SURF: localizzazione e difetti superficie.
+- AI: modello AI o classificazione.
+- MIS: misure su immagini grigi.
+
+Nota:
+Se un comando non compare, controllare il profilo camera nella configurazione.

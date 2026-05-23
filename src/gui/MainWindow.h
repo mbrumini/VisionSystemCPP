@@ -3,6 +3,7 @@
 #include "config/AppConfig.h"
 #include "config/RecipeManager.h"
 #include "config/TranslationManager.h"
+#include "access/AccessSession.h"
 #include "gui/CameraSetupPanelWidget.h"
 #include "gui/CameraStripWidget.h"
 #include "gui/CommandToolbarWidget.h"
@@ -57,6 +58,8 @@ private:
   void selectCamera(const CameraConfig& camera);
   void startMachine();
   void stopMachine();
+  void showAccessLogin();
+  void showHelp();
   void updateControlPanel(const CameraConfig* camera);
   void updateMeasurementResults();
   void updateCameraStripStatus(const QString& cameraId);
@@ -66,6 +69,7 @@ private:
   void clearToolPanel();
   void appendLog(const QString& message);
   void setDetailedLogEnabled(bool enabled);
+  void setSetupDetailsVisible(bool visible);
   void updateLargePreview();
   void setThreadLimitPrompt();
   void incPendingJobs(const QString& cameraId);
@@ -76,6 +80,7 @@ private:
   RecipeManager m_recipeManager;
   TranslationManager m_translations;
   DetailedLogger m_detailedLogger;
+  AccessSession m_accessSession;
 
   MainWindowContext m_ctx;
   MainWindowImagingModule m_imaging;
@@ -120,6 +125,7 @@ private:
   QHash<QString, int> m_cameraDroppedFrames;
   QHash<QString, int> m_cameraPendingJobs;
   bool m_machineRunning = false;
+  bool m_setupDetailsVisible = false;
 
   MainWindowActiveDrawingRecipe m_activeDrawingRecipe = MainWindowActiveDrawingRecipe::None;
 };

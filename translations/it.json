@@ -11,6 +11,7 @@
     "paths": "Percorsi",
     "diagnostics": "Diagnostica",
     "language": "Lingua",
+    "help": "Aiuto",
     "system": "Sistema"
   },
   "commands": {
@@ -22,9 +23,12 @@
     "toggleFullScreen": "Fullscreen / finestra",
     "fullScreen": "Fullscreen",
     "maximized": "Finestra massimizzata",
+    "login": "Accedi",
+    "help": "HELP",
     "exit": "Esci",
     "backToCameraTools": "Torna ai tool camera",
     "backToSetup": "Torna al Set-up",
+    "showSetupDetails": "Mostra dettagli setup",
     "enableDetailedLog": "Attiva log dettagliato"
   },
   "groups": {
@@ -35,6 +39,12 @@
     "localizationStrategies": "Strategie localizzazione",
     "strategyControls": "Controlli strategia"
   },
+  "access": {
+    "loginTitle": "Accedi",
+    "password": "Password",
+    "loginOk": "Accesso eseguito",
+    "loginDenied": "Accesso negato"
+  },
   "status": {
     "systemReady": "Sistema pronto",
     "configError": "Errore configurazione",
@@ -43,7 +53,10 @@
     "running": "In acquisizione",
     "stopped": "Ferma",
     "error": "Errore",
-    "invalid": "Non valida"
+    "invalid": "Non valida",
+    "found": "Trovata",
+    "notFound": "Non trovata",
+    "notAvailable": "Non disponibile"
   },
   "labels": {
     "noCameraSelected": "Nessuna camera selezionata",
@@ -260,12 +273,21 @@
     "measurementRecipeSaveFailed": "Salvataggio misura fallito"
   },
   "messages": {
-    "noRecipes": "Nessuna ricetta disponibile."
+    "noRecipes": "Nessuna ricetta disponibile.",
+    "helpPlaceholder": "Manuale HELP\n\nQuesta finestra e' pronta per mostrare i file di aiuto.\n\nProssimo passo:\n- creare piccoli file di testo in docs/help/it/\n- descrivere comandi, setup, controlli telecamere, edge, misure e tolleranze\n- usare questi contenuti come base per il manuale e per l'assistente locale."
+  },
+  "help": {
+    "manualTab": "Manuale",
+    "chatTab": "Chat",
+    "questionPlaceholder": "Scrivi una domanda sul manuale...",
+    "askButton": "Chiedi",
+    "waiting": "Sto cercando nel manuale e interrogo Ollama...",
+    "assistantUnavailable": "La chat usa Ollama e il modello vision-help. Se non risponde, verificare che Ollama sia avviato e che il modello sia stato creato."
   },
     "tools": {
     "setup": "Set-up",
     "localization": "Localizzazione",
-    "geometries": "Geometrie",
+    "geometries": "Rilevamento edge",
     "constructedGeometries": "Geometrie calcolate",
     "measurements": "Misure",
     "dimensions": "Dimensioni",
@@ -290,6 +312,7 @@
     "acquireSampleImage": "Acquisisci campione",
     "assignTestImages": "Importa test",
     "nextFrame": "Frame successivo",
+    "frameResults": "Risultati frame",
     "pointGeometry": "Punto",
     "lineGeometry": "Linea",
     "newGeometryPoint": "Nuovo punto",

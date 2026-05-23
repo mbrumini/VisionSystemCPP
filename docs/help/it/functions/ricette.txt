@@ -1,0 +1,16 @@
+Titolo: Ricette
+Area: Ricette
+Parole chiave: ricetta, articolo, crea, duplica, importa, esporta
+
+La ricetta contiene la programmazione dell'articolo.
+Include localizzazione, edge, geometrie costruite, misure, tolleranze e percorsi immagini.
+
+Comandi principali:
+- Seleziona ricetta: apre una ricetta esistente.
+- Nuova ricetta: crea una nuova programmazione.
+- Duplica ricetta: copia una ricetta esistente per usarla come base.
+- Importa ricetta: carica una ricetta da cartella esterna.
+- Esporta ricetta: prepara una ricetta da trasferire o archiviare.
+
+Consiglio:
+Per un articolo simile a uno gia' fatto, duplicare la ricetta e modificare solo cio' che cambia.

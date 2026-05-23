@@ -9,6 +9,7 @@
 #include "gui/TouchIconButton.h"
 #include "gui/geometry/GeometryDiagnosticDrawing.h"
 #include "gui/geometry/GeometryMath.h"
+#include "gui/help/HelpDialog.h"
 #include "processing/SurfaceModelTrainer.h"
 #include "processing/geometry/EdgeLineDetector.h"
 #include "processing/geometry/EdgePointDetector.h"
@@ -20,6 +21,7 @@
 #include <QSettings>
 #include <QDir>
 #include <QElapsedTimer>
+#include <QFile>
 #include <QFileInfo>
 #include <QGridLayout>
 #include <QGroupBox>
@@ -35,10 +37,12 @@
 #include <QPushButton>
 #include <QResizeEvent>
 #include <QScrollArea>
+#include <QSet>
 #include <QSizePolicy>
 #include <QSlider>
 #include <QSplitter>
 #include <QSpinBox>
+#include <QTextStream>
 #include <QVBoxLayout>
 
 #include <opencv2/imgcodecs.hpp>
@@ -53,6 +57,53 @@
 #include <memory>
 
 using AsyncExecutor::runAsyncTask;
+
+namespace
+{
+QStringList normalizedList(const QStringList& values)
+{
+  QStringList result;
+  for (const QString& value : values)
+  {
+    result.push_back(value.toLower());
+  }
+  return result;
+}
+
+QString helpCameraRoleSummary(const CameraConfig& camera)
+{
+  const QString imageMode = camera.profile.imageMode.toLower();
+  const QStringList inspections = normalizedList(camera.profile.inspectionTypes);
+  const QStringList tools = normalizedList(camera.profile.guiTools);
+
+  QStringList roles;
+  if (imageMode == QStringLiteral("bw") || inspections.contains(QStringLiteral("dimensional")))
+  {
+    roles.push_back(QStringLiteral("adatta a controlli BN/profilo esterno, edge dimensionali e quote in silhouette/profilo"));
+    roles.push_back(QStringLiteral("non considerarla automaticamente adatta a dettagli sulla faccia del pezzo"));
+  }
+  if (imageMode == QStringLiteral("grayscale") &&
+      (inspections.contains(QStringLiteral("surface")) ||
+       inspections.contains(QStringLiteral("measurement")) ||
+       tools.contains(QStringLiteral("surfacelocalization"))))
+  {
+    roles.push_back(QStringLiteral("candidata per misure superficiali in grigi e riferimenti sulla faccia del pezzo"));
+  }
+  if (inspections.contains(QStringLiteral("ai")) || tools.contains(QStringLiteral("aimodel")))
+  {
+    roles.push_back(QStringLiteral("candidata per controlli AI se il modello e il dataset sono configurati"));
+  }
+  if (tools.contains(QStringLiteral("surfacedefects")))
+  {
+    roles.push_back(QStringLiteral("candidata per difetti superficie"));
+  }
+  if (roles.isEmpty())
+  {
+    roles.push_back(QStringLiteral("capacita' specifiche non deducibili dal profilo"));
+  }
+  return roles.join(QStringLiteral("; "));
+}
+}
 
 void MainWindow::resizeEvent(QResizeEvent* event)
 {
@@ -87,12 +138,14 @@ void MainWindow::buildUi()
                               trText("commands.stop"),
                               trText("commands.gridView"),
                               trText("commands.reloadConfig"),
-                              trText("commands.toggleFullScreen"));
+                              trText("commands.toggleFullScreen"),
+                              trText("commands.help"));
   m_commandToolbar->setStartHandler([this]() { startMachine(); });
   m_commandToolbar->setStopHandler([this]() { stopMachine(); });
   m_commandToolbar->setGridHandler([this]() { showGridView(); });
   m_commandToolbar->setReloadHandler([this]() { loadConfiguration(); });
   m_commandToolbar->setFullscreenHandler([this]() { toggleFullScreen(); });
+  m_commandToolbar->setHelpHandler([this]() { showHelp(); });
   rootLayout->addWidget(m_commandToolbar, 0, 0, 1, 2);
 
   m_gridPage = new QWidget(root);
@@ -740,6 +793,9 @@ void MainWindow::buildMenu()
   languageMenu->addAction("Italiano", this, [this]() { changeLanguage("it"); });
   languageMenu->addAction("English", this, [this]() { changeLanguage("en"); });
 
+  QMenu* helpMenu = menuBar()->addMenu(trText("menu.help"));
+  helpMenu->addAction(trText("commands.help"), this, [this]() { showHelp(); });
+
   QMenu* systemMenu = menuBar()->addMenu(trText("menu.system"));
   systemMenu->addAction(trText("commands.start"), this, [this]() {
     startMachine();
@@ -751,6 +807,13 @@ void MainWindow::buildMenu()
   systemMenu->addAction(trText("commands.reloadConfig"), this, [this]() { loadConfiguration(); });
   systemMenu->addAction(trText("commands.toggleFullScreen"), this, [this]() { toggleFullScreen(); });
   systemMenu->addAction(trText("commands.setMaxThreads"), this, [this]() { setThreadLimitPrompt(); });
+  systemMenu->addAction(trText("commands.login"), this, [this]() { showAccessLogin(); });
+  QAction* setupDetailsAction = systemMenu->addAction(trText("commands.showSetupDetails"));
+  setupDetailsAction->setCheckable(true);
+  setupDetailsAction->setChecked(m_setupDetailsVisible);
+  connect(setupDetailsAction, &QAction::toggled, this, [this](bool checked) {
+    setSetupDetailsVisible(checked);
+  });
   QAction* detailedLogAction = systemMenu->addAction(trText("commands.enableDetailedLog"));
   detailedLogAction->setCheckable(true);
   detailedLogAction->setChecked(m_detailedLogger.enabled());
@@ -759,6 +822,103 @@ void MainWindow::buildMenu()
   });
   systemMenu->addSeparator();
   systemMenu->addAction(trText("commands.exit"), qApp, &QApplication::quit);
+}
+
+void MainWindow::showAccessLogin()
+{
+  bool ok = false;
+  const QString password = QInputDialog::getText(
+    this,
+    trText("access.loginTitle"),
+    trText("access.password"),
+    QLineEdit::Password,
+    QString(),
+    &ok);
+
+  if (!ok)
+  {
+    return;
+  }
+
+  if (m_accessSession.authenticateBackdoor(password))
+  {
+    const QString roleLabel = accessRoleLabel(m_accessSession.role());
+    appendLog(QString("%1: %2").arg(trText("access.loginOk"), roleLabel));
+    QMessageBox::information(this, trText("access.loginTitle"), QString("%1: %2").arg(trText("access.loginOk"), roleLabel));
+    return;
+  }
+
+  appendLog(trText("access.loginDenied"));
+  QMessageBox::warning(this, trText("access.loginTitle"), trText("access.loginDenied"));
+}
+
+void MainWindow::showHelp()
+{
+  const QString language = m_translations.languageCode().isEmpty() ? QStringLiteral("it") : m_translations.languageCode();
+  const QString helpPath = QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath(QString("docs/help/%1/index.txt").arg(language));
+  QFile file(helpPath);
+  QString text;
+  if (file.open(QIODevice::ReadOnly | QIODevice::Text))
+  {
+    QTextStream stream(&file);
+    text = stream.readAll();
+  }
+  else
+  {
+    text = trText("messages.helpPlaceholder");
+  }
+
+  HelpDialog::Labels labels;
+  labels.manualTab = trText("help.manualTab");
+  labels.chatTab = trText("help.chatTab");
+  labels.questionPlaceholder = trText("help.questionPlaceholder");
+  labels.askButton = trText("help.askButton");
+  labels.waiting = trText("help.waiting");
+  labels.assistantUnavailable = trText("help.assistantUnavailable");
+
+  auto machineContextProvider = [this]() {
+    QStringList lines;
+    lines.push_back(QStringLiteral("Configurazione letta live dall'app al momento della domanda."));
+    lines.push_back(QStringLiteral("Nota: la configurazione dichiara profilo, imageMode e tool software; non dichiara ancora l'hardware illuminatore fisico. Non inventare illuminatori non dichiarati."));
+    if (!m_selectedCameraId.isEmpty())
+    {
+      lines.push_back(QStringLiteral("Camera selezionata: %1").arg(m_selectedCameraId));
+    }
+    else
+    {
+      lines.push_back(QStringLiteral("Camera selezionata: nessuna."));
+    }
+
+    const QVector<CameraConfig> cameras = m_config.activeCameras();
+    if (cameras.isEmpty())
+    {
+      lines.push_back(QStringLiteral("Nessuna camera attiva nella configurazione corrente."));
+      return lines.join('\n');
+    }
+
+    lines.push_back(QStringLiteral("Camere attive e capacita' dedotte:"));
+    for (const CameraConfig& camera : cameras)
+    {
+      lines.push_back(QStringLiteral("- %1 slot %2, nome %3, profilo %4, imageMode %5, controlli %6, tool %7. Uso dedotto: %8.")
+                        .arg(camera.id)
+                        .arg(camera.slot)
+                        .arg(camera.displayName)
+                        .arg(camera.processingProfileId)
+                        .arg(camera.profile.imageMode)
+                        .arg(camera.profile.inspectionTypes.join(QStringLiteral(",")))
+                        .arg(camera.profile.guiTools.join(QStringLiteral(",")))
+                        .arg(helpCameraRoleSummary(camera)));
+    }
+
+    lines.push_back(QStringLiteral("Regola risposta: per richieste su misure superficiali indica prima le camere candidate con profilo grayscale/surface/measurement; per profili esterni BN indica camere dimensionali. Se serve un illuminatore specifico non dichiarato, chiedi di verificarlo sulla macchina."));
+    return lines.join('\n');
+  };
+
+  auto* dialog = new HelpDialog(text, language, labels, machineContextProvider, this);
+  dialog->setWindowTitle(trText("commands.help"));
+  dialog->show();
+  dialog->raise();
+  dialog->activateWindow();
 }
 
 void MainWindow::setThreadLimitPrompt()
@@ -1166,28 +1326,37 @@ void MainWindow::showCameraToolList(const CameraConfig& camera)
   m_returnToSetupCameraId.clear();
   clearToolPanel();
 
-  QVector<ToolIconDefinition> tools = {
-    {"setup", trText("tools.setup"), "setup"},
-    {"constructedGeometries", trText("tools.constructedGeometries"), "constructedGeometries"},
-    {"measurements", trText("tools.measurements"), "measurements"}
+  QVector<ToolIconDefinition> tools;
+  QSet<QString> addedTools;
+  auto addTool = [this, &tools, &addedTools](const QString& id) {
+    if (addedTools.contains(id))
+    {
+      return;
+    }
+    addedTools.insert(id);
+    tools.append({id, ToolCatalog::label(id, m_translations), id});
   };
 
-  if (MainWindowCameraProfile::isGrayscaleLocalization(camera, m_config))
+  addTool("setup");
+  addTool("geometries");
+  addTool("constructedGeometries");
+  addTool("measurements");
+  if (camera.profile.guiTools.contains("tolerances"))
   {
-    tools.prepend({"localization", trText("tools.localization"), "localization"});
+    addTool("tolerances");
   }
 
   for (const QString& tool : camera.profile.guiTools)
   {
-    if (MainWindowCameraProfile::isGrayscaleLocalization(camera, m_config) && tool == "surfaceLocalization")
+    if (tool == "localization" ||
+        tool == "surfaceLocalization" ||
+        tool == "geometries" ||
+        tool == "measurements" ||
+        tool == "tolerances")
     {
       continue;
     }
-    if (tool == "measurements")
-    {
-      continue;
-    }
-    tools.append({tool, ToolCatalog::label(tool, m_translations), tool});
+    addTool(tool);
   }
 
   if (m_toolIconBar)
@@ -1307,6 +1476,17 @@ void MainWindow::setDetailedLogEnabled(bool enabled)
 
   settings.setValue("system/detailedLogEnabled", true);
   appendLog(QString("%1: %2").arg(trText("log.detailedLogEnabled"), m_detailedLogger.filePath()));
+}
+
+void MainWindow::setSetupDetailsVisible(bool visible)
+{
+  m_setupDetailsVisible = visible;
+  QSettings settings;
+  settings.setValue("ui/setupDetailsVisible", visible);
+  if (m_setupPanel)
+  {
+    m_setupPanel->setDetailsVisible(visible);
+  }
 }
 
 void MainWindow::updateLargePreview()

@@ -11,6 +11,7 @@
     "paths": "Paths",
     "diagnostics": "Diagnostics",
     "language": "Language",
+    "help": "Help",
     "system": "System"
   },
   "commands": {
@@ -22,9 +23,12 @@
     "toggleFullScreen": "Fullscreen / window",
     "fullScreen": "Fullscreen",
     "maximized": "Maximized window",
+    "login": "Login",
+    "help": "HELP",
     "exit": "Exit",
     "backToCameraTools": "Back to camera tools",
     "backToSetup": "Back to Set-up",
+    "showSetupDetails": "Show setup details",
     "enableDetailedLog": "Enable detailed log"
   },
   "groups": {
@@ -35,6 +39,12 @@
     "localizationStrategies": "Localization strategies",
     "strategyControls": "Strategy controls"
   },
+  "access": {
+    "loginTitle": "Login",
+    "password": "Password",
+    "loginOk": "Login successful",
+    "loginDenied": "Access denied"
+  },
   "status": {
     "systemReady": "System ready",
     "configError": "Configuration error",
@@ -43,7 +53,10 @@
     "running": "Running",
     "stopped": "Stopped",
     "error": "Error",
-    "invalid": "Invalid"
+    "invalid": "Invalid",
+    "found": "Found",
+    "notFound": "Not found",
+    "notAvailable": "Not available"
   },
   "labels": {
     "noCameraSelected": "No camera selected",
@@ -260,12 +273,21 @@
     "measurementRecipeSaveFailed": "Measurement save failed"
   },
   "messages": {
-    "noRecipes": "No recipes available."
+    "noRecipes": "No recipes available.",
+    "helpPlaceholder": "HELP manual\n\nThis window is ready to show help files.\n\nNext step:\n- create small text files in docs/help/en/\n- document commands, setup, camera controls, edge detection, measurements and tolerances\n- use these contents as the base manual and local assistant knowledge."
   },
-  "tools": {
+  "help": {
+    "manualTab": "Manual",
+    "chatTab": "Chat",
+    "questionPlaceholder": "Ask a question about the manual...",
+    "askButton": "Ask",
+    "waiting": "Searching the manual and asking Ollama...",
+    "assistantUnavailable": "The chat uses Ollama and the vision-help model. If it does not answer, check that Ollama is running and the model has been created."
+  },
+    "tools": {
     "setup": "Set-up",
     "localization": "Localization",
-    "geometries": "Geometries",
+    "geometries": "Edge detection",
     "constructedGeometries": "Constructed geometries",
     "measurements": "Measurements",
     "dimensions": "Dimensions",
@@ -290,6 +312,7 @@
     "acquireSampleImage": "Acquire sample",
     "assignTestImages": "Import tests",
     "nextFrame": "Next frame",
+    "frameResults": "Frame results",
     "pointGeometry": "Point",
     "lineGeometry": "Line",
     "deleteGeometryPoint": "Delete point",

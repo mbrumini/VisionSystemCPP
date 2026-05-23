@@ -1,0 +1,17 @@
+Titolo: Backup ricetta
+Area: Ricette
+Parole chiave: backup, esporta ricetta, sicurezza, archivio
+
+Il backup ricetta permette di conservare una versione funzionante.
+
+Quando fare backup:
+- prima di modifiche importanti;
+- dopo validazione articolo;
+- prima di prove rischiose;
+- prima di consegna macchina.
+
+Metodo:
+Usare Esporta ricetta o duplicare la ricetta con un nome chiaro.
+
+Consiglio:
+Usare nomi con articolo, data e versione.

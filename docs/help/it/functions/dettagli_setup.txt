@@ -1,0 +1,19 @@
+Titolo: Dettagli setup
+Area: Setup
+Parole chiave: dettagli setup, sorgente, posa, tempo scansione, menu sistema
+
+I dettagli setup mostrano informazioni tecniche sulla camera selezionata.
+Sono nascosti di default per lasciare piu' spazio all'immagine.
+
+Informazioni disponibili:
+- sorgente camera;
+- cartella immagini;
+- immagine campione;
+- immagini test;
+- stato acquisizione;
+- numero frame;
+- posa pezzo;
+- tempo scansione.
+
+Per attivarli:
+Aprire Sistema e abilitare Mostra dettagli setup.

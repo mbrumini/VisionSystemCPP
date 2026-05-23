@@ -12,6 +12,14 @@ find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
 add_executable(VisionSystemCPP
     src/main.cpp
+    src/access/AccessTypes.h
+    src/access/AccessTypes.cpp
+    src/access/AccessPolicy.h
+    src/access/AccessPolicy.cpp
+    src/access/AccessSession.h
+    src/access/AccessSession.cpp
+    src/access/AccessRecipe.h
+    src/access/AccessRecipe.cpp
     src/config/AppConfig.h
     src/config/AppConfig.cpp
     src/config/RecipeManager.h
@@ -23,6 +31,15 @@ add_executable(VisionSystemCPP
     src/config/RecipeJsonUtils.cpp
     src/config/TranslationManager.h
     src/config/TranslationManager.cpp
+    src/calibration/CalibrationTypes.h
+    src/calibration/CalibrationPatternDetector.h
+    src/calibration/CalibrationPatternDetector.cpp
+    src/calibration/CalibrationSession.h
+    src/calibration/CalibrationSession.cpp
+    src/calibration/ImageCalibrationMap.h
+    src/calibration/ImageCalibrationMap.cpp
+    src/calibration/CalibrationRecipe.h
+    src/calibration/CalibrationRecipe.cpp
     src/camera/ICamera.h
     src/camera/FileCamera.h
     src/camera/FileCamera.cpp
@@ -47,6 +64,10 @@ add_executable(VisionSystemCPP
     src/gui/TouchIconButton.cpp
     src/gui/ImageViewWidgetInteraction.cpp
     src/gui/ImageViewWidgetPainting.cpp
+    src/gui/help/HelpAssistantService.h
+    src/gui/help/HelpAssistantService.cpp
+    src/gui/help/HelpDialog.h
+    src/gui/help/HelpDialog.cpp
     src/gui/MainWindow.h
     src/gui/MainWindow.cpp
     src/gui/MainWindowUi.cpp
@@ -79,6 +100,10 @@ add_executable(VisionSystemCPP
     src/gui/modules/surface/MainWindowSurfaceModule_Panels.cpp
     src/gui/modules/surface/MainWindowSurfaceModule_Runtime.cpp
     src/gui/modules/surface/MainWindowSurfaceModule_Model.cpp
+    src/gui/modules/setup/SetupResultsDialog.h
+    src/gui/modules/setup/SetupResultsDialog.cpp
+    src/gui/modules/setup/SetupResultsFormatter.h
+    src/gui/modules/setup/SetupResultsFormatter.cpp
     src/gui/modules/MainWindowSetupModule.cpp
     src/gui/modules/MainWindowCameraConfigModule.cpp
     src/gui/SurfaceLocalizationPanelWidget.h
@@ -126,6 +151,11 @@ add_executable(VisionSystemCPP
     src/measurement/MeasurementGeometry.h
     src/measurement/MeasurementGeometryMath.h
     src/measurement/MeasurementGeometryMath.cpp
+    src/measurement/RealMeasurementTypes.h
+    src/measurement/MeasurementUnitConverter.h
+    src/measurement/MeasurementUnitConverter.cpp
+    src/measurement/MeasurementToleranceEvaluator.h
+    src/measurement/MeasurementToleranceEvaluator.cpp
     src/processing/ImageProcessor.h
     src/processing/ImageProcessor.cpp
     src/processing/CircleFit.h

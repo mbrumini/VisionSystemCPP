@@ -1,0 +1,15 @@
+Titolo: Esclusioni localizzazione
+Area: Setup / Localizzazione
+Parole chiave: esclusione, maschera rossa, ignora, zona vietata
+
+Le esclusioni indicano al sistema zone da ignorare durante la localizzazione.
+Sono visualizzate in rosso perche' rappresentano aree vietate al calcolo.
+
+Quando usarle:
+- Riflessi.
+- Scritte o marcature.
+- Parti dello sfondo che confondono la soglia.
+- Zone del pezzo non utili alla posa.
+
+Regola pratica:
+Usare esclusioni piccole e mirate. Troppe esclusioni possono rendere la localizzazione fragile.

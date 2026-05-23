@@ -3,9 +3,11 @@
 #include "gui/modules/MainWindowModuleBase.h"
 #include "runtime/CameraRuntime.h"
 
+#include <QPointer>
 #include <QString>
 
 class CameraConfig;
+class SetupResultsDialog;
 
 class MainWindowSetupModule : public MainWindowModuleBase
 {
@@ -25,4 +27,9 @@ public:
   void refreshPoseForCurrentFrame(const CameraConfig& camera);
   void updateCameraSetupDetails(const CameraConfig& camera);
   QString cameraSetupDetailsText(const CameraConfig& camera) const;
+  void showSetupResultsPopup(const CameraConfig& camera);
+  void updateSetupResultsPopup(const CameraConfig& camera);
+
+private:
+  QPointer<SetupResultsDialog> m_resultsDialog;
 };

@@ -1,0 +1,15 @@
+Titolo: Overlay e risultati frame
+Area: Setup
+Parole chiave: overlay, risultati frame, grafica, misura, diagnosi
+
+L'overlay e' la grafica disegnata sull'immagine.
+Risultati frame e' il popup che mostra cosa e' stato calcolato nel runtime.
+
+Differenza:
+- Overlay: aiuta a vedere visivamente edge, misure e posa.
+- Risultati frame: indica se geometrie e misure sono disponibili o non trovate.
+
+Quando usarli insieme:
+Se una quota non si vede o sembra sbagliata, aprire Risultati frame.
+Se il popup dice che la misura e' disponibile, il problema puo' essere grafico.
+Se il popup dice non disponibile, manca una geometria sorgente o il rilevamento e' fallito.
