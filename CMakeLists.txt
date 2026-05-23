@@ -70,6 +70,7 @@ add_executable(VisionSystemCPP
     src/gui/help/HelpDialog.cpp
     src/gui/MainWindow.h
     src/gui/MainWindow.cpp
+    src/gui/MainWindowHelp.cpp
     src/gui/MainWindowUi.cpp
     src/gui/modules/MainWindowCameraProfile.cpp
     src/gui/modules/ConstructedGeometryLineSource.h
