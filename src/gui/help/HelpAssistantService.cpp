@@ -343,6 +343,8 @@ QString HelpAssistantService::buildPrompt(const QString& question,
            "Rispondi in modo breve e operativo: massimo 8 righe, salvo richiesta esplicita di dettaglio.\n"
            "Se il contesto macchina contiene camere candidate o limiti camera, usali per dire quali camere sono adatte, possibili o non adatte.\n"
            "Non consigliare una camera come certa se il suo profilo o la configurazione non supportano la richiesta.\n"
+           "Se la domanda parla di superficie, faccia del pezzo, foro cieco, sede, tasca o incisione, non proporre camere BN dimensionali come candidate principali.\n"
+           "Le camere BN dimensionali vanno proposte per profilo esterno, silhouette o foro passante visto in silhouette solo quando questo e' esplicito o chiaramente richiesto.\n"
            "Se la domanda e' generica, per esempio chiede solo una lunghezza, chiedi prima quali riferimenti o che tipo di quota serve; non elencare camere a caso.\n"
            "Usa il contesto conversazione per interpretare follow-up come 'ora cosa faccio' o correzioni come 'non e' foro-bordo'.\n"
            "Se l'operatore corregge una tua ipotesi, accetta la correzione e non ripetere l'ipotesi sbagliata.\n"
@@ -434,7 +436,9 @@ QStringList HelpAssistantService::expandQueryTokens(const QString& question, con
     expanded.append({QStringLiteral("diametro"), QStringLiteral("superficie"), QStringLiteral("cerchio"),
                      QStringLiteral("foro"), QStringLiteral("luce"), QStringLiteral("diretta"),
                      QStringLiteral("diffusa"), QStringLiteral("coassiale"), QStringLiteral("anulare"),
-                     QStringLiteral("edge")});
+                     QStringLiteral("edge"), QStringLiteral("camera"), QStringLiteral("candidata"),
+                     QStringLiteral("grigi"), QStringLiteral("measurement"), QStringLiteral("surface"),
+                     QStringLiteral("bn"), QStringLiteral("dimensionale"), QStringLiteral("silhouette")});
   }
   if (normalized.contains(QStringLiteral("misur")) && normalized.contains(QStringLiteral("superfic")))
   {

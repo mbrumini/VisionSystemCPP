@@ -8,11 +8,16 @@ Prima bisogna capire quale diametro si vuole misurare.
 Caso 1: diametro visibile sulla faccia del pezzo
 Esempi:
 - foro visto dall'alto;
+- foro cieco;
 - impronta circolare;
 - bordo circolare stampato o inciso;
 - sede o tasca visibile sulla superficie.
 
 In questo caso serve illuminazione diretta sulla superficie.
+La camera deve vedere la faccia del pezzo: preferire una camera in grigi adatta a misure superficiali.
+Una camera BN dimensionale non e' candidata per questo caso, salvo che il diametro sia in realta' un profilo esterno visto in silhouette.
+Se il foro e' passante e viene visto come silhouette netta, si puo' valutare una camera BN dimensionale o retroilluminata.
+Se il foro e' cieco, la misura resta superficiale: usare camera in grigi e illuminazione sulla faccia.
 Scelte tipiche:
 - luce diffusa se la superficie riflette;
 - luce coassiale se serve vedere dettagli piani e ridurre ombre;
@@ -32,4 +37,6 @@ La retroilluminazione crea un contorno BN netto e rende il diametro esterno piu'
 
 Regola:
 Per diametri sulla faccia del pezzo usare illuminazione diretta.
+Per diametri sulla faccia del pezzo non proporre camere BN dimensionali come CAM01/CAM02, se non e' stato detto che si tratta di profilo esterno o foro passante in silhouette.
+Per fori ciechi, sedi e tasche non usare la logica BN/silhouette.
 Per diametri esterni in silhouette valutare retroilluminazione.

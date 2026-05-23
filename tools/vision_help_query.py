@@ -64,7 +64,8 @@ def expand_query_tokens(query, tokens):
     if "diametr" in normalized and "superficie" in normalized:
         expanded.extend([
             "diametro", "superficie", "cerchio", "foro", "luce", "diretta",
-            "diffusa", "coassiale", "anulare", "edge"
+            "diffusa", "coassiale", "anulare", "edge", "camera", "candidata",
+            "grigi", "measurement", "surface", "bn", "dimensionale", "silhouette"
         ])
 
     if "misur" in normalized and "superfic" in normalized:

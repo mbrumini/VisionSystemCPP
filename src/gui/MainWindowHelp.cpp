@@ -111,7 +111,7 @@ void MainWindow::showHelp()
                         .arg(helpCameraRoleSummary(camera)));
     }
 
-    lines.push_back(QStringLiteral("Regola risposta: per richieste su misure superficiali indica prima le camere candidate con profilo grayscale/surface/measurement; per profili esterni BN indica camere dimensionali. Se serve un illuminatore specifico non dichiarato, chiedi di verificarlo sulla macchina."));
+    lines.push_back(QStringLiteral("Regola risposta: per richieste su misure superficiali, faccia del pezzo, fori ciechi, sedi, tasche o incisioni indica prima le camere candidate con profilo grayscale/surface/measurement. Non proporre camere BN dimensionali come CAM01/CAM02 per dettagli sulla superficie. Per profili esterni BN, silhouette o fori passanti visti in silhouette indica camere dimensionali. Se serve un illuminatore specifico non dichiarato, chiedi di verificarlo sulla macchina."));
     return lines.join('\n');
   };
 
