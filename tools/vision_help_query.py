@@ -34,6 +34,39 @@ def tokenize(text):
     return [tok for tok in TOKEN_RE.findall(normalize(text)) if tok not in STOPWORDS and len(tok) > 1]
 
 
+def deterministic_reply(question):
+    compacted = re.sub(r"[^a-z0-9_\s]+", " ", normalize(question)).strip()
+    compacted = re.sub(r"\s+", " ", compacted)
+    words = compacted.split()
+
+    if ({"chi", "sei"}.issubset(words) or
+        "come puoi aiutarmi" in compacted or
+        "cosa puoi fare" in compacted or
+        "a cosa servi" in compacted):
+        return (
+            "Sono l'aiuto di VisionSystemCPP. Posso guidarti su setup, "
+            "localizzazione, edge, geometrie, misure, tolleranze, illuminazione "
+            "e diagnosi dei problemi. Dimmi cosa vedi sul pezzo e ci ragioniamo passo passo."
+        )
+
+    if compacted in {"ciao", "buongiorno", "buonasera", "salve"}:
+        return "Ciao. Dimmi cosa devi controllare e provo a guidarti passo passo."
+
+    asks_diameter = "diametr" in compacted
+    has_diameter_context = any(term in compacted for term in [
+        "superficie", "superficiale", "profilo", "esterno", "silhouette",
+        "foro", "fori", "sede", "tasca", "cieco", "passante",
+    ])
+    if asks_diameter and not has_diameter_context and len(words) <= 4:
+        return (
+            "Ok, diametro. Prima devo capire quale: diametro esterno in "
+            "profilo/silhouette, foro passante, oppure diametro visibile sulla "
+            "superficie come sede, foro cieco o incisione? Cambia camera, luce e tipo di edge."
+        )
+
+    return None
+
+
 def expand_query_tokens(query, tokens):
     normalized = normalize(query)
     expanded = list(tokens)
@@ -246,6 +279,11 @@ def main():
     args = parser.parse_args()
 
     question = " ".join(args.question)
+    direct_reply = deterministic_reply(question)
+    if direct_reply:
+        print(direct_reply)
+        return 0
+
     docs_root = args.docs
     if not docs_root.exists():
         print(f"Cartella documenti non trovata: {docs_root}", file=sys.stderr)

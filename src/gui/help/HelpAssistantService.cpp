@@ -562,6 +562,17 @@ bool HelpAssistantService::tryBuildSocialReply(const QString& question, HelpAssi
     QStringLiteral("ti ringrazio")
   };
   const QStringList words = compacted.split(' ', Qt::SkipEmptyParts);
+  const bool asksIdentity = (words.contains(QStringLiteral("chi")) && words.contains(QStringLiteral("sei"))) ||
+                            compacted.contains(QStringLiteral("come puoi aiutarmi")) ||
+                            compacted.contains(QStringLiteral("cosa puoi fare")) ||
+                            compacted.contains(QStringLiteral("a cosa servi"));
+  if (asksIdentity)
+  {
+    reply.answer = QStringLiteral(
+      "Sono l'aiuto di VisionSystemCPP. Posso guidarti su setup, localizzazione, edge, geometrie, misure, tolleranze, illuminazione e diagnosi dei problemi. Dimmi cosa vedi sul pezzo e ci ragioniamo passo passo.");
+    return true;
+  }
+
   const bool hasThanks = words.contains(QStringLiteral("grazie")) ||
                          (words.contains(QStringLiteral("ringrazio")) && words.size() <= 3);
   if (thanksMessages.contains(compacted) || (hasThanks && words.size() <= 4))
@@ -579,6 +590,25 @@ bool HelpAssistantService::tryBuildSocialReply(const QString& question, HelpAssi
   if (greetingMessages.contains(compacted))
   {
     reply.answer = QStringLiteral("Ciao. Dimmi cosa devi controllare e provo a guidarti passo passo.");
+    return true;
+  }
+
+  const bool asksDiameter = compacted.contains(QStringLiteral("diametr"));
+  const bool hasDiameterContext = compacted.contains(QStringLiteral("superficie")) ||
+                                  compacted.contains(QStringLiteral("superficiale")) ||
+                                  compacted.contains(QStringLiteral("profilo")) ||
+                                  compacted.contains(QStringLiteral("esterno")) ||
+                                  compacted.contains(QStringLiteral("silhouette")) ||
+                                  compacted.contains(QStringLiteral("foro")) ||
+                                  compacted.contains(QStringLiteral("fori")) ||
+                                  compacted.contains(QStringLiteral("sede")) ||
+                                  compacted.contains(QStringLiteral("tasca")) ||
+                                  compacted.contains(QStringLiteral("cieco")) ||
+                                  compacted.contains(QStringLiteral("passante"));
+  if (asksDiameter && !hasDiameterContext && words.size() <= 4)
+  {
+    reply.answer = QStringLiteral(
+      "Ok, diametro. Prima devo capire quale: diametro esterno in profilo/silhouette, foro passante, oppure diametro visibile sulla superficie come sede, foro cieco o incisione? Cambia camera, luce e tipo di edge.");
     return true;
   }
 
