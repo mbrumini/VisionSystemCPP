@@ -63,6 +63,7 @@ bool HelpAssistantService::isBusy() const
 void HelpAssistantService::ask(const QString& question,
                                const QString& languageCode,
                                const QString& machineContext,
+                               const QString& conversationContext,
                                ReplyHandler onReply,
                                ErrorHandler onError)
 {
@@ -79,14 +80,14 @@ void HelpAssistantService::ask(const QString& question,
     return;
   }
 
-  const QList<SourceDocument> sources = selectSources(question, documents);
+  const QList<SourceDocument> sources = selectSources(question, conversationContext, documents);
   if (sources.isEmpty())
   {
     onError(QStringLiteral("Nessun documento pertinente trovato. Prova con termini piu' specifici."));
     return;
   }
 
-  const QString prompt = buildPrompt(question, machineContext, sources);
+  const QString prompt = buildPrompt(question, machineContext, conversationContext, sources);
   auto* process = new QProcess(this);
   m_process = process;
 
@@ -198,9 +199,13 @@ QList<HelpAssistantService::SourceDocument> HelpAssistantService::loadDocuments(
 }
 
 QList<HelpAssistantService::SourceDocument> HelpAssistantService::selectSources(const QString& question,
+                                                                                const QString& conversationContext,
                                                                                 const QList<SourceDocument>& documents) const
 {
-  const QStringList queryTokens = expandQueryTokens(question, tokenize(question));
+  const QString retrievalText = conversationContext.trimmed().isEmpty()
+                                  ? question
+                                  : QStringLiteral("Domanda corrente: %1\nDomanda corrente: %1\n%2").arg(question, conversationContext);
+  const QStringList queryTokens = expandQueryTokens(retrievalText, tokenize(retrievalText));
   if (queryTokens.isEmpty())
   {
     return {};
@@ -276,6 +281,7 @@ QList<HelpAssistantService::SourceDocument> HelpAssistantService::selectSources(
 
 QString HelpAssistantService::buildPrompt(const QString& question,
                                           const QString& machineContext,
+                                          const QString& conversationContext,
                                           const QList<SourceDocument>& sources) const
 {
   QStringList blocks;
@@ -295,13 +301,17 @@ QString HelpAssistantService::buildPrompt(const QString& question,
            "Se il contesto macchina contiene camere candidate o limiti camera, usali per dire quali camere sono adatte, possibili o non adatte.\n"
            "Non consigliare una camera come certa se il suo profilo o la configurazione non supportano la richiesta.\n"
            "Se la domanda e' generica, per esempio chiede solo una lunghezza, chiedi prima quali riferimenti o che tipo di quota serve; non elencare camere a caso.\n"
+           "Usa il contesto conversazione per interpretare follow-up come 'ora cosa faccio' o correzioni come 'non e' foro-bordo'.\n"
+           "Se l'operatore corregge una tua ipotesi, accetta la correzione e non ripetere l'ipotesi sbagliata.\n"
            "Se l'hardware illuminatore non e' dichiarato, dillo chiaramente invece di inventarlo.\n"
            "Se manca una informazione, dillo e indica quale controllo pratico fare.\n"
            "Alla fine aggiungi una riga \"Fonti:\" con i nomi dei file usati.\n\n"
            "Contesto macchina corrente:\n%1\n\n"
-           "Contesto manuale:\n%2\n\n"
-           "Domanda:\n%3")
+           "Contesto conversazione:\n%2\n\n"
+           "Contesto manuale:\n%3\n\n"
+           "Domanda:\n%4")
     .arg(machineContext.trimmed().isEmpty() ? QStringLiteral("Non disponibile.") : machineContext.trimmed(),
+         conversationContext.trimmed().isEmpty() ? QStringLiteral("Nessun messaggio precedente.") : conversationContext.trimmed(),
          blocks.join("\n\n"),
          question.trimmed());
 }
@@ -355,6 +365,16 @@ QStringList HelpAssistantService::expandQueryTokens(const QString& question, con
                      QStringLiteral("distanza"), QStringLiteral("quota"), QStringLiteral("lineare"),
                      QStringLiteral("punto"), QStringLiteral("linea"), QStringLiteral("bordo"),
                      QStringLiteral("profilo"), QStringLiteral("superficie"), QStringLiteral("riferimento")});
+  }
+  if (normalized.contains(QStringLiteral("bordo bordo")) ||
+      normalized.contains(QStringLiteral("bordo-bordo")) ||
+      normalized.contains(QStringLiteral("due bordi")))
+  {
+    expanded.append({QStringLiteral("larghezza"), QStringLiteral("superficiale"), QStringLiteral("bordo"),
+                     QStringLiteral("bordo"), QStringLiteral("due"), QStringLiteral("bordi"),
+                     QStringLiteral("linea"), QStringLiteral("linea"), QStringLiteral("distanza"),
+                     QStringLiteral("cava"), QStringLiteral("sede"), QStringLiteral("luce"),
+                     QStringLiteral("diretta")});
   }
   if (tokens.contains(QStringLiteral("edge")) && hasMeasure)
   {

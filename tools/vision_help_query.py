@@ -49,6 +49,12 @@ def expand_query_tokens(query, tokens):
             "punto", "linea", "bordo", "profilo", "superficie", "riferimento"
         ])
 
+    if "bordo bordo" in normalized or "bordo-bordo" in normalized or "due bordi" in normalized:
+        expanded.extend([
+            "larghezza", "superficiale", "bordo", "bordo", "due", "bordi",
+            "linea", "linea", "distanza", "cava", "sede", "luce", "diretta"
+        ])
+
     if "edge" in tokens and has_measure:
         expanded.extend(["edge", "geometria", "trovata", "misura", "risultati", "frame"])
 

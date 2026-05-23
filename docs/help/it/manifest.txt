@@ -16,6 +16,7 @@ Categorie principali:
 Schede misura principali:
 - functions/misure.txt
 - functions/misura_lunghezza_larghezza.txt
+- functions/misura_larghezza_bordo_bordo_superficie.txt
 - functions/misura_distanza_punto_punto.txt
 - functions/misura_distanza_punto_linea.txt
 - functions/misura_distanza_linea_linea.txt

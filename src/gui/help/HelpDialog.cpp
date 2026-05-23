@@ -72,19 +72,35 @@ void HelpDialog::askQuestion()
     question,
     m_languageCode,
     m_machineContextProvider ? m_machineContextProvider() : QString(),
-    [this](const HelpAssistantReply& reply) {
+    conversationContext(),
+    [this, question](const HelpAssistantReply& reply) {
       QString answer = reply.answer;
       if (!reply.sources.isEmpty() && !answer.contains(QStringLiteral("Fonti:"), Qt::CaseInsensitive))
       {
         answer += QStringLiteral("\n\nFonti: ") + reply.sources.join(QStringLiteral(", "));
       }
       appendChatLine(QStringLiteral("Vision Help"), answer);
+      m_recentTurns.push_back(QStringLiteral("Operatore: %1").arg(question));
+      m_recentTurns.push_back(QStringLiteral("Assistente: %1").arg(answer.left(900)));
+      while (m_recentTurns.size() > 8)
+      {
+        m_recentTurns.removeFirst();
+      }
       setBusy(false);
     },
     [this](const QString& error) {
       appendChatLine(QStringLiteral("Vision Help"), error);
       setBusy(false);
     });
+}
+
+QString HelpDialog::conversationContext() const
+{
+  if (m_recentTurns.isEmpty())
+  {
+    return {};
+  }
+  return m_recentTurns.join(QStringLiteral("\n"));
 }
 
 void HelpDialog::appendChatLine(const QString& speaker, const QString& text)

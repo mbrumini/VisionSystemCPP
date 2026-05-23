@@ -26,6 +26,7 @@ public:
   void ask(const QString& question,
            const QString& languageCode,
            const QString& machineContext,
+           const QString& conversationContext,
            ReplyHandler onReply,
            ErrorHandler onError);
 
@@ -39,8 +40,8 @@ private:
   };
 
   QList<SourceDocument> loadDocuments(const QString& languageCode) const;
-  QList<SourceDocument> selectSources(const QString& question, const QList<SourceDocument>& documents) const;
-  QString buildPrompt(const QString& question, const QString& machineContext, const QList<SourceDocument>& sources) const;
+  QList<SourceDocument> selectSources(const QString& question, const QString& conversationContext, const QList<SourceDocument>& documents) const;
+  QString buildPrompt(const QString& question, const QString& machineContext, const QString& conversationContext, const QList<SourceDocument>& sources) const;
   QStringList tokenize(const QString& text) const;
   QStringList expandQueryTokens(const QString& question, const QStringList& tokens) const;
   QString cleanProcessOutput(const QString& text) const;

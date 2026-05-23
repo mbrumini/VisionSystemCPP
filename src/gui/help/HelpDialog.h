@@ -32,9 +32,11 @@ public:
 private:
   void askQuestion();
   void appendChatLine(const QString& speaker, const QString& text);
+  QString conversationContext() const;
   void setBusy(bool busy);
 
   QString m_languageCode;
+  QStringList m_recentTurns;
   Labels m_labels;
   std::function<QString()> m_machineContextProvider;
   HelpAssistantService* m_assistant = nullptr;
