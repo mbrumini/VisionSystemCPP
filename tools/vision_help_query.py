@@ -17,7 +17,7 @@ SPINNER_RE = re.compile(r"^[\s\u2800-\u28ff]+$")
 
 STOPWORDS = {
     "a", "ad", "al", "alla", "alle", "allo", "anche", "che", "chi", "ci",
-    "ciao", "con", "da", "dei", "del", "della", "devo", "defo", "di", "e", "ed", "fare", "faccio", "gli", "ha", "i",
+    "ciao", "come", "con", "controllare", "controllo", "da", "dei", "del", "della", "devo", "defo", "di", "e", "ed", "fare", "faccio", "gli", "ha", "i",
     "il", "in", "io", "la", "le", "lo", "ma", "mi", "ne", "nel", "non",
     "o", "per", "piu", "puo", "se", "si", "su", "sul", "tra", "un",
     "una", "uno", "uso", "vedi", "vedo",

@@ -1,0 +1,24 @@
+Titolo: Misura altezza gradino
+Area: Misure / Superficie
+Parole chiave: altezza gradino, scalino, spalla, dislivello, bordo, superficie
+
+In una singola immagine 2D, l'altezza reale di un gradino non sempre e' misurabile direttamente.
+Spesso si misura la distanza apparente tra riferimenti o il bordo della spalla.
+
+Quando e' possibile:
+- se il gradino produce un bordo stabile visibile;
+- se la quota richiesta e' una distanza in immagine tra due riferimenti;
+- se la telecamera e la calibrazione sono adatte alla vista.
+
+Quando serve cautela:
+- se serve altezza Z reale;
+- se il gradino e' fuori fuoco;
+- se ombre e riflessi cambiano tra pezzi.
+
+Illuminazione:
+- radente se serve evidenziare la spalla;
+- diffusa se i riflessi disturbano;
+- coassiale se il riferimento e' piano e cambia riflettanza.
+
+Regola:
+Chiarire se si misura una quota 2D sull'immagine o una altezza fisica in Z.

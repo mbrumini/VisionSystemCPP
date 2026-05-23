@@ -1,0 +1,26 @@
+Titolo: Misura posizione foro
+Area: Misure / Superficie
+Parole chiave: posizione foro, centro foro, coordinate, riferimento, foro bordo, interasse
+
+La posizione di un foro si controlla misurando il centro rispetto a riferimenti noti.
+
+Misure tipiche:
+- centro foro da bordo;
+- centro foro da due linee riferimento;
+- interasse con un altro foro;
+- coordinate centro rispetto alla posa pezzo.
+
+Geometrie necessarie:
+- cerchio foro per ottenere il centro;
+- linee o punti di riferimento;
+- eventuali geometrie costruite.
+
+Procedura:
+1. Localizzare il pezzo.
+2. Rilevare il cerchio foro.
+3. Creare le linee riferimento.
+4. Misurare punto-linea o punto-punto.
+5. Validare su master.
+
+Regola:
+Il foro deve essere stabile come centro, non solo visibile.

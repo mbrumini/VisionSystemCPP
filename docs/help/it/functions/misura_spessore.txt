@@ -1,0 +1,27 @@
+Titolo: Misura spessore
+Area: Misure
+Parole chiave: spessore, due bordi, larghezza, linea linea, profilo, materiale
+
+Lo spessore si misura normalmente tra due bordi opposti.
+
+Geometrie tipiche:
+- due linee se i bordi sono rettilinei;
+- due punti se lo spessore e' definito localmente;
+- profilo esterno se il pezzo e' in silhouette.
+
+Scelta camera:
+- camera BN dimensionale per profilo esterno netto;
+- camera grigi/misura se lo spessore e' visibile sulla faccia o su una sezione superficiale.
+
+Illuminazione:
+- retroilluminazione per silhouette;
+- luce diretta/diffusa per riferimenti superficiali;
+- evitare riflessi che allargano il bordo.
+
+Procedura:
+1. Trovare i due bordi.
+2. Creare misura linea-linea o punto-linea.
+3. Controllare in Setup su piu' pezzi.
+
+Attenzione:
+Se il bordo e' arrotondato o lucido, definire bene quale transizione misurare.

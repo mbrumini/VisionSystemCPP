@@ -1,0 +1,20 @@
+Titolo: Misura concentricita 2D
+Area: Misure / Geometrie costruite
+Parole chiave: concentricita, due cerchi, centri, coassialita 2D, foro, diametri
+
+La concentricita 2D si controlla misurando la distanza tra i centri di due cerchi.
+
+Geometrie necessarie:
+- cerchio A;
+- cerchio B;
+- centri dei due cerchi.
+
+Procedura:
+1. Rilevare entrambi i cerchi.
+2. Controllare che i centri siano stabili.
+3. Creare distanza punto-punto tra i centri.
+4. Usare questa distanza come errore di concentricita 2D.
+
+Attenzione:
+Non e' una concentricita metrologica completa 3D.
+E' un controllo 2D sull'immagine e va validato con pezzo master.

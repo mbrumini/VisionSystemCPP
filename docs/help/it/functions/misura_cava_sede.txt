@@ -1,0 +1,24 @@
+Titolo: Misura cava o sede
+Area: Misure / Superficie
+Parole chiave: cava, sede, tasca, larghezza cava, lunghezza cava, superficie, bordi
+
+Una cava o sede puo' richiedere misure di larghezza, lunghezza, posizione o profondita' apparente.
+
+Geometrie tipiche:
+- linee sui bordi della cava;
+- punti sugli estremi;
+- cerchi se la sede e' circolare;
+- geometrie costruite per centro o asse.
+
+Illuminazione:
+- luce diretta diffusa per ridurre riflessi;
+- coassiale per superfici piane con variazione di riflettanza;
+- radente se la cava si vede solo tramite ombra, ma verificare stabilita'.
+
+Misure comuni:
+- larghezza cava: linea-linea;
+- lunghezza cava: punto-punto o linea-linea;
+- posizione cava: punto-linea o centro rispetto a riferimenti.
+
+Attenzione:
+Se l'ombra definisce il bordo, piccole variazioni di altezza o luce possono cambiare la misura.

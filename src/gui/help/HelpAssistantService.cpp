@@ -310,7 +310,7 @@ QStringList HelpAssistantService::tokenize(const QString& text) const
 {
   static const QSet<QString> stopwords = {
     "a", "ad", "al", "alla", "alle", "allo", "anche", "che", "ci", "con", "da", "dei",
-    "ciao", "del", "della", "devo", "defo", "di", "e", "ed", "fare", "faccio", "gli", "ha", "i", "il", "in", "la", "le",
+    "ciao", "come", "controllare", "controllo", "del", "della", "devo", "defo", "di", "e", "ed", "fare", "faccio", "gli", "ha", "i", "il", "in", "la", "le",
     "lo", "ma", "mi", "ne", "nel", "non", "o", "per", "piu", "puo", "se", "si",
     "su", "sul", "tra", "un", "una", "uno", "uso", "vedi", "vedo"
   };

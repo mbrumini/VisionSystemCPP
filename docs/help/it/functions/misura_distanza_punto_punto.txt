@@ -1,0 +1,27 @@
+Titolo: Misura distanza punto-punto
+Area: Misure
+Parole chiave: distanza punto punto, lunghezza, interasse, due punti, centri, quota lineare
+
+La distanza punto-punto misura la distanza diretta tra due punti.
+
+Quando usarla:
+- interasse tra due fori usando i centri;
+- distanza tra due riferimenti puntuali;
+- lunghezza tra due estremi ben definiti;
+- controllo posizione tra due marcature.
+
+Geometrie necessarie:
+- due punti trovati;
+- oppure due centri ricavati da cerchi;
+- oppure punti costruiti da intersezioni o proiezioni.
+
+Procedura:
+1. Creare o rilevare i due punti.
+2. Verificare in Setup che entrambi siano trovati.
+3. Entrare in Misure.
+4. Scegliere Distanza punto-punto.
+5. Validare su piu' frame.
+
+Attenzione:
+Se uno dei due punti deriva da un edge instabile, la misura oscillera'.
+Prima correggere edge/localizzazione, poi la misura.

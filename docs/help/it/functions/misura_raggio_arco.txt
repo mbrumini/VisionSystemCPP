@@ -1,0 +1,25 @@
+Titolo: Misura raggio arco
+Area: Misure
+Parole chiave: raggio, arco, cerchio, raccordo, bordo curvo
+
+Il raggio di un arco si misura rilevando un arco o un cerchio parziale.
+
+Quando usarla:
+- raccordi;
+- bordi curvi;
+- archi di profilo;
+- raggi su cave o sedi.
+
+Geometrie necessarie:
+- arco valido;
+- oppure cerchio stimato dal bordo curvo.
+
+Procedura:
+1. Configurare edge arco o cerchio.
+2. Verificare che il fit sia stabile.
+3. Creare misura raggio o diametro secondo disponibilita'.
+4. Validare su piu' pezzi.
+
+Attenzione:
+Un arco corto produce raggio poco stabile.
+Se possibile aumentare la porzione di bordo usata.

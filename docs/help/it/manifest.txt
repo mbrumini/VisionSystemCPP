@@ -5,101 +5,36 @@ Formato consigliato:
 - I campi "Titolo", "Area" e "Parole chiave" sono pensati per ricerca semantica e recupero contesto.
 - I testi sono brevi per essere usati come chunk indipendenti.
 
-Ordine suggerito:
-1. index.txt
-2. functions/toolbar_start_stop.txt
-3. functions/toolbar_grid_reload_fullscreen_help.txt
-4. functions/setup_acquisizione_campione.txt
-5. functions/setup_importa_campione.txt
-6. functions/setup_importa_test.txt
-7. functions/setup_cartella_immagini.txt
-8. functions/setup_frame_successivo.txt
-9. functions/setup_risultati_frame.txt
-10. functions/localizzazione_area_ricerca.txt
-11. functions/localizzazione_esclusioni.txt
-12. functions/localizzazione_test.txt
-13. functions/edge_punto.txt
-14. functions/edge_linea.txt
-15. functions/edge_cerchio.txt
-16. functions/edge_arco.txt
-17. functions/geometrie_costruite.txt
-18. functions/misure.txt
-19. functions/misura_lunghezza_larghezza.txt
-20. functions/misure_superficiali.txt
-21. functions/misura_diametro_superficie.txt
-21. functions/misura_distanza_fori_superficie.txt
-22. functions/misura_foro_bordo_superficie.txt
-23. functions/misure_superficiali_errori_comuni.txt
-24. functions/tolleranze.txt
-25. functions/colori_overlay.txt
-21. functions/camera_selezione.txt
-22. functions/scelta_camera_per_misura.txt
-23. functions/campione_vs_test.txt
-23. functions/coordinate_pezzo.txt
-24. functions/edge_sensibilita.txt
-25. functions/edge_transizione.txt
-26. functions/edge_pick_mode.txt
-27. functions/edge_fascia.txt
-28. functions/overlay_vs_risultati.txt
-29. functions/troubleshooting_edge_non_trovato.txt
-30. functions/troubleshooting_misura_non_disponibile.txt
-31. functions/maschere_rosse.txt
-32. functions/modalita_setup.txt
-33. functions/workflow_programmazione_articolo.txt
-34. functions/camera_profili.txt
-35. functions/ricette.txt
-36. functions/reload_config.txt
-37. functions/dettagli_setup.txt
-38. functions/log_eventi.txt
-39. functions/log_dettagliato.txt
-40. functions/thread_prestazioni.txt
-41. functions/calibrazione_pixel_mm.txt
-42. functions/misure_pixel_mm.txt
-43. functions/tolleranze_ok_nok.txt
-44. functions/surface_localization_grigi.txt
-45. functions/surface_due_cerchi.txt
-46. functions/surface_difetti.txt
-47. functions/ai_modello.txt
-48. functions/dataset_capture.txt
-49. functions/confidenza_ai.txt
-50. functions/classi_ai.txt
-51. functions/salva_campioni_ok_nok.txt
-52. functions/diagnostica_tempo_scansione.txt
-53. functions/diagnostica_pending_jobs.txt
-54. functions/buone_pratiche_illuminazione.txt
-55. functions/buone_pratiche_ricetta.txt
-56. functions/troubleshooting_localizzazione_instabile.txt
-57. functions/troubleshooting_overlay_mancante.txt
-58. functions/backup_ricetta.txt
-59. functions/nomi_geometrie.txt
-60. functions/illuminazione_bn_dimensionale.txt
-61. functions/illuminazione_superficie_grigi.txt
-62. functions/illuminazione_ai.txt
-63. functions/illuminazione_retroilluminazione.txt
-64. functions/illuminazione_radente.txt
-65. functions/illuminazione_diffusa.txt
-66. functions/illuminazione_anulare.txt
-67. functions/illuminazione_coassiale.txt
-68. functions/illuminazione_esposizione_gain.txt
-69. functions/illuminazione_checklist.txt
-70. functions/ottica_messa_a_fuoco.txt
-71. functions/ottica_profondita_campo.txt
-72. functions/ottica_campo_inquadrato.txt
-73. functions/ottica_distorsione.txt
-74. functions/meccanica_stabilita.txt
-75. functions/meccanica_posizionamento_pezzo.txt
-76. functions/meccanica_vibrazioni.txt
-77. functions/manutenzione_ottica_luce.txt
-78. functions/pezzi_lucidi.txt
-79. functions/pezzi_neri.txt
-80. functions/pezzi_trasparenti.txt
-81. functions/scelta_punto_linea_cerchio_arco.txt
-82. functions/quando_usare_geometrie_costruite.txt
-83. functions/validazione_produzione.txt
-84. functions/pezzi_borderline.txt
-85. functions/cambio_articolo.txt
-86. functions/trigger_acquisizione.txt
-87. functions/sfondo_contrasto.txt
-88. functions/pulizia_pezzo.txt
-89. functions/controllo_periodico.txt
-90. functions/pezzo_master.txt
+Categorie principali:
+- Setup e acquisizione campione.
+- Localizzazione e maschere.
+- Edge e geometrie.
+- Misure e tolleranze.
+- Illuminazione, ottica e meccanica.
+- Diagnostica e buone pratiche.
+
+Schede misura principali:
+- functions/misure.txt
+- functions/misura_lunghezza_larghezza.txt
+- functions/misura_distanza_punto_punto.txt
+- functions/misura_distanza_punto_linea.txt
+- functions/misura_distanza_linea_linea.txt
+- functions/misura_diametro_cerchio.txt
+- functions/misura_angolo_linea_linea.txt
+- functions/misura_interasse_fori.txt
+- functions/misura_spessore.txt
+- functions/misura_altezza_gradino.txt
+- functions/misura_posizione_foro.txt
+- functions/misura_cava_sede.txt
+- functions/misura_parallelismo.txt
+- functions/misura_ortogonalita.txt
+- functions/misura_concentricita_2d.txt
+- functions/misura_raggio_arco.txt
+- functions/misure_superficiali.txt
+- functions/misura_diametro_superficie.txt
+- functions/misura_distanza_fori_superficie.txt
+- functions/misura_foro_bordo_superficie.txt
+- functions/misure_superficiali_errori_comuni.txt
+
+Nota:
+L'indice operativo completo e' in index.txt.

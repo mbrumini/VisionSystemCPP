@@ -1,0 +1,22 @@
+Titolo: Misura parallelismo
+Area: Misure
+Parole chiave: parallelismo, due linee, angolo, distanza, bordi paralleli
+
+Il parallelismo tra due bordi si valuta confrontando due linee.
+
+Controlli possibili:
+- angolo linea-linea vicino a zero;
+- distanza linea-linea stabile lungo la zona;
+- differenza tra distanze misurate in punti diversi.
+
+Geometrie necessarie:
+- due linee robuste e sufficientemente lunghe.
+
+Procedura:
+1. Configurare le due linee.
+2. Verificare overlay e risultati frame.
+3. Creare misura angolo linea-linea o distanza linea-linea.
+4. Applicare tolleranza.
+
+Regola:
+Per parallelismo, evitare linee troppo corte o bordi sporchi.

@@ -1,0 +1,25 @@
+Titolo: Misura distanza punto-linea
+Area: Misure
+Parole chiave: distanza punto linea, foro bordo, quota perpendicolare, centro foro, linea riferimento
+
+La distanza punto-linea misura la distanza perpendicolare tra un punto e una linea.
+
+Quando usarla:
+- distanza centro foro da bordo;
+- distanza di una marcatura da una linea base;
+- quota rispetto a un riferimento teorico;
+- controllo posizione rispetto a una battuta o spalla.
+
+Geometrie necessarie:
+- un punto o centro foro;
+- una linea trovata o costruita.
+
+Procedura:
+1. Trovare il punto.
+2. Trovare o costruire la linea di riferimento.
+3. Controllare che punto e linea siano disponibili nello stesso frame.
+4. Creare la misura punto-linea.
+5. Applicare tolleranze.
+
+Regola:
+Usare punto-linea quando il disegno richiede una quota perpendicolare a un riferimento.
