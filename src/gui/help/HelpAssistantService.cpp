@@ -294,6 +294,7 @@ QString HelpAssistantService::buildPrompt(const QString& question,
            "Rispondi al tema della domanda, senza trasformarla in una checklist generica.\n"
            "Se il contesto macchina contiene camere candidate o limiti camera, usali per dire quali camere sono adatte, possibili o non adatte.\n"
            "Non consigliare una camera come certa se il suo profilo o la configurazione non supportano la richiesta.\n"
+           "Se la domanda e' generica, per esempio chiede solo una lunghezza, chiedi prima quali riferimenti o che tipo di quota serve; non elencare camere a caso.\n"
            "Se l'hardware illuminatore non e' dichiarato, dillo chiaramente invece di inventarlo.\n"
            "Se manca una informazione, dillo e indica quale controllo pratico fare.\n"
            "Alla fine aggiungi una riga \"Fonti:\" con i nomi dei file usati.\n\n"
@@ -309,7 +310,7 @@ QStringList HelpAssistantService::tokenize(const QString& text) const
 {
   static const QSet<QString> stopwords = {
     "a", "ad", "al", "alla", "alle", "allo", "anche", "che", "ci", "con", "da", "dei",
-    "del", "della", "di", "e", "ed", "gli", "ha", "i", "il", "in", "la", "le",
+    "ciao", "del", "della", "devo", "defo", "di", "e", "ed", "fare", "faccio", "gli", "ha", "i", "il", "in", "la", "le",
     "lo", "ma", "mi", "ne", "nel", "non", "o", "per", "piu", "puo", "se", "si",
     "su", "sul", "tra", "un", "una", "uno", "uso", "vedi", "vedo"
   };
@@ -344,6 +345,16 @@ QStringList HelpAssistantService::expandQueryTokens(const QString& question, con
   {
     expanded.append({QStringLiteral("misura"), QStringLiteral("disponibile"), QStringLiteral("geometria"),
                      QStringLiteral("sorgente"), QStringLiteral("mancante"), QStringLiteral("quota")});
+  }
+  if (normalized.contains(QStringLiteral("lunghezza")) ||
+      normalized.contains(QStringLiteral("larghezza")) ||
+      normalized.contains(QStringLiteral("altezza")) ||
+      normalized.contains(QStringLiteral("quota lineare")))
+  {
+    expanded.append({QStringLiteral("lunghezza"), QStringLiteral("larghezza"), QStringLiteral("altezza"),
+                     QStringLiteral("distanza"), QStringLiteral("quota"), QStringLiteral("lineare"),
+                     QStringLiteral("punto"), QStringLiteral("linea"), QStringLiteral("bordo"),
+                     QStringLiteral("profilo"), QStringLiteral("superficie"), QStringLiteral("riferimento")});
   }
   if (tokens.contains(QStringLiteral("edge")) && hasMeasure)
   {

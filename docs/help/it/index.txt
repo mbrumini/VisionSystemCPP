@@ -29,6 +29,7 @@ File funzione disponibili:
 - functions/edge_arco.txt
 - functions/geometrie_costruite.txt
 - functions/misure.txt
+- functions/misura_lunghezza_larghezza.txt
 - functions/misure_superficiali.txt
 - functions/misura_diametro_superficie.txt
 - functions/misura_distanza_fori_superficie.txt

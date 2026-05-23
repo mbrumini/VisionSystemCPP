@@ -24,8 +24,9 @@ Ordine suggerito:
 16. functions/edge_arco.txt
 17. functions/geometrie_costruite.txt
 18. functions/misure.txt
-19. functions/misure_superficiali.txt
-20. functions/misura_diametro_superficie.txt
+19. functions/misura_lunghezza_larghezza.txt
+20. functions/misure_superficiali.txt
+21. functions/misura_diametro_superficie.txt
 21. functions/misura_distanza_fori_superficie.txt
 22. functions/misura_foro_bordo_superficie.txt
 23. functions/misure_superficiali_errori_comuni.txt
