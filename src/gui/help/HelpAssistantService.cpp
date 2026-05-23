@@ -84,6 +84,13 @@ void HelpAssistantService::ask(const QString& question,
     return;
   }
 
+  HelpAssistantReply socialReply;
+  if (tryBuildSocialReply(question, socialReply))
+  {
+    onReply(socialReply);
+    return;
+  }
+
   const QList<SourceDocument> documents = loadDocuments(languageCode);
   if (documents.isEmpty())
   {
@@ -341,6 +348,8 @@ QString HelpAssistantService::buildPrompt(const QString& question,
            "I documenti sono ordinati per pertinenza: dai piu peso al Documento 1.\n"
            "Rispondi al tema della domanda, senza trasformarla in una checklist generica.\n"
            "Rispondi in modo breve e operativo: massimo 8 righe, salvo richiesta esplicita di dettaglio.\n"
+           "Tieni un tono umano e disponibile. Se ci sta, puoi aggiungere una battuta leggera e breve, ma la risposta tecnica deve restare chiara.\n"
+           "Se la domanda e' solo un saluto o un ringraziamento, rispondi naturalmente senza ripetere procedure.\n"
            "Se il contesto macchina contiene camere candidate o limiti camera, usali per dire quali camere sono adatte, possibili o non adatte.\n"
            "Non consigliare una camera come certa se il suo profilo o la configurazione non supportano la richiesta.\n"
            "Se la domanda parla di superficie, faccia del pezzo, foro cieco, sede, tasca o incisione, non proporre camere BN dimensionali come candidate principali.\n"
@@ -464,6 +473,51 @@ QStringList HelpAssistantService::expandQueryTokens(const QString& question, con
   }
 
   return expanded;
+}
+
+bool HelpAssistantService::tryBuildSocialReply(const QString& question, HelpAssistantReply& reply) const
+{
+  const QString normalized = normalizeText(question.trimmed());
+  QString cleaned = normalized;
+  static const QRegularExpression punctuationPattern(QStringLiteral("[^a-z0-9_\\s]+"));
+  cleaned.replace(punctuationPattern, QStringLiteral(" "));
+  const QString compacted = cleaned.simplified();
+  if (compacted.isEmpty())
+  {
+    return false;
+  }
+
+  static const QSet<QString> thanksMessages = {
+    QStringLiteral("grazie"),
+    QStringLiteral("ok grazie"),
+    QStringLiteral("perfetto grazie"),
+    QStringLiteral("bene grazie"),
+    QStringLiteral("ottimo grazie"),
+    QStringLiteral("grazie mille"),
+    QStringLiteral("ti ringrazio")
+  };
+  const QStringList words = compacted.split(' ', Qt::SkipEmptyParts);
+  const bool hasThanks = words.contains(QStringLiteral("grazie")) ||
+                         (words.contains(QStringLiteral("ringrazio")) && words.size() <= 3);
+  if (thanksMessages.contains(compacted) || (hasThanks && words.size() <= 4))
+  {
+    reply.answer = QStringLiteral("Figurati. Quando vuoi, ripartiamo dal pezzo senza fare teatro.");
+    return true;
+  }
+
+  static const QSet<QString> greetingMessages = {
+    QStringLiteral("ciao"),
+    QStringLiteral("buongiorno"),
+    QStringLiteral("buonasera"),
+    QStringLiteral("salve")
+  };
+  if (greetingMessages.contains(compacted))
+  {
+    reply.answer = QStringLiteral("Ciao. Dimmi cosa devi controllare e provo a guidarti passo passo.");
+    return true;
+  }
+
+  return false;
 }
 
 QString HelpAssistantService::cleanProcessOutput(const QString& text) const

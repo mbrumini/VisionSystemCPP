@@ -45,6 +45,7 @@ private:
   QString buildPrompt(const QString& question, const QString& machineContext, const QString& conversationContext, const QList<SourceDocument>& sources) const;
   QStringList tokenize(const QString& text) const;
   QStringList expandQueryTokens(const QString& question, const QStringList& tokens) const;
+  bool tryBuildSocialReply(const QString& question, HelpAssistantReply& reply) const;
   QString cleanProcessOutput(const QString& text) const;
   QString sourceName(const QString& path) const;
   QString limitBlock(const QString& text, qsizetype maxChars) const;
