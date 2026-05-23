@@ -281,7 +281,7 @@
     "chatTab": "Chat",
     "questionPlaceholder": "Scrivi una domanda sul manuale...",
     "askButton": "Chiedi",
-    "waiting": "Sto cercando nel manuale e interrogo Ollama...",
+    "waiting": "Sto cercando...",
     "assistantUnavailable": "La chat usa Ollama e il modello vision-help. Se non risponde, verificare che Ollama sia avviato e che il modello sia stato creato."
   },
     "tools": {
