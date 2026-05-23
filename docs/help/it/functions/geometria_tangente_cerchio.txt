@@ -1,0 +1,18 @@
+Titolo: Geometria tangente a cerchio
+Area: Geometrie costruite
+Parole chiave: tangente, cerchio, linea tangente, geometria costruita
+
+Una tangente a cerchio crea un riferimento teorico partendo da un cerchio.
+
+Quando usarla:
+- quota rispetto al bordo teorico di un foro o sede;
+- costruzione geometrica richiesta dal disegno;
+- confronto tra cerchio e linea.
+
+Controlli:
+1. Cerchio stabile.
+2. Centro e diametro coerenti.
+3. Verso della tangente corretto.
+
+Regola:
+Non usare tangenti se il cerchio sorgente e' gia' rumoroso.

@@ -1,0 +1,17 @@
+Titolo: Edge su rumore o texture
+Area: Rilevamento edge / Superficie
+Parole chiave: texture, rumore, edge falso, superficie
+
+Su superfici con texture il sistema puo' trovare variazioni locali invece del bordo geometrico.
+
+Sintomi:
+- punto che oscilla;
+- edge diverso su pezzi simili;
+- misura rumorosa anche con localizzazione stabile.
+
+Controlli:
+1. Ridurre fascia o linea di scansione.
+2. Cambiare luce per separare bordo e texture.
+3. Abbassare sensibilita' se prende microvariazioni.
+4. Usare geometrie piu' robuste, come linea da piu' punti.
+5. Validare su superfici reali di produzione.

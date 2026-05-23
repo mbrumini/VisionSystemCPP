@@ -1,0 +1,16 @@
+Titolo: Quando attivare debug log
+Area: Diagnostica / Debug
+Parole chiave: debug, log, dettagliato, quando attivare
+
+Il debug log serve per capire problemi non evidenti dalla GUI.
+Non va lasciato sempre attivo se produce troppi dati.
+
+Quando attivarlo:
+- errore intermittente;
+- misura disponibile solo su alcuni frame;
+- localizzazione che salta senza motivo visibile;
+- pending jobs o tempi scansione anomali;
+- confronto tra pezzo OK e NOK difficile.
+
+Regola:
+Attivare il debug per raccogliere una prova, poi disattivarlo quando il problema e' stato isolato.

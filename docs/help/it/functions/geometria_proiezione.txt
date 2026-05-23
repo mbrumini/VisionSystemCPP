@@ -1,0 +1,18 @@
+Titolo: Geometria proiezione punto-linea
+Area: Geometrie costruite
+Parole chiave: proiezione, punto linea, perpendicolare, riferimento
+
+La proiezione punto-linea crea il punto perpendicolare da un punto a una linea.
+
+Quando usarla:
+- distanza perpendicolare da foro o punto a bordo;
+- quota rispetto a una linea base;
+- costruzione di riferimenti sul disegno.
+
+Controlli:
+1. Punto sorgente stabile.
+2. Linea sorgente stabile.
+3. Linea coerente con il riferimento del disegno.
+
+Regola:
+Usare la proiezione quando serve una distanza perpendicolare, non una distanza libera.

@@ -1,0 +1,15 @@
+Titolo: Camera non attiva
+Area: Diagnostica / Camera
+Parole chiave: camera non attiva, camera assente, configurazione, reload
+
+Una camera non attiva non partecipa al controllo e non deve essere proposta come candidata.
+
+Controlli:
+1. Verificare configurazione camere.
+2. Controllare se la camera e' abilitata.
+3. Usare Reload config dopo modifiche ai file.
+4. Verificare sorgente immagine: file o camera reale.
+5. Controllare log eventi.
+
+Regola:
+Prima di programmare tool su una camera, verificare che sia attiva e che produca immagini valide.

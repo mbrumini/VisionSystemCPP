@@ -1,0 +1,17 @@
+Titolo: Tolleranza con limiti simmetrici
+Area: Tolleranze
+Parole chiave: tolleranza simmetrica, nominale, piu meno
+
+Una tolleranza simmetrica usa lo stesso margine sopra e sotto il nominale.
+
+Esempio:
+Nominale 10.00 mm con +/- 0.10 mm significa limite basso 9.90 e limite alto 10.10.
+
+Controlli:
+1. Verificare unita' di misura.
+2. Controllare nominale.
+3. Provare valori vicino ai limiti.
+4. Verificare OK/NOK in Setup.
+
+Regola:
+La tolleranza non deve compensare una misura instabile.

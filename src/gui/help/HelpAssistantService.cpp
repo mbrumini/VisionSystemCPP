@@ -486,6 +486,13 @@ QStringList HelpAssistantService::expandQueryTokens(const QString& question, con
     expanded.append({QStringLiteral("illuminazione"), QStringLiteral("contrasto"),
                      QStringLiteral("esposizione"), QStringLiteral("gain")});
   }
+  if (normalized.contains(QStringLiteral("rifless")))
+  {
+    expanded.append({QStringLiteral("riflesso"), QStringLiteral("riflessi"),
+                     QStringLiteral("edge"), QStringLiteral("bordo"), QStringLiteral("falso"),
+                     QStringLiteral("superficie"), QStringLiteral("lucida"), QStringLiteral("diffusa"),
+                     QStringLiteral("coassiale"), QStringLiteral("angolo"), QStringLiteral("luce")});
+  }
   if (normalized.contains(QStringLiteral("localizz")) ||
       normalized.contains(QStringLiteral("posa")) ||
       (normalized.contains(QStringLiteral("pezzo")) && normalized.contains(QStringLiteral("difficile"))))

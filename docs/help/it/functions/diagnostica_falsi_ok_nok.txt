@@ -1,0 +1,16 @@
+Titolo: Diagnostica falsi OK e falsi NOK
+Area: Diagnostica / Produzione
+Parole chiave: falso OK, falso NOK, diagnosi, produzione
+
+Un falso OK o falso NOK va analizzato partendo dall'immagine, non dalla tolleranza.
+
+Ordine consigliato:
+1. Verificare se il difetto o riferimento e' visibile.
+2. Controllare localizzazione.
+3. Controllare edge o AI sorgente.
+4. Controllare misura e tolleranza.
+5. Verificare luce, fuoco e meccanica.
+6. Ripetere su campioni OK/NOK.
+
+Regola:
+Cambiare una soglia e' l'ultima cosa, non la prima.

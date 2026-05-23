@@ -1,0 +1,18 @@
+Titolo: Geometria intersezione linee
+Area: Geometrie costruite
+Parole chiave: intersezione linee, punto costruito, due linee
+
+L'intersezione di due linee crea un punto teorico partendo da due linee trovate o costruite.
+
+Quando usarla:
+- spigolo teorico non visibile direttamente;
+- riferimento tra due bordi;
+- quota da un angolo costruito.
+
+Controlli:
+1. Verificare che entrambe le linee siano stabili.
+2. Evitare linee quasi parallele se serve un punto preciso.
+3. Controllare in Setup il punto costruito.
+
+Regola:
+Un punto costruito non puo' essere piu' stabile delle linee che lo generano.

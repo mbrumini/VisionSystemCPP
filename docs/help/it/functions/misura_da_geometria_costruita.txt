@@ -1,0 +1,20 @@
+Titolo: Misura da geometria costruita
+Area: Misure / Geometrie costruite
+Parole chiave: misura da geometria costruita, riferimento teorico, sorgente
+
+Una misura puo' usare geometrie costruite invece di edge diretti.
+
+Quando conviene:
+- il riferimento reale non e' visibile;
+- serve un punto teorico;
+- un singolo edge e' troppo rumoroso;
+- il disegno definisce la quota tramite costruzione.
+
+Controlli:
+1. Verificare tutte le sorgenti.
+2. Controllare la geometria costruita in Setup.
+3. Creare la misura solo dopo stabilita'.
+4. Validare su master e OK/NOK.
+
+Regola:
+Una misura costruita eredita gli errori delle sorgenti.

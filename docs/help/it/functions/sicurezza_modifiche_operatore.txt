@@ -1,0 +1,17 @@
+Titolo: Sicurezza modifiche operatore
+Area: Sistema / Produzione
+Parole chiave: operatore, permessi, modifiche, sicurezza
+
+Non tutte le modifiche devono essere disponibili a tutti gli utenti.
+Alcune impostazioni cambiano il comportamento del controllo.
+
+Modifiche critiche:
+- tolleranze;
+- edge e geometrie;
+- localizzazione;
+- calibrazione;
+- modello AI;
+- numero thread se influenza produzione.
+
+Regola:
+Limitare le modifiche critiche a utenti autorizzati e validare dopo ogni cambio.

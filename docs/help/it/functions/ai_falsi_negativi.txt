@@ -1,0 +1,16 @@
+Titolo: AI falsi negativi
+Area: AI / Diagnostica
+Parole chiave: falso negativo, AI, difetto non trovato, NOK visto OK
+
+Un falso negativo avviene quando un pezzo difettoso viene classificato come OK.
+E' il caso piu' critico in produzione.
+
+Controlli:
+1. Verificare se il difetto e' visibile nell'immagine.
+2. Controllare se il difetto e' presente nel dataset.
+3. Verificare illuminazione e fuoco.
+4. Controllare soglia di confidenza e classe prevista.
+5. Salvare immagini reali del falso negativo per aggiornare il dataset.
+
+Regola:
+Se il difetto non si vede nell'immagine, l'AI non puo' impararlo in modo affidabile.

@@ -1,0 +1,13 @@
+Titolo: Domanda ambigua all'help
+Area: Help / Regole risposta
+Parole chiave: domanda ambigua, help, contesto, chiedere chiarimento
+
+Quando la richiesta e' ambigua, l'help deve chiedere un chiarimento breve invece di inventare il caso.
+
+Esempi:
+- "devo misurare un diametro": chiedere se e' esterno, foro passante, foro cieco o riferimento su superficie.
+- "devo fare una lunghezza": chiedere tra quali riferimenti.
+- "il punto si muove": chiedere se e' punto edge, centro cerchio o punto costruito.
+
+Regola:
+Seguire le parole dell'operatore. Non introdurre fori, camere, AI o tolleranze se non sono stati nominati o non sono nel contesto.

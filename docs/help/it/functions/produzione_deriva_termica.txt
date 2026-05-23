@@ -1,0 +1,20 @@
+Titolo: Deriva termica
+Area: Produzione / Diagnostica
+Parole chiave: deriva termica, temperatura, misura che cambia, produzione
+
+La deriva termica puo' cambiare dimensioni, posizione meccanica, fuoco o illuminazione nel tempo.
+
+Sintomi:
+- misura che cambia lentamente;
+- differenze tra avvio e macchina calda;
+- focus leggermente diverso;
+- illuminatore meno stabile.
+
+Controlli:
+1. Misurare pezzo master a freddo e a caldo.
+2. Controllare temperatura ambiente.
+3. Verificare fissaggi e ottica.
+4. Guardare trend nei log.
+
+Regola:
+Una deriva lenta non si risolve con una soglia piu' larga senza capire la causa.

@@ -1,0 +1,18 @@
+Titolo: Geometria punto medio
+Area: Geometrie costruite
+Parole chiave: punto medio, due punti, centro costruito
+
+Il punto medio crea un riferimento a meta' tra due punti.
+
+Quando usarlo:
+- centro teorico tra due bordi;
+- riferimento simmetrico;
+- quota rispetto a due punti trovati.
+
+Controlli:
+1. Verificare stabilita' dei due punti sorgente.
+2. Controllare che i punti rappresentino riferimenti reali.
+3. Validare su pezzi con variazioni normali.
+
+Regola:
+Se uno dei due punti e' instabile, il punto medio oscillera'.

@@ -1,0 +1,19 @@
+Titolo: Geometria offset linea
+Area: Geometrie costruite
+Parole chiave: offset linea, linea parallela, riferimento teorico
+
+L'offset crea una linea parallela a una linea sorgente a una distanza definita.
+
+Quando usarlo:
+- creare riferimento teorico;
+- controllare distanza da bordo;
+- costruire una zona di confronto.
+
+Controlli:
+1. Verificare stabilita' della linea sorgente.
+2. Controllare unita' pixel/mm.
+3. Verificare verso dell'offset.
+4. Validare con pezzo master.
+
+Regola:
+Se la linea sorgente si muove, anche l'offset si muove.

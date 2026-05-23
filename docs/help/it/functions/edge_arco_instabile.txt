@@ -1,0 +1,15 @@
+Titolo: Edge arco instabile
+Area: Rilevamento edge / Diagnostica
+Parole chiave: arco instabile, edge arco, bordo curvo, raggio
+
+Un arco instabile puo' derivare da bordo parziale, riflessi, fascia errata o tratto troppo corto.
+
+Controlli:
+1. Verificare che l'arco reale sia visibile su tutti i pezzi.
+2. Aumentare il tratto solo se include bordo utile.
+3. Ridurre zone disturbate da riflessi o texture.
+4. Controllare sensibilita' e transizione.
+5. Valutare edge cerchio se il bordo e' quasi completo.
+
+Regola:
+Un arco troppo corto puo' essere matematicamente fragile anche se visivamente sembra corretto.

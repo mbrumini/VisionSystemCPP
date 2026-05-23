@@ -1,0 +1,18 @@
+Titolo: Riflesso mobile su superficie
+Area: Superficie / Illuminazione / Diagnostica
+Parole chiave: riflesso mobile, superficie, luce, edge instabile
+
+Un riflesso mobile cambia posizione quando il pezzo si sposta, ruota o cambia finitura.
+
+Sintomi:
+- edge che segue una zona brillante;
+- difetto surface non ripetibile;
+- localizzazione che cambia tra pezzi simili;
+- punto instabile su superficie.
+
+Controlli:
+1. Cambiare angolo luce.
+2. Usare diffusa o coassiale.
+3. Bloccare esposizione.
+4. Mascherare riflessi inevitabili.
+5. Scegliere riferimenti geometrici piu' robusti.

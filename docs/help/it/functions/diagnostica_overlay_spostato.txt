@@ -1,0 +1,15 @@
+Titolo: Overlay spostato
+Area: Diagnostica / Overlay
+Parole chiave: overlay spostato, grafica spostata, edge fuori posto
+
+Un overlay spostato puo' indicare localizzazione sbagliata, scala errata o geometria salvata nel riferimento sbagliato.
+
+Controlli:
+1. Verificare localizzazione del pezzo.
+2. Controllare se la geometria e' in coordinate immagine o pezzo.
+3. Verificare calibrazione se la scala sembra errata.
+4. Controllare che l'immagine visualizzata sia il frame corrente.
+5. Confrontare overlay e risultati frame.
+
+Regola:
+Non correggere l'overlay spostando a mano gli edge se la posa pezzo e' sbagliata.

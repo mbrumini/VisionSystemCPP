@@ -1,0 +1,18 @@
+Titolo: Soglia confidenza AI
+Area: AI / Tolleranze
+Parole chiave: soglia confidenza, AI, confidence, OK, NOK
+
+La soglia di confidenza decide quanto il modello deve essere sicuro per accettare una classe.
+
+Soglia troppo bassa:
+- aumenta rischio di falsi OK;
+- accetta decisioni deboli;
+- puo' nascondere dataset povero.
+
+Soglia troppo alta:
+- aumenta falsi NOK;
+- scarta pezzi borderline;
+- rende il sistema nervoso su variazioni normali.
+
+Regola:
+Regolare la soglia solo dopo aver controllato dataset, luce e campioni OK/NOK reali.

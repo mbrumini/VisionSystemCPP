@@ -1,0 +1,19 @@
+Titolo: Edge cerchio instabile
+Area: Rilevamento edge / Diagnostica
+Parole chiave: cerchio instabile, edge cerchio, diametro variabile, bordo circolare
+
+Un edge cerchio instabile produce centro o diametro variabili.
+
+Cause comuni:
+- bordo circolare non continuo;
+- fascia anulare troppo larga;
+- riflessi dentro la fascia;
+- transizione sbagliata;
+- localizzazione instabile.
+
+Controlli:
+1. Controllare in Setup i punti edge usati dal cerchio.
+2. Ridurre la fascia anulare al bordo utile.
+3. Escludere riflessi o scritte.
+4. Bloccare esposizione e gain.
+5. Provare su pezzi OK/NOK reali.

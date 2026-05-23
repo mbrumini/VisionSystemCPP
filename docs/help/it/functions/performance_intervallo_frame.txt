@@ -1,0 +1,20 @@
+Titolo: Intervallo frame e prestazioni
+Area: Prestazioni / Acquisizione
+Parole chiave: intervallo frame, frame rate, pending jobs, tempo scansione
+
+L'intervallo frame deve essere compatibile con il tempo di elaborazione.
+
+Se e' troppo breve:
+- pending jobs aumentano;
+- la GUI puo' rallentare;
+- risultati arrivano in ritardo;
+- il PC lavora sempre saturo.
+
+Azioni:
+1. Misurare tempo scansione.
+2. Aumentare intervallo frame.
+3. Ridurre strumenti o aree.
+4. Valutare thread solo se CPU ha margine.
+
+Regola:
+Non acquisire piu' veloce di quanto il sistema riesca a controllare.

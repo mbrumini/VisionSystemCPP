@@ -1,0 +1,16 @@
+Titolo: Riflesso speculare
+Area: Illuminazione / Diagnostica
+Parole chiave: riflesso speculare, luce, pezzo lucido, saturazione
+
+Un riflesso speculare e' una luce riflessa direttamente verso la camera.
+Puo' saturare l'immagine o creare bordi falsi.
+
+Controlli:
+1. Cambiare angolo luce-camera.
+2. Usare luce diffusa o coassiale se adatta.
+3. Ridurre esposizione solo se non si perde il bordo utile.
+4. Usare esclusioni su riflessi inevitabili.
+5. Verificare su piu' pezzi e orientamenti.
+
+Regola:
+Non misurare un riflesso: misurare un riferimento geometrico stabile.

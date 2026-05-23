@@ -1,0 +1,20 @@
+Titolo: Texture confusa con difetto
+Area: Superficie / AI / Diagnostica
+Parole chiave: texture, falso difetto, superficie, AI, soglia
+
+La texture naturale del pezzo puo' sembrare un difetto se non e' rappresentata nella ricetta o nel dataset.
+
+Sintomi:
+- falsi NOK casuali;
+- difetti sempre diversi;
+- AI incerta;
+- soglia surface troppo sensibile.
+
+Controlli:
+1. Distinguere texture accettabile da difetto reale.
+2. Includere texture OK nel dataset.
+3. Usare luce che riduca variazioni inutili.
+4. Evitare soglie troppo strette.
+
+Regola:
+Il sistema deve imparare cosa e' normale, non solo cosa e' difetto.

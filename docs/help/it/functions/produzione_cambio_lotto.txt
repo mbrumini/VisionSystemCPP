@@ -1,0 +1,15 @@
+Titolo: Cambio lotto
+Area: Produzione / Validazione
+Parole chiave: cambio lotto, materiale, variazione, produzione
+
+Un cambio lotto puo' cambiare colore, riflettanza, finitura o dimensioni reali del pezzo.
+
+Controlli:
+1. Provare localizzazione.
+2. Verificare edge e misure principali.
+3. Controllare AI o surface se usati.
+4. Confrontare con pezzo master.
+5. Salvare campioni se la variazione e' accettabile.
+
+Regola:
+Se il lotto cambia aspetto, non assumere che la ricetta sia ancora valida.

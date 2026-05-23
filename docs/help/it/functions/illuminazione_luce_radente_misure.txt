@@ -1,0 +1,15 @@
+Titolo: Luce radente nelle misure
+Area: Illuminazione / Misure
+Parole chiave: luce radente, misura, ombra, rilievo, instabile
+
+La luce radente evidenzia rilievi, incisioni e graffi tramite ombre.
+Puo' aiutare se il riferimento e' un rilievo reale.
+
+Rischi:
+- ombre che cambiano con posizione pezzo;
+- falso bordo su texture;
+- misura instabile su superfici lucide;
+- dipendenza forte dall'altezza pezzo.
+
+Regola:
+Usare radente per misure solo se l'ombra e' ripetibile e rappresenta il riferimento da misurare.

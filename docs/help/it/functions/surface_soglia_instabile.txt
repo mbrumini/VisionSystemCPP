@@ -1,0 +1,21 @@
+Titolo: Soglia superficie instabile
+Area: Superficie / Diagnostica
+Parole chiave: soglia instabile, superficie, grigi, texture
+
+Una soglia instabile su superficie puo' cambiare risultato con piccole variazioni di luce o materiale.
+
+Cause:
+- texture simile al difetto;
+- esposizione automatica;
+- riflessi;
+- contrasto troppo basso;
+- lotto diverso.
+
+Controlli:
+1. Bloccare esposizione e gain.
+2. Migliorare illuminazione.
+3. Ridurre area a zona utile.
+4. Validare su piu' pezzi e lotti.
+
+Regola:
+Se la soglia funziona solo sul campione, non e' robusta.
