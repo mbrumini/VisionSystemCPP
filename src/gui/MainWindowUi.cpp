@@ -1145,6 +1145,11 @@ void MainWindow::showCameraToolList(const CameraConfig& camera)
   };
 
   addTool("setup");
+  if (camera.profile.guiTools.contains("localization") ||
+      camera.profile.guiTools.contains("surfaceLocalization"))
+  {
+    addTool("localization");
+  }
   addTool("geometries");
   addTool("constructedGeometries");
   addTool("measurements");
