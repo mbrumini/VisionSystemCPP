@@ -637,6 +637,27 @@ bool HelpAssistantService::tryBuildDirectReply(const QString& question,
   }
 
   const QString combined = QStringLiteral(" ") + compactedOperatorContext + QStringLiteral(" ") + compacted + QStringLiteral(" ");
+  const bool diameterContext = combined.contains(QStringLiteral(" diametro ")) ||
+                               combined.contains(QStringLiteral(" diametri ")) ||
+                               combined.contains(QStringLiteral(" diametr"));
+  const bool externalDiameter = diameterContext &&
+                                (combined.contains(QStringLiteral(" esterno ")) ||
+                                 combined.contains(QStringLiteral(" profilo ")) ||
+                                 combined.contains(QStringLiteral(" silhouette "))) &&
+                                !combined.contains(QStringLiteral(" superficie ")) &&
+                                !combined.contains(QStringLiteral(" superficiale ")) &&
+                                !combined.contains(QStringLiteral(" cieco ")) &&
+                                !combined.contains(QStringLiteral(" sede ")) &&
+                                !combined.contains(QStringLiteral(" tasca "));
+  if (externalDiameter && words.size() <= 5)
+  {
+    reply.answer = QStringLiteral(
+      "Ok: diametro esterno in silhouette. Qui la strada giusta e' una camera dimensionale BN, con profilo netto del pezzo.\n"
+      "Preferisci retroilluminazione o comunque contrasto forte pezzo/sfondo; non usare camere grigi/superficie per questo caso.\n"
+      "Crea un edge cerchio o un controllo profilo sul contorno esterno, verifica in Setup che il bordo resti stabile su piu' pezzi, poi imposta misura diametro e tolleranze.");
+    return true;
+  }
+
   const bool asksLinearMeasure = combined.contains(QStringLiteral(" lunghezza ")) ||
                                  combined.contains(QStringLiteral(" larghezza ")) ||
                                  combined.contains(QStringLiteral(" altezza ")) ||

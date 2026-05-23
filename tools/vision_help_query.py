@@ -72,6 +72,19 @@ def deterministic_reply(question, conversation_context=""):
         )
 
     combined = f" {normalized_context} {compacted} "
+    diameter_context = " diametro " in combined or " diametri " in combined or " diametr" in combined
+    external_diameter = (
+        diameter_context and
+        any(term in combined for term in [" esterno ", " profilo ", " silhouette "]) and
+        not any(term in combined for term in [" superficie ", " superficiale ", " cieco ", " sede ", " tasca "])
+    )
+    if external_diameter and len(words) <= 5:
+        return (
+            "Ok: diametro esterno in silhouette. Qui la strada giusta e' una camera dimensionale BN, con profilo netto del pezzo.\n"
+            "Preferisci retroilluminazione o comunque contrasto forte pezzo/sfondo; non usare camere grigi/superficie per questo caso.\n"
+            "Crea un edge cerchio o un controllo profilo sul contorno esterno, verifica in Setup che il bordo resti stabile su piu' pezzi, poi imposta misura diametro e tolleranze."
+        )
+
     asks_linear_measure = any(term in combined for term in [
         " lunghezza ", " larghezza ", " altezza ", " quota lineare ",
     ])
