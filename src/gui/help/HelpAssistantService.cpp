@@ -390,7 +390,7 @@ QString HelpAssistantService::buildPrompt(const QString& question,
            "Se l'operatore corregge una tua ipotesi, accetta la correzione e non ripetere l'ipotesi sbagliata.\n"
            "Se l'hardware illuminatore non e' dichiarato, dillo chiaramente invece di inventarlo.\n"
            "Se manca una informazione, dillo e indica quale controllo pratico fare.\n"
-           "Alla fine aggiungi una riga \"Fonti:\" con i nomi dei file usati.\n\n"
+           "Non mostrare i nomi dei file o una sezione Fonti nella risposta all'operatore.\n\n"
            "Contesto macchina corrente:\n%1\n\n"
            "Contesto conversazione:\n%2\n\n"
            "Contesto manuale:\n%3\n\n"
@@ -590,7 +590,10 @@ QString HelpAssistantService::cleanProcessOutput(const QString& text) const
   QString cleaned = text;
   static const QRegularExpression ansiPattern("\x1b\\[[0-?]*[ -/]*[@-~]");
   static const QRegularExpression spinnerPattern("^[\\s\\x{2800}-\\x{28ff}]+$");
+  static const QRegularExpression sourcesPattern(
+    QStringLiteral("(?im)^\\s*(fonti|fonti usate|sorgenti)\\s*:\\s*[\\s\\S]*$"));
   cleaned.remove(ansiPattern);
+  cleaned.remove(sourcesPattern);
 
   QStringList lines;
   for (QString line : cleaned.split('\n'))

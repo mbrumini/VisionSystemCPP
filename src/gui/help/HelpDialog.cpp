@@ -75,10 +75,6 @@ void HelpDialog::askQuestion()
     conversationContext(),
     [this, question](const HelpAssistantReply& reply) {
       QString answer = reply.answer;
-      if (!reply.sources.isEmpty() && !answer.contains(QStringLiteral("Fonti:"), Qt::CaseInsensitive))
-      {
-        answer += QStringLiteral("\n\nFonti: ") + reply.sources.join(QStringLiteral(", "));
-      }
       appendChatLine(QStringLiteral("Vision Help"), answer);
       m_recentTurns.push_back(QStringLiteral("Operatore: %1").arg(question));
       m_recentTurns.push_back(QStringLiteral("Assistente: %1").arg(answer.left(900)));

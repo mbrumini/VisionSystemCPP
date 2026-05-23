@@ -205,7 +205,7 @@ def build_prompt(question, selected_docs):
         "I documenti sono ordinati per pertinenza: dai piu peso al Documento 1.\n"
         "Rispondi al tema della domanda, senza trasformarla in una checklist generica.\n"
         "Se manca una informazione, dillo e indica quale controllo pratico fare.\n"
-        "Alla fine aggiungi una riga \"Fonti:\" con i nomi dei file usati.\n\n"
+        "Non mostrare i nomi dei file o una sezione Fonti nella risposta all'operatore.\n\n"
         f"Contesto:\n{context}\n\n"
         f"Domanda:\n{question}"
     )
