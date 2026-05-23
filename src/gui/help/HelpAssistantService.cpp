@@ -440,6 +440,18 @@ QStringList HelpAssistantService::expandQueryTokens(const QString& question, con
     expanded.append({QStringLiteral("illuminazione"), QStringLiteral("contrasto"),
                      QStringLiteral("esposizione"), QStringLiteral("gain")});
   }
+  if (normalized.contains(QStringLiteral("localizz")) ||
+      normalized.contains(QStringLiteral("posa")) ||
+      (normalized.contains(QStringLiteral("pezzo")) && normalized.contains(QStringLiteral("difficile"))))
+  {
+    expanded.append({QStringLiteral("localizzazione"), QStringLiteral("localizzare"),
+                     QStringLiteral("pezzo"), QStringLiteral("difficile"), QStringLiteral("instabile"),
+                     QStringLiteral("posa"), QStringLiteral("centro"), QStringLiteral("angolo"),
+                     QStringLiteral("area"), QStringLiteral("ricerca"), QStringLiteral("roi"),
+                     QStringLiteral("esclusioni"), QStringLiteral("maschera"), QStringLiteral("rossa"),
+                     QStringLiteral("riflessi"), QStringLiteral("contrasto"), QStringLiteral("illuminazione"),
+                     QStringLiteral("meccanica"), QStringLiteral("battuta")});
+  }
   if (normalized.contains(QStringLiteral("diametr")) && normalized.contains(QStringLiteral("superficie")))
   {
     expanded.append({QStringLiteral("diametro"), QStringLiteral("superficie"), QStringLiteral("cerchio"),

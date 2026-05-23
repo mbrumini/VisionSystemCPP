@@ -61,6 +61,14 @@ def expand_query_tokens(query, tokens):
     if "luce" in tokens or "illuminazione" in tokens:
         expanded.extend(["illuminazione", "contrasto", "esposizione", "gain"])
 
+    if "localizz" in normalized or "posa" in normalized or ("pezzo" in normalized and "difficile" in normalized):
+        expanded.extend([
+            "localizzazione", "localizzare", "pezzo", "difficile", "instabile",
+            "posa", "centro", "angolo", "area", "ricerca", "roi",
+            "esclusioni", "maschera", "rossa", "riflessi", "contrasto",
+            "illuminazione", "meccanica", "battuta"
+        ])
+
     if "diametr" in normalized and "superficie" in normalized:
         expanded.extend([
             "diametro", "superficie", "cerchio", "foro", "luce", "diretta",

@@ -21,6 +21,7 @@ File funzione disponibili:
 - functions/setup_frame_successivo.txt
 - functions/setup_risultati_frame.txt
 - functions/localizzazione_area_ricerca.txt
+- functions/localizzazione_pezzo_difficile.txt
 - functions/localizzazione_esclusioni.txt
 - functions/localizzazione_test.txt
 - functions/edge_punto.txt
