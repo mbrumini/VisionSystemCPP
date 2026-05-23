@@ -1,5 +1,8 @@
 #include "gui/help/HelpAssistantService.h"
 
+#include "gui/help/HelpModelBootstrapper.h"
+
+#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -21,6 +24,11 @@ constexpr qsizetype kMaxConversationContextChars = 1200;
 
 QString projectRoot()
 {
+  const QString appDocs = QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("docs/help"));
+  if (QDir(appDocs).exists())
+  {
+    return QCoreApplication::applicationDirPath();
+  }
   return QString::fromUtf8(PROJECT_SOURCE_DIR);
 }
 
@@ -54,12 +62,13 @@ QString trimmedContent(QString content)
 
 HelpAssistantService::HelpAssistantService(QObject* parent)
   : QObject(parent)
+  , m_bootstrapper(new HelpModelBootstrapper(this))
 {
 }
 
 bool HelpAssistantService::isBusy() const
 {
-  return m_process != nullptr;
+  return m_busy || m_process != nullptr || (m_bootstrapper && m_bootstrapper->isBusy());
 }
 
 void HelpAssistantService::ask(const QString& question,
@@ -90,6 +99,22 @@ void HelpAssistantService::ask(const QString& question,
   }
 
   const QString prompt = buildPrompt(question, machineContext, conversationContext, sources);
+  m_busy = true;
+  m_bootstrapper->ensureReady(
+    [this, prompt, sources, onReply, onError]() {
+      runPrompt(prompt, sources, onReply, onError);
+    },
+    [this, onError](const QString& error) {
+      m_busy = false;
+      onError(error);
+    });
+}
+
+void HelpAssistantService::runPrompt(const QString& prompt,
+                                     QList<SourceDocument> sources,
+                                     ReplyHandler onReply,
+                                     ErrorHandler onError)
+{
   auto* process = new QProcess(this);
   m_process = process;
 
@@ -104,6 +129,7 @@ void HelpAssistantService::ask(const QString& question,
       return;
     }
     m_process = nullptr;
+    m_busy = false;
     process->deleteLater();
     if (error == QProcess::FailedToStart)
     {
@@ -120,6 +146,7 @@ void HelpAssistantService::ask(const QString& question,
       return;
     }
     m_process = nullptr;
+    m_busy = false;
     const QString stdoutText = cleanProcessOutput(QString::fromUtf8(process->readAllStandardOutput()));
     const QString stderrText = cleanProcessOutput(QString::fromUtf8(process->readAllStandardError()));
     process->deleteLater();

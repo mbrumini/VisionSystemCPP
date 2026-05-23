@@ -66,6 +66,8 @@ add_executable(VisionSystemCPP
     src/gui/ImageViewWidgetPainting.cpp
     src/gui/help/HelpAssistantService.h
     src/gui/help/HelpAssistantService.cpp
+    src/gui/help/HelpModelBootstrapper.h
+    src/gui/help/HelpModelBootstrapper.cpp
     src/gui/help/HelpDialog.h
     src/gui/help/HelpDialog.cpp
     src/gui/MainWindow.h
@@ -220,4 +222,10 @@ add_custom_command(TARGET VisionSystemCPP POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_SOURCE_DIR}/translations"
         "$<TARGET_FILE_DIR:VisionSystemCPP>/translations"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/docs/help"
+        "$<TARGET_FILE_DIR:VisionSystemCPP>/docs/help"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/ollama/vision-help"
+        "$<TARGET_FILE_DIR:VisionSystemCPP>/ollama/vision-help"
 )

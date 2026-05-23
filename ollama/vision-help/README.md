@@ -11,6 +11,24 @@ ollama pull llama3.2:3b
 ollama create vision-help -f ollama/vision-help/Modelfile
 ```
 
+Su un altro PC Windows con Ollama installato si puo copiare questa cartella e lanciare:
+
+```bat
+install_vision_help.bat
+```
+
+VisionSystemCPP copia questa cartella accanto all'eseguibile durante la build.
+Quando la chat HELP viene usata, il programma:
+
+1. cerca `ollama` nel PATH;
+2. prova a contattare il servizio Ollama;
+3. se il servizio non risponde, prova ad avviare `ollama serve`;
+4. controlla se il modello `vision-help` esiste;
+5. se manca, lo crea usando il `Modelfile` in questa cartella.
+
+Nota: i pesi reali del modello base restano gestiti da Ollama nella macchina locale.
+Questa cartella contiene la definizione importabile del modello VisionSystemCPP, non una copia interna dei pesi di Ollama.
+
 ## Domande al manuale
 
 ```powershell

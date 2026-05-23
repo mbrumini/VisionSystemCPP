@@ -6,6 +6,7 @@
 
 #include <functional>
 
+class HelpModelBootstrapper;
 class QProcess;
 
 struct HelpAssistantReply
@@ -47,8 +48,14 @@ private:
   QString cleanProcessOutput(const QString& text) const;
   QString sourceName(const QString& path) const;
   QString limitBlock(const QString& text, qsizetype maxChars) const;
+  void runPrompt(const QString& prompt,
+                 QList<SourceDocument> sources,
+                 ReplyHandler onReply,
+                 ErrorHandler onError);
 
   QProcess* m_process = nullptr;
+  HelpModelBootstrapper* m_bootstrapper = nullptr;
+  bool m_busy = false;
   mutable QString m_cachedLanguageCode;
   mutable QList<SourceDocument> m_cachedDocuments;
 };
