@@ -84,10 +84,10 @@ void HelpAssistantService::ask(const QString& question,
     return;
   }
 
-  HelpAssistantReply socialReply;
-  if (tryBuildSocialReply(question, socialReply))
+  HelpAssistantReply directReply;
+  if (tryBuildDirectReply(question, conversationContext, directReply))
   {
-    onReply(socialReply);
+    onReply(directReply);
     return;
   }
 
@@ -551,13 +551,26 @@ QStringList HelpAssistantService::expandQueryTokens(const QString& question, con
   return expanded;
 }
 
-bool HelpAssistantService::tryBuildSocialReply(const QString& question, HelpAssistantReply& reply) const
+bool HelpAssistantService::tryBuildDirectReply(const QString& question,
+                                               const QString& conversationContext,
+                                               HelpAssistantReply& reply) const
 {
   const QString normalized = normalizeText(question.trimmed());
   QString cleaned = normalized;
   static const QRegularExpression punctuationPattern(QStringLiteral("[^a-z0-9_\\s]+"));
   cleaned.replace(punctuationPattern, QStringLiteral(" "));
   const QString compacted = cleaned.simplified();
+  QStringList operatorLines;
+  for (const QString& line : conversationContext.split('\n'))
+  {
+    if (line.trimmed().startsWith(QStringLiteral("Operatore:"), Qt::CaseInsensitive))
+    {
+      operatorLines.push_back(line);
+    }
+  }
+  QString contextCleaned = normalizeText(operatorLines.join(QStringLiteral(" ")));
+  contextCleaned.replace(punctuationPattern, QStringLiteral(" "));
+  const QString compactedOperatorContext = contextCleaned.simplified();
   if (compacted.isEmpty())
   {
     return false;
@@ -620,6 +633,53 @@ bool HelpAssistantService::tryBuildSocialReply(const QString& question, HelpAssi
   {
     reply.answer = QStringLiteral(
       "Ok, diametro. Prima devo capire quale: diametro esterno in profilo/silhouette, foro passante, oppure diametro visibile sulla superficie come sede, foro cieco o incisione? Cambia camera, luce e tipo di edge.");
+    return true;
+  }
+
+  const QString combined = QStringLiteral(" ") + compactedOperatorContext + QStringLiteral(" ") + compacted + QStringLiteral(" ");
+  const bool asksLinearMeasure = combined.contains(QStringLiteral(" lunghezza ")) ||
+                                 combined.contains(QStringLiteral(" larghezza ")) ||
+                                 combined.contains(QStringLiteral(" altezza ")) ||
+                                 combined.contains(QStringLiteral(" quota lineare "));
+  const bool externalProfile = combined.contains(QStringLiteral(" esterno ")) ||
+                               combined.contains(QStringLiteral(" profilo ")) ||
+                               combined.contains(QStringLiteral(" profilo bn ")) ||
+                               combined.contains(QStringLiteral(" silhouette ")) ||
+                               combined.contains(QStringLiteral(" bn "));
+  const bool twoReferences = combined.contains(QStringLiteral(" 2 linee ")) ||
+                             combined.contains(QStringLiteral(" due linee ")) ||
+                             combined.contains(QStringLiteral(" 2 bordi ")) ||
+                             combined.contains(QStringLiteral(" due bordi ")) ||
+                             combined.contains(QStringLiteral(" linea linea ")) ||
+                             combined.contains(QStringLiteral(" bordo bordo "));
+
+  if (asksLinearMeasure && externalProfile && twoReferences && words.size() <= 4)
+  {
+    reply.answer = QStringLiteral(
+      "Ok, adesso il caso e' chiaro: lunghezza esterna su profilo BN tra due bordi.\n"
+      "Usa una camera dimensionale BN con contrasto netto o retroilluminazione, poi crea due edge linea sui due bordi esterni.\n"
+      "In Setup controlla che le due linee restino stabili su piu' pezzi, senza riflessi o soglia ballerina.\n"
+      "Quando le linee sono verdi e ripetibili, crea la misura linea-linea e imposta nominale e tolleranze.");
+    return true;
+  }
+
+  if (compacted == QStringLiteral("lunghezza") ||
+      compacted == QStringLiteral("larghezza") ||
+      compacted == QStringLiteral("altezza"))
+  {
+    reply.answer = QStringLiteral(
+      "Ok. Prima dimmi che tipo di quota e': profilo esterno BN/silhouette, distanza tra due bordi sulla superficie, foro-bordo, oppure punto-punto?");
+    return true;
+  }
+
+  if (asksLinearMeasure && externalProfile &&
+      (compacted == QStringLiteral("esterno") ||
+       compacted == QStringLiteral("profilo") ||
+       compacted == QStringLiteral("profilo bn") ||
+       compacted == QStringLiteral("bn")))
+  {
+    reply.answer = QStringLiteral(
+      "Perfetto, quindi parliamo di profilo esterno BN. Se la quota e' tra due lati del pezzo, il passo successivo e' trovare i due bordi con edge linea e poi fare una misura linea-linea.");
     return true;
   }
 

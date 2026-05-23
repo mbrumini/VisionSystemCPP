@@ -35,9 +35,15 @@ def tokenize(text):
     return [tok for tok in TOKEN_RE.findall(normalize(text)) if tok not in STOPWORDS and len(tok) > 1]
 
 
-def deterministic_reply(question):
+def deterministic_reply(question, conversation_context=""):
     compacted = re.sub(r"[^a-z0-9_\s]+", " ", normalize(question)).strip()
     compacted = re.sub(r"\s+", " ", compacted)
+    operator_lines = [
+        line for line in conversation_context.splitlines()
+        if line.strip().lower().startswith("operatore:")
+    ]
+    normalized_context = re.sub(r"[^a-z0-9_\s]+", " ", normalize(" ".join(operator_lines))).strip()
+    normalized_context = re.sub(r"\s+", " ", normalized_context)
     words = compacted.split()
 
     if ({"chi", "sei"}.issubset(words) or
@@ -63,6 +69,40 @@ def deterministic_reply(question):
             "Ok, diametro. Prima devo capire quale: diametro esterno in "
             "profilo/silhouette, foro passante, oppure diametro visibile sulla "
             "superficie come sede, foro cieco o incisione? Cambia camera, luce e tipo di edge."
+        )
+
+    combined = f" {normalized_context} {compacted} "
+    asks_linear_measure = any(term in combined for term in [
+        " lunghezza ", " larghezza ", " altezza ", " quota lineare ",
+    ])
+    external_profile = any(term in combined for term in [
+        " esterno ", " profilo ", " profilo bn ", " silhouette ", " bn ",
+    ])
+    two_references = any(term in combined for term in [
+        " 2 linee ", " due linee ", " 2 bordi ", " due bordi ",
+        " linea linea ", " bordo bordo ",
+    ])
+
+    if asks_linear_measure and external_profile and two_references and len(words) <= 4:
+        return (
+            "Ok, adesso il caso e' chiaro: lunghezza esterna su profilo BN tra due bordi.\n"
+            "Usa una camera dimensionale BN con contrasto netto o retroilluminazione, poi crea due edge linea sui due bordi esterni.\n"
+            "In Setup controlla che le due linee restino stabili su piu' pezzi, senza riflessi o soglia ballerina.\n"
+            "Quando le linee sono verdi e ripetibili, crea la misura linea-linea e imposta nominale e tolleranze."
+        )
+
+    if compacted in {"lunghezza", "larghezza", "altezza"}:
+        return (
+            "Ok. Prima dimmi che tipo di quota e': profilo esterno BN/silhouette, "
+            "distanza tra due bordi sulla superficie, foro-bordo, oppure punto-punto?"
+        )
+
+    if (asks_linear_measure and external_profile and
+        compacted in {"esterno", "profilo", "profilo bn", "bn"}):
+        return (
+            "Perfetto, quindi parliamo di profilo esterno BN. Se la quota e' tra "
+            "due lati del pezzo, il passo successivo e' trovare i due bordi con "
+            "edge linea e poi fare una misura linea-linea."
         )
 
     return None
