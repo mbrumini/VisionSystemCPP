@@ -365,19 +365,19 @@ QString HelpAssistantService::buildPrompt(const QString& question,
   for (int i = 0; i < sources.size(); ++i)
   {
     const SourceDocument& source = sources[i];
-    blocks.push_back(QStringLiteral("[Documento %1: %2]\n%3")
+    blocks.push_back(QStringLiteral("[Contesto tecnico %1]\n%2")
                        .arg(i + 1)
-                       .arg(sourceName(source.path))
                        .arg(trimmedContent(source.content)));
   }
 
   return QStringLiteral(
            "Usa solo il contesto qui sotto per rispondere alla domanda.\n"
-           "I documenti sono ordinati per pertinenza: dai piu peso al Documento 1.\n"
+           "I blocchi di contesto sono ordinati per pertinenza: dai piu peso al primo blocco.\n"
            "Rispondi al tema della domanda, senza trasformarla in una checklist generica.\n"
            "Rispondi in modo breve e operativo: massimo 8 righe, salvo richiesta esplicita di dettaglio.\n"
            "Tieni un tono umano e disponibile. Se ci sta, puoi aggiungere una battuta leggera e breve, ma la risposta tecnica deve restare chiara.\n"
            "Se la domanda e' solo un saluto o un ringraziamento, rispondi naturalmente senza ripetere procedure.\n"
+           "Non citare documenti, blocchi, contesti tecnici o numeri di documento nella risposta all'operatore.\n"
            "Segui il contesto della richiesta: non introdurre oggetti non citati dall'operatore o dai documenti, per esempio fori, cerchi, camere o misure specifiche.\n"
            "Se manca un dettaglio, chiedilo o indica una verifica pratica invece di completare la storia da solo.\n"
            "Se il contesto macchina contiene camere candidate o limiti camera, usali per dire quali camere sono adatte, possibili o non adatte.\n"
@@ -514,6 +514,17 @@ QStringList HelpAssistantService::expandQueryTokens(const QString& question, con
                      QStringLiteral("grigi"), QStringLiteral("measurement"), QStringLiteral("surface"),
                      QStringLiteral("bn"), QStringLiteral("dimensionale"), QStringLiteral("silhouette")});
   }
+  if (normalized.contains(QStringLiteral("diametr")) &&
+      (normalized.contains(QStringLiteral("esterno")) ||
+       normalized.contains(QStringLiteral("profilo")) ||
+       normalized.contains(QStringLiteral("silhouette"))))
+  {
+    expanded.append({QStringLiteral("diametro"), QStringLiteral("esterno"), QStringLiteral("profilo"),
+                     QStringLiteral("silhouette"), QStringLiteral("retroilluminazione"),
+                     QStringLiteral("backlight"), QStringLiteral("bn"), QStringLiteral("dimensionale"),
+                     QStringLiteral("edge"), QStringLiteral("cerchio"), QStringLiteral("contorno"),
+                     QStringLiteral("bordo")});
+  }
   if (normalized.contains(QStringLiteral("misur")) && normalized.contains(QStringLiteral("superfic")))
   {
     expanded.append({QStringLiteral("misure"), QStringLiteral("superficiali"), QStringLiteral("faccia"),
@@ -622,6 +633,8 @@ QString HelpAssistantService::cleanProcessOutput(const QString& text) const
   static const QRegularExpression spinnerPattern("^[\\s\\x{2800}-\\x{28ff}]+$");
   static const QRegularExpression sourcesPattern(
     QStringLiteral("(?im)^\\s*(fonti|fonti usate|sorgenti)\\s*:\\s*[\\s\\S]*$"));
+  static const QRegularExpression documentReferencePattern(
+    QStringLiteral("\\b(documento|documenti|contesto tecnico|blocco)\\s+\\d+\\b"), QRegularExpression::CaseInsensitiveOption);
   cleaned.remove(ansiPattern);
   cleaned.remove(sourcesPattern);
 
@@ -630,6 +643,10 @@ QString HelpAssistantService::cleanProcessOutput(const QString& text) const
   {
     line.remove('\r');
     line = line.trimmed();
+    if (documentReferencePattern.match(line).hasMatch())
+    {
+      continue;
+    }
     if (!line.isEmpty() && !spinnerPattern.match(line).hasMatch())
     {
       lines.push_back(line);

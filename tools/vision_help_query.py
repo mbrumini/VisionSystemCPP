@@ -14,6 +14,7 @@ DEFAULT_DOCS_DIR = Path("docs/help/it")
 TOKEN_RE = re.compile(r"[a-z0-9_]+")
 ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07]*(?:\x07|\x1b\\)")
 SPINNER_RE = re.compile(r"^[\s\u2800-\u28ff]+$")
+DOCUMENT_REFERENCE_RE = re.compile(r"\b(documento|documenti|contesto tecnico|blocco)\s+\d+\b", re.IGNORECASE)
 
 STOPWORDS = {
     "a", "ad", "al", "alla", "alle", "allo", "anche", "che", "chi", "ci",
@@ -127,6 +128,12 @@ def expand_query_tokens(query, tokens):
             "grigi", "measurement", "surface", "bn", "dimensionale", "silhouette"
         ])
 
+    if "diametr" in normalized and any(term in normalized for term in ["esterno", "profilo", "silhouette"]):
+        expanded.extend([
+            "diametro", "esterno", "profilo", "silhouette", "retroilluminazione",
+            "backlight", "bn", "dimensionale", "edge", "cerchio", "contorno", "bordo"
+        ])
+
     if "misur" in normalized and "superfic" in normalized:
         expanded.extend([
             "misure", "superficiali", "faccia", "foro", "sede", "tasca",
@@ -214,6 +221,8 @@ def clean_terminal_output(text):
         line = line.replace("\r", "").rstrip()
         if not line or SPINNER_RE.match(line):
             continue
+        if DOCUMENT_REFERENCE_RE.search(line):
+            continue
         lines.append(line)
     return "\n".join(lines).strip()
 
@@ -228,16 +237,16 @@ def trim_content(content, max_chars):
 def build_prompt(question, selected_docs):
     context_blocks = []
     for index, doc in enumerate(selected_docs, start=1):
-        rel_path = doc["path"].as_posix()
         content = trim_content(doc["content"], 1400)
-        context_blocks.append(f"[Documento {index}: {rel_path}]\n{content}")
+        context_blocks.append(f"[Contesto tecnico {index}]\n{content}")
 
     context = "\n\n".join(context_blocks)
     return (
         "Usa solo il contesto qui sotto per rispondere alla domanda.\n"
-        "I documenti sono ordinati per pertinenza: dai piu peso al Documento 1.\n"
+        "I blocchi di contesto sono ordinati per pertinenza: dai piu peso al primo blocco.\n"
         "Rispondi al tema della domanda, senza trasformarla in una checklist generica.\n"
         "Se manca una informazione, dillo e indica quale controllo pratico fare.\n"
+        "Non citare documenti, blocchi, contesti tecnici o numeri di documento nella risposta all'operatore.\n"
         "Non mostrare i nomi dei file o una sezione Fonti nella risposta all'operatore.\n\n"
         f"Contesto:\n{context}\n\n"
         f"Domanda:\n{question}"
