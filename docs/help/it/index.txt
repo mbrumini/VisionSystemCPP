@@ -25,6 +25,7 @@ File funzione disponibili:
 - functions/localizzazione_esclusioni.txt
 - functions/localizzazione_test.txt
 - functions/edge_punto.txt
+- functions/edge_punto_instabile_superficie.txt
 - functions/edge_linea.txt
 - functions/edge_cerchio.txt
 - functions/edge_arco.txt

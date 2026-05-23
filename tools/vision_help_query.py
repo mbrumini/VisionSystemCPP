@@ -55,6 +55,18 @@ def expand_query_tokens(query, tokens):
             "linea", "linea", "distanza", "cava", "sede", "luce", "diretta"
         ])
 
+    if (("punto" in normalized and "superficie" in normalized) or
+        ("punto" in normalized and (
+            "muov" in normalized or "instabil" in normalized or
+            "stabilizz" in normalized or "staqbilizz" in normalized
+        ))):
+        expanded.extend([
+            "punto", "edge", "instabile", "muove", "superficie", "bordo",
+            "scansione", "riflesso", "texture", "sensibilita", "transizione",
+            "first", "best", "last", "fascia", "contrasto", "coassiale",
+            "diffusa", "geometria", "costruita"
+        ])
+
     if "edge" in tokens and has_measure:
         expanded.extend(["edge", "geometria", "trovata", "misura", "risultati", "frame"])
 
@@ -108,6 +120,11 @@ def read_documents(root):
 
 
 def score_documents(query, docs):
+    normalized_query = normalize(query)
+    mentions_circular_reference = any(
+        term in normalized_query
+        for term in (" foro", " fori", " cerchio", " cerchi", " centro", " centri", " sede", " diametr")
+    )
     query_tokens = expand_query_tokens(query, tokenize(query))
     if not query_tokens:
         return []
@@ -124,6 +141,14 @@ def score_documents(query, docs):
     scored = []
     total_docs = max(1, len(docs))
     for doc in docs:
+        circular_text = normalize(f"{doc['path'].stem} {doc['content'][:240]}")
+        circular_document = any(
+            term in circular_text
+            for term in ("foro", "fori", "cerchio", "diametro")
+        )
+        if circular_document and not mentions_circular_reference:
+            continue
+
         doc_counts = {}
         for token in doc["tokens"]:
             doc_counts[token] = doc_counts.get(token, 0) + 1

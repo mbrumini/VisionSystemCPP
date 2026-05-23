@@ -254,6 +254,15 @@ QList<HelpAssistantService::SourceDocument> HelpAssistantService::selectSources(
   const QString retrievalText = conversationContext.trimmed().isEmpty()
                                   ? question
                                   : QStringLiteral("Domanda corrente: %1\nDomanda corrente: %1\n%2").arg(question, conversationContext);
+  const QString normalizedRetrieval = normalizeText(retrievalText);
+  const bool mentionsCircularReference = normalizedRetrieval.contains(QStringLiteral(" foro")) ||
+                                         normalizedRetrieval.contains(QStringLiteral(" fori")) ||
+                                         normalizedRetrieval.contains(QStringLiteral(" cerchio")) ||
+                                         normalizedRetrieval.contains(QStringLiteral(" cerchi")) ||
+                                         normalizedRetrieval.contains(QStringLiteral(" centro")) ||
+                                         normalizedRetrieval.contains(QStringLiteral(" centri")) ||
+                                         normalizedRetrieval.contains(QStringLiteral(" sede")) ||
+                                         normalizedRetrieval.contains(QStringLiteral(" diametr"));
   const QStringList queryTokens = expandQueryTokens(retrievalText, tokenize(retrievalText));
   if (queryTokens.isEmpty())
   {
@@ -319,6 +328,25 @@ QList<HelpAssistantService::SourceDocument> HelpAssistantService::selectSources(
     {
       break;
     }
+    const QString title = normalizeText(item.document.title);
+    const QString path = normalizeText(item.document.path);
+    const QString keywords = normalizeText(item.document.content.left(240));
+    const bool circularDocument = title.contains(QStringLiteral("foro")) ||
+                                  title.contains(QStringLiteral("fori")) ||
+                                  title.contains(QStringLiteral("cerchio")) ||
+                                  title.contains(QStringLiteral("diametro")) ||
+                                  path.contains(QStringLiteral("foro")) ||
+                                  path.contains(QStringLiteral("fori")) ||
+                                  path.contains(QStringLiteral("cerchio")) ||
+                                  path.contains(QStringLiteral("diametro")) ||
+                                  keywords.contains(QStringLiteral("foro")) ||
+                                  keywords.contains(QStringLiteral("fori")) ||
+                                  keywords.contains(QStringLiteral("cerchio")) ||
+                                  keywords.contains(QStringLiteral("diametro"));
+    if (!mentionsCircularReference && circularDocument)
+    {
+      continue;
+    }
     if (bestScore > 0.0 && item.score < bestScore * 0.25)
     {
       continue;
@@ -350,10 +378,13 @@ QString HelpAssistantService::buildPrompt(const QString& question,
            "Rispondi in modo breve e operativo: massimo 8 righe, salvo richiesta esplicita di dettaglio.\n"
            "Tieni un tono umano e disponibile. Se ci sta, puoi aggiungere una battuta leggera e breve, ma la risposta tecnica deve restare chiara.\n"
            "Se la domanda e' solo un saluto o un ringraziamento, rispondi naturalmente senza ripetere procedure.\n"
+           "Segui il contesto della richiesta: non introdurre oggetti non citati dall'operatore o dai documenti, per esempio fori, cerchi, camere o misure specifiche.\n"
+           "Se manca un dettaglio, chiedilo o indica una verifica pratica invece di completare la storia da solo.\n"
            "Se il contesto macchina contiene camere candidate o limiti camera, usali per dire quali camere sono adatte, possibili o non adatte.\n"
            "Non consigliare una camera come certa se il suo profilo o la configurazione non supportano la richiesta.\n"
            "Se la domanda parla di superficie, faccia del pezzo, foro cieco, sede, tasca o incisione, non proporre camere BN dimensionali come candidate principali.\n"
            "Le camere BN dimensionali vanno proposte per profilo esterno, silhouette o foro passante visto in silhouette solo quando questo e' esplicito o chiaramente richiesto.\n"
+           "Non introdurre fori, cerchi o centri se l'operatore parla solo di un punto o un bordo e non cita fori, cerchi o sedi circolari.\n"
            "Se la domanda e' generica, per esempio chiede solo una lunghezza, chiedi prima quali riferimenti o che tipo di quota serve; non elencare camere a caso.\n"
            "Usa il contesto conversazione per interpretare follow-up come 'ora cosa faccio' o correzioni come 'non e' foro-bordo'.\n"
            "Se l'operatore corregge una tua ipotesi, accetta la correzione e non ripetere l'ipotesi sbagliata.\n"
@@ -419,6 +450,21 @@ QStringList HelpAssistantService::expandQueryTokens(const QString& question, con
                      QStringLiteral("distanza"), QStringLiteral("quota"), QStringLiteral("lineare"),
                      QStringLiteral("punto"), QStringLiteral("linea"), QStringLiteral("bordo"),
                      QStringLiteral("profilo"), QStringLiteral("superficie"), QStringLiteral("riferimento")});
+  }
+  if ((normalized.contains(QStringLiteral("punto")) && normalized.contains(QStringLiteral("superficie"))) ||
+      (normalized.contains(QStringLiteral("punto")) &&
+       (normalized.contains(QStringLiteral("muov")) ||
+        normalized.contains(QStringLiteral("instabil")) ||
+        normalized.contains(QStringLiteral("stabilizz")) ||
+        normalized.contains(QStringLiteral("staqbilizz")))))
+  {
+    expanded.append({QStringLiteral("punto"), QStringLiteral("edge"), QStringLiteral("instabile"),
+                     QStringLiteral("muove"), QStringLiteral("superficie"), QStringLiteral("bordo"),
+                     QStringLiteral("scansione"), QStringLiteral("riflesso"), QStringLiteral("texture"),
+                     QStringLiteral("sensibilita"), QStringLiteral("transizione"), QStringLiteral("first"),
+                     QStringLiteral("best"), QStringLiteral("last"), QStringLiteral("fascia"),
+                     QStringLiteral("contrasto"), QStringLiteral("coassiale"), QStringLiteral("diffusa"),
+                     QStringLiteral("geometria"), QStringLiteral("costruita")});
   }
   if (normalized.contains(QStringLiteral("bordo bordo")) ||
       normalized.contains(QStringLiteral("bordo-bordo")) ||
