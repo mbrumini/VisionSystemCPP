@@ -175,7 +175,7 @@ def build_prompt(question, selected_docs):
 def run_ollama(model, prompt):
     try:
         result = subprocess.run(
-            ["ollama", "run", "--nowordwrap", model],
+            ["ollama", "run", "--nowordwrap", "--think=false", "--keepalive", "30m", model],
             input=prompt,
             text=True,
             capture_output=True,

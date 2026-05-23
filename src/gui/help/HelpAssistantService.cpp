@@ -15,7 +15,9 @@
 namespace
 {
 constexpr int kMaxSources = 3;
-constexpr qsizetype kMaxSourceChars = 1400;
+constexpr qsizetype kMaxSourceChars = 900;
+constexpr qsizetype kMaxMachineContextChars = 2200;
+constexpr qsizetype kMaxConversationContextChars = 1200;
 
 QString projectRoot()
 {
@@ -150,17 +152,28 @@ void HelpAssistantService::ask(const QString& question,
   });
 
   process->setProgram(QStringLiteral("ollama"));
-  process->setArguments({QStringLiteral("run"), QStringLiteral("--nowordwrap"), QStringLiteral("vision-help")});
+  process->setArguments({QStringLiteral("run"),
+                         QStringLiteral("--nowordwrap"),
+                         QStringLiteral("--think=false"),
+                         QStringLiteral("--keepalive"),
+                         QStringLiteral("30m"),
+                         QStringLiteral("vision-help")});
   process->start();
 }
 
 QList<HelpAssistantService::SourceDocument> HelpAssistantService::loadDocuments(const QString& languageCode) const
 {
   QString language = languageCode.isEmpty() ? QStringLiteral("it") : languageCode;
+  if (language == m_cachedLanguageCode && !m_cachedDocuments.isEmpty())
+  {
+    return m_cachedDocuments;
+  }
+
   QDir dir(QDir(projectRoot()).filePath(QStringLiteral("docs/help/%1/functions").arg(language)));
   if (!dir.exists() && language != QStringLiteral("it"))
   {
     dir = QDir(QDir(projectRoot()).filePath(QStringLiteral("docs/help/it/functions")));
+    language = QStringLiteral("it");
   }
 
   QList<SourceDocument> documents;
@@ -195,6 +208,8 @@ QList<HelpAssistantService::SourceDocument> HelpAssistantService::loadDocuments(
       documents.push_back(document);
     }
   }
+  m_cachedLanguageCode = language;
+  m_cachedDocuments = documents;
   return documents;
 }
 
@@ -298,6 +313,7 @@ QString HelpAssistantService::buildPrompt(const QString& question,
            "Usa solo il contesto qui sotto per rispondere alla domanda.\n"
            "I documenti sono ordinati per pertinenza: dai piu peso al Documento 1.\n"
            "Rispondi al tema della domanda, senza trasformarla in una checklist generica.\n"
+           "Rispondi in modo breve e operativo: massimo 8 righe, salvo richiesta esplicita di dettaglio.\n"
            "Se il contesto macchina contiene camere candidate o limiti camera, usali per dire quali camere sono adatte, possibili o non adatte.\n"
            "Non consigliare una camera come certa se il suo profilo o la configurazione non supportano la richiesta.\n"
            "Se la domanda e' generica, per esempio chiede solo una lunghezza, chiedi prima quali riferimenti o che tipo di quota serve; non elencare camere a caso.\n"
@@ -310,8 +326,8 @@ QString HelpAssistantService::buildPrompt(const QString& question,
            "Contesto conversazione:\n%2\n\n"
            "Contesto manuale:\n%3\n\n"
            "Domanda:\n%4")
-    .arg(machineContext.trimmed().isEmpty() ? QStringLiteral("Non disponibile.") : machineContext.trimmed(),
-         conversationContext.trimmed().isEmpty() ? QStringLiteral("Nessun messaggio precedente.") : conversationContext.trimmed(),
+    .arg(machineContext.trimmed().isEmpty() ? QStringLiteral("Non disponibile.") : limitBlock(machineContext, kMaxMachineContextChars),
+         conversationContext.trimmed().isEmpty() ? QStringLiteral("Nessun messaggio precedente.") : limitBlock(conversationContext, kMaxConversationContextChars),
          blocks.join("\n\n"),
          question.trimmed());
 }
@@ -442,4 +458,14 @@ QString HelpAssistantService::cleanProcessOutput(const QString& text) const
 QString HelpAssistantService::sourceName(const QString& path) const
 {
   return QFileInfo(path).fileName();
+}
+
+QString HelpAssistantService::limitBlock(const QString& text, qsizetype maxChars) const
+{
+  QString normalized = text.trimmed();
+  if (normalized.size() <= maxChars)
+  {
+    return normalized;
+  }
+  return normalized.left(maxChars).trimmed() + QStringLiteral("\n...");
 }

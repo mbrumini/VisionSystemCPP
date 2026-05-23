@@ -46,6 +46,9 @@ private:
   QStringList expandQueryTokens(const QString& question, const QStringList& tokens) const;
   QString cleanProcessOutput(const QString& text) const;
   QString sourceName(const QString& path) const;
+  QString limitBlock(const QString& text, qsizetype maxChars) const;
 
   QProcess* m_process = nullptr;
+  mutable QString m_cachedLanguageCode;
+  mutable QList<SourceDocument> m_cachedDocuments;
 };
