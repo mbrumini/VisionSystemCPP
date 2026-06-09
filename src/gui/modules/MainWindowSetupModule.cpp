@@ -333,6 +333,13 @@ void MainWindowSetupModule::advanceCameraFrame(const CameraConfig& camera)
     return;
   }
 
+  if (context().cameraPendingJobs && context().cameraPendingJobs->value(camera.id, 0) > 0)
+  {
+    (*context().cameraDroppedFrames)[camera.id] = context().cameraDroppedFrames->value(camera.id, 0) + 1;
+    updateCameraSetupDetails(camera);
+    return;
+  }
+
   CameraRuntime& runtime = cameraRuntime()[camera.id];
   QString error;
   const QString testFolder = context().imaging->cameraTestImagesFolder(camera);
@@ -373,40 +380,10 @@ void MainWindowSetupModule::advanceCameraFrame(const CameraConfig& camera)
 
 void MainWindowSetupModule::processCurrentCameraFrame(const CameraConfig& camera)
 {
-  auto runConfiguredGeometry = [this, camera]() {
-    log(QString("pipeline geometries begin: %1").arg(camera.id));
-    context().geometry->testConfiguredGeometryLines(camera);
-    if (context().geometry->drawingTarget() == MainWindowGeometryModule::DrawingTarget::Point)
-    {
-      context().geometry->testGeometryPoint(camera);
-    }
-    else if (context().geometry->drawingTarget() == MainWindowGeometryModule::DrawingTarget::Circle)
-    {
-      context().geometry->testGeometryCircle(camera);
-    }
-    else if (context().geometry->drawingTarget() == MainWindowGeometryModule::DrawingTarget::Arc)
-    {
-      context().geometry->testGeometryArc(camera);
-    }
-    if (context().constructedGeometry)
-    {
-      context().constructedGeometry->rebuildConstructedGeometryRecipe(camera);
-    }
-    if (context().measurement)
-    {
-      context().measurement->rebuildMeasurementRecipe(camera);
-      GeometryOverlay overlay = largeImage()->geometryOverlay();
-      context().measurement->appendMeasurementOverlay(camera, overlay);
-      largeImage()->setGeometryOverlay(overlay);
-    }
-    log(QString("pipeline geometries queued: %1").arg(camera.id));
-  };
-
   if (MainWindowCameraProfile::isBwDimensional(camera, config()))
   {
     log(QString("pipeline localization begin: %1 mode=bw").arg(camera.id));
     context().localization->testLocalization(camera);
-    runConfiguredGeometry();
     return;
   }
 
@@ -422,7 +399,6 @@ void MainWindowSetupModule::processCurrentCameraFrame(const CameraConfig& camera
   {
     log(QString("pipeline surface localization begin: %1 method=%2").arg(camera.id, annulus.method));
     context().surface->testSurfaceAnnulusLocalization(camera);
-    runConfiguredGeometry();
     return;
   }
 
@@ -436,7 +412,6 @@ void MainWindowSetupModule::processCurrentCameraFrame(const CameraConfig& camera
           .arg(roi.width())
           .arg(roi.height()));
     context().surface->testSurfaceEdgePcaLocalization(camera);
-    runConfiguredGeometry();
     return;
   }
 

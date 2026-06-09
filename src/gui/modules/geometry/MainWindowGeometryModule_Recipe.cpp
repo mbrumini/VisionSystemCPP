@@ -74,6 +74,7 @@ EdgeLinePickMode pickModeFromRecipe(const QString& value)
 
   return EdgeLinePickMode::First;
 }
+
 }
 
 MainWindowGeometryModule::MainWindowGeometryModule(MainWindowContext& context)
@@ -160,35 +161,6 @@ void MainWindowGeometryModule::addGeometryLine(const CameraConfig& camera)
   line.hasLine = false;
   lines.append(line);
   m_activeLineIndexes[camera.id] = lines.size() - 1;
-}
-
-void MainWindowGeometryModule::removeActiveGeometryLine(const CameraConfig& camera)
-{
-  QVector<GeometryLineRuntimeConfig>& lines = m_lineConfigs[camera.id];
-  if (lines.isEmpty())
-  {
-    GeometryLineRuntimeConfig line;
-    line.id = "line_1";
-    lines.append(line);
-    m_activeLineIndexes[camera.id] = 0;
-    showGeometryLinePanel(camera);
-    return;
-  }
-
-  const int index = qBound(0, m_activeLineIndexes.value(camera.id, 0), lines.size() - 1);
-  lines.removeAt(index);
-  if (lines.isEmpty())
-  {
-    GeometryLineRuntimeConfig line;
-    line.id = "line_1";
-    lines.append(line);
-  }
-
-  m_activeLineIndexes[camera.id] = qBound(0, index, lines.size() - 1);
-  m_lineMouseControllers[camera.id].begin(activeGeometryLineConfig(camera.id).bandHalfWidth);
-  saveGeometryLinesRecipe(camera);
-  updateGeometryLineOverlay(camera);
-  showGeometryLinePanel(camera);
 }
 
 void MainWindowGeometryModule::loadGeometryPointRecipe(const CameraConfig& camera)
@@ -385,62 +357,6 @@ void MainWindowGeometryModule::addGeometryCircle(const CameraConfig& camera)
   circle.hasCircle = false;
   circles.append(circle);
   m_activeCircleIndexes[camera.id] = circles.size() - 1;
-}
-
-void MainWindowGeometryModule::removeActiveGeometryPoint(const CameraConfig& camera)
-{
-  QVector<GeometryPointRuntimeConfig>& points = m_pointConfigs[camera.id];
-  if (points.isEmpty())
-  {
-    GeometryPointRuntimeConfig point;
-    point.id = "point_1";
-    points.append(point);
-    m_activePointIndexes[camera.id] = 0;
-    showGeometryPointPanel(camera);
-    return;
-  }
-
-  const int index = qBound(0, m_activePointIndexes.value(camera.id, 0), points.size() - 1);
-  points.removeAt(index);
-  if (points.isEmpty())
-  {
-    GeometryPointRuntimeConfig point;
-    point.id = "point_1";
-    points.append(point);
-  }
-
-  m_activePointIndexes[camera.id] = qBound(0, index, points.size() - 1);
-  m_pointMouseControllers[camera.id].begin(3.0);
-  saveGeometryPointRecipe(camera);
-  updateGeometryPointOverlay(camera);
-  showGeometryPointPanel(camera);
-}
-
-void MainWindowGeometryModule::removeActiveGeometryCircle(const CameraConfig& camera)
-{
-  QVector<GeometryCircleRuntimeConfig>& circles = m_circleConfigs[camera.id];
-  if (circles.isEmpty())
-  {
-    GeometryCircleRuntimeConfig circle;
-    circle.id = "circle_1";
-    circles.append(circle);
-    m_activeCircleIndexes[camera.id] = 0;
-    showGeometryCirclePanel(camera);
-    return;
-  }
-
-  const int index = qBound(0, m_activeCircleIndexes.value(camera.id, 0), circles.size() - 1);
-  circles.removeAt(index);
-  if (circles.isEmpty())
-  {
-    GeometryCircleRuntimeConfig circle;
-    circle.id = "circle_1";
-    circles.append(circle);
-  }
-
-  m_activeCircleIndexes[camera.id] = qBound(0, index, circles.size() - 1);
-  saveGeometryCirclesRecipe(camera);
-  showGeometryCirclePanel(camera);
 }
 
 GeometryPointRuntimeConfig& MainWindowGeometryModule::activeGeometryPointConfig(const QString& cameraId)

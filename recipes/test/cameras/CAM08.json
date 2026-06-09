@@ -283,6 +283,24 @@
                     "transition": "light_to_dark",
                     "type": "edge_point",
                     "useSubpixel": true
+                },
+                {
+                    "coordinateSpace": "part",
+                    "edgeSensitivity": 60,
+                    "enabled": true,
+                    "id": "point_2",
+                    "partEnd": {
+                        "x": 721.1108396544918,
+                        "y": 300.2093352832552
+                    },
+                    "partStart": {
+                        "x": 701.5552840989363,
+                        "y": 148.8197770503234
+                    },
+                    "pickMode": "first",
+                    "transition": "light_to_dark",
+                    "type": "edge_point",
+                    "useSubpixel": true
                 }
             ]
         },
@@ -440,6 +458,27 @@
                     "sourceAId": "line_1",
                     "sourceBId": "line_2",
                     "type": "line_line_angle"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_23",
+                    "sourceAId": "point_1",
+                    "sourceBId": "point_2",
+                    "type": "point_point_distance"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_24",
+                    "sourceAId": "point_1",
+                    "sourceBId": "point_2",
+                    "type": "point_point_distance"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_25",
+                    "sourceAId": "point_1",
+                    "sourceBId": "point_2",
+                    "type": "point_point_distance"
                 }
             ]
         },

@@ -1,11 +1,6 @@
 {
     "cameraId": "CAM02",
     "tools": {
-        "geometries": {
-            "enabled": true,
-            "lines": [
-            ]
-        },
         "localization": {
             "enabled": true,
             "exclusionRects": [

@@ -92,6 +92,8 @@ public:
   LineGeometryMouseController& pointMouseController(const QString& cameraId);
 
 private:
+  void removeMeasurementsForDeletedGeometry(const CameraConfig& camera, const QString& geometryId);
+
   DrawingTarget m_drawingTarget = DrawingTarget::None;
 
   QHash<QString, QVector<GeometryLineRuntimeConfig>> m_lineConfigs;

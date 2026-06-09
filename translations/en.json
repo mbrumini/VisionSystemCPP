@@ -4,6 +4,7 @@
     "selectRecipe": "Select recipe",
     "newRecipe": "New recipe",
     "duplicateRecipe": "Duplicate recipe",
+    "deleteRecipe": "Delete recipe",
     "importRecipe": "Import recipe",
     "exportRecipe": "Export recipe",
     "configurations": "Configurations",
@@ -154,6 +155,7 @@
     "toolPanel": "Tool panel",
     "activeRecipe": "Active recipe",
     "recipeExported": "Recipe exported",
+    "recipeDeleted": "Recipe deleted",
     "localizationRoiDrawing": "Draw localization AOE",
     "localizationRoiSaved": "Localization AOE saved",
     "localizationExclusionDrawing": "Draw localization exclusion",
@@ -274,6 +276,8 @@
   },
   "messages": {
     "noRecipes": "No recipes available.",
+    "cannotDeleteLastRecipe": "Cannot delete the last available recipe.",
+    "confirmDeleteRecipe": "Permanently delete recipe \"%1\"?",
     "helpPlaceholder": "HELP manual\n\nThis window is ready to show help files.\n\nNext step:\n- create small text files in docs/help/en/\n- document commands, setup, camera controls, edge detection, measurements and tolerances\n- use these contents as the base manual and local assistant knowledge."
   },
   "help": {

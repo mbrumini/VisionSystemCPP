@@ -24,6 +24,8 @@ add_executable(VisionSystemCPP
     src/config/AppConfig.cpp
     src/config/RecipeManager.h
     src/config/RecipeManager.cpp
+    src/config/RecipeDeletion.h
+    src/config/RecipeDeletion.cpp
     src/config/RecipeManagerGeometry.cpp
     src/config/RecipeManagerMeasurement.cpp
     src/config/RecipeManagerStorage.cpp
@@ -88,6 +90,7 @@ add_executable(VisionSystemCPP
     src/gui/modules/MainWindowConstructedGeometryRecipe.cpp
     src/gui/modules/MainWindowImagingModule.cpp
     src/gui/modules/MainWindowRecipeModule.cpp
+    src/gui/modules/MainWindowRecipeModule_Delete.cpp
     src/gui/modules/MainWindowLocalizationModule.cpp
     src/gui/modules/MainWindowMeasurementModule.h
     src/gui/modules/MainWindowMeasurementModule.cpp
@@ -96,6 +99,7 @@ add_executable(VisionSystemCPP
     src/gui/modules/MainWindowMeasurementRecipe.cpp
     src/gui/modules/MainWindowGeometryModule.h
     src/gui/modules/geometry/MainWindowGeometryModule_Recipe.cpp
+    src/gui/modules/geometry/MainWindowGeometryModule_Delete.cpp
     src/gui/modules/geometry/GeometryToolPanels.cpp
     src/gui/modules/geometry/GeometryRuntimeModule.cpp
     src/gui/modules/geometry/MainWindowGeometryModule_ArcPanels.cpp

@@ -75,6 +75,7 @@
 - [ ] Collegare misure future, controlli superficie e AI alla posa corrente invece che alle sole coordinate pixel assolute.
 - [ ] Gestire il caso posa non valida: blocco tool dipendenti, risultato NOK o stato di allarme configurabile.
 - [ ] Aggiungere sub localizzazione relativa: dopo una localizzazione primaria su shape simmetrico, permettere una seconda ricerca dentro la posa trovata per agganciare dettagli asimmetrici, per esempio un foro non simmetrico, e risolvere ambiguita' di orientamento/posizione.
+- [ ] Aggiungere localizzazione pezzi cilindrici/gambi vite: rilevare due bordi paralleli del gambo, calcolare asse centrale, diametro/spessore, angolo, estremita' e riferimenti longitudinali; usare l'asse come posa pezzo per misure successive, controlli filettatura, fase, ammaccature e profilo.
 
 ## Geometrie e misure
 
@@ -133,6 +134,51 @@
 - [x] Geometrie calcolate: tangente a cerchio.
 - [x] Geometrie calcolate: proiezione punto su linea o altra geometria compatibile.
 - [x] Salvare/ricaricare la configurazione delle geometrie calcolate in ricetta camera.
+- [ ] IMPORTANTE: aggiungere tool `Filettature` con rilevamento e misure dedicate: diametro interno/esterno o maggiore/minore, passo filetto, cresta e fondo filetto, angolo profilo, profondita'/altezza filetto, numero creste/gole, presenza filetto, posizione rispetto a riferimenti, tolleranze OK/NOK e diagnostica overlay. Includere controlli su fase/smussi di ingresso, ammaccature o schiacciamenti del filetto/bordo, bave, profilo completo del filetto, continuita' del profilo e confronto con profilo campione/master. Prevedere uso su profilo BN/silhouette e, dove possibile, su superficie con illuminazione adeguata.
+
+## Misure reali e calibrazione
+
+- [x] Imbastire moduli base per calibrazione e misure reali, senza collegarli ancora alla GUI/pipeline.
+- [ ] Implementare acquisizione pattern calibrazione per camera: scatto singolo, lista frame accettati/scartati e salvataggio immagini pattern.
+- [ ] Implementare detector pattern calibrazione: checkerboard, dot grid/circle grid, pattern custom.
+- [ ] Calcolare modello calibrazione camera: pixel/mm, origine, rotazione e futura mappa distorsione.
+- [ ] Salvare/ricaricare calibrazione nella ricetta camera.
+- [ ] Convertire `MeasurementResult` pixel in risultati reali: mm/gradi, unita' display, esito.
+- [ ] Implementare tolleranze nominale/min/max per misura.
+- [ ] Collegare esito misura OK/NOK a overview, camera strip e futuro IO.
+- [ ] Aggiungere pannello GUI calibrazione solo dopo aver validato modello dati e formato ricetta.
+
+### Registro moduli creati
+
+- [x] `src/calibration/CalibrationTypes.h`: tipi base pattern, frame calibrazione e modello camera.
+- [x] `src/calibration/CalibrationPatternDetector.*`: interfaccia detector pattern; implementazione placeholder.
+- [x] `src/calibration/CalibrationSession.*`: sessione acquisizione pattern per camera.
+- [x] `src/calibration/ImageCalibrationMap.*`: mappa immagine <-> mondo mm; implementazione placeholder.
+- [x] `src/calibration/CalibrationRecipe.*`: persistenza calibrazione in ricetta; implementazione placeholder.
+- [x] `src/measurement/RealMeasurementTypes.h`: tipi per unita', tolleranze, esito e risultato reale.
+- [x] `src/measurement/MeasurementUnitConverter.*`: conversione risultato pixel -> reale; implementazione placeholder.
+- [x] `src/measurement/MeasurementToleranceEvaluator.*`: valutazione OK/NOK; implementazione placeholder.
+
+## Livelli di accesso
+
+- [x] Imbastire moduli base per ruoli, permessi e sessione utente, senza applicarli ancora alla GUI.
+- [ ] Definire matrice permessi definitiva per Viewer/Operatore/Supervisore/Admin/Guru.
+- [x] Aggiungere voce `Sistema > Accedi` con dialog password.
+- [ ] Aggiungere logout o selezione livello con PIN/password configurabili.
+- [x] Inserire backdoor Guru residente nel codice e non configurabile dall'exe.
+- [ ] Persistenza utenti/livelli configurabili da exe: Operatore, Supervisore, Admin.
+- [ ] Escludere sempre la backdoor dai file utenti/livelli configurabili.
+- [ ] Applicare permessi ai comandi HMI: start/stop, setup, geometrie, misure, calibrazione, ricette, sorgenti camera, sistema.
+- [ ] Rendere visibile in toolbar il livello utente corrente.
+- [ ] Loggare cambi livello e tentativi di accesso negati.
+
+### Registro moduli accesso creati
+
+- [x] `src/access/AccessTypes.*`: ruoli, permessi e utente.
+- [x] `src/access/AccessPolicy.*`: regole base ruolo -> permesso.
+- [x] `src/access/AccessSession.*`: sessione utente corrente e verifica permessi.
+- [x] `src/access/AccessSession::authenticateBackdoor`: accesso Guru residente nel codice con password dedicata.
+- [x] `src/access/AccessRecipe.*`: persistenza utenti/livelli configurabili da exe; implementazione placeholder.
 
 
 ## Ricette

@@ -4,6 +4,7 @@
     "selectRecipe": "Seleziona ricetta",
     "newRecipe": "Nuova ricetta",
     "duplicateRecipe": "Duplica ricetta",
+    "deleteRecipe": "Elimina ricetta",
     "importRecipe": "Importa ricetta",
     "exportRecipe": "Esporta ricetta",
     "configurations": "Configurazioni",
@@ -154,6 +155,7 @@
     "toolPanel": "Pannello tool",
     "activeRecipe": "Ricetta attiva",
     "recipeExported": "Ricetta esportata",
+    "recipeDeleted": "Ricetta eliminata",
     "localizationRoiDrawing": "Disegna AOE localizzazione",
     "localizationRoiSaved": "AOE localizzazione salvata",
     "localizationExclusionDrawing": "Disegna esclusione localizzazione",
@@ -274,6 +276,8 @@
   },
   "messages": {
     "noRecipes": "Nessuna ricetta disponibile.",
+    "cannotDeleteLastRecipe": "Impossibile eliminare l'ultima ricetta disponibile.",
+    "confirmDeleteRecipe": "Eliminare definitivamente la ricetta \"%1\"?",
     "helpPlaceholder": "Manuale HELP\n\nQuesta finestra e' pronta per mostrare i file di aiuto.\n\nProssimo passo:\n- creare piccoli file di testo in docs/help/it/\n- descrivere comandi, setup, controlli telecamere, edge, misure e tolleranze\n- usare questi contenuti come base per il manuale e per l'assistente locale."
   },
   "help": {

@@ -262,27 +262,6 @@ void MainWindowGeometryModule::addGeometryArc(const CameraConfig& camera)
   m_activeArcIndexes[camera.id] = arcs.size() - 1;
 }
 
-void MainWindowGeometryModule::removeActiveGeometryArc(const CameraConfig& camera)
-{
-  QVector<GeometryArcRuntimeConfig>& arcs = m_arcConfigs[camera.id];
-  if (arcs.isEmpty())
-  {
-    return;
-  }
-
-  const int index = qBound(0, m_activeArcIndexes.value(camera.id, 0), arcs.size() - 1);
-  arcs.removeAt(index);
-  if (arcs.isEmpty())
-  {
-    GeometryArcRuntimeConfig arc;
-    arc.id = "arc_1";
-    arcs.append(arc);
-  }
-  m_activeArcIndexes[camera.id] = qBound(0, index, arcs.size() - 1);
-  saveGeometryArcsRecipe(camera);
-  showGeometryArcPanel(camera);
-}
-
 GeometryArcRuntimeConfig& MainWindowGeometryModule::activeGeometryArcConfig(const QString& cameraId)
 {
   QVector<GeometryArcRuntimeConfig>& arcs = m_arcConfigs[cameraId];

@@ -14,6 +14,7 @@ public:
   void selectRecipe();
   void createRecipe();
   void duplicateRecipe();
+  void deleteRecipe();
   void importRecipe();
   void exportRecipe();
   void ensureRecipeCameraFolders();

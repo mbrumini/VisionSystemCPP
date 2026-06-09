@@ -14,6 +14,10 @@
                 "factor": 0.5,
                 "offset": 0
             }
+        },
+        "surfaceLocalization": {
+            "enabled": true,
+            "method": "threshold"
         }
     }
 }
