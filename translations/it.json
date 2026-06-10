@@ -24,6 +24,7 @@
     "toggleFullScreen": "Fullscreen / finestra",
     "fullScreen": "Fullscreen",
     "maximized": "Finestra massimizzata",
+    "setMaxThreads": "Imposta thread massimi",
     "login": "Accedi",
     "help": "HELP",
     "exit": "Esci",
@@ -127,7 +128,23 @@
     "sourcePoint": "Punto",
     "sourcePointA": "Punto A",
     "sourcePointB": "Punto B",
-    "offsetPixels": "Offset px"
+    "offsetPixels": "Offset px",
+    "productionOverview": "Overview produzione",
+    "productionOverviewDetails": "Overview produzione: misure aggregate di tutte le telecamere attive.",
+    "productionStats": "Statistiche produzione",
+    "activeCamerasCount": "Telecamere attive",
+    "busyCamerasCount": "Telecamere occupate",
+    "readyCamerasCount": "Telecamere pronte",
+    "machineMode": "Modalita'",
+    "cameraMonitoring": "Monitoraggio camera",
+    "machineStartReadOnly": "Macchina in START: immagine, overlay e misure sono consultabili; setup, geometrie, misure e parametri non sono modificabili.",
+    "cameraState": "Stato camera",
+    "pendingFrames": "Frame pending",
+    "lastScan": "Ultimo scan",
+    "maxThreads": "Thread massimi (0 = automatico)"
+  },
+  "surfaceModel": {
+    "missing": "Modello superficie mancante"
   },
   "strategies": {
     "threshold": "Soglia",
@@ -231,6 +248,7 @@
     "geometryPointFound": "Punto trovato",
     "detailedLogEnabled": "Log dettagliato attivo",
     "detailedLogDisabled": "Log dettagliato disattivato",
+    "threadLimitSet": "Limite thread impostato",
     "constructedGeometryPanel": "Pannello geometrie calcolate",
     "constructedGeometryAction": "Geometria calcolata",
     "constructedLineIntersectionMissing": "Intersezione linee non disponibile: servono almeno 2 linee trovate",
@@ -272,7 +290,8 @@
     "measurementLineAngleMissing": "Misura angolo non disponibile: scegli 2 linee distinte trovate",
     "measurementLineAngleInvalid": "Misura angolo non disponibile: linee non valide",
     "measurementLineAngleCreated": "Angolo linea-linea creato",
-    "measurementRecipeSaveFailed": "Salvataggio misura fallito"
+    "measurementRecipeSaveFailed": "Salvataggio misura fallito",
+    "startReadOnly": "START: pannelli modifica disabilitati"
   },
   "messages": {
     "noRecipes": "Nessuna ricetta disponibile.",

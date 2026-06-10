@@ -24,6 +24,7 @@
     "toggleFullScreen": "Fullscreen / window",
     "fullScreen": "Fullscreen",
     "maximized": "Maximized window",
+    "setMaxThreads": "Set max threads",
     "login": "Login",
     "help": "HELP",
     "exit": "Exit",
@@ -127,7 +128,23 @@
     "sourcePoint": "Point",
     "sourcePointA": "Point A",
     "sourcePointB": "Point B",
-    "offsetPixels": "Offset px"
+    "offsetPixels": "Offset px",
+    "productionOverview": "Production overview",
+    "productionOverviewDetails": "Production overview: aggregate measurements from all active cameras.",
+    "productionStats": "Production statistics",
+    "activeCamerasCount": "Active cameras",
+    "busyCamerasCount": "Busy cameras",
+    "readyCamerasCount": "Ready cameras",
+    "machineMode": "Mode",
+    "cameraMonitoring": "Camera monitoring",
+    "machineStartReadOnly": "Machine in START: image, overlay and measurements are available; setup, geometries, measurements and parameters cannot be edited.",
+    "cameraState": "Camera state",
+    "pendingFrames": "Pending frames",
+    "lastScan": "Last scan",
+    "maxThreads": "Max threads (0 = automatic)"
+  },
+  "surfaceModel": {
+    "missing": "Surface model missing"
   },
   "strategies": {
     "threshold": "Threshold",
@@ -231,6 +248,7 @@
     "geometryPointFound": "Point found",
     "detailedLogEnabled": "Detailed log enabled",
     "detailedLogDisabled": "Detailed log disabled",
+    "threadLimitSet": "Thread limit set",
     "constructedGeometryPanel": "Constructed geometries panel",
     "constructedGeometryAction": "Constructed geometry",
     "constructedLineIntersectionMissing": "Line intersection unavailable: at least 2 found lines are required",
@@ -272,7 +290,8 @@
     "measurementLineAngleMissing": "Angle measurement unavailable: choose 2 distinct found lines",
     "measurementLineAngleInvalid": "Angle measurement unavailable: invalid lines",
     "measurementLineAngleCreated": "Line-line angle created",
-    "measurementRecipeSaveFailed": "Measurement save failed"
+    "measurementRecipeSaveFailed": "Measurement save failed",
+    "startReadOnly": "START: edit panels disabled"
   },
   "messages": {
     "noRecipes": "No recipes available.",
@@ -319,6 +338,7 @@
     "frameResults": "Frame results",
     "pointGeometry": "Point",
     "lineGeometry": "Line",
+    "newGeometryPoint": "New point",
     "deleteGeometryPoint": "Delete point",
     "newGeometryLine": "New line",
     "deleteGeometryLine": "Delete line",

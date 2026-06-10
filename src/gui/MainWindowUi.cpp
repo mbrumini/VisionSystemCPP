@@ -593,7 +593,7 @@ void MainWindow::buildUi()
     }
     if (m_machineRunning)
     {
-      appendLog("START: pannelli modifica disabilitati");
+      appendLog(trText("log.startReadOnly"));
       updateControlPanel(&m_selectedCamera);
       return;
     }
@@ -845,7 +845,7 @@ void MainWindow::showGridView()
   m_selectedCamera = {};
   m_selectedPreview = {};
   m_selectedImagePath.clear();
-  m_largeTitle->setText("Overview produzione");
+  m_largeTitle->setText(trText("labels.productionOverview"));
   m_largeImage->clearImage();
   m_largeImage->clearRoi();
   m_largeImage->clearExclusionRects();
@@ -983,7 +983,7 @@ void MainWindow::updateControlPanel(const CameraConfig* camera)
     {
       m_measurementResults->show();
     }
-    m_cameraDetails->setText("Overview produzione: misure aggregate di tutte le telecamere attive.");
+    m_cameraDetails->setText(trText("labels.productionOverviewDetails"));
     if (m_toolIconBar)
     {
       m_toolIconBar->setTools({});
@@ -998,16 +998,20 @@ void MainWindow::updateControlPanel(const CameraConfig* camera)
       }
     }
 
-    auto* title = new QLabel("Statistiche produzione", m_toolsContainer);
+    auto* title = new QLabel(trText("labels.productionStats"), m_toolsContainer);
     title->setObjectName("toolPanelTitle");
     title->setWordWrap(true);
     m_toolsLayout->addWidget(title);
 
     auto* stats = new QLabel(
-      QString("Telecamere attive: %1\nTelecamere occupate: %2\nTelecamere pronte: %3\nModalita: %4")
+      QString("%1: %2\n%3: %4\n%5: %6\n%7: %8")
+        .arg(trText("labels.activeCamerasCount"))
         .arg(activeCameras.size())
+        .arg(trText("labels.busyCamerasCount"))
         .arg(busyCount)
+        .arg(trText("labels.readyCamerasCount"))
         .arg(qMax(0, activeCameras.size() - busyCount))
+        .arg(trText("labels.machineMode"))
         .arg(m_machineRunning ? "START" : "STOP"),
       m_toolsContainer);
     stats->setObjectName("toolPanelNote");
@@ -1034,19 +1038,22 @@ void MainWindow::updateControlPanel(const CameraConfig* camera)
     {
       m_toolIconBar->setTools({});
     }
-    auto* title = new QLabel("Monitoraggio camera", m_toolsContainer);
+    auto* title = new QLabel(trText("labels.cameraMonitoring"), m_toolsContainer);
     title->setObjectName("toolPanelTitle");
     title->setWordWrap(true);
     m_toolsLayout->addWidget(title);
-    auto* note = new QLabel("Macchina in START: immagine, overlay e misure sono consultabili; setup, geometrie, misure e parametri non sono modificabili.", m_toolsContainer);
+    auto* note = new QLabel(trText("labels.machineStartReadOnly"), m_toolsContainer);
     note->setObjectName("toolPanelNote");
     note->setWordWrap(true);
     m_toolsLayout->addWidget(note);
     const bool busy = m_cameraProcessingBusy.value(camera->id, false);
     auto* stats = new QLabel(
-      QString("Stato camera: %1\nFrame pending: %2\nUltimo scan: %3 ms")
+      QString("%1: %2\n%3: %4\n%5: %6 ms")
+        .arg(trText("labels.cameraState"))
         .arg(busy ? "BUSY" : "READY")
+        .arg(trText("labels.pendingFrames"))
         .arg(m_cameraPendingJobs.value(camera->id, 0))
+        .arg(trText("labels.lastScan"))
         .arg(m_lastSetupScanElapsedMs.value(camera->id, 0)),
       m_toolsContainer);
     stats->setObjectName("toolPanelNote");

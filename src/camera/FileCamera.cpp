@@ -2,7 +2,6 @@
 
 #include <opencv2/imgcodecs.hpp>
 #include <algorithm>
-#include <iostream>
 
 FileCamera::FileCamera(const std::string& folderPath, bool loop)
   : m_folderPath(folderPath), m_loop(loop)
@@ -16,7 +15,6 @@ bool FileCamera::open()
 
   if (!std::filesystem::exists(m_folderPath))
   {
-    std::cerr << "Cartella non trovata: " << m_folderPath << std::endl;
     return false;
   }
 
@@ -32,11 +30,9 @@ bool FileCamera::open()
 
   if (m_images.empty())
   {
-    std::cerr << "Nessuna immagine trovata in: " << m_folderPath << std::endl;
     return false;
   }
 
-  std::cout << "Immagini caricate: " << m_images.size() << std::endl;
   return true;
 }
 
@@ -63,11 +59,8 @@ bool FileCamera::getFrame(cv::Mat& frame)
 
   if (frame.empty())
   {
-    std::cerr << "Errore lettura immagine: " << imagePath << std::endl;
     return false;
   }
-
-  std::cout << "Frame: " << imagePath.filename().string() << std::endl;
 
   m_currentIndex++;
   return true;
