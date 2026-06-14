@@ -15,7 +15,13 @@
 
 #include <QApplication>
 #include <QElapsedTimer>
+#include <QGridLayout>
+#include <QInputDialog>
+#include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
+#include <QTimer>
+#include <QVBoxLayout>
 
 #include <opencv2/core.hpp>
 
@@ -55,6 +61,7 @@ void MainWindowSetupModule::showCameraSetupPanel(const CameraConfig& camera)
   texts.details = cameraSetupDetailsText(camera);
   texts.frameInterval = tr("labels.frameInterval");
   texts.acquireSample = tr("actions.acquireSampleImage");
+  texts.acquireAiSample = tr("tools.ai");
   texts.importSample = tr("actions.assignSampleImage");
   texts.showSample = tr("labels.sampleImage");
   texts.importTests = tr("actions.assignTestImages");
@@ -83,6 +90,7 @@ void MainWindowSetupModule::showCameraSetupPanel(const CameraConfig& camera)
       }
     },
     [this, camera]() { context().cameraConfig->acquireCameraSampleImage(camera); },
+    [this, camera]() { showAiPanel(camera); },
     [this, camera]() { context().cameraConfig->configureCameraSampleImage(camera); },
     [this, camera]() { showCameraSampleImage(camera); },
     [this, camera]() { context().cameraConfig->configureCameraTestImages(camera); },
@@ -141,6 +149,18 @@ void MainWindowSetupModule::showToolPanel(const CameraConfig& camera, const QStr
   if (toolId == "measurements")
   {
     context().measurement->showMeasurementPanel(camera);
+    return;
+  }
+
+  if (toolId == "ai")
+  {
+    showAiPanel(camera);
+    return;
+  }
+
+  if (toolId == "aiClassification")
+  {
+    showAiClassificationPanel(camera);
     return;
   }
 
@@ -270,6 +290,184 @@ void MainWindowSetupModule::showToolPanel(const CameraConfig& camera, const QStr
   log(tr("log.toolPanel") + ": " + tool.label);
 }
 
+void MainWindowSetupModule::showAiClassificationPanel(const CameraConfig& camera)
+{
+  context().deactivateImageDrawingTools();
+  context().clearToolPanel();
+
+  auto* panel = new QWidget(toolsContainer());
+  auto* layout = new QVBoxLayout(panel);
+  layout->setContentsMargins(0, 0, 0, 0);
+  layout->setSpacing(8);
+
+  auto* title = new QLabel(QString("%1 | %2").arg(tr("tools.aiClassification"), camera.id), panel);
+  title->setObjectName("toolPanelTitle");
+  title->setWordWrap(true);
+  layout->addWidget(title);
+
+  auto* note = new QLabel(tr("labels.aiClassificationNote"), panel);
+  note->setObjectName("toolPanelNote");
+  note->setWordWrap(true);
+  layout->addWidget(note);
+
+  auto* buttons = new QWidget(panel);
+  auto* buttonsLayout = new QGridLayout(buttons);
+  buttonsLayout->setContentsMargins(0, 0, 0, 0);
+  buttonsLayout->setSpacing(6);
+
+  auto* rawButton = new QPushButton(tr("actions.acquireAiRawImage") + " 1 shot", buttons);
+  rawButton->setObjectName("touchButton");
+  QObject::connect(rawButton, &QPushButton::clicked, window(), [this, camera]() {
+    context().cameraConfig->acquireCameraAiClassificationRawImage(camera);
+  });
+  buttonsLayout->addWidget(rawButton, 0, 0);
+
+  auto* rawPlayButton = new QPushButton(tr("commands.start") + " raw", buttons);
+  rawPlayButton->setObjectName("touchButton");
+  QObject::connect(rawPlayButton, &QPushButton::clicked, window(), [this, camera]() {
+    startAiClassificationCapture(camera, false);
+  });
+  buttonsLayout->addWidget(rawPlayButton, 0, 1);
+
+  auto* stopCaptureButton = new QPushButton(tr("commands.stop"), buttons);
+  stopCaptureButton->setObjectName("touchButton");
+  QObject::connect(stopCaptureButton, &QPushButton::clicked, window(), [this]() {
+    stopAiClassificationCapture();
+  });
+  buttonsLayout->addWidget(stopCaptureButton, 0, 2);
+
+  auto* addClassButton = new QPushButton(tr("actions.addAiClass"), buttons);
+  addClassButton->setObjectName("touchButton");
+  QObject::connect(addClassButton, &QPushButton::clicked, window(), [this, camera]() {
+    bool ok = false;
+    const QString className = QInputDialog::getText(
+      window(),
+      tr("actions.addAiClass"),
+      tr("labels.aiClassName"),
+      QLineEdit::Normal,
+      {},
+      &ok).trimmed();
+    if (!ok || className.isEmpty())
+    {
+      return;
+    }
+
+    QString error;
+    if (!recipes().addAiClassificationClass(camera.id, className, nullptr, &error))
+    {
+      log(error);
+      return;
+    }
+
+    showAiClassificationPanel(camera);
+  });
+  buttonsLayout->addWidget(addClassButton, 0, 3);
+
+  auto* prepareDatasetButton = new QPushButton(tr("actions.prepareAiDataset"), buttons);
+  prepareDatasetButton->setObjectName("touchButton");
+  QObject::connect(prepareDatasetButton, &QPushButton::clicked, window(), [this, camera]() {
+    prepareAiClassificationDataset(camera);
+  });
+  buttonsLayout->addWidget(prepareDatasetButton, 1, 0, 1, 2);
+
+  auto* trainButton = new QPushButton(tr("actions.trainAiModel") + " GPU", buttons);
+  trainButton->setObjectName("touchButton");
+  QObject::connect(trainButton, &QPushButton::clicked, window(), [this, camera]() {
+    startAiClassificationTraining(camera);
+  });
+  buttonsLayout->addWidget(trainButton, 1, 2, 1, 2);
+
+  const QVector<AiClassificationClassConfig> classes = recipes().loadAiClassificationClasses(camera.id);
+  int index = 0;
+  for (const AiClassificationClassConfig& classConfig : classes)
+  {
+    auto* classButton = new QPushButton(
+      QString("%1 - %2 1 shot").arg(classConfig.id, 3, 10, QChar('0')).arg(classConfig.name),
+      buttons);
+    classButton->setObjectName("touchButton");
+    QObject::connect(classButton, &QPushButton::clicked, window(), [this, camera, classConfig]() {
+      context().cameraConfig->acquireCameraAiClassificationClassImage(camera, classConfig);
+    });
+    auto* classPlayButton = new QPushButton(
+      QString("%1 %2").arg(tr("commands.start"), classConfig.name),
+      buttons);
+    classPlayButton->setObjectName("touchButton");
+    QObject::connect(classPlayButton, &QPushButton::clicked, window(), [this, camera, classConfig]() {
+      startAiClassificationCapture(camera, true, classConfig);
+    });
+    buttonsLayout->addWidget(classButton, 2 + index, 0, 1, 2);
+    buttonsLayout->addWidget(classPlayButton, 2 + index, 2, 1, 2);
+    ++index;
+  }
+
+  layout->addWidget(buttons);
+
+  auto* backButton = new QPushButton(tr("commands.backToCameraTools"), panel);
+  backButton->setObjectName("touchButton");
+  QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() {
+    showAiPanel(camera);
+  });
+  layout->addWidget(backButton);
+  layout->addStretch(1);
+
+  toolsLayout()->addWidget(panel);
+  log(tr("log.toolPanel") + ": " + tr("tools.aiClassification"));
+}
+
+void MainWindowSetupModule::startAiClassificationCapture(
+  const CameraConfig& camera,
+  bool toClass,
+  const AiClassificationClassConfig& classConfig)
+{
+  if (!m_aiClassificationCaptureTimer)
+  {
+    m_aiClassificationCaptureTimer = new QTimer(window());
+    QObject::connect(m_aiClassificationCaptureTimer, &QTimer::timeout, window(), [this]() {
+      captureAiClassificationFrame();
+    });
+  }
+
+  m_aiClassificationCaptureCameraId = camera.id;
+  m_aiClassificationCaptureToClass = toClass;
+  m_aiClassificationCaptureClass = classConfig;
+
+  startCameraSimulation(camera, false);
+  const int intervalMs = qMax(50, cameraRuntime()[camera.id].intervalMs());
+  m_aiClassificationCaptureTimer->start(intervalMs);
+  captureAiClassificationFrame();
+  log(QString("%1: %2 %3")
+        .arg(tr("log.aiCaptureStarted"))
+        .arg(camera.id)
+        .arg(toClass ? classConfig.name : QStringLiteral("raw")));
+}
+
+void MainWindowSetupModule::stopAiClassificationCapture()
+{
+  if (m_aiClassificationCaptureTimer)
+  {
+    m_aiClassificationCaptureTimer->stop();
+  }
+  log(tr("log.aiCaptureStopped"));
+}
+
+void MainWindowSetupModule::captureAiClassificationFrame()
+{
+  if (m_aiClassificationCaptureCameraId.isEmpty() ||
+      selectedCameraId() != m_aiClassificationCaptureCameraId)
+  {
+    stopAiClassificationCapture();
+    return;
+  }
+
+  if (m_aiClassificationCaptureToClass)
+  {
+    context().cameraConfig->acquireCameraAiClassificationClassImage(selectedCamera(), m_aiClassificationCaptureClass);
+    return;
+  }
+
+  context().cameraConfig->acquireCameraAiClassificationRawImage(selectedCamera());
+}
+
 void MainWindowSetupModule::startCameraSimulation(const CameraConfig& camera, bool refreshSetupPanel)
 {
   if (camera.id != selectedCamera().id)
@@ -308,6 +506,11 @@ void MainWindowSetupModule::startCameraSimulation(const CameraConfig& camera, bo
 
 void MainWindowSetupModule::stopCameraSimulation(const CameraConfig& camera, bool refreshSetupPanel)
 {
+  if (m_aiClassificationCaptureCameraId == camera.id)
+  {
+    stopAiClassificationCapture();
+  }
+
   CameraRuntime& runtime = cameraRuntime()[camera.id];
   runtime.stop();
 
@@ -440,23 +643,36 @@ void MainWindowSetupModule::processCurrentCameraFrame(const CameraConfig& camera
     return;
   }
 
+  if (annulus.method == "edgePca")
+  {
+    if (recipes().loadSurfaceDefectRoi(camera.id, roi) || recipes().loadSurfaceDefectPolygon(camera.id).size() >= 3)
+    {
+      log(QString("pipeline surface edge pca begin: %1 method=%2").arg(camera.id, annulus.method));
+      context().surface->testSurfaceEdgePcaLocalization(camera);
+      return;
+    }
+    log(QString("pipeline surface edge pca missing area: %1").arg(camera.id));
+    return;
+  }
+
+  if (annulus.method == "model")
+  {
+    const SurfaceModelConfig model = recipes().loadSurfaceModel(camera.id);
+    if (model.hasModel)
+    {
+      log(QString("pipeline surface model begin: %1").arg(camera.id));
+      context().surface->testSurfaceShapeModel(camera);
+      return;
+    }
+    log(QString("pipeline surface model missing setup: %1").arg(camera.id));
+    return;
+  }
+
   if ((annulus.method == "edge" && annulus.hasEdgeCircle && annulus.edgeRadius > annulus.edgeBandInner) ||
       (annulus.method == "threshold" && annulus.hasOuterCircle && annulus.hasInnerCircle && annulus.outerRadius > annulus.innerRadius))
   {
     log(QString("pipeline surface localization begin: %1 method=%2").arg(camera.id, annulus.method));
     context().surface->testSurfaceAnnulusLocalization(camera);
-    return;
-  }
-
-  if (recipes().loadSurfaceDefectRoi(camera.id, roi))
-  {
-    log(QString("pipeline surface pca begin: %1 roi=%2,%3 %4x%5")
-          .arg(camera.id)
-          .arg(roi.x())
-          .arg(roi.y())
-          .arg(roi.width())
-          .arg(roi.height()));
-    context().surface->testSurfaceEdgePcaLocalization(camera);
     return;
   }
 
@@ -519,16 +735,28 @@ void MainWindowSetupModule::refreshPoseForCurrentFrame(const CameraConfig& camer
     return;
   }
 
+  if (annulus.method == "edgePca")
+  {
+    if (recipes().loadSurfaceDefectRoi(camera.id, roi) || recipes().loadSurfaceDefectPolygon(camera.id).size() >= 3)
+    {
+      context().surface->testSurfaceEdgePcaLocalization(camera);
+    }
+    return;
+  }
+
+  if (annulus.method == "model")
+  {
+    if (recipes().loadSurfaceModel(camera.id).hasModel)
+    {
+      context().surface->testSurfaceShapeModel(camera);
+    }
+    return;
+  }
+
   if ((annulus.method == "edge" && annulus.hasEdgeCircle && annulus.edgeRadius > annulus.edgeBandInner) ||
       (annulus.method == "threshold" && annulus.hasOuterCircle && annulus.hasInnerCircle && annulus.outerRadius > annulus.innerRadius))
   {
     context().surface->testSurfaceAnnulusLocalization(camera);
-    return;
-  }
-
-  if (recipes().loadSurfaceDefectRoi(camera.id, roi))
-  {
-    context().surface->testSurfaceEdgePcaLocalization(camera);
     return;
   }
 

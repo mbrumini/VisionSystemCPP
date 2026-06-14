@@ -128,6 +128,12 @@ SurfaceLocalizationPanelWidget::SurfaceLocalizationPanelWidget(
       {
         handlers.clearExclusions();
       }
+    }},
+    {trText("actions.clearLocalization"), "clear", [handlers]() {
+      if (handlers.clearLocalization)
+      {
+        handlers.clearLocalization();
+      }
     }}
   };
 

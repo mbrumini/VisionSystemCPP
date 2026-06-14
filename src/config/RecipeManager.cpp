@@ -847,12 +847,11 @@ bool RecipeManager::clearSurfaceLocalizationGeometry(const QString& cameraId, QS
 
   QJsonObject tools = root.value("tools").toObject();
   QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
+  const QString method = surfaceLocalization.value("method").toString("threshold");
+  surfaceLocalization = QJsonObject();
+  surfaceLocalization["enabled"] = true;
+  surfaceLocalization["method"] = method;
   surfaceLocalization["exclusionRects"] = QJsonArray();
-  surfaceLocalization.remove("annulus");
-
-  QJsonObject edge = surfaceLocalization.value("edge").toObject();
-  edge.remove("circle");
-  surfaceLocalization["edge"] = edge;
 
   tools["surfaceLocalization"] = surfaceLocalization;
   root["tools"] = tools;

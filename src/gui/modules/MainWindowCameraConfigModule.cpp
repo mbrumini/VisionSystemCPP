@@ -8,6 +8,7 @@
 
 #include <QDir>
 #include <QFileDialog>
+#include <QDateTime>
 #include <QMessageBox>
 
 #include <opencv2/imgcodecs.hpp>
@@ -30,6 +31,17 @@ CameraConfig cameraById(const AppConfig& config, const QString& cameraId)
   }
 
   return {};
+}
+
+cv::Mat currentCameraFrameForSave(MainWindowContext& context, const CameraConfig& camera, QString* errorMessage)
+{
+  const auto runtimeIt = context.cameraRuntime->find(camera.id);
+  if (runtimeIt != context.cameraRuntime->end() && !runtimeIt->second.currentFrame().empty())
+  {
+    return runtimeIt->second.currentFrame().clone();
+  }
+
+  return context.imaging->currentInputImage(camera, errorMessage);
 }
 }
 
@@ -361,4 +373,90 @@ void MainWindowCameraConfigModule::acquireCameraSampleImage(const CameraConfig& 
   }
 
   log(QString("%1: %2").arg(tr("log.cameraSampleAcquired"), camera.id));
+}
+
+void MainWindowCameraConfigModule::acquireCameraAiSampleImage(const CameraConfig& camera)
+{
+  QString imageError;
+  const cv::Mat sample = currentCameraFrameForSave(context(), camera, &imageError);
+  if (sample.empty())
+  {
+    log(imageError);
+    return;
+  }
+
+  QString error;
+  if (!recipes().ensureCameraImageFolders(camera.id, &error))
+  {
+    QMessageBox::warning(window(), tr("actions.acquireAiSampleImage"), error);
+    return;
+  }
+
+  const QString stamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss_zzz");
+  const QString samplePath = QDir(recipes().cameraAiRawImagesPath(camera.id)).filePath(QString("%1_%2.png").arg(camera.id, stamp));
+  if (!cv::imwrite(samplePath.toStdString(), sample))
+  {
+    QMessageBox::warning(
+      window(),
+      tr("actions.acquireAiSampleImage"),
+      tr("log.cameraAiSampleAcquireFailed") + ": " + samplePath);
+    return;
+  }
+
+  log(QString("%1: %2 -> %3").arg(tr("log.cameraAiSampleAcquired"), camera.id, samplePath));
+}
+
+void MainWindowCameraConfigModule::acquireCameraAiClassificationRawImage(const CameraConfig& camera)
+{
+  QString imageError;
+  const cv::Mat sample = currentCameraFrameForSave(context(), camera, &imageError);
+  if (sample.empty())
+  {
+    log(imageError);
+    return;
+  }
+
+  QString error;
+  if (!recipes().ensureCameraImageFolders(camera.id, &error))
+  {
+    QMessageBox::warning(window(), tr("actions.acquireAiRawImage"), error);
+    return;
+  }
+
+  const QString folder = recipes().cameraAiClassificationRawImagesPath(camera.id);
+  QDir().mkpath(folder);
+  const QString stamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss_zzz");
+  const QString imagePath = QDir(folder).filePath(QString("%1_raw_%2.png").arg(camera.id, stamp));
+  if (!cv::imwrite(imagePath.toStdString(), sample))
+  {
+    QMessageBox::warning(window(), tr("actions.acquireAiRawImage"), tr("log.cameraAiSampleAcquireFailed") + ": " + imagePath);
+    return;
+  }
+
+  log(QString("%1: %2 -> %3").arg(tr("log.cameraAiRawAcquired"), camera.id, imagePath));
+}
+
+void MainWindowCameraConfigModule::acquireCameraAiClassificationClassImage(
+  const CameraConfig& camera,
+  const AiClassificationClassConfig& classConfig)
+{
+  QString imageError;
+  const cv::Mat sample = currentCameraFrameForSave(context(), camera, &imageError);
+  if (sample.empty())
+  {
+    log(imageError);
+    return;
+  }
+
+  const QString folder = recipes().cameraAiClassificationClassImagesPath(camera.id, classConfig);
+  QDir().mkpath(folder);
+  const QString stamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss_zzz");
+  const QString imagePath = QDir(folder).filePath(QString("%1_%2_%3.png").arg(camera.id).arg(classConfig.id, 3, 10, QChar('0')).arg(stamp));
+  if (!cv::imwrite(imagePath.toStdString(), sample))
+  {
+    QMessageBox::warning(window(), tr("actions.acquireAiClassImage"), tr("log.cameraAiSampleAcquireFailed") + ": " + imagePath);
+    return;
+  }
+
+  log(QString("%1: %2 class=%3 -> %4").arg(tr("log.cameraAiClassAcquired"), camera.id, classConfig.name, imagePath));
 }

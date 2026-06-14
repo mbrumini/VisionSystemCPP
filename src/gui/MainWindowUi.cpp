@@ -1224,6 +1224,7 @@ void MainWindow::showCameraToolList(const CameraConfig& camera)
   addTool("geometries");
   addTool("constructedGeometries");
   addTool("measurements");
+  addTool("ai");
   addTool("tolerances");
 
   for (const QString& tool : camera.profile.guiTools)

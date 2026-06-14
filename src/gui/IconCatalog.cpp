@@ -27,6 +27,7 @@ QColor iconColor(const QString& id)
   }
 
   if (id == "setup" || id == "camera" || id == "acquireSample" ||
+      id == "aiSample" || id == "aiTrain" ||
       id == "assignSampleImage" || id == "assignTestImages" ||
       id == "assignImageFolder" || id == "nextFrame" ||
       id == "start" || id == "stop" || id == "reload" ||
@@ -79,7 +80,9 @@ QColor iconColor(const QString& id)
       id == "configureStrategy" || id == "previewModel" ||
       id == "acquireModel" || id == "testShapeModel" ||
       id == "testTemplateModel" || id == "surfaceModel" ||
-      id == "aiModel" || id == "confidence" ||
+      id == "ai" || id == "aiModel" || id == "aiClassification" ||
+      id == "aiAnomaly" || id == "aiSegmentation" ||
+      id == "confidence" ||
       id == "classes" || id == "datasetCapture" ||
       id == "defectMap" || id == "lighting" ||
       id == "contrast" || id == "calibration" ||
@@ -143,6 +146,7 @@ QIcon IconCatalog::icon(const QString& id)
     {"polygon", ":/icons/shapes.svg"},
     {"saveSample", ":/icons/save.svg"},
     {"sampleImage", ":/icons/image.svg"},
+    {"aiSample", ":/icons/database.svg"},
     {"tolerances", ":/icons/gauge.svg"},
     {"surfaceLocalization", ":/icons/scan-search.svg"},
     {"surfaceDefects", ":/icons/sparkles.svg"},
@@ -160,6 +164,11 @@ QIcon IconCatalog::icon(const QString& id)
     {"contrast", ":/icons/contrast.svg"},
     {"defectMap", ":/icons/map.svg"},
     {"aiModel", ":/icons/tool-ai.svg"},
+    {"ai", ":/icons/tool-ai.svg"},
+    {"aiClassification", ":/icons/tags.svg"},
+    {"aiAnomaly", ":/icons/sparkles.svg"},
+    {"aiSegmentation", ":/icons/shapes.svg"},
+    {"aiTrain", ":/icons/play.svg"},
     {"confidence", ":/icons/shield.svg"},
     {"classes", ":/icons/tags.svg"},
     {"datasetCapture", ":/icons/database.svg"},

@@ -157,6 +157,12 @@ struct MeasurementRecipeConfig
   QString sourceBId;
 };
 
+struct AiClassificationClassConfig
+{
+  int id = 0;
+  QString name;
+};
+
 class RecipeManager
 {
 public:
@@ -230,11 +236,16 @@ public:
   bool appendMeasurement(const QString& cameraId, const MeasurementRecipeConfig& config, QString* errorMessage = nullptr) const;
   QString cameraSampleImagesPath(const QString& cameraId) const;
   QString cameraTestImagesPath(const QString& cameraId) const;
+  QString cameraAiRawImagesPath(const QString& cameraId) const;
+  QString cameraAiClassificationRawImagesPath(const QString& cameraId) const;
+  QString cameraAiClassificationClassImagesPath(const QString& cameraId, const AiClassificationClassConfig& classConfig) const;
   QString firstCameraSampleImagePath(const QString& cameraId) const;
   QString firstCameraTestImagePath(const QString& cameraId) const;
   bool ensureCameraImageFolders(const QString& cameraId, QString* errorMessage = nullptr) const;
   bool importCameraSampleImage(const QString& cameraId, const QString& sourceFilePath, QString* errorMessage = nullptr) const;
   bool importCameraTestImages(const QString& cameraId, const QString& sourceDirectory, QString* errorMessage = nullptr) const;
+  QVector<AiClassificationClassConfig> loadAiClassificationClasses(const QString& cameraId) const;
+  bool addAiClassificationClass(const QString& cameraId, const QString& className, AiClassificationClassConfig* createdClass = nullptr, QString* errorMessage = nullptr) const;
 
 private:
   static bool copyDirectory(const QString& sourceDirectory, const QString& destinationDirectory, QString* errorMessage);

@@ -9,6 +9,15 @@ deploy/
 .deps/
 .tmp/
 vcpkg_installed/
+.venv-ai/
+yolo*-cls.pt
+__pycache__/
+*.pyc
+
+# Local AI captures/training outputs
+recipes/*/images/*/ai/
+recipes/*/datasets/
+recipes/*/models/
 
 # Visual Studio
 .vs/

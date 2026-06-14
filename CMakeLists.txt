@@ -46,6 +46,7 @@ add_executable(VisionSystemCPP
     src/config/RecipeManager.cpp
     src/config/RecipeDeletion.h
     src/config/RecipeDeletion.cpp
+    src/config/RecipeManagerAI.cpp
     src/config/RecipeManagerGeometry.cpp
     src/config/RecipeManagerMeasurement.cpp
     src/config/RecipeManagerStorage.cpp
@@ -149,6 +150,7 @@ add_executable(VisionSystemCPP
     src/gui/modules/setup/SetupResultsDialog.cpp
     src/gui/modules/setup/SetupResultsFormatter.h
     src/gui/modules/setup/SetupResultsFormatter.cpp
+    src/gui/modules/setup/MainWindowSetupModule_Ai.cpp
     src/gui/modules/MainWindowSetupModule.cpp
     src/gui/modules/MainWindowCameraConfigModule.cpp
     src/gui/SurfaceLocalizationPanelWidget.h

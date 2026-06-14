@@ -1,30 +1,56 @@
 {
     "cameraId": "CAM01",
     "tools": {
-        "geometries": {
-            "enabled": true,
-            "lines": [
+        "aiClassification": {
+            "classes": [
                 {
-                    "bandHalfWidth": 26,
+                    "id": 1,
+                    "name": "5 cent"
+                },
+                {
+                    "id": 2,
+                    "name": "1 cent"
+                },
+                {
+                    "id": 3,
+                    "name": "2 cent"
+                }
+            ],
+            "enabled": true
+        },
+        "geometries": {
+            "circles": [
+                {
                     "coordinateSpace": "part",
                     "edgeCleanupDerivative": 5,
-                    "edgeSensitivity": 41,
+                    "edgeSensitivity": 10,
                     "edgeStatisticalFilter": 2,
                     "enabled": true,
-                    "id": "line_1",
-                    "partEnd": {
-                        "x": 205.2353909549035,
-                        "y": 33.57093437959516
+                    "id": "circle_1",
+                    "innerBand": 20,
+                    "outerBand": 20,
+                    "partCenter": {
+                        "x": 0.9165505845258726,
+                        "y": 2.0455293093458895
                     },
-                    "partStart": {
-                        "x": -41.83476504545451,
-                        "y": 33.29880721406712
-                    },
-                    "pickMode": "first",
-                    "scanDirection": "normal_negative",
+                    "pickMode": "best",
+                    "radius": 106,
+                    "scanDirection": "normal_positive",
                     "transition": "light_to_dark",
-                    "type": "edge_line",
-                    "useSubpixel": false
+                    "type": "edge_circle",
+                    "useSubpixel": true
+                }
+            ],
+            "enabled": true
+        },
+        "measurements": {
+            "enabled": true,
+            "items": [
+                {
+                    "enabled": true,
+                    "id": "measurement_1",
+                    "sourceAId": "circle_1",
+                    "type": "circle_diameter"
                 }
             ]
         },
@@ -32,74 +58,26 @@
             "aoes": {
                 "massPca": {
                     "id": "massPca",
-                    "label": "massPca",
-                    "searchPolygon": [
-                        {
-                            "x": 171,
-                            "y": 160
-                        },
-                        {
-                            "x": 602,
-                            "y": 157
-                        },
-                        {
-                            "x": 597,
-                            "y": 252
-                        },
-                        {
-                            "x": 368,
-                            "y": 267
-                        },
-                        {
-                            "x": 170,
-                            "y": 245
-                        }
-                    ],
-                    "searchRoi": {
-                        "height": 111,
-                        "width": 433,
-                        "x": 170,
-                        "y": 157
-                    }
+                    "label": "massPca"
                 }
+            },
+            "edge": {
+                "band": {
+                    "inner": 65,
+                    "outer": 122
+                },
+                "circle": {
+                    "centerX": 297,
+                    "centerY": 249,
+                    "radius": 106
+                },
+                "fitMaxError": 5,
+                "sensitivity": 218
             },
             "enabled": true,
             "exclusionRects": [
             ],
-            "method": "massPca",
-            "searchPolygon": [
-                {
-                    "x": 171,
-                    "y": 160
-                },
-                {
-                    "x": 602,
-                    "y": 157
-                },
-                {
-                    "x": 597,
-                    "y": 252
-                },
-                {
-                    "x": 368,
-                    "y": 267
-                },
-                {
-                    "x": 170,
-                    "y": 245
-                }
-            ],
-            "searchRoi": {
-                "height": 111,
-                "width": 433,
-                "x": 170,
-                "y": 157
-            },
-            "threshold": {
-                "max": 97,
-                "min": 0,
-                "value": 97
-            }
+            "method": "edge"
         }
     }
 }

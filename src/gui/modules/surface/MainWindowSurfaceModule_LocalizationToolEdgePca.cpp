@@ -50,6 +50,7 @@ void MainWindowSurfaceModule::showEdgePcaLocalizationPanel(const CameraConfig& c
   auto* clearRoiButton = createTouchIconButton("clearRoi", tr("actions.clearRoi"), buttons);
   auto* clearPolygonButton = createTouchIconButton("clearPolygon", tr("actions.clearPolygon"), buttons);
   auto* clearButton = createTouchIconButton("surfaceClearExclusions", tr("actions.surfaceClearExclusions"), buttons);
+  auto* clearLocalizationButton = createTouchIconButton("clear", tr("actions.clearLocalization"), buttons);
   auto* testButton = createTouchIconButton("testStrategy", tr("actions.testStrategy"), buttons);
   QObject::connect(roiButton, &QPushButton::clicked, window(), [this, camera]() { activateSurfaceDefectRoiDrawing(camera); });
   QObject::connect(polygonButton, &QPushButton::clicked, window(), [this, camera]() { activateSurfaceDefectPolygonDrawing(camera); });
@@ -57,6 +58,7 @@ void MainWindowSurfaceModule::showEdgePcaLocalizationPanel(const CameraConfig& c
   QObject::connect(clearRoiButton, &QPushButton::clicked, window(), [this, camera]() { clearSurfaceDefectRoi(camera); });
   QObject::connect(clearPolygonButton, &QPushButton::clicked, window(), [this, camera]() { clearSurfaceDefectPolygon(camera); });
   QObject::connect(clearButton, &QPushButton::clicked, window(), [this, camera]() { clearSurfaceDefectExclusions(camera); });
+  QObject::connect(clearLocalizationButton, &QPushButton::clicked, window(), [this, camera]() { clearSurfaceLocalization(camera); });
   QObject::connect(testButton, &QPushButton::clicked, window(), [this, camera]() { testSurfaceEdgePcaLocalization(camera); });
   buttonsLayout->addWidget(roiButton, 0, 0);
   buttonsLayout->addWidget(polygonButton, 0, 1);
@@ -64,7 +66,8 @@ void MainWindowSurfaceModule::showEdgePcaLocalizationPanel(const CameraConfig& c
   buttonsLayout->addWidget(clearButton, 1, 1);
   buttonsLayout->addWidget(clearRoiButton, 2, 0);
   buttonsLayout->addWidget(clearPolygonButton, 2, 1);
-  buttonsLayout->addWidget(testButton, 3, 0, 1, 2);
+  buttonsLayout->addWidget(clearLocalizationButton, 3, 0, 1, 2);
+  buttonsLayout->addWidget(testButton, 4, 0, 1, 2);
   layout->addWidget(buttons);
 
   auto* sensitivityBox = new QGroupBox(tr("labels.edgeSensitivity"), panel);

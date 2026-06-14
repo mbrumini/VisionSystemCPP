@@ -37,6 +37,7 @@ public:
   void clearSurfaceDefectRoi(const CameraConfig& camera);
   void clearSurfaceDefectPolygon(const CameraConfig& camera);
   void clearSurfaceDefectExclusions(const CameraConfig& camera);
+  void clearSurfaceLocalization(const CameraConfig& camera);
 
   void activateSurfaceOuterCircleDrawing(const CameraConfig& camera);
   void activateSurfaceInnerCircleDrawing(const CameraConfig& camera);

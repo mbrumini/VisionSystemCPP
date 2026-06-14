@@ -17,4 +17,7 @@ public:
   void configureCameraSampleImage(const CameraConfig& camera);
   void configureCameraTestImages(const CameraConfig& camera);
   void acquireCameraSampleImage(const CameraConfig& camera);
+  void acquireCameraAiSampleImage(const CameraConfig& camera);
+  void acquireCameraAiClassificationRawImage(const CameraConfig& camera);
+  void acquireCameraAiClassificationClassImage(const CameraConfig& camera, const AiClassificationClassConfig& classConfig);
 };

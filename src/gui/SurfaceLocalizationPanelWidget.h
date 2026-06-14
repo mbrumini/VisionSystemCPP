@@ -17,6 +17,7 @@ public:
     std::function<void()> drawThreePointCircle;
     std::function<void()> addExclusion;
     std::function<void()> clearExclusions;
+    std::function<void()> clearLocalization;
     std::function<void(const QString&)> methodChanged;
     std::function<void(int)> thresholdChanged;
     std::function<void(int)> edgeSensitivityChanged;

@@ -130,6 +130,17 @@ const QHash<QString, ToolTemplate>& tools()
       {"classMap", "actions.classMap"},
       {"runInference", "actions.runInference"}
     })},
+    {"ai", makeTool("ai", "tools.ai", {
+      {"aiClassification", "tools.aiClassification"},
+      {"aiAnomaly", "tools.aiAnomaly"},
+      {"aiSegmentation", "tools.aiSegmentation"}
+    })},
+    {"aiClassification", makeTool("aiClassification", "tools.aiClassification", {
+      {"acquireAiRawImage", "actions.acquireAiRawImage"},
+      {"addAiClass", "actions.addAiClass"},
+      {"prepareAiDataset", "actions.prepareAiDataset"},
+      {"trainAiModel", "actions.trainAiModel"}
+    })},
     {"confidence", makeTool("confidence", "tools.confidence", {
       {"minimumConfidence", "actions.minimumConfidence"},
       {"warningThreshold", "actions.warningThreshold"},

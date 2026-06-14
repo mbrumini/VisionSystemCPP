@@ -235,6 +235,32 @@ void MainWindowSurfaceModule::clearSurfaceDefectPolygon(const CameraConfig& came
   log(tr("actions.clearPolygon") + ": " + camera.id);
 }
 
+void MainWindowSurfaceModule::clearSurfaceLocalization(const CameraConfig& camera)
+{
+  if (camera.id != selectedCameraId())
+  {
+    return;
+  }
+
+  QString error;
+  if (!recipes().clearSurfaceLocalizationGeometry(camera.id, &error))
+  {
+    log(error);
+    return;
+  }
+
+  largeImage()->clearRoi();
+  largeImage()->clearSearchPolygon();
+  largeImage()->clearExclusionRects();
+  largeImage()->clearCircles();
+  largeImage()->clearGeometryOverlay();
+  context().lastSurfaceLocalizationResults->remove(camera.id);
+  context().lastLocalizationResults->remove(camera.id);
+  cameraRuntime()[camera.id].clearCurrentPose(camera.id);
+  cameraRuntime()[camera.id].clearGeometries();
+  log(tr("actions.clearLocalization") + ": " + camera.id);
+}
+
 void MainWindowSurfaceModule::showStoredSurfaceDefectAoe(const CameraConfig& camera)
 {
   if (camera.id != selectedCameraId())

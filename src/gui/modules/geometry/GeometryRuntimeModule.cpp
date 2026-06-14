@@ -517,14 +517,48 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
     const EdgeLineDetectorResult result = detector.detect(input, config);
     if (!result.processed)
     {
+      log(QString("geometry line skipped: %1 id=%2 guide=(%3,%4)-(%5,%6) band=%7 reason=%8")
+            .arg(camera.id)
+            .arg(line.id)
+            .arg(imageStart.x, 0, 'f', 1)
+            .arg(imageStart.y, 0, 'f', 1)
+            .arg(imageEnd.x, 0, 'f', 1)
+            .arg(imageEnd.y, 0, 'f', 1)
+            .arg(line.bandHalfWidth)
+            .arg(result.message));
       continue;
     }
 
     if (!result.found)
     {
+      log(QString("geometry line not found: %1 id=%2 guide=(%3,%4)-(%5,%6) band=%7 raw=%8 filtered=%9 reason=%10")
+            .arg(camera.id)
+            .arg(line.id)
+            .arg(imageStart.x, 0, 'f', 1)
+            .arg(imageStart.y, 0, 'f', 1)
+            .arg(imageEnd.x, 0, 'f', 1)
+            .arg(imageEnd.y, 0, 'f', 1)
+            .arg(line.bandHalfWidth)
+            .arg(static_cast<int>(result.rawEdgePoints.size()))
+            .arg(static_cast<int>(result.edgePoints.size()))
+            .arg(result.message));
       continue;
     }
 
+    log(QString("geometry line found: %1 id=%2 guide=(%3,%4)-(%5,%6) band=%7 raw=%8 filtered=%9 line=(%10,%11)-(%12,%13)")
+          .arg(camera.id)
+          .arg(line.id)
+          .arg(imageStart.x, 0, 'f', 1)
+          .arg(imageStart.y, 0, 'f', 1)
+          .arg(imageEnd.x, 0, 'f', 1)
+          .arg(imageEnd.y, 0, 'f', 1)
+          .arg(line.bandHalfWidth)
+          .arg(static_cast<int>(result.rawEdgePoints.size()))
+          .arg(static_cast<int>(result.edgePoints.size()))
+          .arg(result.line.start.x, 0, 'f', 1)
+          .arg(result.line.start.y, 0, 'f', 1)
+          .arg(result.line.end.x, 0, 'f', 1)
+          .arg(result.line.end.y, 0, 'f', 1));
     geometries.lines.append(result.line);
     cv::line(
       diagnostic,

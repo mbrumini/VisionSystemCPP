@@ -23,6 +23,7 @@ void MainWindowSurfaceModule::showCircleAnnulusLocalizationPanel(const CameraCon
   handlers.drawThreePointCircle = [this, camera]() { activateSurfaceThreePointCircleDrawing(camera, CircleTarget::None); };
   handlers.addExclusion = [this, camera]() { activateSurfaceDefectExclusionDrawing(camera); };
   handlers.clearExclusions = [this, camera]() { clearSurfaceDefectExclusions(camera); };
+  handlers.clearLocalization = [this, camera]() { clearSurfaceLocalization(camera); };
   handlers.methodChanged = [this, camera](const QString& method) { saveSurfaceMethodAndPreview(camera, method); };
   handlers.thresholdChanged = [this, camera](int value) { saveSurfaceThresholdAndPreview(camera, value); };
   handlers.edgeSensitivityChanged = [this, camera](int value) { saveSurfaceEdgeAndPreview(camera, value); };

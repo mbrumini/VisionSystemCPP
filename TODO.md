@@ -1,77 +1,29 @@
 # TODO - VisionSystemCPP
 
-## Fatto / Stato attuale
-
-- [x] GUI Qt con griglia 16 miniature, vista camera grande e pannello destro.
-- [x] Pannello destro: comandi generali solo in main/griglia; camera, strategie e tool quando una camera e' selezionata.
-- [x] Traduzioni JSON italiano/inglese e copia post-build accanto all'eseguibile.
-- [x] Ricette come cartelle con creazione, selezione, duplicazione, import ed export.
-- [x] Tipologie camera gestite: BN misurazioni, Scala grigi, AI, Scala grigi + AI.
-- [x] Localizzazione BW dimensionale con ROI, esclusioni, soglia factor/offset, contorno, centro massa e assi X/Y.
-- [x] Localizzazione grigi con strategie `Soglia` e `Bordo`.
-- [x] Disegno cerchi con `Centro + raggio` oppure `3 punti`.
-- [x] Centro di massa evidenziato con croce diagnostica.
-- [x] Strategie localizzazione grigi elencate nel pannello: Soglia, Bordo, Bordo + PCA, Modello, AI YOLO.
-- [x] Catalogo strategie GUI separato da `MainWindow`.
-- [x] Strategie OpenCV attuali separate in file dedicati.
-- [x] Maschere/esclusioni modificabili singolarmente da viewer.
-- [x] Fit circolare robusto riusabile con filtro errore regolabile.
-- [x] Localizzazione grigi con risultato runtime riusabile: centro, raggio, score, assi e orientamento.
-- [x] Strategia Bordo + PCA per sagome con centro e orientamento.
-- [x] Strategia Modello con acquisizione da AOE, shape matching e template matching edge-based.
-
-## Localizzazione BW dimensionale
-
-- [x] Mostrare il tool `Localizzazione` solo per camere con `imageMode=bw` e `inspectionTypes` contenente `dimensional`.
-- [x] Attivare il disegno AOE/ROI solo dal pannello `Localizzazione`.
-- [x] Disegnare il rettangolo con mouse drag sull'immagine grande.
-- [x] Convertire coordinate widget in coordinate immagine originale.
-- [x] Salvare la ROI nella ricetta della camera corrispondente.
-- [x] Implementare test localizzazione: sfondo chiaro, pezzo nero, soglia da campionamento angoli.
-- [x] Aggiungere parametri soglia `factor`/`offset` nella ricetta.
-- [x] Disegnare contorno pezzo, centro di massa e assi X/Y orientati.
-- [x] Salvare il risultato localizzazione come struttura dati riusabile.
-- [x] Aggiungere rettangoli rossi di esclusione nella ROI per ignorare disturbi.
-- [x] Aggiungere modifica/cancellazione singola delle esclusioni.
-
 ## Localizzazione superficie grayscale
 
-- [x] Separare i comandi superficiali dalla localizzazione dimensionale.
-- [x] Aggiungere localizzazione superficie con AOE, esclusioni e soglia per camere grayscale/surface.
-- [x] Calcolare contorno principale e centro di massa anche su grayscale.
-- [x] Aggiungere prima strategia `two_circles_axis` con due cerchi, soglie e polarita'.
-- [x] Aggiungere selezione metodo localizzazione grayscale: soglia oppure bordo.
-- [x] Aggiungere cerchio bordo a 3 click e fascia interna/esterna per metodo edge.
-- [x] Preparare pannello strategie nel lato destro senza log eventi e senza comandi Start/Stop.
-- [x] Separare il catalogo strategie in file dedicati (`SurfaceLocalizationStrategies.*`).
-- [x] Separare le strategie OpenCV attuali in file dedicati (`SurfaceThresholdStrategy`, `SurfaceEdgeStrategy`, `SurfaceTwoCirclesStrategy`).
-- [x] Salvare il risultato runtime della localizzazione grigi per camera: centro pezzo, raggio, score e qualita' fit.
 - [ ] Usare sempre il centro localizzato del pezzo corrente come origine dinamica per le misure successive.
 - [ ] Aggiungere maniglie grafiche per regolare direttamente la fascia edge.
 - [ ] Implementare controlli dedicati strategia `Soglia`: soglia, polarita', area min/max, maschere.
 - [ ] Implementare controlli dedicati strategia `Bordo`: guida, fascia, sensibilita', area min/max, maschere.
-- [x] Implementare strategia `Bordo + PCA`: punti bordo, min punti, centro massa e orientamento.
-- [x] Aggiungere funzioni processing per `Modello`: shape matching classico e template/model matching edge-based con sweep angolare.
-- [x] Implementare GUI/ricetta base per `Modello`: acquisizione modello, salvataggio template/contorno, prove shape e template.
-- [x] Aggiungere controlli avanzati `Modello`: range angolo, score minimo, distanza shape massima, sensibilita' bordo.
 - [ ] Migliorare diagnostica `Modello`: viste separate template, edge map e contorno acquisito.
 - [ ] Implementare strategia `AI YOLO`: modello ONNX, classe target, confidenza, soglia maschera, centro/orientamento da mask.
 - [ ] Aggiungere editor GUI delle feature strategia.
-## Gui 
-- [x] lasciare solo Cam X, eliminare le repliche X e poi X di nuovo dalle miniature
-- [x] togliere il pulsante Esci dalla gui lasciarlo solo nel menù a tendina
-- [x] aggiungere 1 livello per la localizzazione, primo pulsante solo localizzazione che apre una finestra con la lista delle possibilità
-- [x] comandi linea, fascia linea e sensibilità bordo su una riga, pulizia edge e filtro statistico sulla seconda riga anche direzione linea e transizione bordo su una linea
-- [x] quando premo Nuova linea il sistema deve prepararsi per fare una nuova linea, il pulsante disegna linea 2 punti è inutile, automatizzare ed eliminare il pulsante inutile
 
+## AI
+
+- [ ] Classificazione: durante il training sostituire l'immagine grande con un grafico live di loss/accuracy letto dal log o da `results.csv`.
+- [ ] Classificazione: visualizzare riepilogo dataset per classe e warning sbilanciamento direttamente nel pannello.
+- [ ] Classificazione: salvare nella ricetta il modello attivo (`best.pt`/`best.onnx`), soglia confidenza e mappa classi.
+- [ ] Classificazione: aggiungere test inferenza su frame corrente con risultato classe/confidenza.
+- [ ] Segmentazione: definire label, raccolta immagini/maschere, dataset YOLO segmentation e training dedicato.
+- [ ] Segmentazione: usare la maschera per centro, orientamento, area e controlli dimensionali/forma.
+- [ ] Anomaly detection: definire raccolta immagini buone, training e soglia anomalia.
+- [ ] Anomaly detection: mostrare heatmap/overlay difetto e score OK/NOK.
 
 ## Runtime camera e origine pezzo
 
-- [x] Aggiungere struttura runtime per camera con sorgente, frame corrente, stato, risultato tool e posa pezzo corrente.
 - [ ] IMPORTANTE: implementare runtime reale multicamera con pipeline/thread separato per ogni camera attiva, fino a 16 camere, e aggiornamento GUI tramite risultati asincroni.
-- [x] Definire una struttura comune `PiecePose`/`PartPose` valida per BW e grayscale: origine, angolo, assi, score, metodo e validita'.
-- [x] Aggiornare la posa pezzo a ogni localizzazione riuscita, indipendentemente dalla strategia usata.
-- [x] Aggiungere funzioni di conversione coordinate immagine <-> coordinate pezzo per riusare l'origine dinamica nei tool successivi.
 - [ ] Collegare misure future, controlli superficie e AI alla posa corrente invece che alle sole coordinate pixel assolute.
 - [ ] Gestire il caso posa non valida: blocco tool dipendenti, risultato NOK o stato di allarme configurabile.
 - [ ] Aggiungere sub localizzazione relativa: dopo una localizzazione primaria su shape simmetrico, permettere una seconda ricerca dentro la posa trovata per agganciare dettagli asimmetrici, per esempio un foro non simmetrico, e risolvere ambiguita' di orientamento/posizione.
@@ -79,66 +31,19 @@
 
 ## Geometrie e misure
 
-- [x] Separare il flusso in due passaggi: prima geometrie rilevate, poi misure calcolate sulle geometrie.
-- [x] Aggiungere modelli geometrici separati per tipo: punto, linea, cerchio, arco, edge e contorno.
-- [x] Aggiungere contenitore runtime `GeometrySet` per camera.
-- [x] Aggiungere primo detector geometrico riusabile: cerchio da soglia/contorno con fit robusto.
-- [x] Aggiungere primo flusso operativo `Geometrie -> Linea`: pannello parametri, linea guida a 2 punti, fascia regolabile relativa alla posa pezzo, detector edge, diagnostica e salvataggio runtime.
-- [x] Separare la gestione click a 2 punti della linea da `ImageViewWidget` usando `LineGeometryEditor`.
-- [x] Creare editor dedicato `LineGeometryEditor`: due punti, fascia e configurazione linea.
-- [x] Creare controller mouse dedicato `LineGeometryMouseController` per click e anteprima linea.
-- [x] Creare overlay geometrie riusabile per punti, linee e fasce orientate.
-- [x] Aggiungere refresh live della linea quando cambiano fascia e sensibilita' edge.
-- [x] Correggere bug linea: dopo il secondo punto restano visibili punto 1, punto 2, linea guida e fascia.
-- [x] Aggiungere scansione linea configurabile: direzione normale, transizione BN/NB e scelta edge primo/ultimo/migliore.
-- [x] Separare filtro punti edge in `EdgePointFilters` e aggiungere pulizia edge per derivata sui punti linea.
-- [x] Aggiungere filtro statistico riusabile sui punti edge basato su deviazione dalla mediana normale.
-- [x] Aggiungere gestione multi-linea nel pannello `Linea`: lista linee, `Nuova linea`, linea attiva modificabile e salvataggio ricetta.
-- [x] Mostrare tutte le linee configurate in overlay e scansionarle tutte nel runtime/setup, non solo l'ultima selezionata.
-- [x] Aggiungere subpixel edge per linee su camere BN e nascondere l'opzione sulle camere non BN.
-- [x] Nascondere le maniglie della linea nel setup/runtime: restano visibili solo nel tool di modifica.
-- [x] al passaggio da set-up a qualsiasi altra finestra ricaricare immagine di riferimento
-- [X] Aggiungere gestione multi-Punto nel pannello `Punto`: lista linee, `Nuovo punto`, punto attivo modificabile e salvataggio ricetta.
-- [x] Visualizzare sempre il centro di massa durante il set-up
-- [x] in set up, possibilità di portare il timer a 0 (ora minimo 50) ed inserire un timer per capire il tempo di scansione
-- [x] Separare anche la gestione maniglie/fascia in un controller/editor riusabile per tutti gli editor geometrici.
 - [ ] Estendere i detector dedicati alle altre geometrie in ROI relative alla posa pezzo.
-- [x] Aggiungere detector dedicato `Cerchio`: guida a 3 punti, fascia edge interna/esterna, transizioni, filtri, subpixel BN e fit robusto.
 - [ ] quando entro nel tool cerchio visualizzo i cerchi di costruzione usati per la localizzazione. non voglio vederli
 - [ ] Visualizzare il cerchio in set-up
 - [ ] Aggiungere pulsante `Elimina` a tutte le geometrie configurabili: punto, segmento/linea, cerchio, arco, edge e contorno.
 - [ ] Per tutte le geometrie, `Nuovo ...` deve creare/selezionare l'elemento e attivare subito il disegno; evitare pulsanti separati tipo `Disegna ...`.
 - [ ] Salvare configurazione geometrie in ricetta camera.
-- [x] Aggiungere arco nelle geometrie, si possono anche unire archi per formare un cerchio
 - [ ] Disegnare overlay diagnostici delle geometrie rilevate.
-- [x] Implementare prima misura che usa geometrie gia' rilevate: distanza punto-linea.
-- [x] Disegnare overlay quota per distanza punto-linea: freccia a 2 punte e valore in pixel sull'immagine.
-- [x] Riordinare il modulo `Misure` come le geometrie calcolate: menu principale e una pagina separata per ogni misura.
-- [x] Separare i file del modulo misure: pannelli UI, azioni/creazione misure, rebuild da ricetta e matematica in file dedicati.
-- [x] Aggiungere misura distanza punto-punto.
-- [x] Aggiungere misura distanza linea-linea, valida per linee parallele.
-- [x] Aggiungere misura diametro cerchio.
-- [x] Aggiungere misura angolo linea-linea.
-- [x] Salvare/ricaricare tutte le misure in ricetta camera (`tools.measurements.items`).
-- [x] Disegnare overlay diagnostico per tutte le misure: sorgenti evidenziate, freccia/angolo e valore in pixel o gradi.
-- [x] Compilare il flusso completo `Misure` dopo il riordino.
 - [ ] Provare in GUI il flusso completo `Misure` con immagini reali.
 - [ ] Implementare tolleranze/criteri su misure e relazioni tra geometrie, per esempio concentricita' tra due cerchi.
-- [x] Aggiungere pannello `Geometrie calcolate` con sorgenti da geometrie edge gia' trovate a runtime.
-- [x] Geometrie calcolate: intersezione linea-linea con creazione punto runtime e overlay diagnostico.
-- [x] Geometrie calcolate: intersezione linea-cerchio con creazione punti runtime e overlay diagnostico.
-- [x] Geometrie calcolate: intersezione cerchio-cerchio.
-- [x] Geometrie calcolate: punto medio tra due punti/geometrie compatibili.
-- [x] Geometrie calcolate: linea offset da una linea sorgente.
-- [x] Geometrie calcolate: bisettrice tra due linee.
-- [x] Geometrie calcolate: tangente a cerchio.
-- [x] Geometrie calcolate: proiezione punto su linea o altra geometria compatibile.
-- [x] Salvare/ricaricare la configurazione delle geometrie calcolate in ricetta camera.
 - [ ] IMPORTANTE: aggiungere tool `Filettature` con rilevamento e misure dedicate: diametro interno/esterno o maggiore/minore, passo filetto, cresta e fondo filetto, angolo profilo, profondita'/altezza filetto, numero creste/gole, presenza filetto, posizione rispetto a riferimenti, tolleranze OK/NOK e diagnostica overlay. Includere controlli su fase/smussi di ingresso, ammaccature o schiacciamenti del filetto/bordo, bave, profilo completo del filetto, continuita' del profilo e confronto con profilo campione/master. Prevedere uso su profilo BN/silhouette e, dove possibile, su superficie con illuminazione adeguata.
 
 ## Misure reali e calibrazione
 
-- [x] Imbastire moduli base per calibrazione e misure reali, senza collegarli ancora alla GUI/pipeline.
 - [ ] Implementare acquisizione pattern calibrazione per camera: scatto singolo, lista frame accettati/scartati e salvataggio immagini pattern.
 - [ ] Implementare detector pattern calibrazione: checkerboard, dot grid/circle grid, pattern custom.
 - [ ] Calcolare modello calibrazione camera: pixel/mm, origine, rotazione e futura mappa distorsione.
@@ -148,63 +53,20 @@
 - [ ] Collegare esito misura OK/NOK a overview, camera strip e futuro IO.
 - [ ] Aggiungere pannello GUI calibrazione solo dopo aver validato modello dati e formato ricetta.
 
-### Registro moduli creati
-
-- [x] `src/calibration/CalibrationTypes.h`: tipi base pattern, frame calibrazione e modello camera.
-- [x] `src/calibration/CalibrationPatternDetector.*`: interfaccia detector pattern; implementazione placeholder.
-- [x] `src/calibration/CalibrationSession.*`: sessione acquisizione pattern per camera.
-- [x] `src/calibration/ImageCalibrationMap.*`: mappa immagine <-> mondo mm; implementazione placeholder.
-- [x] `src/calibration/CalibrationRecipe.*`: persistenza calibrazione in ricetta; implementazione placeholder.
-- [x] `src/measurement/RealMeasurementTypes.h`: tipi per unita', tolleranze, esito e risultato reale.
-- [x] `src/measurement/MeasurementUnitConverter.*`: conversione risultato pixel -> reale; implementazione placeholder.
-- [x] `src/measurement/MeasurementToleranceEvaluator.*`: valutazione OK/NOK; implementazione placeholder.
-
 ## Livelli di accesso
 
-- [x] Imbastire moduli base per ruoli, permessi e sessione utente, senza applicarli ancora alla GUI.
 - [ ] Definire matrice permessi definitiva per Viewer/Operatore/Supervisore/Admin/Guru.
-- [x] Aggiungere voce `Sistema > Accedi` con dialog password.
 - [ ] Aggiungere logout o selezione livello con PIN/password configurabili.
-- [x] Inserire backdoor Guru residente nel codice e non configurabile dall'exe.
 - [ ] Persistenza utenti/livelli configurabili da exe: Operatore, Supervisore, Admin.
 - [ ] Escludere sempre la backdoor dai file utenti/livelli configurabili.
 - [ ] Applicare permessi ai comandi HMI: start/stop, setup, geometrie, misure, calibrazione, ricette, sorgenti camera, sistema.
 - [ ] Rendere visibile in toolbar il livello utente corrente.
 - [ ] Loggare cambi livello e tentativi di accesso negati.
 
-### Registro moduli accesso creati
-
-- [x] `src/access/AccessTypes.*`: ruoli, permessi e utente.
-- [x] `src/access/AccessPolicy.*`: regole base ruolo -> permesso.
-- [x] `src/access/AccessSession.*`: sessione utente corrente e verifica permessi.
-- [x] `src/access/AccessSession::authenticateBackdoor`: accesso Guru residente nel codice con password dedicata.
-- [x] `src/access/AccessRecipe.*`: persistenza utenti/livelli configurabili da exe; implementazione placeholder.
-
-
 ## Ricette
 
-- [x] Creare struttura iniziale `recipes/default/`.
-- [x] Salvare tool camera in `recipes/default/cameras/CAMxx.json`.
-- [x] Aggiungere selezione ricetta dal menu superiore.
-- [x] Aggiungere creazione/duplicazione/import/export ricetta come cartella.
-- [x] Salvare ricetta attiva in `config/app_settings.json`.
-- [x] Aggiungere per ogni camera della ricetta una cartella `images/CAMxx/sample/` con l'immagine campione usata per programmare i tool.
-- [x] Aggiungere per ogni camera della ricetta una cartella `images/CAMxx/test/` con immagini di test usate per simulare e validare la ricetta.
 - [ ] Separare chiaramente immagine campione e immagini test: i tool si impostano sul campione, Start/Frame successivo scorre i test.
 - [ ] Aggiungere export/import in formato archivio zip.
-
-## Simulazione acquisizione
-
-- [ ] Aggiungere menu alto `Telecamere` con la stessa lista delle miniature.
-- [ ] Da `Telecamere -> CAMxx`, aprire una finestra setup per associare una cartella immagini alla camera.
-- [ ] Salvare la cartella immagini in `config/cameras.json` come sorgente camera simulata, non nella ricetta prodotto.
-- [ ] Aggiungere voce `Setup` nel pannello destro della camera selezionata.
-- [ ] Nel pannello `Setup`, mostrare sorgente, stato, frame corrente, Start/Stop, step manuale, loop e intervallo frame.
-- [ ] Aggiungere Start/Stop simulazione per scorrere le immagini come frame in arrivo.
-- [ ] Aggiornare preview camera e vista grande a ogni frame simulato.
-- [ ] Eseguire la localizzazione attiva a ogni frame e aggiornare il risultato runtime del pezzo corrente.
-- [ ] Eseguire i tool programmati per la camera dopo la localizzazione: diametro, superficie, AI e altri controlli futuri.
-- [ ] Progettare la simulazione in modo che `FileCamera` sia sostituibile in seguito con `VimbaCamera` senza cambiare la pipeline tool.
 
 ## Divisione compiti
 
@@ -212,14 +74,14 @@
 
 
 
-## consigli
-Suggerimenti generali (breve, pratici)
-•	Eseguire l’elaborazione pesante (detector, trainer, processor) fuori dal thread UI (QtConcurrent / QThreadPool) per evitare freeze della UI.
-•	Ridurre duplicazioni: molte funzioni ripetono pattern "carica immagine -> valida -> crea config -> esegui detector -> aggiornamento UI"; estrarre helper comuni (es. runAsyncDetector, showDiagnosticImageAndRoi).
-•	Evitare closure che catturano copie pesanti: cattura const CameraConfig& quando possibile per risparmiare copie non necessarie.
-•	Centralizzare la costruzione dei log (helper logInfo() / logError()) per evitare ripetizioni e formattazioni multiple.
-•	Spostare lo stylesheet in risorsa qss / file esterno per manutenibilità.
-•	Considerare uso di piccoli helper const/ref per projectPath / resolveProjectPath — già OK, ma attenzione a macro compile-time.
-Esempio concreto: rendere testGeometryLine asincrono con QtConcurrent
-•	questo evita il blocco della UI mentre EdgeLineDetector::detect(...) esegue
-•	mostra come integrare QFutureWatcher per aggiornare UI a termine
+## Consigli
+
+Suggerimenti generali brevi e pratici:
+
+- Eseguire elaborazione pesante, detector, trainer e processor fuori dal thread UI con QtConcurrent/QThreadPool per evitare freeze della UI.
+- Ridurre duplicazioni: molte funzioni ripetono il pattern "carica immagine -> valida -> crea config -> esegui detector -> aggiornamento UI"; estrarre helper comuni come `runAsyncDetector` o `showDiagnosticImageAndRoi`.
+- Evitare closure che catturano copie pesanti: catturare `const CameraConfig&` quando possibile.
+- Centralizzare la costruzione dei log con helper tipo `logInfo()`/`logError()`.
+- Spostare lo stylesheet in risorsa qss o file esterno per manutenibilita'.
+- Considerare piccoli helper const/ref per `projectPath` e `resolveProjectPath`; gia' OK, ma attenzione a macro compile-time.
+- Esempio concreto: rendere `testGeometryLine` asincrono con QtConcurrent, evitando il blocco della UI mentre `EdgeLineDetector::detect(...)` esegue e aggiornando la UI a termine con `QFutureWatcher`.

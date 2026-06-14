@@ -63,6 +63,7 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
   int intervalMs,
   std::function<void(int)> intervalChanged,
   std::function<void()> acquireSample,
+  std::function<void()> acquireAiSample,
   std::function<void()> importSample,
   std::function<void()> showSample,
   std::function<void()> importTests,
@@ -128,6 +129,7 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
   buttonsLayout->setSpacing(6);
 
   auto* acquireSampleButton = createTouchButton("acquireSample", texts.acquireSample, buttons);
+  auto* acquireAiSampleButton = createTouchButton("aiSample", texts.acquireAiSample, buttons);
   auto* sampleButton = createTouchButton("assignSampleImage", texts.importSample, buttons);
   auto* showSampleButton = createTouchButton("sampleImage", texts.showSample, buttons);
   auto* testImagesButton = createTouchButton("assignTestImages", texts.importTests, buttons);
@@ -138,17 +140,19 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
   auto* backButton = createTouchButton("back", texts.back, buttons);
 
   buttonsLayout->addWidget(acquireSampleButton, 0, 0);
-  buttonsLayout->addWidget(sampleButton, 0, 1);
-  buttonsLayout->addWidget(showSampleButton, 0, 2);
-  buttonsLayout->addWidget(testImagesButton, 0, 3);
-  buttonsLayout->addWidget(startButton, 1, 0);
-  buttonsLayout->addWidget(stopButton, 1, 1);
-  buttonsLayout->addWidget(stepButton, 1, 2);
-  buttonsLayout->addWidget(resultsButton, 1, 3);
-  buttonsLayout->addWidget(backButton, 2, 0);
+  buttonsLayout->addWidget(acquireAiSampleButton, 0, 1);
+  buttonsLayout->addWidget(sampleButton, 0, 2);
+  buttonsLayout->addWidget(showSampleButton, 0, 3);
+  buttonsLayout->addWidget(testImagesButton, 1, 0);
+  buttonsLayout->addWidget(startButton, 1, 1);
+  buttonsLayout->addWidget(stopButton, 1, 2);
+  buttonsLayout->addWidget(stepButton, 1, 3);
+  buttonsLayout->addWidget(resultsButton, 2, 0);
+  buttonsLayout->addWidget(backButton, 2, 1);
   layout->addWidget(buttons);
 
   connectButton(acquireSampleButton, acquireSample);
+  connectButton(acquireAiSampleButton, acquireAiSample);
   connectButton(sampleButton, importSample);
   connectButton(showSampleButton, showSample);
   connectButton(testImagesButton, importTests);
