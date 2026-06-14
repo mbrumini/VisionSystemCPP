@@ -34,6 +34,8 @@ public:
   void activateSurfaceDefectRoiDrawing(const CameraConfig& camera);
   void activateSurfaceDefectPolygonDrawing(const CameraConfig& camera);
   void activateSurfaceDefectExclusionDrawing(const CameraConfig& camera);
+  void clearSurfaceDefectRoi(const CameraConfig& camera);
+  void clearSurfaceDefectPolygon(const CameraConfig& camera);
   void clearSurfaceDefectExclusions(const CameraConfig& camera);
 
   void activateSurfaceOuterCircleDrawing(const CameraConfig& camera);
@@ -64,6 +66,7 @@ private:
   void showEdgePcaLocalizationPanel(const CameraConfig& camera);
   void showModelLocalizationPanel(const CameraConfig& camera);
   void showPlannedLocalizationPanel(const CameraConfig& camera, const QString& strategyId);
+  void showStoredSurfaceDefectAoe(const CameraConfig& camera);
 
   CircleTarget m_circleTarget = CircleTarget::None;
 };

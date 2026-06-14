@@ -488,9 +488,17 @@ bool RecipeManager::loadSurfaceDefectRoi(const QString& cameraId, QRect& roi) co
     return false;
   }
 
-  const QJsonObject searchRoi = root.value("tools").toObject()
+  const QJsonObject surfaceLocalization = root.value("tools").toObject()
     .value("surfaceLocalization").toObject()
-    .value("searchRoi").toObject();
+;
+  const QString method = normalizedSurfaceLocalizationMethod(surfaceLocalization.value("method").toString("threshold"));
+  const QJsonObject methodAoe = surfaceLocalization.value("aoes").toObject()
+    .value(method).toObject();
+  QJsonObject searchRoi = methodAoe.value("searchRoi").toObject();
+  if (searchRoi.isEmpty())
+  {
+    searchRoi = surfaceLocalization.value("searchRoi").toObject();
+  }
 
   if (searchRoi.isEmpty())
   {
@@ -510,9 +518,17 @@ QVector<QPoint> RecipeManager::loadSurfaceDefectPolygon(const QString& cameraId)
     return {};
   }
 
-  const QJsonArray polygon = root.value("tools").toObject()
+  const QJsonObject surfaceLocalization = root.value("tools").toObject()
     .value("surfaceLocalization").toObject()
-    .value("searchPolygon").toArray();
+;
+  const QString method = normalizedSurfaceLocalizationMethod(surfaceLocalization.value("method").toString("threshold"));
+  const QJsonObject methodAoe = surfaceLocalization.value("aoes").toObject()
+    .value(method).toObject();
+  QJsonArray polygon = methodAoe.value("searchPolygon").toArray();
+  if (polygon.isEmpty())
+  {
+    polygon = surfaceLocalization.value("searchPolygon").toArray();
+  }
 
   QVector<QPoint> result;
   result.reserve(polygon.size());
@@ -589,6 +605,16 @@ bool RecipeManager::saveSurfaceDefectRoi(const QString& cameraId, const QRect& r
   const QString method = normalizedSurfaceLocalizationMethod(surfaceDefects.value("method").toString("threshold"));
   pruneSurfaceLocalizationForMethod(surfaceDefects, method);
   surfaceDefects["searchRoi"] = rectToJson(roi.normalized());
+  surfaceDefects.remove("searchPolygon");
+
+  QJsonObject aoes = surfaceDefects.value("aoes").toObject();
+  QJsonObject methodAoe = aoes.value(method).toObject();
+  methodAoe["id"] = method;
+  methodAoe["label"] = method;
+  methodAoe["searchRoi"] = rectToJson(roi.normalized());
+  methodAoe.remove("searchPolygon");
+  aoes[method] = methodAoe;
+  surfaceDefects["aoes"] = aoes;
 
   if (method == "threshold" || method == "massPca")
   {
@@ -635,7 +661,17 @@ bool RecipeManager::saveSurfaceDefectPolygon(const QString& cameraId, const QVec
 
   if (polygon.size() >= 3)
   {
-    surfaceLocalization["searchRoi"] = rectToJson(QPolygon(polygon).boundingRect().normalized());
+    const QRect boundingRoi = QPolygon(polygon).boundingRect().normalized();
+    surfaceLocalization["searchRoi"] = rectToJson(boundingRoi);
+
+    QJsonObject aoes = surfaceLocalization.value("aoes").toObject();
+    QJsonObject methodAoe = aoes.value(method).toObject();
+    methodAoe["id"] = method;
+    methodAoe["label"] = method;
+    methodAoe["searchRoi"] = rectToJson(boundingRoi);
+    methodAoe["searchPolygon"] = points;
+    aoes[method] = methodAoe;
+    surfaceLocalization["aoes"] = aoes;
   }
 
   if (method == "threshold" || method == "massPca")
@@ -655,6 +691,52 @@ bool RecipeManager::saveSurfaceDefectPolygon(const QString& cameraId, const QVec
     surfaceLocalization["threshold"] = threshold;
   }
 
+  tools["surfaceLocalization"] = surfaceLocalization;
+  root["tools"] = tools;
+
+  return saveJsonObject(path, root, errorMessage);
+}
+
+bool RecipeManager::clearSurfaceDefectRoi(const QString& cameraId, QString* errorMessage) const
+{
+  const QString path = cameraRecipePath(cameraId);
+  QJsonObject root;
+  loadJsonObject(path, root);
+
+  root["cameraId"] = cameraId;
+
+  QJsonObject tools = root.value("tools").toObject();
+  QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
+  const QString method = normalizedSurfaceLocalizationMethod(surfaceLocalization.value("method").toString("threshold"));
+  surfaceLocalization.remove("searchRoi");
+  QJsonObject aoes = surfaceLocalization.value("aoes").toObject();
+  QJsonObject methodAoe = aoes.value(method).toObject();
+  methodAoe.remove("searchRoi");
+  aoes[method] = methodAoe;
+  surfaceLocalization["aoes"] = aoes;
+  tools["surfaceLocalization"] = surfaceLocalization;
+  root["tools"] = tools;
+
+  return saveJsonObject(path, root, errorMessage);
+}
+
+bool RecipeManager::clearSurfaceDefectPolygon(const QString& cameraId, QString* errorMessage) const
+{
+  const QString path = cameraRecipePath(cameraId);
+  QJsonObject root;
+  loadJsonObject(path, root);
+
+  root["cameraId"] = cameraId;
+
+  QJsonObject tools = root.value("tools").toObject();
+  QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
+  const QString method = normalizedSurfaceLocalizationMethod(surfaceLocalization.value("method").toString("threshold"));
+  surfaceLocalization.remove("searchPolygon");
+  QJsonObject aoes = surfaceLocalization.value("aoes").toObject();
+  QJsonObject methodAoe = aoes.value(method).toObject();
+  methodAoe.remove("searchPolygon");
+  aoes[method] = methodAoe;
+  surfaceLocalization["aoes"] = aoes;
   tools["surfaceLocalization"] = surfaceLocalization;
   root["tools"] = tools;
 

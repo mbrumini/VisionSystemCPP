@@ -422,6 +422,7 @@
     "move": "Sposta",
     "resize": "Ridimensiona",
     "clearRoi": "Cancella ROI",
+    "clearPolygon": "Cancella poligono",
     "saveOk": "Salva OK",
     "saveNok": "Salva NOK",
     "saveRaw": "Salva originale",

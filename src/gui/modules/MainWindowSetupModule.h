@@ -18,8 +18,9 @@ public:
 
   void showCameraSetupPanel(const CameraConfig& camera);
   void showToolPanel(const CameraConfig& camera, const QString& toolId);
-  void startCameraSimulation(const CameraConfig& camera);
-  void stopCameraSimulation(const CameraConfig& camera);
+  void startCameraSimulation(const CameraConfig& camera, bool refreshSetupPanel = true);
+  void stopCameraSimulation(const CameraConfig& camera, bool refreshSetupPanel = true);
+  void showCameraSampleImage(const CameraConfig& camera);
   void stepCameraSimulation(const CameraConfig& camera);
   void advanceCameraFrame(const CameraConfig& camera);
   void processCurrentCameraFrame(const CameraConfig& camera);

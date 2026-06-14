@@ -13,6 +13,7 @@ struct CameraSetupPanelTexts
   QString frameInterval;
   QString acquireSample;
   QString importSample;
+  QString showSample;
   QString importTests;
   QString start;
   QString stop;
@@ -34,6 +35,7 @@ public:
     std::function<void(int)> intervalChanged,
     std::function<void()> acquireSample,
     std::function<void()> importSample,
+    std::function<void()> showSample,
     std::function<void()> importTests,
     std::function<void()> start,
     std::function<void()> stop,

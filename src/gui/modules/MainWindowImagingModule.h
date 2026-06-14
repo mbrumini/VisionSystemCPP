@@ -21,6 +21,7 @@ public:
   PartPose partPoseFromSurfaceReference(const CameraConfig& camera, const SurfaceLocalizationReference& reference) const;
 
   QPixmap loadCameraPreview(const CameraConfig& camera) const;
+  QPixmap loadCameraSamplePreview(const CameraConfig& camera) const;
   void reloadCameraReferenceImage(const CameraConfig& camera);
   QPixmap matToPixmap(const cv::Mat& image) const;
   cv::Mat currentInputImage(const CameraConfig& camera, QString* errorMessage = nullptr) const;

@@ -912,7 +912,18 @@ void MainWindow::showGridView()
 void MainWindow::startMachine()
 {
   m_machineRunning = true;
-  deactivateImageDrawingTools();
+  const bool keepCurrentTool =
+    !m_selectedCameraId.isEmpty() &&
+    m_activeDrawingRecipe != MainWindowActiveDrawingRecipe::None;
+  if (!keepCurrentTool)
+  {
+    deactivateImageDrawingTools();
+  }
+  if (!m_selectedCameraId.isEmpty() &&
+      (m_selectedCamera.type == "file" || m_selectedCamera.type == "usb"))
+  {
+    m_setup.startCameraSimulation(m_selectedCamera, false);
+  }
   if (m_systemStatus)
   {
     m_systemStatus->setText(QString("START | %1 %2")
@@ -923,12 +934,23 @@ void MainWindow::startMachine()
   {
     m_commandToolbar->setStatusText(m_systemStatus ? m_systemStatus->text() : "START");
   }
-  updateControlPanel(m_selectedCameraId.isEmpty() ? nullptr : &m_selectedCamera);
+  if (!keepCurrentTool)
+  {
+    updateControlPanel(m_selectedCameraId.isEmpty() ? nullptr : &m_selectedCamera);
+  }
   appendLog(trText("log.command") + ": " + trText("commands.start"));
 }
 
 void MainWindow::stopMachine()
 {
+  const bool keepCurrentTool =
+    !m_selectedCameraId.isEmpty() &&
+    m_activeDrawingRecipe != MainWindowActiveDrawingRecipe::None;
+  if (!m_selectedCameraId.isEmpty() &&
+      (m_selectedCamera.type == "file" || m_selectedCamera.type == "usb"))
+  {
+    m_setup.stopCameraSimulation(m_selectedCamera, false);
+  }
   m_machineRunning = false;
   if (m_systemStatus)
   {
@@ -941,7 +963,10 @@ void MainWindow::stopMachine()
   {
     m_commandToolbar->setStatusText(m_systemStatus ? m_systemStatus->text() : trText("status.systemReady"));
   }
-  updateControlPanel(m_selectedCameraId.isEmpty() ? nullptr : &m_selectedCamera);
+  if (!keepCurrentTool)
+  {
+    updateControlPanel(m_selectedCameraId.isEmpty() ? nullptr : &m_selectedCamera);
+  }
   appendLog(trText("log.command") + ": " + trText("commands.stop"));
 }
 

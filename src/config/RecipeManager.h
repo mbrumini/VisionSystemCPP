@@ -187,6 +187,8 @@ public:
   QVector<QRect> loadSurfaceDefectExclusionRects(const QString& cameraId) const;
   bool saveSurfaceDefectRoi(const QString& cameraId, const QRect& roi, QString* errorMessage = nullptr) const;
   bool saveSurfaceDefectPolygon(const QString& cameraId, const QVector<QPoint>& polygon, QString* errorMessage = nullptr) const;
+  bool clearSurfaceDefectRoi(const QString& cameraId, QString* errorMessage = nullptr) const;
+  bool clearSurfaceDefectPolygon(const QString& cameraId, QString* errorMessage = nullptr) const;
   bool saveSurfaceDefectThreshold(const QString& cameraId, int minValue, int maxValue, QString* errorMessage = nullptr) const;
   bool addSurfaceDefectExclusionRect(const QString& cameraId, const QRect& rect, QString* errorMessage = nullptr) const;
   bool saveSurfaceDefectExclusionRects(const QString& cameraId, const QVector<QRect>& rects, QString* errorMessage = nullptr) const;

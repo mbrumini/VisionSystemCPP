@@ -8,6 +8,8 @@
 #include "gui/SurfaceLocalizationAdapters.h"
 #include "util/AsyncExecutor.h"
 
+#include <QPolygon>
+
 #include <memory>
 #include <vector>
 
@@ -147,6 +149,12 @@ void MainWindowSurfaceModule::testSurfaceAnnulusLocalization(const CameraConfig&
         return;
       }
 
+      if (*context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry && context().setup)
+      {
+        context().setup->refreshSetupGeometryResults(camera);
+        return;
+      }
+
       GeometryOverlay overlay;
       context().geometry->appendCurrentPartPoseOverlay(camera, overlay);
       largeImage()->setGeometryOverlay(overlay);
@@ -189,11 +197,16 @@ void MainWindowSurfaceModule::testSurfaceLocalization(const CameraConfig& camera
   }
 
   QRect roi;
-
-  if (!recipes().loadSurfaceDefectRoi(camera.id, roi))
+  const QVector<QPoint> searchPolygon = recipes().loadSurfaceDefectPolygon(camera.id);
+  const bool hasPolygon = searchPolygon.size() >= 3;
+  if (!recipes().loadSurfaceDefectRoi(camera.id, roi) && !hasPolygon)
   {
     log(tr("log.surfaceRoiMissing") + ": " + camera.id);
     return;
+  }
+  if (!roi.isValid() && hasPolygon)
+  {
+    roi = QPolygon(searchPolygon).boundingRect().normalized();
   }
 
   QString imageError;
@@ -210,7 +223,6 @@ void MainWindowSurfaceModule::testSurfaceLocalization(const CameraConfig& camera
   thresholdSettings.maxValue = recipeSettings.thresholdMax;
 
   const QVector<QRect> exclusionRects = recipes().loadSurfaceDefectExclusionRects(camera.id);
-  const QVector<QPoint> searchPolygon = recipes().loadSurfaceDefectPolygon(camera.id);
 
   auto job = [input, roi, searchPolygon, exclusionRects, thresholdSettings]() -> SurfaceDefectResult {
     SurfaceDefectProcessor processor;
@@ -273,6 +285,12 @@ void MainWindowSurfaceModule::testSurfaceLocalization(const CameraConfig& camera
       context().lastSurfaceLocalizationResults->insert(camera.id, result.localization);
       cameraRuntime()[camera.id].setCurrentPose(context().imaging->partPoseFromSurfaceReference(camera, result.localization));
       if (*context().setupCameraId == camera.id && *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry)
+      {
+        context().setup->refreshSetupGeometryResults(camera);
+        return;
+      }
+
+      if (*context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry && context().setup)
       {
         context().setup->refreshSetupGeometryResults(camera);
         return;
@@ -390,10 +408,16 @@ void MainWindowSurfaceModule::testSurfaceEdgePcaLocalization(const CameraConfig&
   }
 
   QRect roi;
-  if (!recipes().loadSurfaceDefectRoi(camera.id, roi))
+  const QVector<QPoint> searchPolygon = recipes().loadSurfaceDefectPolygon(camera.id);
+  const bool hasPolygon = searchPolygon.size() >= 3;
+  if (!recipes().loadSurfaceDefectRoi(camera.id, roi) && !hasPolygon)
   {
     log(tr("log.surfaceRoiMissing") + ": " + camera.id);
     return;
+  }
+  if (!roi.isValid() && hasPolygon)
+  {
+    roi = QPolygon(searchPolygon).boundingRect().normalized();
   }
 
   QString imageError;
@@ -406,7 +430,6 @@ void MainWindowSurfaceModule::testSurfaceEdgePcaLocalization(const CameraConfig&
 
   const SurfaceAnnulusLocalizationConfig annulus = recipes().loadSurfaceAnnulusLocalization(camera.id);
   const QVector<QRect> exclusionRects = recipes().loadSurfaceDefectExclusionRects(camera.id);
-  const QVector<QPoint> searchPolygon = recipes().loadSurfaceDefectPolygon(camera.id);
 
   auto job = [input, roi, searchPolygon, exclusionRects, annulus]() -> SurfaceDefectResult {
     SurfaceDefectProcessor processor;
@@ -475,6 +498,12 @@ void MainWindowSurfaceModule::testSurfaceEdgePcaLocalization(const CameraConfig&
     context().lastSurfaceLocalizationResults->insert(camera.id, result.localization);
     cameraRuntime()[camera.id].setCurrentPose(context().imaging->partPoseFromSurfaceReference(camera, result.localization));
     if (*context().setupCameraId == camera.id && *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry)
+    {
+      context().setup->refreshSetupGeometryResults(camera);
+      return;
+    }
+
+    if (*context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry && context().setup)
     {
       context().setup->refreshSetupGeometryResults(camera);
       return;

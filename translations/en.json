@@ -422,6 +422,7 @@
     "move": "Move",
     "resize": "Resize",
     "clearRoi": "Clear ROI",
+    "clearPolygon": "Clear polygon",
     "saveOk": "Save OK",
     "saveNok": "Save NOK",
     "saveRaw": "Save raw",

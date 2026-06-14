@@ -44,15 +44,19 @@ void MainWindowSetupModule::showCameraSetupPanel(const CameraConfig& camera)
 {
   context().deactivateImageDrawingTools();
   context().clearToolPanel();
-  context().geometry->restoreCleanGeometryImage(camera);
 
   CameraRuntime& runtime = cameraRuntime()[camera.id];
+  if (!runtime.running())
+  {
+    context().geometry->restoreCleanGeometryImage(camera);
+  }
   CameraSetupPanelTexts texts;
   texts.title = QString("%1 | %2").arg(tr("tools.setup"), camera.id);
   texts.details = cameraSetupDetailsText(camera);
   texts.frameInterval = tr("labels.frameInterval");
   texts.acquireSample = tr("actions.acquireSampleImage");
   texts.importSample = tr("actions.assignSampleImage");
+  texts.showSample = tr("labels.sampleImage");
   texts.importTests = tr("actions.assignTestImages");
   texts.start = tr("commands.start");
   texts.stop = tr("commands.stop");
@@ -80,6 +84,7 @@ void MainWindowSetupModule::showCameraSetupPanel(const CameraConfig& camera)
     },
     [this, camera]() { context().cameraConfig->acquireCameraSampleImage(camera); },
     [this, camera]() { context().cameraConfig->configureCameraSampleImage(camera); },
+    [this, camera]() { showCameraSampleImage(camera); },
     [this, camera]() { context().cameraConfig->configureCameraTestImages(camera); },
     [this, camera]() { startCameraSimulation(camera); },
     [this, camera]() { stopCameraSimulation(camera); },
@@ -265,7 +270,7 @@ void MainWindowSetupModule::showToolPanel(const CameraConfig& camera, const QStr
   log(tr("log.toolPanel") + ": " + tool.label);
 }
 
-void MainWindowSetupModule::startCameraSimulation(const CameraConfig& camera)
+void MainWindowSetupModule::startCameraSimulation(const CameraConfig& camera, bool refreshSetupPanel)
 {
   if (camera.id != selectedCamera().id)
   {
@@ -284,18 +289,24 @@ void MainWindowSetupModule::startCameraSimulation(const CameraConfig& camera)
   if (!runtime.start(camera, testFolder, &error))
   {
     log(error.isEmpty() ? tr("log.cameraStartFailed") + ": " + camera.id : error);
-    showCameraSetupPanel(camera);
+    if (refreshSetupPanel)
+    {
+      showCameraSetupPanel(camera);
+    }
     return;
   }
 
   context().simulationTimer->start(runtime.intervalMs());
   log(tr("log.cameraStarted") + ": " + camera.id);
   advanceCameraFrame(camera);
-  showCameraSetupPanel(camera);
+  if (refreshSetupPanel)
+  {
+    showCameraSetupPanel(camera);
+  }
 }
 
 
-void MainWindowSetupModule::stopCameraSimulation(const CameraConfig& camera)
+void MainWindowSetupModule::stopCameraSimulation(const CameraConfig& camera, bool refreshSetupPanel)
 {
   CameraRuntime& runtime = cameraRuntime()[camera.id];
   runtime.stop();
@@ -303,10 +314,32 @@ void MainWindowSetupModule::stopCameraSimulation(const CameraConfig& camera)
   if (camera.id == selectedCamera().id)
   {
     context().simulationTimer->stop();
-    showCameraSetupPanel(camera);
+    if (refreshSetupPanel)
+    {
+      showCameraSetupPanel(camera);
+    }
   }
 
   log(tr("log.cameraStopped") + ": " + camera.id);
+}
+
+void MainWindowSetupModule::showCameraSampleImage(const CameraConfig& camera)
+{
+  if (camera.id != selectedCamera().id)
+  {
+    context().selectCamera(camera);
+  }
+
+  CameraRuntime& runtime = cameraRuntime()[camera.id];
+  runtime.stop();
+  if (camera.id == selectedCamera().id)
+  {
+    context().simulationTimer->stop();
+  }
+
+  context().imaging->reloadCameraReferenceImage(camera);
+  showCameraSetupPanel(camera);
+  log(tr("labels.sampleImage") + ": " + camera.id);
 }
 
 
@@ -359,6 +392,10 @@ void MainWindowSetupModule::advanceCameraFrame(const CameraConfig& camera)
     }
   }
   largeImage()->setImage(selectedPreview());
+  if (context().geometry)
+  {
+    context().geometry->showRuntimeGeometryOverlay(camera);
+  }
   QElapsedTimer scanTimer;
   scanTimer.start();
   processCurrentCameraFrame(camera);

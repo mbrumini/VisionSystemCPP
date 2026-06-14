@@ -123,6 +123,12 @@ void MainWindowLocalizationModule::testLocalization(const CameraConfig& camera)
         return;
       }
 
+      if (*context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry && context().setup)
+      {
+        context().setup->refreshSetupGeometryResults(camera);
+        return;
+      }
+
       GeometryOverlay overlay;
       if (context().geometry)
       {

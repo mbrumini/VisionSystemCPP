@@ -64,6 +64,7 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
   std::function<void(int)> intervalChanged,
   std::function<void()> acquireSample,
   std::function<void()> importSample,
+  std::function<void()> showSample,
   std::function<void()> importTests,
   std::function<void()> start,
   std::function<void()> stop,
@@ -128,6 +129,7 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
 
   auto* acquireSampleButton = createTouchButton("acquireSample", texts.acquireSample, buttons);
   auto* sampleButton = createTouchButton("assignSampleImage", texts.importSample, buttons);
+  auto* showSampleButton = createTouchButton("sampleImage", texts.showSample, buttons);
   auto* testImagesButton = createTouchButton("assignTestImages", texts.importTests, buttons);
   auto* startButton = createTouchButton("start", texts.start, buttons);
   auto* stopButton = createTouchButton("stop", texts.stop, buttons);
@@ -137,7 +139,8 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
 
   buttonsLayout->addWidget(acquireSampleButton, 0, 0);
   buttonsLayout->addWidget(sampleButton, 0, 1);
-  buttonsLayout->addWidget(testImagesButton, 0, 2);
+  buttonsLayout->addWidget(showSampleButton, 0, 2);
+  buttonsLayout->addWidget(testImagesButton, 0, 3);
   buttonsLayout->addWidget(startButton, 1, 0);
   buttonsLayout->addWidget(stopButton, 1, 1);
   buttonsLayout->addWidget(stepButton, 1, 2);
@@ -147,6 +150,7 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
 
   connectButton(acquireSampleButton, acquireSample);
   connectButton(sampleButton, importSample);
+  connectButton(showSampleButton, showSample);
   connectButton(testImagesButton, importTests);
   connectButton(startButton, start);
   connectButton(stopButton, stop);

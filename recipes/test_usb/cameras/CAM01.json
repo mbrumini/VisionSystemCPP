@@ -1,8 +1,67 @@
 {
     "cameraId": "CAM01",
     "tools": {
+        "geometries": {
+            "enabled": true,
+            "lines": [
+                {
+                    "bandHalfWidth": 26,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 5,
+                    "edgeSensitivity": 41,
+                    "edgeStatisticalFilter": 2,
+                    "enabled": true,
+                    "id": "line_1",
+                    "partEnd": {
+                        "x": 205.2353909549035,
+                        "y": 33.57093437959516
+                    },
+                    "partStart": {
+                        "x": -41.83476504545451,
+                        "y": 33.29880721406712
+                    },
+                    "pickMode": "first",
+                    "scanDirection": "normal_negative",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": false
+                }
+            ]
+        },
         "surfaceLocalization": {
-            "edge": {
+            "aoes": {
+                "massPca": {
+                    "id": "massPca",
+                    "label": "massPca",
+                    "searchPolygon": [
+                        {
+                            "x": 171,
+                            "y": 160
+                        },
+                        {
+                            "x": 602,
+                            "y": 157
+                        },
+                        {
+                            "x": 597,
+                            "y": 252
+                        },
+                        {
+                            "x": 368,
+                            "y": 267
+                        },
+                        {
+                            "x": 170,
+                            "y": 245
+                        }
+                    ],
+                    "searchRoi": {
+                        "height": 111,
+                        "width": 433,
+                        "x": 170,
+                        "y": 157
+                    }
+                }
             },
             "enabled": true,
             "exclusionRects": [
@@ -10,56 +69,36 @@
             "method": "massPca",
             "searchPolygon": [
                 {
-                    "x": 199,
-                    "y": 43
+                    "x": 171,
+                    "y": 160
                 },
                 {
-                    "x": 298,
-                    "y": 40
+                    "x": 602,
+                    "y": 157
                 },
                 {
-                    "x": 423,
-                    "y": 53
+                    "x": 597,
+                    "y": 252
                 },
                 {
-                    "x": 424,
-                    "y": 107
+                    "x": 368,
+                    "y": 267
                 },
                 {
-                    "x": 339,
-                    "y": 119
-                },
-                {
-                    "x": 234,
-                    "y": 112
-                },
-                {
-                    "x": 131,
-                    "y": 112
-                },
-                {
-                    "x": 82,
-                    "y": 95
-                },
-                {
-                    "x": 103,
-                    "y": 57
-                },
-                {
-                    "x": 162,
-                    "y": 40
+                    "x": 170,
+                    "y": 245
                 }
             ],
             "searchRoi": {
-                "height": 80,
-                "width": 343,
-                "x": 82,
-                "y": 40
+                "height": 111,
+                "width": 433,
+                "x": 170,
+                "y": 157
             },
             "threshold": {
-                "max": 163,
+                "max": 97,
                 "min": 0,
-                "value": 163
+                "value": 97
             }
         }
     }

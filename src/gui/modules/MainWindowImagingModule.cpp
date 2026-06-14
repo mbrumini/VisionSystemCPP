@@ -95,6 +95,12 @@ QPixmap MainWindowImagingModule::loadCameraPreview(const CameraConfig& camera) c
   return QPixmap(imagePath);
 }
 
+QPixmap MainWindowImagingModule::loadCameraSamplePreview(const CameraConfig& camera) const
+{
+  const QString imagePath = cameraSampleImagePath(camera);
+  return imagePath.isEmpty() ? QPixmap() : QPixmap(imagePath);
+}
+
 void MainWindowImagingModule::reloadCameraReferenceImage(const CameraConfig& camera)
 {
   if (camera.id != selectedCameraId() || !largeImage())
@@ -103,26 +109,6 @@ void MainWindowImagingModule::reloadCameraReferenceImage(const CameraConfig& cam
   }
 
   selectedImagePath() = cameraSampleImagePath(camera);
-  if (camera.type != "file")
-  {
-    const auto runtimeIt = cameraRuntime().find(camera.id);
-    selectedPreview() = runtimeIt != cameraRuntime().end() && !runtimeIt->second.currentFrame().empty()
-      ? matToPixmap(runtimeIt->second.currentFrame())
-      : QPixmap();
-    if (selectedPreview().isNull())
-    {
-      largeImage()->clearImage();
-      return;
-    }
-
-    largeImage()->setImage(selectedPreview());
-    if (context().updateLargePreview)
-    {
-      context().updateLargePreview();
-    }
-    return;
-  }
-
   selectedPreview() = selectedImagePath().isEmpty() ? QPixmap() : QPixmap(selectedImagePath());
   if (selectedPreview().isNull())
   {
@@ -201,15 +187,15 @@ cv::Mat MainWindowImagingModule::currentInputImage(const CameraConfig& camera, Q
 
 QString MainWindowImagingModule::cameraSampleImagePath(const CameraConfig& camera) const
 {
-  if (camera.type != "file")
-  {
-    return {};
-  }
-
   const QString recipeSample = recipes().firstCameraSampleImagePath(camera.id);
   if (!recipeSample.isEmpty())
   {
     return recipeSample;
+  }
+
+  if (camera.type != "file")
+  {
+    return {};
   }
 
   return firstImageInFolder(camera.folder);

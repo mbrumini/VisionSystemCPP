@@ -284,15 +284,7 @@ void MainWindowGeometryModule::restoreCleanGeometryImage(const CameraConfig& cam
     return;
   }
 
-  const auto runtimeIt = cameraRuntime().find(camera.id);
-  if (runtimeIt != cameraRuntime().end() && !runtimeIt->second.currentFrame().empty())
-  {
-    selectedPreview() = context().imaging->matToPixmap(runtimeIt->second.currentFrame());
-  }
-  else
-  {
-    selectedPreview() = context().imaging->loadCameraPreview(camera);
-  }
+  selectedPreview() = context().imaging->loadCameraSamplePreview(camera);
 
   if (selectedPreview().isNull())
   {
@@ -309,6 +301,40 @@ void MainWindowGeometryModule::restoreCleanGeometryImage(const CameraConfig& cam
   largeImage()->clearGeometryPoints();
   largeImage()->clearGeometryLines();
   largeImage()->clearGeometryOverlay();
+}
+
+void MainWindowGeometryModule::showRuntimeGeometryOverlay(const CameraConfig& camera)
+{
+  if (camera.id != selectedCameraId())
+  {
+    return;
+  }
+
+  const GeometrySet& geometries = cameraRuntime()[camera.id].geometries();
+  GeometryOverlay overlay;
+  for (const LineGeometry& line : geometries.lines)
+  {
+    overlay.lines.append({
+      QPointF(line.start.x, line.start.y),
+      QPointF(line.end.x, line.end.y),
+      QColor("#35c46a"),
+      6
+    });
+  }
+  for (const PointGeometry& point : geometries.points)
+  {
+    GeometryDiagnosticDrawing::appendOrangePointCross(overlay, point.point);
+  }
+  for (const CircleGeometry& circle : geometries.circles)
+  {
+    appendCirclePolyline(overlay, circle.center, circle.radius, QColor("#00d2ff"), 7);
+  }
+  for (const ArcGeometry& arc : geometries.arcs)
+  {
+    appendArcPolyline(overlay, arc.center, arc.radius, arc.startAngleRadians, arc.endAngleRadians, QColor("#ff4fd8"), 7);
+  }
+  appendCurrentPartPoseOverlay(camera, overlay);
+  largeImage()->setGeometryOverlay(overlay);
 }
 
 void MainWindowGeometryModule::testGeometryLine(const CameraConfig& camera)
@@ -707,6 +733,40 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
   largeImage()->setImage(selectedPreview());
   largeImage()->clearRoi();
   largeImage()->clearCircles();
+
+  if (*context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry &&
+      m_drawingTarget == DrawingTarget::Line)
+  {
+    GeometryLineRuntimeConfig& activeLine = activeGeometryLineConfig(camera.id);
+    if (pose.valid && !activeLine.hasLine && activeLine.hasImageLine)
+    {
+      activeLine.partStart = imageToPart(pose, activeLine.imageStart);
+      activeLine.partEnd = imageToPart(pose, activeLine.imageEnd);
+      activeLine.hasLine = true;
+    }
+
+    const bool usePartLine = pose.valid && activeLine.hasLine;
+    if (usePartLine || activeLine.hasImageLine)
+    {
+      const cv::Point2d imageStart = usePartLine ? partToImage(pose, activeLine.partStart) : activeLine.imageStart;
+      const cv::Point2d imageEnd = usePartLine ? partToImage(pose, activeLine.partEnd) : activeLine.imageEnd;
+      m_lineMouseControllers[camera.id].setLine(
+        QPointF(imageStart.x, imageStart.y),
+        QPointF(imageEnd.x, imageEnd.y),
+        activeLine.bandHalfWidth);
+    }
+
+    updateGeometryLineOverlay(camera, detectedOverlay);
+    return;
+  }
+
+  if (*context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry &&
+      m_drawingTarget == DrawingTarget::Point)
+  {
+    updateGeometryPointOverlay(camera, detectedOverlay);
+    return;
+  }
+
   GeometryOverlay setupOverlay = detectedOverlay;
   appendCurrentPartPoseOverlay(camera, setupOverlay);
   largeImage()->setGeometryOverlay(setupOverlay);

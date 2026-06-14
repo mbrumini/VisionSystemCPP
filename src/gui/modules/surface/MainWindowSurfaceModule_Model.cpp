@@ -2,6 +2,7 @@
 #include "gui/modules/MainWindowCameraProfile.h"
 #include "gui/modules/MainWindowImagingModule.h"
 #include "gui/modules/MainWindowGeometryModule.h"
+#include "gui/modules/MainWindowSetupModule.h"
 #include "gui/modules/MainWindowContext.h"
 
 #include "gui/SurfaceLocalizationAdapters.h"
@@ -191,6 +192,12 @@ void MainWindowSurfaceModule::testSurfaceShapeModel(const CameraConfig& camera)
 
     context().lastSurfaceLocalizationResults->insert(camera.id, result.localization);
     cameraRuntime()[camera.id].setCurrentPose(context().imaging->partPoseFromSurfaceReference(camera, result.localization));
+    if (*context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry && context().setup)
+    {
+      context().setup->refreshSetupGeometryResults(camera);
+      return;
+    }
+
     if (!suppressViewUpdate)
     {
       selectedPreview() = context().imaging->matToPixmap(result.diagnosticImage);
@@ -272,6 +279,12 @@ void MainWindowSurfaceModule::testSurfaceTemplateModel(const CameraConfig& camer
 
     context().lastSurfaceLocalizationResults->insert(camera.id, result.localization);
     cameraRuntime()[camera.id].setCurrentPose(context().imaging->partPoseFromSurfaceReference(camera, result.localization));
+    if (*context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry && context().setup)
+    {
+      context().setup->refreshSetupGeometryResults(camera);
+      return;
+    }
+
     if (!suppressViewUpdate)
     {
       selectedPreview() = context().imaging->matToPixmap(result.diagnosticImage);

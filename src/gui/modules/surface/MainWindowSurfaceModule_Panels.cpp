@@ -133,6 +133,7 @@ void MainWindowSurfaceModule::activateSurfaceDefectRoiDrawing(const CameraConfig
     return;
   }
 
+  showStoredSurfaceDefectAoe(camera);
   largeImage()->setRoiDrawingEnabled(true);
   *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::SurfaceDefects;
   log(tr("log.surfaceRoiDrawing") + ": " + camera.id);
@@ -151,6 +152,7 @@ void MainWindowSurfaceModule::activateSurfaceDefectPolygonDrawing(const CameraCo
     return;
   }
 
+  showStoredSurfaceDefectAoe(camera);
   largeImage()->setPolygonDrawingEnabled(true);
   *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::SurfaceDefects;
   log(tr("actions.polygon") + ": " + camera.id);
@@ -183,19 +185,80 @@ void MainWindowSurfaceModule::clearSurfaceDefectExclusions(const CameraConfig& c
 
   QString error;
 
-  if (!recipes().clearSurfaceLocalizationGeometry(camera.id, &error))
+  if (!recipes().clearSurfaceDefectExclusionRects(camera.id, &error))
   {
     log(error);
     return;
   }
 
   largeImage()->clearExclusionRects();
-  largeImage()->clearCircles();
-  context().lastSurfaceLocalizationResults->remove(camera.id);
-  selectedPreview() = context().imaging->loadCameraPreview(camera);
-  largeImage()->setImage(selectedPreview());
-  log(tr("log.surfaceGeometryCleared") + ": " + camera.id);
+  log(tr("log.surfaceExclusionsCleared") + ": " + camera.id);
 }
+
+void MainWindowSurfaceModule::clearSurfaceDefectRoi(const CameraConfig& camera)
+{
+  if (camera.id != selectedCameraId())
+  {
+    return;
+  }
+
+  QString error;
+  if (!recipes().clearSurfaceDefectRoi(camera.id, &error))
+  {
+    log(error);
+    return;
+  }
+
+  largeImage()->clearRoi();
+  context().lastSurfaceLocalizationResults->remove(camera.id);
+  cameraRuntime()[camera.id].clearCurrentPose(camera.id);
+  log(tr("actions.clearRoi") + ": " + camera.id);
+}
+
+void MainWindowSurfaceModule::clearSurfaceDefectPolygon(const CameraConfig& camera)
+{
+  if (camera.id != selectedCameraId())
+  {
+    return;
+  }
+
+  QString error;
+  if (!recipes().clearSurfaceDefectPolygon(camera.id, &error))
+  {
+    log(error);
+    return;
+  }
+
+  largeImage()->clearSearchPolygon();
+  context().lastSurfaceLocalizationResults->remove(camera.id);
+  cameraRuntime()[camera.id].clearCurrentPose(camera.id);
+  log(tr("actions.clearPolygon") + ": " + camera.id);
+}
+
+void MainWindowSurfaceModule::showStoredSurfaceDefectAoe(const CameraConfig& camera)
+{
+  if (camera.id != selectedCameraId())
+  {
+    return;
+  }
+
+  selectedPreview() = context().imaging->loadCameraSamplePreview(camera);
+  largeImage()->setImage(selectedPreview());
+
+  QRect roi;
+  if (recipes().loadSurfaceDefectRoi(camera.id, roi))
+  {
+    largeImage()->setRoi(roi);
+  }
+  else
+  {
+    largeImage()->clearRoi();
+  }
+
+  largeImage()->setSearchPolygon(recipes().loadSurfaceDefectPolygon(camera.id));
+  largeImage()->setExclusionRects(recipes().loadSurfaceDefectExclusionRects(camera.id));
+}
+
 void MainWindowSurfaceModule::activateSurfaceOuterCircleDrawing(const CameraConfig& camera)
 {
   if (!MainWindowCameraProfile::isGrayscaleLocalization(camera, config()))
@@ -459,7 +522,7 @@ void MainWindowSurfaceModule::showStoredSurfaceLocalizationGeometry(const Camera
     return;
   }
 
-  selectedPreview() = context().imaging->loadCameraPreview(camera);
+  selectedPreview() = context().imaging->loadCameraSamplePreview(camera);
   largeImage()->setImage(selectedPreview());
   largeImage()->setExclusionRects(recipes().loadSurfaceDefectExclusionRects(camera.id));
   largeImage()->setSearchPolygon(recipes().loadSurfaceDefectPolygon(camera.id));

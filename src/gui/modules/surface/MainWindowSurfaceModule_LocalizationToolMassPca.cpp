@@ -47,18 +47,24 @@ void MainWindowSurfaceModule::showMassPcaLocalizationPanel(const CameraConfig& c
   auto* roiButton = createTouchIconButton("surfaceSearchRoi", tr("actions.surfaceSearchRoi"), buttons);
   auto* polygonButton = createTouchIconButton("polygon", tr("actions.polygon"), buttons);
   auto* maskButton = createTouchIconButton("surfaceAddExclusion", tr("actions.surfaceAddExclusion"), buttons);
+  auto* clearRoiButton = createTouchIconButton("clearRoi", tr("actions.clearRoi"), buttons);
+  auto* clearPolygonButton = createTouchIconButton("clearPolygon", tr("actions.clearPolygon"), buttons);
   auto* clearButton = createTouchIconButton("surfaceClearExclusions", tr("actions.surfaceClearExclusions"), buttons);
   auto* testButton = createTouchIconButton("testStrategy", tr("actions.testStrategy"), buttons);
   QObject::connect(roiButton, &QPushButton::clicked, window(), [this, camera]() { activateSurfaceDefectRoiDrawing(camera); });
   QObject::connect(polygonButton, &QPushButton::clicked, window(), [this, camera]() { activateSurfaceDefectPolygonDrawing(camera); });
   QObject::connect(maskButton, &QPushButton::clicked, window(), [this, camera]() { activateSurfaceDefectExclusionDrawing(camera); });
+  QObject::connect(clearRoiButton, &QPushButton::clicked, window(), [this, camera]() { clearSurfaceDefectRoi(camera); });
+  QObject::connect(clearPolygonButton, &QPushButton::clicked, window(), [this, camera]() { clearSurfaceDefectPolygon(camera); });
   QObject::connect(clearButton, &QPushButton::clicked, window(), [this, camera]() { clearSurfaceDefectExclusions(camera); });
   QObject::connect(testButton, &QPushButton::clicked, window(), [this, camera]() { testSurfaceLocalization(camera); });
   buttonsLayout->addWidget(roiButton, 0, 0);
   buttonsLayout->addWidget(polygonButton, 0, 1);
   buttonsLayout->addWidget(maskButton, 1, 0);
   buttonsLayout->addWidget(clearButton, 1, 1);
-  buttonsLayout->addWidget(testButton, 2, 0, 1, 2);
+  buttonsLayout->addWidget(clearRoiButton, 2, 0);
+  buttonsLayout->addWidget(clearPolygonButton, 2, 1);
+  buttonsLayout->addWidget(testButton, 3, 0, 1, 2);
   layout->addWidget(buttons);
 
   auto* thresholdBox = new QGroupBox(tr("labels.threshold"), panel);
@@ -119,5 +125,6 @@ void MainWindowSurfaceModule::showMassPcaLocalizationPanel(const CameraConfig& c
 
   toolsLayout()->addWidget(panel);
   log(tr("log.toolPanel") + ": " + strategy.label);
+  showStoredSurfaceDefectAoe(camera);
   testSurfaceLocalization(camera);
 }

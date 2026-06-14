@@ -142,6 +142,7 @@ QIcon IconCatalog::icon(const QString& id)
     {"roi", ":/icons/scan.svg"},
     {"polygon", ":/icons/shapes.svg"},
     {"saveSample", ":/icons/save.svg"},
+    {"sampleImage", ":/icons/image.svg"},
     {"tolerances", ":/icons/gauge.svg"},
     {"surfaceLocalization", ":/icons/scan-search.svg"},
     {"surfaceDefects", ":/icons/sparkles.svg"},
@@ -184,6 +185,7 @@ QIcon IconCatalog::icon(const QString& id)
     ,{"area", ":/icons/shapes.svg"}
     ,{"clear", ":/icons/refresh.svg"}
     ,{"clearRoi", ":/icons/refresh.svg"}
+    ,{"clearPolygon", ":/icons/refresh.svg"}
     ,{"testGeometry", ":/icons/play.svg"}
     ,{"testLocalization", ":/icons/play.svg"}
     ,{"testStrategy", ":/icons/play.svg"}

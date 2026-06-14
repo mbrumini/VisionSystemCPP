@@ -55,6 +55,7 @@ public:
   GeometryOverlay configuredGeometryLinesOverlay(const CameraConfig& camera, bool includeActive) const;
   void updateGeometryLineOverlay(const CameraConfig& camera, const GeometryOverlay& extraOverlay = {});
   void restoreCleanGeometryImage(const CameraConfig& camera);
+  void showRuntimeGeometryOverlay(const CameraConfig& camera);
   void testGeometryLine(const CameraConfig& camera);
   void testConfiguredGeometryLines(const CameraConfig& camera);
 
