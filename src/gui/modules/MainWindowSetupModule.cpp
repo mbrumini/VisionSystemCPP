@@ -377,6 +377,13 @@ void MainWindowSetupModule::showAiClassificationPanel(const CameraConfig& camera
   });
   buttonsLayout->addWidget(trainButton, 1, 2, 1, 2);
 
+  auto* inferenceButton = new QPushButton(tr("actions.runInference"), buttons);
+  inferenceButton->setObjectName("touchButton");
+  QObject::connect(inferenceButton, &QPushButton::clicked, window(), [this, camera]() {
+    runAiClassificationInference(camera);
+  });
+  buttonsLayout->addWidget(inferenceButton, 2, 0, 1, 4);
+
   const QVector<AiClassificationClassConfig> classes = recipes().loadAiClassificationClasses(camera.id);
   int index = 0;
   for (const AiClassificationClassConfig& classConfig : classes)
@@ -395,8 +402,8 @@ void MainWindowSetupModule::showAiClassificationPanel(const CameraConfig& camera
     QObject::connect(classPlayButton, &QPushButton::clicked, window(), [this, camera, classConfig]() {
       startAiClassificationCapture(camera, true, classConfig);
     });
-    buttonsLayout->addWidget(classButton, 2 + index, 0, 1, 2);
-    buttonsLayout->addWidget(classPlayButton, 2 + index, 2, 1, 2);
+    buttonsLayout->addWidget(classButton, 3 + index, 0, 1, 2);
+    buttonsLayout->addWidget(classPlayButton, 3 + index, 2, 1, 2);
     ++index;
   }
 

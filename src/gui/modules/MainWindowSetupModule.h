@@ -42,6 +42,7 @@ private:
   void captureAiClassificationFrame();
   void prepareAiClassificationDataset(const CameraConfig& camera);
   void startAiClassificationTraining(const CameraConfig& camera);
+  void runAiClassificationInference(const CameraConfig& camera);
   void startAiProcess(const QString& label, const QString& program, const QStringList& arguments);
 
   QPointer<SetupResultsDialog> m_resultsDialog;

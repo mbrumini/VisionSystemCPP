@@ -4,8 +4,10 @@
 #include "gui/IconCatalog.h"
 #include "gui/modules/MainWindowCameraConfigModule.h"
 #include "gui/modules/MainWindowContext.h"
+#include "gui/modules/MainWindowImagingModule.h"
 
 #include <QDir>
+#include <QDateTime>
 #include <QFileInfo>
 #include <QGridLayout>
 #include <QInputDialog>
@@ -15,6 +17,8 @@
 #include <QPushButton>
 #include <QTimer>
 #include <QVBoxLayout>
+
+#include <opencv2/imgcodecs.hpp>
 
 namespace
 {
@@ -74,6 +78,17 @@ QString classificationModelPath(const RecipeManager& recipes, const QString& cam
 {
   return QDir(RecipeManager::recipesRootPath()).filePath(
     QString("%1/models/classification/runs").arg(recipes.recipeId()));
+}
+
+QString classificationModelFilePath(const RecipeManager& recipes, const QString& cameraId)
+{
+  const QDir recipeRoot(QDir(RecipeManager::recipesRootPath()).filePath(recipes.recipeId()));
+  const QString direct = recipeRoot.filePath(QString("models/classification/%1_yolo11s_cls/weights/best.pt").arg(cameraId));
+  if (QFileInfo::exists(direct))
+  {
+    return direct;
+  }
+  return recipeRoot.filePath(QString("models/classification/runs/%1_yolo11s_cls/weights/best.pt").arg(cameraId));
 }
 }
 
@@ -256,6 +271,55 @@ void MainWindowSetupModule::startAiClassificationTraining(const CameraConfig& ca
       "-Command",
       prepareCommand + "; if ($LASTEXITCODE -eq 0) { " + trainCommand + " }"
     });
+}
+
+void MainWindowSetupModule::runAiClassificationInference(const CameraConfig& camera)
+{
+  const QString modelPath = QDir::cleanPath(classificationModelFilePath(recipes(), camera.id));
+  if (!QFileInfo::exists(modelPath))
+  {
+    log(QString("AI inference model missing: %1").arg(modelPath));
+    return;
+  }
+
+  cv::Mat frame;
+  const auto runtimeIt = cameraRuntime().find(camera.id);
+  if (runtimeIt != cameraRuntime().end() && !runtimeIt->second.currentFrame().empty())
+  {
+    frame = runtimeIt->second.currentFrame().clone();
+  }
+  else
+  {
+    QString error;
+    frame = context().imaging->currentInputImage(camera, &error);
+    if (frame.empty())
+    {
+      log(error.isEmpty() ? QString("AI inference image missing: %1").arg(camera.id) : error);
+      return;
+    }
+  }
+
+  const QString folder = QDir(RecipeManager::recipesRootPath()).filePath(
+    QString("%1/images/%2/ai/inference").arg(recipes().recipeId(), camera.id));
+  QDir().mkpath(folder);
+  const QString stamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss_zzz");
+  const QString imagePath = QDir(folder).filePath(QString("%1_inference_%2.png").arg(camera.id, stamp));
+  if (!cv::imwrite(imagePath.toStdString(), frame))
+  {
+    log(QString("AI inference image save failed: %1").arg(imagePath));
+    return;
+  }
+
+  const QString script = projectPath("tools/ai/predict_classification_yolo.py");
+  startAiProcess(
+    tr("actions.runInference"),
+    pythonProgram(),
+    pythonArguments({
+      script,
+      "--model", modelPath,
+      "--image", imagePath,
+      "--device", "0"
+    }));
 }
 
 void MainWindowSetupModule::startAiProcess(
