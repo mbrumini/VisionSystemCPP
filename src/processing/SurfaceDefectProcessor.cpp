@@ -15,6 +15,15 @@ SurfaceDefectResult SurfaceDefectProcessor::detectByGrayscaleThreshold(
   return SurfaceThresholdStrategy().detectInRoi(input, searchRoi, exclusionRects, settings);
 }
 
+SurfaceDefectResult SurfaceDefectProcessor::detectByGrayscaleThreshold(
+  const cv::Mat& input,
+  const std::vector<cv::Point>& searchPolygon,
+  const std::vector<cv::Rect>& exclusionRects,
+  const SurfaceThresholdSettings& settings) const
+{
+  return SurfaceThresholdStrategy().detectInPolygon(input, searchPolygon, exclusionRects, settings);
+}
+
 SurfaceStrategyResult SurfaceDefectProcessor::locateTwoCirclesAxis(
   const cv::Mat& input,
   const SurfaceTwoCirclesStrategyConfig& config,
@@ -46,6 +55,15 @@ SurfaceDefectResult SurfaceDefectProcessor::locateByEdgePca(
   int edgeSensitivity) const
 {
   return SurfacePcaStrategy().locateByEdgePca(input, searchRoi, exclusionRects, edgeSensitivity);
+}
+
+SurfaceDefectResult SurfaceDefectProcessor::locateByEdgePca(
+  const cv::Mat& input,
+  const std::vector<cv::Point>& searchPolygon,
+  const std::vector<cv::Rect>& exclusionRects,
+  int edgeSensitivity) const
+{
+  return SurfacePcaStrategy().locateByEdgePca(input, searchPolygon, exclusionRects, edgeSensitivity);
 }
 
 SurfaceDefectResult SurfaceDefectProcessor::locateByShapeMatching(

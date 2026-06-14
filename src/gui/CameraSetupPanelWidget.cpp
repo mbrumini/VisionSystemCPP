@@ -65,7 +65,6 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
   std::function<void()> acquireSample,
   std::function<void()> importSample,
   std::function<void()> importTests,
-  std::function<void()> assignImageFolder,
   std::function<void()> start,
   std::function<void()> stop,
   std::function<void()> nextFrame,
@@ -130,7 +129,6 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
   auto* acquireSampleButton = createTouchButton("acquireSample", texts.acquireSample, buttons);
   auto* sampleButton = createTouchButton("assignSampleImage", texts.importSample, buttons);
   auto* testImagesButton = createTouchButton("assignTestImages", texts.importTests, buttons);
-  auto* sourceButton = createTouchButton("assignImageFolder", texts.assignImageFolder, buttons);
   auto* startButton = createTouchButton("start", texts.start, buttons);
   auto* stopButton = createTouchButton("stop", texts.stop, buttons);
   auto* stepButton = createTouchButton("nextFrame", texts.nextFrame, buttons);
@@ -140,7 +138,6 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
   buttonsLayout->addWidget(acquireSampleButton, 0, 0);
   buttonsLayout->addWidget(sampleButton, 0, 1);
   buttonsLayout->addWidget(testImagesButton, 0, 2);
-  buttonsLayout->addWidget(sourceButton, 0, 3);
   buttonsLayout->addWidget(startButton, 1, 0);
   buttonsLayout->addWidget(stopButton, 1, 1);
   buttonsLayout->addWidget(stepButton, 1, 2);
@@ -151,7 +148,6 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
   connectButton(acquireSampleButton, acquireSample);
   connectButton(sampleButton, importSample);
   connectButton(testImagesButton, importTests);
-  connectButton(sourceButton, assignImageFolder);
   connectButton(startButton, start);
   connectButton(stopButton, stop);
   connectButton(stepButton, nextFrame);

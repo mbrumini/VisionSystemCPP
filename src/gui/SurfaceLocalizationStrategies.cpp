@@ -16,6 +16,7 @@ const QVector<StrategyTemplate>& strategies()
     {"threshold", "strategies.threshold", "strategyNotes.threshold", true},
     {"edge", "strategies.edge", "strategyNotes.edge", true},
     {"edgePca", "strategies.edgePca", "strategyNotes.edgePca", true},
+    {"massPca", "strategies.massPca", "strategyNotes.massPca", true},
     {"model", "strategies.model", "strategyNotes.model", false},
     {"aiYolo", "strategies.aiYolo", "strategyNotes.aiYolo", false}
   };

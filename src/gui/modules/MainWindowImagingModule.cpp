@@ -75,6 +75,17 @@ PartPose MainWindowImagingModule::partPoseFromSurfaceReference(const CameraConfi
 
 QPixmap MainWindowImagingModule::loadCameraPreview(const CameraConfig& camera) const
 {
+  const auto runtimeIt = cameraRuntime().find(camera.id);
+  if (runtimeIt != cameraRuntime().end() && !runtimeIt->second.currentFrame().empty())
+  {
+    return matToPixmap(runtimeIt->second.currentFrame());
+  }
+
+  if (camera.type != "file")
+  {
+    return {};
+  }
+
   const QString imagePath = cameraSampleImagePath(camera);
   if (imagePath.isEmpty())
   {
@@ -92,6 +103,26 @@ void MainWindowImagingModule::reloadCameraReferenceImage(const CameraConfig& cam
   }
 
   selectedImagePath() = cameraSampleImagePath(camera);
+  if (camera.type != "file")
+  {
+    const auto runtimeIt = cameraRuntime().find(camera.id);
+    selectedPreview() = runtimeIt != cameraRuntime().end() && !runtimeIt->second.currentFrame().empty()
+      ? matToPixmap(runtimeIt->second.currentFrame())
+      : QPixmap();
+    if (selectedPreview().isNull())
+    {
+      largeImage()->clearImage();
+      return;
+    }
+
+    largeImage()->setImage(selectedPreview());
+    if (context().updateLargePreview)
+    {
+      context().updateLargePreview();
+    }
+    return;
+  }
+
   selectedPreview() = selectedImagePath().isEmpty() ? QPixmap() : QPixmap(selectedImagePath());
   if (selectedPreview().isNull())
   {
@@ -135,6 +166,15 @@ cv::Mat MainWindowImagingModule::currentInputImage(const CameraConfig& camera, Q
     return runtimeIt->second.currentFrame().clone();
   }
 
+  if (camera.type != "file")
+  {
+    if (errorMessage)
+    {
+      *errorMessage = QString("Frame live non disponibile: %1 type=%2").arg(camera.id, camera.type);
+    }
+    return {};
+  }
+
   QString imagePath = camera.id == selectedCameraId() ? selectedImagePath() : QString();
   if (imagePath.isEmpty())
   {
@@ -161,6 +201,11 @@ cv::Mat MainWindowImagingModule::currentInputImage(const CameraConfig& camera, Q
 
 QString MainWindowImagingModule::cameraSampleImagePath(const CameraConfig& camera) const
 {
+  if (camera.type != "file")
+  {
+    return {};
+  }
+
   const QString recipeSample = recipes().firstCameraSampleImagePath(camera.id);
   if (!recipeSample.isEmpty())
   {
@@ -172,6 +217,11 @@ QString MainWindowImagingModule::cameraSampleImagePath(const CameraConfig& camer
 
 QString MainWindowImagingModule::cameraTestImagesFolder(const CameraConfig& camera) const
 {
+  if (camera.type != "file")
+  {
+    return {};
+  }
+
   if (!recipes().firstCameraTestImagePath(camera.id).isEmpty())
   {
     return recipes().cameraTestImagesPath(camera.id);
@@ -182,6 +232,11 @@ QString MainWindowImagingModule::cameraTestImagesFolder(const CameraConfig& came
 
 QString MainWindowImagingModule::resolvedCameraFolder(const CameraConfig& camera) const
 {
+  if (camera.type != "file")
+  {
+    return {};
+  }
+
   if (camera.folder.isEmpty())
   {
     return projectPath("data/images");

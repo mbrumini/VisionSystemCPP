@@ -1,6 +1,8 @@
 #include "gui/modules/MainWindowCameraConfigModule.h"
 
 #include "config/RecipeJsonUtils.h"
+#include "gui/CameraAssignmentDialog.h"
+#include "gui/UsbCameraAssignmentDialog.h"
 #include "gui/modules/MainWindowImagingModule.h"
 #include "gui/modules/MainWindowSetupModule.h"
 
@@ -15,6 +17,19 @@ namespace
 QString projectPath(const QString& relativePath)
 {
   return RecipeJsonUtils::appPath(relativePath);
+}
+
+CameraConfig cameraById(const AppConfig& config, const QString& cameraId)
+{
+  for (const CameraConfig& camera : config.cameras())
+  {
+    if (camera.id == cameraId)
+    {
+      return camera;
+    }
+  }
+
+  return {};
 }
 }
 
@@ -60,6 +75,167 @@ void MainWindowCameraConfigModule::configureCameraSource(const CameraConfig& cam
     context().loadConfiguration();
   }
   log(QString("%1: %2 -> %3").arg(tr("log.cameraSourceSaved"), camera.id, storedFolder));
+}
+
+void MainWindowCameraConfigModule::configureVimbaCamera(const CameraConfig& camera)
+{
+  configureVimbaCameraSlot(camera.slot, camera.id);
+}
+
+void MainWindowCameraConfigModule::configureVimbaCameraSlot(int currentSlot, const QString& currentCameraId)
+{
+  const int defaultSlot = currentSlot <= 0 ? 1 : currentSlot;
+  log(QString("VimbaX assignment open: currentCamera=%1 currentSlot=%2 maxSlot=%3")
+        .arg(currentCameraId.isEmpty() ? "<menu>" : currentCameraId)
+        .arg(defaultSlot)
+        .arg(config().maxCameras()));
+
+  CameraAssignmentDialog dialog(
+    defaultSlot,
+    config().maxCameras(),
+    [this](const QString& message) { log(message); },
+    window());
+  if (dialog.exec() != QDialog::Accepted)
+  {
+    log(QString("VimbaX assignment canceled: currentCamera=%1").arg(currentCameraId.isEmpty() ? "<menu>" : currentCameraId));
+    return;
+  }
+
+  const CameraDeviceInfo device = dialog.selectedDevice();
+  if (device.deviceId.isEmpty() && device.serial.isEmpty())
+  {
+    log("VimbaX assignment rejected: no camera selected");
+    QMessageBox::warning(window(), tr("menu.cameras"), tr("log.vimbaNoCameraSelected"));
+    return;
+  }
+
+  QString error;
+  const QString configPath = projectPath("config/cameras.json");
+  log(QString("VimbaX assignment save begin: path='%1' slot=%2 enabled=%3 name='%4' model='%5' serial='%6' id='%7' interface='%8'")
+        .arg(configPath)
+        .arg(dialog.selectedSlot())
+        .arg(dialog.cameraEnabled() ? "true" : "false")
+        .arg(dialog.displayName())
+        .arg(device.modelName)
+        .arg(device.serial)
+        .arg(device.deviceId)
+        .arg(device.interfaceId));
+
+  if (!config().saveVimbaCameraAssignment(
+        configPath,
+        dialog.selectedSlot(),
+        device.deviceId,
+        device.serial,
+        dialog.displayName(),
+        device.modelName,
+        device.interfaceId,
+        dialog.cameraEnabled(),
+        &error))
+  {
+    log("VimbaX assignment save failed: " + error);
+    QMessageBox::warning(window(), tr("menu.cameras"), error);
+    return;
+  }
+
+  const QString assignedCameraId = QString("CAM%1").arg(dialog.selectedSlot(), 2, 10, QChar('0'));
+  cameraRuntime().erase(assignedCameraId);
+  log(QString("VimbaX assignment runtime reset: %1").arg(assignedCameraId));
+  if (context().loadConfiguration)
+  {
+    context().loadConfiguration();
+    log("VimbaX assignment configuration reloaded");
+  }
+
+  const CameraConfig assignedCamera = cameraById(config(), assignedCameraId);
+  if (!assignedCamera.id.isEmpty() && context().selectCamera)
+  {
+    context().selectCamera(assignedCamera);
+    log(QString("VimbaX assignment selected slot: %1").arg(assignedCameraId));
+  }
+
+  log(QString("%1: %2 -> %3 trigger=external/ioBoard")
+        .arg(tr("log.vimbaCameraAssigned"))
+        .arg(assignedCameraId)
+        .arg(device.serial.isEmpty() ? device.deviceId : device.serial));
+}
+
+void MainWindowCameraConfigModule::configureUsbCamera(const CameraConfig& camera)
+{
+  configureUsbCameraSlot(camera.slot, camera.id);
+}
+
+void MainWindowCameraConfigModule::configureUsbCameraSlot(int currentSlot, const QString& currentCameraId)
+{
+  const int defaultSlot = currentSlot <= 0 ? 1 : currentSlot;
+  log(QString("USB camera assignment open: currentCamera=%1 currentSlot=%2 maxSlot=%3")
+        .arg(currentCameraId.isEmpty() ? "<menu>" : currentCameraId)
+        .arg(defaultSlot)
+        .arg(config().maxCameras()));
+
+  UsbCameraAssignmentDialog dialog(
+    defaultSlot,
+    config().maxCameras(),
+    [this](const QString& message) { log(message); },
+    window());
+  if (dialog.exec() != QDialog::Accepted)
+  {
+    log(QString("USB camera assignment canceled: currentCamera=%1").arg(currentCameraId.isEmpty() ? "<menu>" : currentCameraId));
+    return;
+  }
+
+  const UsbCameraDeviceInfo device = dialog.selectedDevice();
+  if (device.index < 0)
+  {
+    log("USB camera assignment rejected: no camera selected");
+    QMessageBox::warning(window(), tr("menu.cameras"), tr("log.usbNoCameraSelected"));
+    return;
+  }
+
+  QString error;
+  const QString configPath = projectPath("config/cameras.json");
+  log(QString("USB camera assignment save begin: path='%1' slot=%2 enabled=%3 name='%4' index=%5 size=%6x%7 fps=%8")
+        .arg(configPath)
+        .arg(dialog.selectedSlot())
+        .arg(dialog.cameraEnabled() ? "true" : "false")
+        .arg(dialog.displayName())
+        .arg(device.index)
+        .arg(device.width)
+        .arg(device.height)
+        .arg(device.fps, 0, 'f', 2));
+
+  if (!config().saveUsbCameraAssignment(
+        configPath,
+        dialog.selectedSlot(),
+        device.index,
+        dialog.displayName(),
+        dialog.cameraEnabled(),
+        &error))
+  {
+    log("USB camera assignment save failed: " + error);
+    QMessageBox::warning(window(), tr("menu.cameras"), error);
+    return;
+  }
+
+  const QString assignedCameraId = QString("CAM%1").arg(dialog.selectedSlot(), 2, 10, QChar('0'));
+  cameraRuntime().erase(assignedCameraId);
+  log(QString("USB camera assignment runtime reset: %1").arg(assignedCameraId));
+  if (context().loadConfiguration)
+  {
+    context().loadConfiguration();
+    log("USB camera assignment configuration reloaded");
+  }
+
+  const CameraConfig assignedCamera = cameraById(config(), assignedCameraId);
+  if (!assignedCamera.id.isEmpty() && context().setup)
+  {
+    context().setup->startCameraSimulation(assignedCamera);
+    log(QString("USB camera assignment live start requested: %1").arg(assignedCameraId));
+  }
+
+  log(QString("%1: %2 -> index %3")
+        .arg(tr("log.usbCameraAssigned"))
+        .arg(assignedCameraId)
+        .arg(device.index));
 }
 
 void MainWindowCameraConfigModule::configureCameraSampleImage(const CameraConfig& camera)

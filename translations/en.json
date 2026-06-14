@@ -150,6 +150,7 @@
     "threshold": "Threshold",
     "edge": "Edge",
     "edgePca": "Edge + PCA",
+    "massPca": "Mass + PCA",
     "model": "Model",
     "aiYolo": "AI YOLO"
   },
@@ -157,6 +158,7 @@
     "threshold": "Localizes the contour with a grayscale threshold inside an operator-defined ring.",
     "edge": "Uses a guide and search band to find the real edge with OpenCV.",
     "edgePca": "Will collect edge points and compute center/orientation with robust PCA.",
+    "massPca": "Uses a rectangular AOE: the thresholded blob defines center of mass and XY axes with PCA.",
     "model": "Will use a geometric model or template to estimate position and orientation.",
     "aiYolo": "Will use a YOLO model, preferably segmentation, to obtain the part mask and reference."
   },
@@ -218,6 +220,10 @@
     "cameraSampleAcquired": "Sample image acquired",
     "cameraSampleAcquireFailed": "Sample image acquisition failed",
     "cameraTestImagesSaved": "Test images saved",
+    "vimbaCameraAssigned": "VimbaX camera assigned",
+    "vimbaNoCameraSelected": "Select a VimbaX camera before saving",
+    "usbCameraAssigned": "USB camera assigned",
+    "usbNoCameraSelected": "Select a USB camera before saving",
     "cameraSourceUnsupported": "Unsupported camera source",
     "cameraStartFailed": "Camera start failed",
     "cameraStarted": "Camera started",
@@ -331,6 +337,8 @@
   },
   "actions": {
     "assignImageFolder": "Assign image folder",
+    "assignVimbaCamera": "Assign VimbaX",
+    "assignUsbCamera": "Assign USB",
     "assignSampleImage": "Import sample",
     "acquireSampleImage": "Acquire sample",
     "assignTestImages": "Import tests",

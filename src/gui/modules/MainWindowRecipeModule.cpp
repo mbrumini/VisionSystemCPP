@@ -191,6 +191,7 @@ void MainWindowRecipeModule::refreshSelectedCameraRecipeData()
     }
 
     largeImage()->setExclusionRects(recipes().loadSurfaceDefectExclusionRects(selectedCameraId()));
+    largeImage()->setSearchPolygon(recipes().loadSurfaceDefectPolygon(selectedCameraId()));
     largeImage()->clearCircles();
     GeometryOverlay overlay;
     if (context().geometry)
@@ -211,4 +212,5 @@ void MainWindowRecipeModule::refreshSelectedCameraRecipeData()
   }
 
   largeImage()->setExclusionRects(recipes().loadLocalizationExclusionRects(selectedCameraId()));
+  largeImage()->clearSearchPolygon();
 }

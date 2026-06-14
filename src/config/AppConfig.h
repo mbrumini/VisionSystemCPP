@@ -4,6 +4,14 @@
 #include <QStringList>
 #include <QVector>
 
+struct CameraTriggerConfig
+{
+  QString mode;
+  QString source;
+  QString ioOutput;
+  QString cameraLine;
+};
+
 struct ProcessingProfile
 {
   QString id;
@@ -21,6 +29,12 @@ struct CameraConfig
   bool enabled = false;
   QString type;
   QString folder;
+  int usbIndex = -1;
+  QString serial;
+  QString deviceId;
+  QString modelName;
+  QString interfaceId;
+  CameraTriggerConfig trigger;
   QString processingProfileId;
   ProcessingProfile profile;
 };
@@ -34,6 +48,23 @@ public:
     const QString& cameraId,
     const QString& type,
     const QString& folder,
+    QString* errorMessage = nullptr);
+  bool saveVimbaCameraAssignment(
+    const QString& filePath,
+    int slot,
+    const QString& deviceId,
+    const QString& serial,
+    const QString& displayName,
+    const QString& modelName,
+    const QString& interfaceId,
+    bool enabled,
+    QString* errorMessage = nullptr);
+  bool saveUsbCameraAssignment(
+    const QString& filePath,
+    int slot,
+    int usbIndex,
+    const QString& displayName,
+    bool enabled,
     QString* errorMessage = nullptr);
 
   int maxCameras() const;

@@ -54,7 +54,6 @@ void MainWindowSetupModule::showCameraSetupPanel(const CameraConfig& camera)
   texts.acquireSample = tr("actions.acquireSampleImage");
   texts.importSample = tr("actions.assignSampleImage");
   texts.importTests = tr("actions.assignTestImages");
-  texts.assignImageFolder = tr("actions.assignImageFolder");
   texts.start = tr("commands.start");
   texts.stop = tr("commands.stop");
   texts.nextFrame = tr("actions.nextFrame");
@@ -82,7 +81,6 @@ void MainWindowSetupModule::showCameraSetupPanel(const CameraConfig& camera)
     [this, camera]() { context().cameraConfig->acquireCameraSampleImage(camera); },
     [this, camera]() { context().cameraConfig->configureCameraSampleImage(camera); },
     [this, camera]() { context().cameraConfig->configureCameraTestImages(camera); },
-    [this, camera]() { context().cameraConfig->configureCameraSource(camera); },
     [this, camera]() { startCameraSimulation(camera); },
     [this, camera]() { stopCameraSimulation(camera); },
     [this, camera]() { stepCameraSimulation(camera); },
@@ -274,7 +272,7 @@ void MainWindowSetupModule::startCameraSimulation(const CameraConfig& camera)
     context().selectCamera(camera);
   }
 
-  if (camera.type != "file")
+  if (camera.type != "file" && camera.type != "usb")
   {
     log(tr("log.cameraSourceUnsupported") + ": " + camera.id);
     return;
@@ -314,7 +312,7 @@ void MainWindowSetupModule::stopCameraSimulation(const CameraConfig& camera)
 
 void MainWindowSetupModule::stepCameraSimulation(const CameraConfig& camera)
 {
-  if (camera.type != "file")
+  if (camera.type != "file" && camera.type != "usb")
   {
     log(tr("log.cameraSourceUnsupported") + ": " + camera.id);
     return;
@@ -380,13 +378,6 @@ void MainWindowSetupModule::advanceCameraFrame(const CameraConfig& camera)
 
 void MainWindowSetupModule::processCurrentCameraFrame(const CameraConfig& camera)
 {
-  if (MainWindowCameraProfile::isBwDimensional(camera, config()))
-  {
-    log(QString("pipeline localization begin: %1 mode=bw").arg(camera.id));
-    context().localization->testLocalization(camera);
-    return;
-  }
-
   if (!MainWindowCameraProfile::isGrayscaleLocalization(camera, config()))
   {
     log(QString("pipeline localization skipped: %1 profile=%2").arg(camera.id, camera.profile.id));
@@ -394,15 +385,32 @@ void MainWindowSetupModule::processCurrentCameraFrame(const CameraConfig& camera
   }
 
   const SurfaceAnnulusLocalizationConfig annulus = recipes().loadSurfaceAnnulusLocalization(camera.id);
+  QRect roi;
+  if (annulus.method == "massPca")
+  {
+    if (recipes().loadSurfaceDefectRoi(camera.id, roi))
+    {
+      log(QString("pipeline surface mass pca begin: %1 roi=%2,%3 %4x%5")
+            .arg(camera.id)
+            .arg(roi.x())
+            .arg(roi.y())
+            .arg(roi.width())
+            .arg(roi.height()));
+      context().surface->testSurfaceLocalization(camera);
+      return;
+    }
+    log(QString("pipeline surface mass pca missing roi: %1").arg(camera.id));
+    return;
+  }
+
   if ((annulus.method == "edge" && annulus.hasEdgeCircle && annulus.edgeRadius > annulus.edgeBandInner) ||
-      (annulus.method != "edge" && annulus.hasOuterCircle && annulus.hasInnerCircle && annulus.outerRadius > annulus.innerRadius))
+      (annulus.method == "threshold" && annulus.hasOuterCircle && annulus.hasInnerCircle && annulus.outerRadius > annulus.innerRadius))
   {
     log(QString("pipeline surface localization begin: %1 method=%2").arg(camera.id, annulus.method));
     context().surface->testSurfaceAnnulusLocalization(camera);
     return;
   }
 
-  QRect roi;
   if (recipes().loadSurfaceDefectRoi(camera.id, roi))
   {
     log(QString("pipeline surface pca begin: %1 roi=%2,%3 %4x%5")
@@ -412,6 +420,13 @@ void MainWindowSetupModule::processCurrentCameraFrame(const CameraConfig& camera
           .arg(roi.width())
           .arg(roi.height()));
     context().surface->testSurfaceEdgePcaLocalization(camera);
+    return;
+  }
+
+  if (MainWindowCameraProfile::isBwDimensional(camera, config()))
+  {
+    log(QString("pipeline localization begin: %1 mode=bw").arg(camera.id));
+    context().localization->testLocalization(camera);
     return;
   }
 
@@ -451,29 +466,38 @@ void MainWindowSetupModule::refreshPoseForCurrentFrame(const CameraConfig& camer
     return;
   }
 
-  if (MainWindowCameraProfile::isBwDimensional(camera, config()))
-  {
-    context().localization->testLocalization(camera);
-    return;
-  }
-
   if (!MainWindowCameraProfile::isGrayscaleLocalization(camera, config()))
   {
     return;
   }
 
   const SurfaceAnnulusLocalizationConfig annulus = recipes().loadSurfaceAnnulusLocalization(camera.id);
+  QRect roi;
+  if (annulus.method == "massPca")
+  {
+    if (recipes().loadSurfaceDefectRoi(camera.id, roi))
+    {
+      context().surface->testSurfaceLocalization(camera);
+    }
+    return;
+  }
+
   if ((annulus.method == "edge" && annulus.hasEdgeCircle && annulus.edgeRadius > annulus.edgeBandInner) ||
-      (annulus.method != "edge" && annulus.hasOuterCircle && annulus.hasInnerCircle && annulus.outerRadius > annulus.innerRadius))
+      (annulus.method == "threshold" && annulus.hasOuterCircle && annulus.hasInnerCircle && annulus.outerRadius > annulus.innerRadius))
   {
     context().surface->testSurfaceAnnulusLocalization(camera);
     return;
   }
 
-  QRect roi;
   if (recipes().loadSurfaceDefectRoi(camera.id, roi))
   {
     context().surface->testSurfaceEdgePcaLocalization(camera);
+    return;
+  }
+
+  if (MainWindowCameraProfile::isBwDimensional(camera, config()))
+  {
+    context().localization->testLocalization(camera);
   }
 }
 
@@ -498,10 +522,31 @@ QString MainWindowSetupModule::cameraSetupDetailsText(const CameraConfig& camera
   const QString samplePath = recipes().firstCameraSampleImagePath(camera.id);
   const QString testPath = recipes().firstCameraTestImagePath(camera.id);
   const qint64 scanElapsedMs = context().lastSetupScanElapsedMs->value(camera.id, -1);
+  QString sourceLabel = tr("labels.folder");
+  QString sourceDetails = context().imaging->resolvedCameraFolder(camera);
+  if (camera.type == "vimba")
+  {
+    sourceLabel = "VimbaX";
+    sourceDetails = QString("serial=%1 id=%2 interface=%3 trigger=%4/%5")
+      .arg(camera.serial.isEmpty() ? tr("status.invalid") : camera.serial)
+      .arg(camera.deviceId.isEmpty() ? tr("status.invalid") : camera.deviceId)
+      .arg(camera.interfaceId.isEmpty() ? tr("status.invalid") : camera.interfaceId)
+      .arg(camera.trigger.mode.isEmpty() ? tr("status.invalid") : camera.trigger.mode)
+      .arg(camera.trigger.source.isEmpty() ? tr("status.invalid") : camera.trigger.source);
+  }
+  else if (camera.type == "usb")
+  {
+    sourceLabel = "USB";
+    sourceDetails = QString("index=%1 id=%2 trigger=%3/%4")
+      .arg(camera.usbIndex)
+      .arg(camera.deviceId.isEmpty() ? tr("status.invalid") : camera.deviceId)
+      .arg(camera.trigger.mode.isEmpty() ? tr("status.invalid") : camera.trigger.mode)
+      .arg(camera.trigger.source.isEmpty() ? tr("status.invalid") : camera.trigger.source);
+  }
 
   return QString("%1: %2\n%3: %4\n%5: %6\n%7: %8\n%9: %10\n%11: %12\n%13: %14\n%15: %16")
     .arg(tr("labels.source"), camera.type)
-    .arg(tr("labels.folder"), context().imaging->resolvedCameraFolder(camera))
+    .arg(sourceLabel, sourceDetails)
     .arg(tr("labels.sampleImage"), samplePath.isEmpty() ? tr("status.invalid") : samplePath)
     .arg(tr("labels.testImages"), testPath.isEmpty() ? tr("status.invalid") : recipes().cameraTestImagesPath(camera.id))
     .arg(tr("labels.status"), runtime ? runtimeStatusText(context(), runtime->status()) : tr("status.stopped"))

@@ -14,7 +14,6 @@ struct CameraSetupPanelTexts
   QString acquireSample;
   QString importSample;
   QString importTests;
-  QString assignImageFolder;
   QString start;
   QString stop;
   QString nextFrame;
@@ -36,7 +35,6 @@ public:
     std::function<void()> acquireSample,
     std::function<void()> importSample,
     std::function<void()> importTests,
-    std::function<void()> assignImageFolder,
     std::function<void()> start,
     std::function<void()> stop,
     std::function<void()> nextFrame,

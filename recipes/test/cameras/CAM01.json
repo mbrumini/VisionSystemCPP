@@ -16,8 +16,12 @@
             }
         },
         "surfaceLocalization": {
+            "edge": {
+            },
             "enabled": true,
-            "method": "threshold"
+            "exclusionRects": [
+            ],
+            "method": "edge"
         }
     }
 }

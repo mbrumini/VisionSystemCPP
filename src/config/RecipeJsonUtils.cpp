@@ -169,7 +169,7 @@ bool saveJsonObject(const QString& path, const QJsonObject& root, QString* error
 
 QString normalizedSurfaceLocalizationMethod(const QString& method)
 {
-  if (method == "edge" || method == "edgePca" || method == "model" || method == "aiYolo")
+  if (method == "edge" || method == "edgePca" || method == "massPca" || method == "model" || method == "aiYolo")
   {
     return method;
   }
@@ -182,7 +182,7 @@ void pruneSurfaceLocalizationForMethod(QJsonObject& surfaceLocalization, const Q
   const QString normalizedMethod = normalizedSurfaceLocalizationMethod(method);
   surfaceLocalization["method"] = normalizedMethod;
 
-  if (normalizedMethod != "threshold")
+  if (normalizedMethod != "threshold" && normalizedMethod != "massPca")
   {
     surfaceLocalization.remove("annulus");
     surfaceLocalization.remove("threshold");

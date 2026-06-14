@@ -16,6 +16,7 @@
 #include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QCursor>
 #include <QDateTime>
 #include <QElapsedTimer>
 #include <QGridLayout>
@@ -163,6 +164,29 @@ void MainWindow::buildUi()
                 .arg(roi.y())
                 .arg(roi.width())
                 .arg(roi.height()));
+  });
+  m_largeImage->setPolygonChangedHandler([this](const QVector<QPoint>& polygon) {
+    if (m_selectedCameraId.isEmpty() || polygon.size() < 3)
+    {
+      return;
+    }
+
+    if (m_activeDrawingRecipe != MainWindowActiveDrawingRecipe::SurfaceDefects)
+    {
+      return;
+    }
+
+    QString error;
+    if (!m_recipeManager.saveSurfaceDefectPolygon(m_selectedCameraId, polygon, &error))
+    {
+      appendLog(error);
+      return;
+    }
+
+    appendLog(QString("%1: %2 points=%3")
+                .arg(trText("actions.polygon"))
+                .arg(m_selectedCameraId)
+                .arg(polygon.size()));
   });
   m_largeImage->setExclusionRectAddedHandler([this](const QRect& rect) {
     if (m_selectedCameraId.isEmpty())
@@ -712,6 +736,16 @@ void MainWindow::buildMenu()
   recipesMenu->addAction(trText("menu.exportRecipe"), this, [this]() { m_recipes.exportRecipe(); });
 
   QMenu* camerasMenu = menuBar()->addMenu(trText("menu.cameras"));
+  auto defaultCameraSlot = [this]() {
+    return m_selectedCameraId.isEmpty() ? 1 : qMax(1, m_selectedCamera.slot);
+  };
+  camerasMenu->addAction(trText("actions.assignVimbaCamera"), this, [this, defaultCameraSlot]() {
+    m_cameraConfig.configureVimbaCameraSlot(defaultCameraSlot(), m_selectedCameraId);
+  });
+  camerasMenu->addAction(trText("actions.assignUsbCamera"), this, [this, defaultCameraSlot]() {
+    m_cameraConfig.configureUsbCameraSlot(defaultCameraSlot(), m_selectedCameraId);
+  });
+  camerasMenu->addSeparator();
   for (const CameraConfig& camera : m_config.activeCameras())
   {
     camerasMenu->addAction(QString("%1 | %2").arg(camera.id, camera.displayName), this, [this, camera]() {
@@ -721,7 +755,15 @@ void MainWindow::buildMenu()
 
   QMenu* configMenu = menuBar()->addMenu(trText("menu.configurations"));
   configMenu->addAction(trText("menu.cameras"), this, [this]() {
-    appendLog(trText("log.placeholder") + ": " + trText("menu.cameras"));
+    QMenu menu(this);
+    menu.setTitle(trText("menu.cameras"));
+    menu.addAction(trText("actions.assignVimbaCamera"), this, [this]() {
+      m_cameraConfig.configureVimbaCameraSlot(m_selectedCameraId.isEmpty() ? 1 : qMax(1, m_selectedCamera.slot), m_selectedCameraId);
+    });
+    menu.addAction(trText("actions.assignUsbCamera"), this, [this]() {
+      m_cameraConfig.configureUsbCameraSlot(m_selectedCameraId.isEmpty() ? 1 : qMax(1, m_selectedCamera.slot), m_selectedCameraId);
+    });
+    menu.exec(QCursor::pos());
   });
   configMenu->addAction(trText("menu.paths"), this, [this]() {
     appendLog(trText("log.placeholder") + ": " + trText("menu.paths"));
@@ -1153,18 +1195,11 @@ void MainWindow::showCameraToolList(const CameraConfig& camera)
   };
 
   addTool("setup");
-  if (camera.profile.guiTools.contains("localization") ||
-      camera.profile.guiTools.contains("surfaceLocalization"))
-  {
-    addTool("localization");
-  }
+  addTool("localization");
   addTool("geometries");
   addTool("constructedGeometries");
   addTool("measurements");
-  if (camera.profile.guiTools.contains("tolerances"))
-  {
-    addTool("tolerances");
-  }
+  addTool("tolerances");
 
   for (const QString& tool : camera.profile.guiTools)
   {
@@ -1223,7 +1258,8 @@ void MainWindow::showLocalizationStrategyList(const CameraConfig& camera)
     const QString iconId = strategy.id == "threshold" ? "surfaceThreshold" :
       (strategy.id == "edge" ? "surfaceEdge" :
        (strategy.id == "edgePca" ? "surfacePca" :
-        (strategy.id == "model" ? "surfaceModel" : "aiModel")));
+        (strategy.id == "massPca" ? "surfaceSearchRoi" :
+        (strategy.id == "model" ? "surfaceModel" : "aiModel"))));
     auto* button = createTouchIconButton(iconId, strategy.label, strategyGrid);
     connect(button, &QPushButton::clicked, this, [this, camera, strategy]() {
       m_surface.showSurfaceLocalizationStrategyPanel(camera, strategy.id);

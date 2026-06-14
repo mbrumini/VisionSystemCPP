@@ -2,6 +2,7 @@
 
 #include <QKeyEvent>
 #include <QMouseEvent>
+#include <QPolygon>
 #include <QWheelEvent>
 
 #include <algorithm>
@@ -9,6 +10,22 @@
 
 void ImageViewWidget::keyPressEvent(QKeyEvent* event)
 {
+  if (m_drawingMode == DrawingMode::Polygon)
+  {
+    if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter)
+    {
+      finishPolygonDrawing();
+      return;
+    }
+
+    if (event->key() == Qt::Key_Escape)
+    {
+      m_pendingPolygon.clear();
+      update();
+      return;
+    }
+  }
+
   if ((event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace) &&
       m_selectedExclusionIndex >= 0 &&
       m_selectedExclusionIndex < m_exclusionRects.size())
@@ -47,6 +64,44 @@ void ImageViewWidget::mousePressEvent(QMouseEvent* event)
 
   setFocus();
 
+  if (m_drawingMode == DrawingMode::Polygon)
+  {
+    const int vertexIndex = polygonVertexAt(event->pos());
+    if (vertexIndex >= 0)
+    {
+      m_selectedPolygonVertexIndex = vertexIndex;
+      m_movingPolygonVertex = true;
+      m_dragging = true;
+      update();
+      return;
+    }
+
+    if (polygonContains(event->pos()))
+    {
+      m_movingPolygon = true;
+      m_dragging = true;
+      m_moveStartImagePoint = widgetToImage(event->pos());
+      m_pendingPolygon.clear();
+      update();
+      return;
+    }
+
+    const QPoint imagePoint = widgetToImage(event->pos());
+    if (m_pendingPolygon.size() >= 3)
+    {
+      const QPoint firstWidgetPoint = imagePointToWidget(m_pendingPolygon.first());
+      if (QRect(firstWidgetPoint - QPoint(10, 10), QSize(20, 20)).contains(event->pos()))
+      {
+        finishPolygonDrawing();
+        return;
+      }
+    }
+
+    m_pendingPolygon.append(imagePoint);
+    update();
+    return;
+  }
+
   if (m_drawingMode == DrawingMode::Exclusion)
   {
     ExclusionHandle handle = ExclusionHandle::None;
@@ -77,6 +132,32 @@ void ImageViewWidget::mousePressEvent(QMouseEvent* event)
 
     m_selectedExclusionIndex = -1;
     m_activeExclusionHandle = ExclusionHandle::None;
+  }
+
+  if (m_drawingMode == DrawingMode::Roi && m_hasRoi)
+  {
+    ExclusionHandle handle = ExclusionHandle::None;
+    if (roiHandleAt(event->pos(), handle))
+    {
+      m_activeRoiHandle = handle;
+      m_resizingRoi = true;
+      m_dragging = true;
+      m_moveStartImageRect = m_roi;
+      update();
+      return;
+    }
+
+    if (roiContains(event->pos()))
+    {
+      m_movingRoi = true;
+      m_dragging = true;
+      m_moveStartImagePoint = widgetToImage(event->pos());
+      m_moveStartImageRect = m_roi;
+      update();
+      return;
+    }
+
+    m_activeRoiHandle = ExclusionHandle::None;
   }
 
   if (m_drawingMode == DrawingMode::GeometryArea && m_hasGeometryArea)
@@ -198,6 +279,76 @@ void ImageViewWidget::mouseMoveEvent(QMouseEvent* event)
     return;
   }
 
+  if (m_movingPolygonVertex &&
+      m_selectedPolygonVertexIndex >= 0 &&
+      m_selectedPolygonVertexIndex < m_searchPolygon.size())
+  {
+    m_searchPolygon[m_selectedPolygonVertexIndex] = widgetToImage(event->pos());
+    if (m_searchPolygon.size() >= 3)
+    {
+      m_roi = QPolygon(m_searchPolygon).boundingRect().normalized();
+      m_hasRoi = m_roi.isValid();
+    }
+    update();
+    return;
+  }
+
+  if (m_movingPolygon && m_searchPolygon.size() >= 3)
+  {
+    const QPoint currentImagePoint = widgetToImage(event->pos());
+    const QPoint delta = currentImagePoint - m_moveStartImagePoint;
+    for (QPoint& point : m_searchPolygon)
+    {
+      point += delta;
+    }
+    m_moveStartImagePoint = currentImagePoint;
+    m_roi = QPolygon(m_searchPolygon).boundingRect().normalized();
+    m_hasRoi = m_roi.isValid();
+    update();
+    return;
+  }
+
+  if (m_movingRoi && m_hasRoi)
+  {
+    const QPoint currentImagePoint = widgetToImage(event->pos());
+    const QPoint delta = currentImagePoint - m_moveStartImagePoint;
+    m_roi = clampImageRectToImage(m_moveStartImageRect.translated(delta));
+    update();
+    return;
+  }
+
+  if (m_resizingRoi && m_hasRoi)
+  {
+    const QPoint currentImagePoint = widgetToImage(event->pos());
+    QRect resized = m_moveStartImageRect;
+
+    if (m_activeRoiHandle == ExclusionHandle::TopLeft)
+    {
+      resized.setTopLeft(currentImagePoint);
+    }
+    else if (m_activeRoiHandle == ExclusionHandle::TopRight)
+    {
+      resized.setTopRight(currentImagePoint);
+    }
+    else if (m_activeRoiHandle == ExclusionHandle::BottomLeft)
+    {
+      resized.setBottomLeft(currentImagePoint);
+    }
+    else if (m_activeRoiHandle == ExclusionHandle::BottomRight)
+    {
+      resized.setBottomRight(currentImagePoint);
+    }
+
+    resized = clampImageRectToImage(resized);
+    if (resized.width() > 2 && resized.height() > 2)
+    {
+      m_roi = resized;
+    }
+
+    update();
+    return;
+  }
+
   if (m_movingExclusion &&
       m_selectedExclusionIndex >= 0 &&
       m_selectedExclusionIndex < m_exclusionRects.size())
@@ -301,6 +452,36 @@ void ImageViewWidget::mouseReleaseEvent(QMouseEvent* event)
     if (m_exclusionRectsChangedHandler)
     {
       m_exclusionRectsChangedHandler(m_exclusionRects);
+    }
+
+    update();
+    return;
+  }
+
+  if (m_movingRoi || m_resizingRoi)
+  {
+    m_movingRoi = false;
+    m_resizingRoi = false;
+    m_activeRoiHandle = ExclusionHandle::None;
+
+    if (m_roiChangedHandler)
+    {
+      m_roiChangedHandler(m_roi);
+    }
+
+    update();
+    return;
+  }
+
+  if (m_movingPolygon || m_movingPolygonVertex)
+  {
+    m_movingPolygon = false;
+    m_movingPolygonVertex = false;
+    m_selectedPolygonVertexIndex = -1;
+
+    if (m_polygonChangedHandler && m_searchPolygon.size() >= 3)
+    {
+      m_polygonChangedHandler(m_searchPolygon);
     }
 
     update();

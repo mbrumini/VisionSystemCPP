@@ -36,304 +36,29 @@ void MainWindowSurfaceModule::showSurfaceLocalizationStrategyPanel(const CameraC
       return;
     }
 
-    showSurfaceLocalizationPanel(camera);
+    showCircleAnnulusLocalizationPanel(camera);
+    return;
+  }
+
+  if (strategyId == "massPca")
+  {
+    showMassPcaLocalizationPanel(camera);
     return;
   }
 
   if (strategyId == "edgePca")
   {
-    QString error;
-    if (!recipes().saveSurfaceLocalizationMethod(camera.id, strategyId, &error))
-    {
-      log(error);
-      return;
-    }
-
-    context().clearToolPanel();
-
-    const SurfaceAnnulusLocalizationConfig annulus = recipes().loadSurfaceAnnulusLocalization(camera.id);
-    const SurfaceLocalizationStrategyDefinition strategy = SurfaceLocalizationStrategies::strategy(strategyId, translations());
-    auto* panel = new QWidget(toolsContainer());
-    auto* layout = new QVBoxLayout(panel);
-    layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(6);
-
-    auto* title = new QLabel(strategy.label + " | " + QString("%1 %2").arg(tr("labels.camera")).arg(camera.slot), panel);
-    title->setObjectName("toolPanelTitle");
-    title->setWordWrap(true);
-    layout->addWidget(title);
-
-    auto* note = new QLabel(strategy.note, panel);
-    note->setObjectName("toolPanelNote");
-    note->setWordWrap(true);
-    layout->addWidget(note);
-
-    auto* buttons = new QWidget(panel);
-    auto* buttonsLayout = new QGridLayout(buttons);
-    buttonsLayout->setContentsMargins(0, 0, 0, 0);
-    buttonsLayout->setSpacing(6);
-
-    auto* roiButton = createTouchIconButton("surfaceSearchRoi", tr("actions.surfaceSearchRoi"), buttons);
-    auto* maskButton = createTouchIconButton("surfaceAddExclusion", tr("actions.surfaceAddExclusion"), buttons);
-    auto* clearButton = createTouchIconButton("surfaceClearExclusions", tr("actions.surfaceClearExclusions"), buttons);
-    auto* testButton = createTouchIconButton("testStrategy", tr("actions.testStrategy"), buttons);
-    QObject::connect(roiButton, &QPushButton::clicked, window(), [this, camera]() { activateSurfaceDefectRoiDrawing(camera); });
-    QObject::connect(maskButton, &QPushButton::clicked, window(), [this, camera]() { activateSurfaceDefectExclusionDrawing(camera); });
-    QObject::connect(clearButton, &QPushButton::clicked, window(), [this, camera]() { clearSurfaceDefectExclusions(camera); });
-    QObject::connect(testButton, &QPushButton::clicked, window(), [this, camera]() { testSurfaceEdgePcaLocalization(camera); });
-    buttonsLayout->addWidget(roiButton, 0, 0);
-    buttonsLayout->addWidget(maskButton, 0, 1);
-    buttonsLayout->addWidget(clearButton, 1, 0);
-    buttonsLayout->addWidget(testButton, 1, 1);
-    layout->addWidget(buttons);
-
-    auto* sensitivityBox = new QGroupBox(tr("labels.edgeSensitivity"), panel);
-    auto* sensitivityLayout = new QGridLayout(sensitivityBox);
-    sensitivityLayout->setContentsMargins(8, 10, 8, 8);
-    auto* sensitivityValue = new QLabel(QString::number(annulus.edgeSensitivity), sensitivityBox);
-    sensitivityValue->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    auto* sensitivitySlider = new QSlider(Qt::Horizontal, sensitivityBox);
-    sensitivitySlider->setRange(1, 255);
-    sensitivitySlider->setValue(annulus.edgeSensitivity);
-    sensitivityLayout->addWidget(sensitivityValue, 0, 1);
-    sensitivityLayout->addWidget(sensitivitySlider, 1, 0, 1, 2);
-    QObject::connect(sensitivitySlider, &QSlider::valueChanged, window(), [this, camera, sensitivityValue](int value) {
-      sensitivityValue->setText(QString::number(value));
-      QString error;
-      if (!recipes().saveSurfaceEdgeSensitivity(camera.id, value, &error))
-      {
-        log(error);
-        return;
-      }
-      testSurfaceEdgePcaLocalization(camera);
-    });
-    layout->addWidget(sensitivityBox);
-
-    auto* backButton = createTouchIconButton("back", tr("groups.localizationStrategies"), panel);
-    QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() {
-      context().showLocalizationStrategyList(camera);
-      log(tr("log.backToCameraTools") + ": " + camera.id);
-    });
-    layout->addWidget(backButton);
-    layout->addStretch(1);
-
-    toolsLayout()->addWidget(panel);
-    log(tr("log.toolPanel") + ": " + strategy.label);
-    testSurfaceEdgePcaLocalization(camera);
+    showEdgePcaLocalizationPanel(camera);
     return;
   }
 
   if (strategyId == "model")
   {
-    QString error;
-    if (!recipes().saveSurfaceLocalizationMethod(camera.id, strategyId, &error))
-    {
-      log(error);
-      return;
-    }
-
-    context().clearToolPanel();
-
-    const SurfaceLocalizationStrategyDefinition strategy = SurfaceLocalizationStrategies::strategy(strategyId, translations());
-    auto* panel = new QWidget(toolsContainer());
-    auto* layout = new QVBoxLayout(panel);
-    layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(6);
-
-    auto* title = new QLabel(strategy.label + " | " + QString("%1 %2").arg(tr("labels.camera")).arg(camera.slot), panel);
-    title->setObjectName("toolPanelTitle");
-    title->setWordWrap(true);
-    layout->addWidget(title);
-
-    auto* note = new QLabel(strategy.note, panel);
-    note->setObjectName("toolPanelNote");
-    note->setWordWrap(true);
-    layout->addWidget(note);
-
-    auto* buttons = new QWidget(panel);
-    auto* buttonsLayout = new QGridLayout(buttons);
-    buttonsLayout->setContentsMargins(0, 0, 0, 0);
-    buttonsLayout->setSpacing(6);
-
-    auto* roiButton = createTouchIconButton("surfaceSearchRoi", tr("actions.surfaceSearchRoi"), buttons);
-    auto* previewButton = createTouchIconButton("previewModel", tr("actions.previewModel"), buttons);
-    auto* acquireButton = createTouchIconButton("acquireModel", tr("actions.acquireModel"), buttons);
-    auto* shapeButton = createTouchIconButton("testShapeModel", tr("actions.testShapeModel"), buttons);
-    auto* templateButton = createTouchIconButton("testTemplateModel", tr("actions.testTemplateModel"), buttons);
-    QObject::connect(roiButton, &QPushButton::clicked, window(), [this, camera]() { activateSurfaceDefectRoiDrawing(camera); });
-    QObject::connect(previewButton, &QPushButton::clicked, window(), [this, camera]() { previewSurfaceModel(camera); });
-    QObject::connect(acquireButton, &QPushButton::clicked, window(), [this, camera]() { acquireSurfaceModel(camera); });
-    QObject::connect(shapeButton, &QPushButton::clicked, window(), [this, camera]() { testSurfaceShapeModel(camera); });
-    QObject::connect(templateButton, &QPushButton::clicked, window(), [this, camera]() { testSurfaceTemplateModel(camera); });
-    buttonsLayout->addWidget(roiButton, 0, 0);
-    buttonsLayout->addWidget(previewButton, 0, 1);
-    buttonsLayout->addWidget(acquireButton, 1, 0);
-    buttonsLayout->addWidget(shapeButton, 1, 1);
-    buttonsLayout->addWidget(templateButton, 2, 0, 1, 2);
-    layout->addWidget(buttons);
-
-    SurfaceModelConfig model = recipes().loadSurfaceModel(camera.id);
-    auto* modelBox = new QGroupBox(tr("groups.strategyControls"), panel);
-    auto* modelLayout = new QGridLayout(modelBox);
-    modelLayout->setContentsMargins(8, 10, 8, 8);
-    modelLayout->setHorizontalSpacing(8);
-    modelLayout->setVerticalSpacing(4);
-
-    auto addSlider = [this, camera, modelLayout](const QString& labelText, int row, int minValue, int maxValue, int value, std::function<void(int)> handler, double displayScale = 1.0) {
-      auto* label = new QLabel(labelText, modelLayout->parentWidget());
-      auto* valueLabel = new QLabel(QString::number(value * displayScale, 'f', displayScale == 1.0 ? 0 : 2), modelLayout->parentWidget());
-      valueLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-      auto* slider = new QSlider(Qt::Horizontal, modelLayout->parentWidget());
-      slider->setRange(minValue, maxValue);
-      slider->setValue(value);
-      modelLayout->addWidget(label, row, 0);
-      modelLayout->addWidget(valueLabel, row, 1);
-      modelLayout->addWidget(slider, row + 1, 0, 1, 2);
-      QObject::connect(slider, &QSlider::valueChanged, window(), [valueLabel, handler, displayScale](int sliderValue) {
-        valueLabel->setText(QString::number(sliderValue * displayScale, 'f', displayScale == 1.0 ? 0 : 2));
-        handler(sliderValue);
-      });
-    };
-
-    addSlider(tr("labels.edgeSensitivity"), 0, 1, 255, model.edgeSensitivity, [this, camera](int value) {
-      QString error;
-      if (!recipes().saveSurfaceModelEdgeSensitivity(camera.id, value, &error))
-      {
-        log(error);
-      }
-      previewSurfaceModel(camera);
-    });
-    addSlider(tr("labels.modelMaxShapeDistance"), 2, 1, 500, static_cast<int>(model.maxShapeDistance * 100.0), [this, camera](int value) {
-      QString error;
-      if (!recipes().saveSurfaceModelMaxShapeDistance(camera.id, value / 100.0, &error))
-      {
-        log(error);
-      }
-    }, 0.01);
-    addSlider(tr("labels.modelMinTemplateScore"), 4, 0, 100, static_cast<int>(model.minTemplateScore * 100.0), [this, camera](int value) {
-      QString error;
-      if (!recipes().saveSurfaceModelMinTemplateScore(camera.id, value / 100.0, &error))
-      {
-        log(error);
-      }
-    }, 0.01);
-    addSlider(tr("labels.modelAngleStart"), 6, -180, 180, static_cast<int>(model.angleStartDegrees), [this, camera](int value) {
-      const SurfaceModelConfig current = recipes().loadSurfaceModel(camera.id);
-      QString error;
-      if (!recipes().saveSurfaceModelAngleRange(camera.id, value, current.angleEndDegrees, current.angleStepDegrees, &error))
-      {
-        log(error);
-      }
-    });
-    addSlider(tr("labels.modelAngleEnd"), 8, -180, 180, static_cast<int>(model.angleEndDegrees), [this, camera](int value) {
-      const SurfaceModelConfig current = recipes().loadSurfaceModel(camera.id);
-      QString error;
-      if (!recipes().saveSurfaceModelAngleRange(camera.id, current.angleStartDegrees, value, current.angleStepDegrees, &error))
-      {
-        log(error);
-      }
-    });
-    addSlider(tr("labels.modelAngleStep"), 10, 1, 45, static_cast<int>(model.angleStepDegrees), [this, camera](int value) {
-      const SurfaceModelConfig current = recipes().loadSurfaceModel(camera.id);
-      QString error;
-      if (!recipes().saveSurfaceModelAngleRange(camera.id, current.angleStartDegrees, current.angleEndDegrees, value, &error))
-      {
-        log(error);
-      }
-    });
-    layout->addWidget(modelBox);
-
-    auto* backButton = createTouchIconButton("back", tr("groups.localizationStrategies"), panel);
-    QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() {
-      context().showLocalizationStrategyList(camera);
-      log(tr("log.backToCameraTools") + ": " + camera.id);
-    });
-    layout->addWidget(backButton);
-    layout->addStretch(1);
-
-    toolsLayout()->addWidget(panel);
-    log(tr("log.toolPanel") + ": " + strategy.label);
+    showModelLocalizationPanel(camera);
     return;
   }
 
-  context().clearToolPanel();
-
-  const SurfaceLocalizationStrategyDefinition strategy = SurfaceLocalizationStrategies::strategy(strategyId, translations());
-  auto* panel = new QWidget(toolsContainer());
-  auto* layout = new QVBoxLayout(panel);
-  layout->setContentsMargins(0, 0, 0, 0);
-  layout->setSpacing(6);
-
-  auto* title = new QLabel(strategy.label + " | " + QString("%1 %2").arg(tr("labels.camera")).arg(camera.slot), panel);
-  title->setObjectName("toolPanelTitle");
-  title->setWordWrap(true);
-  layout->addWidget(title);
-
-  auto* note = new QLabel(strategy.note, panel);
-  note->setObjectName("toolPanelNote");
-  note->setWordWrap(true);
-  layout->addWidget(note);
-
-  auto* controlsBox = new QGroupBox(tr("groups.strategyControls"), panel);
-  auto* controlsLayout = new QVBoxLayout(controlsBox);
-  controlsLayout->setSpacing(8);
-  controlsLayout->addWidget(new QLabel(tr("labels.strategyPlanned"), controlsBox));
-  controlsLayout->addWidget(createTouchIconButton("configureStrategy", tr("actions.configureStrategy"), controlsBox));
-  controlsLayout->addWidget(createTouchIconButton("testStrategy", tr("actions.testStrategy"), controlsBox));
-  layout->addWidget(controlsBox);
-
-  auto* backButton = createTouchIconButton("back", tr("groups.localizationStrategies"), panel);
-  QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() {
-    context().showLocalizationStrategyList(camera);
-    log(tr("log.backToCameraTools") + ": " + camera.id);
-  });
-  layout->addWidget(backButton);
-  layout->addStretch(1);
-
-  toolsLayout()->addWidget(panel);
-  log(tr("log.toolPanel") + ": " + strategy.label);
-}
-
-
-void MainWindowSurfaceModule::showSurfaceLocalizationPanel(const CameraConfig& camera)
-{
-  context().deactivateImageDrawingTools();
-  context().clearToolPanel();
-
-  const SurfaceAnnulusLocalizationConfig annulus = recipes().loadSurfaceAnnulusLocalization(camera.id);
-
-  SurfaceLocalizationPanelWidget::Handlers handlers;
-  handlers.drawOuterCircle = [this, camera]() { activateSurfaceOuterCircleDrawing(camera); };
-  handlers.drawInnerCircle = [this, camera]() { activateSurfaceInnerCircleDrawing(camera); };
-  handlers.drawEdgeCircle = [this, camera]() { activateSurfaceEdgeCircleCenterRadiusDrawing(camera); };
-  handlers.drawThreePointCircle = [this, camera]() { activateSurfaceThreePointCircleDrawing(camera, CircleTarget::None); };
-  handlers.addExclusion = [this, camera]() { activateSurfaceDefectExclusionDrawing(camera); };
-  handlers.clearExclusions = [this, camera]() { clearSurfaceDefectExclusions(camera); };
-  handlers.methodChanged = [this, camera](const QString& method) { saveSurfaceMethodAndPreview(camera, method); };
-  handlers.thresholdChanged = [this, camera](int value) { saveSurfaceThresholdAndPreview(camera, value); };
-  handlers.edgeSensitivityChanged = [this, camera](int value) { saveSurfaceEdgeAndPreview(camera, value); };
-  handlers.edgeBandChanged = [this, camera](int innerWidth, int outerWidth) { saveSurfaceEdgeBandAndPreview(camera, innerWidth, outerWidth); };
-  handlers.edgeFitMaxErrorChanged = [this, camera](int value) { saveSurfaceEdgeFitMaxErrorAndPreview(camera, value); };
-  handlers.back = [this, camera]() {
-    context().showCameraToolList(camera);
-    log(tr("log.backToCameraTools") + ": " + camera.id);
-  };
-
-  auto* panel = new SurfaceLocalizationPanelWidget(
-    ToolCatalog::label("surfaceLocalization", translations()) + " | " + QString("%1 %2").arg(tr("labels.camera")).arg(camera.slot),
-    annulus,
-    translations(),
-    handlers,
-    toolsContainer());
-
-  toolsLayout()->addWidget(panel);
-  log(tr("log.toolPanel") + ": " + ToolCatalog::label("surfaceLocalization", translations()));
-
-  if ((annulus.method == "edge" && annulus.hasEdgeCircle && annulus.edgeRadius > annulus.edgeBandInner) ||
-      (annulus.method != "edge" && annulus.hasOuterCircle && annulus.hasInnerCircle && annulus.outerRadius > annulus.innerRadius))
-  {
-    testSurfaceAnnulusLocalization(camera);
-  }
+  showPlannedLocalizationPanel(camera, strategyId);
 }
 
 
@@ -411,6 +136,24 @@ void MainWindowSurfaceModule::activateSurfaceDefectRoiDrawing(const CameraConfig
   largeImage()->setRoiDrawingEnabled(true);
   *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::SurfaceDefects;
   log(tr("log.surfaceRoiDrawing") + ": " + camera.id);
+}
+
+void MainWindowSurfaceModule::activateSurfaceDefectPolygonDrawing(const CameraConfig& camera)
+{
+  if (!MainWindowCameraProfile::isGrayscaleLocalization(camera, config()))
+  {
+    log(tr("log.surfaceNotAvailable") + ": " + camera.id);
+    return;
+  }
+
+  if (camera.id != selectedCameraId())
+  {
+    return;
+  }
+
+  largeImage()->setPolygonDrawingEnabled(true);
+  *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::SurfaceDefects;
+  log(tr("actions.polygon") + ": " + camera.id);
 }
 
 void MainWindowSurfaceModule::activateSurfaceDefectExclusionDrawing(const CameraConfig& camera)
@@ -719,6 +462,7 @@ void MainWindowSurfaceModule::showStoredSurfaceLocalizationGeometry(const Camera
   selectedPreview() = context().imaging->loadCameraPreview(camera);
   largeImage()->setImage(selectedPreview());
   largeImage()->setExclusionRects(recipes().loadSurfaceDefectExclusionRects(camera.id));
+  largeImage()->setSearchPolygon(recipes().loadSurfaceDefectPolygon(camera.id));
 
   if (annulus.method == "edge")
   {

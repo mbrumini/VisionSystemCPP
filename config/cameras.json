@@ -1,14 +1,21 @@
 {
     "cameras": [
         {
-            "displayName": "Camera 1",
+            "deviceId": "usb:1",
+            "displayName": "USB Camera 1",
             "enabled": true,
             "exists": true,
-            "folder": "data/images/cam01",
             "id": "CAM01",
             "processingProfile": "profile_cam01",
             "slot": 1,
-            "type": "file"
+            "trigger": {
+                "cameraLine": "",
+                "ioOutput": "",
+                "mode": "software",
+                "source": "usbCamera"
+            },
+            "type": "usb",
+            "usbIndex": 1
         },
         {
             "displayName": "Camera 2",

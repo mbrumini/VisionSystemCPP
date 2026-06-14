@@ -1,6 +1,7 @@
 #include "ImageViewWidget.h"
 
 #include <QPainter>
+#include <QPolygon>
 #include <QPolygonF>
 
 #include <algorithm>
@@ -109,7 +110,81 @@ void ImageViewWidget::paintEvent(QPaintEvent* event)
 
   if (m_hasRoi)
   {
-    painter.drawRect(imageRectToWidgetRect(m_roi));
+    const QRect widgetRoi = imageRectToWidgetRect(m_roi);
+    painter.drawRect(widgetRoi);
+
+    if (m_drawingMode == DrawingMode::Roi)
+    {
+      QPen selectedPen(QColor("#ffffff"));
+      selectedPen.setWidth(1);
+      selectedPen.setStyle(Qt::DashLine);
+      painter.setPen(selectedPen);
+      painter.setBrush(Qt::NoBrush);
+      painter.drawRect(widgetRoi.adjusted(-3, -3, 3, 3));
+      painter.setBrush(QColor("#ffffff"));
+      const QVector<QPoint> handles = {
+        widgetRoi.topLeft(),
+        widgetRoi.topRight(),
+        widgetRoi.bottomLeft(),
+        widgetRoi.bottomRight()
+      };
+      for (const QPoint& handle : handles)
+      {
+        painter.drawRect(QRect(handle - QPoint(4, 4), QSize(8, 8)));
+      }
+      painter.setPen(roiPen);
+      painter.setBrush(Qt::NoBrush);
+    }
+  }
+
+  QPen polygonPen(QColor("#00d2ff"));
+  polygonPen.setWidth(2);
+  if (m_searchPolygon.size() >= 2)
+  {
+    QPolygon widgetPolygon;
+    for (const QPoint& point : m_searchPolygon)
+    {
+      widgetPolygon << imagePointToWidget(point);
+    }
+
+    painter.setPen(polygonPen);
+    painter.setBrush(m_searchPolygon.size() >= 3 ? QColor(0, 210, 255, 35) : Qt::NoBrush);
+    if (m_searchPolygon.size() >= 3)
+    {
+      painter.drawPolygon(widgetPolygon);
+    }
+    else
+    {
+      painter.drawPolyline(widgetPolygon);
+    }
+
+    painter.setBrush(QColor("#ffffff"));
+    for (int i = 0; i < widgetPolygon.size(); ++i)
+    {
+      const QPoint point = widgetPolygon[i];
+      painter.drawRect(QRect(point - QPoint(4, 4), QSize(8, 8)));
+      painter.drawText(point + QPoint(8, -8), QString::number(i + 1));
+    }
+  }
+
+  if (!m_pendingPolygon.isEmpty())
+  {
+    QPolygon pendingPolygon;
+    for (const QPoint& point : m_pendingPolygon)
+    {
+      pendingPolygon << imagePointToWidget(point);
+    }
+
+    painter.setPen(polygonPen);
+    painter.setBrush(Qt::NoBrush);
+    painter.drawPolyline(pendingPolygon);
+    painter.setBrush(QColor("#00d2ff"));
+    for (int i = 0; i < pendingPolygon.size(); ++i)
+    {
+      const QPoint point = pendingPolygon[i];
+      painter.drawEllipse(point, 4, 4);
+      painter.drawText(point + QPoint(8, -8), QString::number(i + 1));
+    }
   }
 
   QPen exclusionPen(QColor("#ff3b30"));
@@ -321,7 +396,7 @@ void ImageViewWidget::paintEvent(QPaintEvent* event)
     }
   }
 
-  if (m_dragging && !m_movingExclusion && !m_movingGeometryOverlayPoint)
+  if (m_dragging && !m_movingRoi && !m_resizingRoi && !m_movingExclusion && !m_movingGeometryOverlayPoint)
   {
     if (m_drawingMode == DrawingMode::OuterCircle || m_drawingMode == DrawingMode::InnerCircle)
     {

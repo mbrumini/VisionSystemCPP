@@ -31,6 +31,8 @@ void ImageViewWidget::clearImage()
   m_geometryPoints.clear();
   m_geometryLines.clear();
   m_geometryOverlay.clear();
+  m_searchPolygon.clear();
+  m_pendingPolygon.clear();
   update();
 }
 
@@ -45,6 +47,25 @@ void ImageViewWidget::clearRoi()
 {
   m_hasRoi = false;
   m_roi = {};
+  update();
+}
+
+void ImageViewWidget::setSearchPolygon(const QVector<QPoint>& imagePolygon)
+{
+  m_searchPolygon.clear();
+  for (const QPoint& point : imagePolygon)
+  {
+    m_searchPolygon.append(point);
+  }
+  m_selectedPolygonVertexIndex = -1;
+  update();
+}
+
+void ImageViewWidget::clearSearchPolygon()
+{
+  m_searchPolygon.clear();
+  m_pendingPolygon.clear();
+  m_selectedPolygonVertexIndex = -1;
   update();
 }
 
@@ -146,6 +167,8 @@ const GeometryOverlay& ImageViewWidget::geometryOverlay() const
 void ImageViewWidget::clearGeometryOverlay()
 {
   m_geometryOverlay.clear();
+  m_searchPolygon.clear();
+  m_pendingPolygon.clear();
   update();
 }
 
@@ -154,12 +177,35 @@ void ImageViewWidget::setRoiDrawingEnabled(bool enabled)
   m_drawingMode = enabled ? DrawingMode::Roi : DrawingMode::None;
   setCursor(enabled ? Qt::CrossCursor : Qt::ArrowCursor);
   m_dragging = false;
+  m_movingRoi = false;
+  m_resizingRoi = false;
   m_movingExclusion = false;
   m_resizingExclusion = false;
   m_movingGeometryOverlayPoint = false;
+  m_activeRoiHandle = ExclusionHandle::None;
   m_selectedExclusionIndex = -1;
   m_selectedGeometryOverlayPointIndex = -1;
   m_threePointCirclePoints.clear();
+  update();
+}
+
+void ImageViewWidget::setPolygonDrawingEnabled(bool enabled)
+{
+  m_drawingMode = enabled ? DrawingMode::Polygon : DrawingMode::None;
+  setCursor(enabled ? Qt::CrossCursor : Qt::ArrowCursor);
+  m_dragging = false;
+  m_movingRoi = false;
+  m_resizingRoi = false;
+  m_movingPolygon = false;
+  m_movingPolygonVertex = false;
+  m_movingExclusion = false;
+  m_resizingExclusion = false;
+  m_movingGeometryOverlayPoint = false;
+  m_activeRoiHandle = ExclusionHandle::None;
+  m_selectedExclusionIndex = -1;
+  m_selectedPolygonVertexIndex = -1;
+  m_selectedGeometryOverlayPointIndex = -1;
+  m_pendingPolygon.clear();
   update();
 }
 
@@ -168,9 +214,14 @@ void ImageViewWidget::setExclusionDrawingEnabled(bool enabled)
   m_drawingMode = enabled ? DrawingMode::Exclusion : DrawingMode::None;
   setCursor(enabled ? Qt::CrossCursor : Qt::ArrowCursor);
   m_dragging = false;
+  m_movingRoi = false;
+  m_resizingRoi = false;
+  m_movingPolygon = false;
+  m_movingPolygonVertex = false;
   m_movingExclusion = false;
   m_resizingExclusion = false;
   m_movingGeometryOverlayPoint = false;
+  m_activeRoiHandle = ExclusionHandle::None;
   m_threePointCirclePoints.clear();
   update();
 }
@@ -180,9 +231,12 @@ void ImageViewWidget::setGeometryAreaEditingEnabled(bool enabled)
   m_drawingMode = enabled ? DrawingMode::GeometryArea : DrawingMode::None;
   setCursor(enabled ? Qt::SizeAllCursor : Qt::ArrowCursor);
   m_dragging = false;
+  m_movingRoi = false;
+  m_resizingRoi = false;
   m_movingExclusion = false;
   m_resizingExclusion = false;
   m_movingGeometryOverlayPoint = false;
+  m_activeRoiHandle = ExclusionHandle::None;
   m_selectedExclusionIndex = -1;
   m_selectedGeometryOverlayPointIndex = -1;
   m_activeGeometryAreaHandle = GeometryAreaHandle::None;
@@ -196,9 +250,12 @@ void ImageViewWidget::setGeometryPointPickingEnabled(bool enabled)
   m_drawingMode = enabled ? DrawingMode::GeometryPointPick : DrawingMode::None;
   setCursor(enabled ? Qt::CrossCursor : Qt::ArrowCursor);
   m_dragging = false;
+  m_movingRoi = false;
+  m_resizingRoi = false;
   m_movingExclusion = false;
   m_resizingExclusion = false;
   m_movingGeometryOverlayPoint = false;
+  m_activeRoiHandle = ExclusionHandle::None;
   m_selectedExclusionIndex = -1;
   m_selectedGeometryOverlayPointIndex = -1;
   m_activeGeometryAreaHandle = GeometryAreaHandle::None;
@@ -212,9 +269,12 @@ void ImageViewWidget::setGeometryOverlayPointEditingEnabled(bool enabled)
   m_drawingMode = enabled ? DrawingMode::GeometryOverlayPointEdit : DrawingMode::None;
   setCursor(enabled ? Qt::OpenHandCursor : Qt::ArrowCursor);
   m_dragging = false;
+  m_movingRoi = false;
+  m_resizingRoi = false;
   m_movingExclusion = false;
   m_resizingExclusion = false;
   m_movingGeometryOverlayPoint = false;
+  m_activeRoiHandle = ExclusionHandle::None;
   m_selectedExclusionIndex = -1;
   m_selectedGeometryOverlayPointIndex = -1;
   m_activeGeometryAreaHandle = GeometryAreaHandle::None;
@@ -228,9 +288,12 @@ void ImageViewWidget::setTwoPointLineDrawingEnabled(bool enabled)
   m_drawingMode = enabled ? DrawingMode::TwoPointLine : DrawingMode::None;
   setCursor(enabled ? Qt::CrossCursor : Qt::ArrowCursor);
   m_dragging = false;
+  m_movingRoi = false;
+  m_resizingRoi = false;
   m_movingExclusion = false;
   m_resizingExclusion = false;
   m_movingGeometryOverlayPoint = false;
+  m_activeRoiHandle = ExclusionHandle::None;
   m_selectedExclusionIndex = -1;
   m_selectedGeometryOverlayPointIndex = -1;
   m_threePointCirclePoints.clear();
@@ -243,8 +306,11 @@ void ImageViewWidget::setOuterCircleDrawingEnabled(bool enabled)
   m_drawingMode = enabled ? DrawingMode::OuterCircle : DrawingMode::None;
   setCursor(enabled ? Qt::CrossCursor : Qt::ArrowCursor);
   m_dragging = false;
+  m_movingRoi = false;
+  m_resizingRoi = false;
   m_movingExclusion = false;
   m_resizingExclusion = false;
+  m_activeRoiHandle = ExclusionHandle::None;
   m_selectedExclusionIndex = -1;
   m_threePointCirclePoints.clear();
   update();
@@ -255,8 +321,11 @@ void ImageViewWidget::setInnerCircleDrawingEnabled(bool enabled)
   m_drawingMode = enabled ? DrawingMode::InnerCircle : DrawingMode::None;
   setCursor(enabled ? Qt::CrossCursor : Qt::ArrowCursor);
   m_dragging = false;
+  m_movingRoi = false;
+  m_resizingRoi = false;
   m_movingExclusion = false;
   m_resizingExclusion = false;
+  m_activeRoiHandle = ExclusionHandle::None;
   m_selectedExclusionIndex = -1;
   m_threePointCirclePoints.clear();
   update();
@@ -267,8 +336,11 @@ void ImageViewWidget::setThreePointCircleDrawingEnabled(bool enabled)
   m_drawingMode = enabled ? DrawingMode::ThreePointCircle : DrawingMode::None;
   setCursor(enabled ? Qt::CrossCursor : Qt::ArrowCursor);
   m_dragging = false;
+  m_movingRoi = false;
+  m_resizingRoi = false;
   m_movingExclusion = false;
   m_resizingExclusion = false;
+  m_activeRoiHandle = ExclusionHandle::None;
   m_selectedExclusionIndex = -1;
   m_threePointCirclePoints.clear();
   update();
@@ -279,9 +351,12 @@ void ImageViewWidget::setThreePointArcDrawingEnabled(bool enabled)
   m_drawingMode = enabled ? DrawingMode::ThreePointArc : DrawingMode::None;
   setCursor(enabled ? Qt::CrossCursor : Qt::ArrowCursor);
   m_dragging = false;
+  m_movingRoi = false;
+  m_resizingRoi = false;
   m_movingExclusion = false;
   m_resizingExclusion = false;
   m_movingGeometryOverlayPoint = false;
+  m_activeRoiHandle = ExclusionHandle::None;
   m_threePointCirclePoints.clear();
   update();
 }
@@ -289,6 +364,11 @@ void ImageViewWidget::setThreePointArcDrawingEnabled(bool enabled)
 void ImageViewWidget::setRoiChangedHandler(std::function<void(const QRect&)> handler)
 {
   m_roiChangedHandler = std::move(handler);
+}
+
+void ImageViewWidget::setPolygonChangedHandler(std::function<void(const QVector<QPoint>&)> handler)
+{
+  m_polygonChangedHandler = std::move(handler);
 }
 
 void ImageViewWidget::setExclusionRectAddedHandler(std::function<void(const QRect&)> handler)
@@ -652,6 +732,45 @@ int ImageViewWidget::exclusionHandleAt(const QPoint& widgetPoint, ExclusionHandl
   }
 
   return -1;
+}
+
+bool ImageViewWidget::roiContains(const QPoint& widgetPoint) const
+{
+  if (!m_hasRoi)
+  {
+    return false;
+  }
+
+  return imageRectToWidgetRect(m_roi).adjusted(-5, -5, 5, 5).contains(widgetPoint);
+}
+
+bool ImageViewWidget::roiHandleAt(const QPoint& widgetPoint, ExclusionHandle& handle) const
+{
+  handle = ExclusionHandle::None;
+
+  if (!m_hasRoi)
+  {
+    return false;
+  }
+
+  const QRect widgetRect = imageRectToWidgetRect(m_roi);
+  const QVector<QPair<ExclusionHandle, QPoint>> handles = {
+    {ExclusionHandle::TopLeft, widgetRect.topLeft()},
+    {ExclusionHandle::TopRight, widgetRect.topRight()},
+    {ExclusionHandle::BottomLeft, widgetRect.bottomLeft()},
+    {ExclusionHandle::BottomRight, widgetRect.bottomRight()}
+  };
+
+  for (const auto& item : handles)
+  {
+    if (QRect(item.second - QPoint(7, 7), QSize(14, 14)).contains(widgetPoint))
+    {
+      handle = item.first;
+      return true;
+    }
+  }
+
+  return false;
 }
 
 int ImageViewWidget::geometryOverlayPointAt(const QPoint& widgetPoint) const

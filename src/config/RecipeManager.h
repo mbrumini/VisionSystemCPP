@@ -182,9 +182,12 @@ public:
   bool saveLocalizationExclusionRects(const QString& cameraId, const QVector<QRect>& rects, QString* errorMessage = nullptr) const;
   bool clearLocalizationExclusionRects(const QString& cameraId, QString* errorMessage = nullptr) const;
   bool loadSurfaceDefectRoi(const QString& cameraId, QRect& roi) const;
+  QVector<QPoint> loadSurfaceDefectPolygon(const QString& cameraId) const;
   SurfaceDefectSettings loadSurfaceDefectSettings(const QString& cameraId) const;
   QVector<QRect> loadSurfaceDefectExclusionRects(const QString& cameraId) const;
   bool saveSurfaceDefectRoi(const QString& cameraId, const QRect& roi, QString* errorMessage = nullptr) const;
+  bool saveSurfaceDefectPolygon(const QString& cameraId, const QVector<QPoint>& polygon, QString* errorMessage = nullptr) const;
+  bool saveSurfaceDefectThreshold(const QString& cameraId, int minValue, int maxValue, QString* errorMessage = nullptr) const;
   bool addSurfaceDefectExclusionRect(const QString& cameraId, const QRect& rect, QString* errorMessage = nullptr) const;
   bool saveSurfaceDefectExclusionRects(const QString& cameraId, const QVector<QRect>& rects, QString* errorMessage = nullptr) const;
   bool clearSurfaceDefectExclusionRects(const QString& cameraId, QString* errorMessage = nullptr) const;

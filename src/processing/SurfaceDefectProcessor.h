@@ -129,6 +129,12 @@ public:
     const std::vector<cv::Rect>& exclusionRects = {},
     const SurfaceThresholdSettings& settings = {}) const;
 
+  SurfaceDefectResult detectByGrayscaleThreshold(
+    const cv::Mat& input,
+    const std::vector<cv::Point>& searchPolygon,
+    const std::vector<cv::Rect>& exclusionRects = {},
+    const SurfaceThresholdSettings& settings = {}) const;
+
   SurfaceStrategyResult locateTwoCirclesAxis(
     const cv::Mat& input,
     const SurfaceTwoCirclesStrategyConfig& config,
@@ -147,6 +153,12 @@ public:
   SurfaceDefectResult locateByEdgePca(
     const cv::Mat& input,
     const cv::Rect& searchRoi,
+    const std::vector<cv::Rect>& exclusionRects = {},
+    int edgeSensitivity = 60) const;
+
+  SurfaceDefectResult locateByEdgePca(
+    const cv::Mat& input,
+    const std::vector<cv::Point>& searchPolygon,
     const std::vector<cv::Rect>& exclusionRects = {},
     int edgeSensitivity = 60) const;
 

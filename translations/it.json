@@ -150,6 +150,7 @@
     "threshold": "Soglia",
     "edge": "Bordo",
     "edgePca": "Bordo + PCA",
+    "massPca": "Massa + PCA",
     "model": "Modello",
     "aiYolo": "AI YOLO"
   },
@@ -157,6 +158,7 @@
     "threshold": "Localizza il contorno con soglia grayscale dentro una corona definita dall'operatore.",
     "edge": "Usa una guida e una fascia di ricerca per trovare il bordo reale con OpenCV.",
     "edgePca": "Raccogliera' punti bordo e calcolera' centro/orientamento con PCA robusta.",
+    "massPca": "Usa un AOE rettangolare: il blob sogliato definisce centro di massa e assi XY con PCA.",
     "model": "Usera' un modello geometrico o template per stimare posizione e orientamento.",
     "aiYolo": "Usera' un modello YOLO, preferibilmente segmentation, per ottenere maschera e riferimento pezzo."
   },
@@ -218,6 +220,10 @@
     "cameraSampleAcquired": "Immagine campione acquisita",
     "cameraSampleAcquireFailed": "Acquisizione immagine campione fallita",
     "cameraTestImagesSaved": "Immagini test salvate",
+    "vimbaCameraAssigned": "Camera VimbaX assegnata",
+    "vimbaNoCameraSelected": "Seleziona una camera VimbaX prima di salvare",
+    "usbCameraAssigned": "Camera USB assegnata",
+    "usbNoCameraSelected": "Seleziona una camera USB prima di salvare",
     "cameraSourceUnsupported": "Sorgente camera non supportata",
     "cameraStartFailed": "Avvio camera fallito",
     "cameraStarted": "Camera avviata",
@@ -331,6 +337,8 @@
   },
   "actions": {
     "assignImageFolder": "Associa cartella immagini",
+    "assignVimbaCamera": "Assegna VimbaX",
+    "assignUsbCamera": "Assegna USB",
     "assignSampleImage": "Importa campione",
     "acquireSampleImage": "Acquisisci campione",
     "assignTestImages": "Importa test",

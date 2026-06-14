@@ -140,6 +140,7 @@ QIcon IconCatalog::icon(const QString& id)
     {"threshold", ":/icons/contrast.svg"},
     {"calibration", ":/icons/scale.svg"},
     {"roi", ":/icons/scan.svg"},
+    {"polygon", ":/icons/shapes.svg"},
     {"saveSample", ":/icons/save.svg"},
     {"tolerances", ":/icons/gauge.svg"},
     {"surfaceLocalization", ":/icons/scan-search.svg"},

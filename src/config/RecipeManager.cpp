@@ -6,6 +6,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QPolygon>
 #include <QRegularExpression>
 
 #include "RecipeJsonUtils.h"
@@ -500,6 +501,29 @@ bool RecipeManager::loadSurfaceDefectRoi(const QString& cameraId, QRect& roi) co
   return roi.isValid();
 }
 
+QVector<QPoint> RecipeManager::loadSurfaceDefectPolygon(const QString& cameraId) const
+{
+  QJsonObject root;
+
+  if (!loadJsonObject(cameraRecipePath(cameraId), root))
+  {
+    return {};
+  }
+
+  const QJsonArray polygon = root.value("tools").toObject()
+    .value("surfaceLocalization").toObject()
+    .value("searchPolygon").toArray();
+
+  QVector<QPoint> result;
+  result.reserve(polygon.size());
+  for (const QJsonValue& value : polygon)
+  {
+    result.append(pointFromJson(value.toObject()));
+  }
+
+  return result.size() >= 3 ? result : QVector<QPoint>();
+}
+
 SurfaceDefectSettings RecipeManager::loadSurfaceDefectSettings(const QString& cameraId) const
 {
   SurfaceDefectSettings settings;
@@ -566,7 +590,7 @@ bool RecipeManager::saveSurfaceDefectRoi(const QString& cameraId, const QRect& r
   pruneSurfaceLocalizationForMethod(surfaceDefects, method);
   surfaceDefects["searchRoi"] = rectToJson(roi.normalized());
 
-  if (method == "threshold")
+  if (method == "threshold" || method == "massPca")
   {
     QJsonObject threshold = surfaceDefects.value("threshold").toObject();
 
@@ -583,6 +607,80 @@ bool RecipeManager::saveSurfaceDefectRoi(const QString& cameraId, const QRect& r
     surfaceDefects["threshold"] = threshold;
   }
   tools["surfaceLocalization"] = surfaceDefects;
+  root["tools"] = tools;
+
+  return saveJsonObject(path, root, errorMessage);
+}
+
+bool RecipeManager::saveSurfaceDefectPolygon(const QString& cameraId, const QVector<QPoint>& polygon, QString* errorMessage) const
+{
+  const QString path = cameraRecipePath(cameraId);
+  QJsonObject root;
+  loadJsonObject(path, root);
+
+  root["cameraId"] = cameraId;
+
+  QJsonObject tools = root.value("tools").toObject();
+  QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
+  surfaceLocalization["enabled"] = true;
+  const QString method = normalizedSurfaceLocalizationMethod(surfaceLocalization.value("method").toString("threshold"));
+  pruneSurfaceLocalizationForMethod(surfaceLocalization, method);
+
+  QJsonArray points;
+  for (const QPoint& point : polygon)
+  {
+    points.append(pointToJson(point));
+  }
+  surfaceLocalization["searchPolygon"] = points;
+
+  if (polygon.size() >= 3)
+  {
+    surfaceLocalization["searchRoi"] = rectToJson(QPolygon(polygon).boundingRect().normalized());
+  }
+
+  if (method == "threshold" || method == "massPca")
+  {
+    QJsonObject threshold = surfaceLocalization.value("threshold").toObject();
+
+    if (!threshold.contains("min"))
+    {
+      threshold["min"] = SurfaceDefectSettings().thresholdMin;
+    }
+
+    if (!threshold.contains("max"))
+    {
+      threshold["max"] = SurfaceDefectSettings().thresholdMax;
+    }
+
+    surfaceLocalization["threshold"] = threshold;
+  }
+
+  tools["surfaceLocalization"] = surfaceLocalization;
+  root["tools"] = tools;
+
+  return saveJsonObject(path, root, errorMessage);
+}
+
+bool RecipeManager::saveSurfaceDefectThreshold(const QString& cameraId, int minValue, int maxValue, QString* errorMessage) const
+{
+  const QString path = cameraRecipePath(cameraId);
+  QJsonObject root;
+  loadJsonObject(path, root);
+
+  root["cameraId"] = cameraId;
+
+  QJsonObject tools = root.value("tools").toObject();
+  QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
+  surfaceLocalization["enabled"] = true;
+  const QString method = normalizedSurfaceLocalizationMethod(surfaceLocalization.value("method").toString("massPca"));
+  pruneSurfaceLocalizationForMethod(surfaceLocalization, method == "threshold" ? "threshold" : "massPca");
+
+  QJsonObject threshold;
+  threshold["min"] = qBound(0, minValue, 255);
+  threshold["max"] = qBound(threshold.value("min").toInt(), maxValue, 255);
+  threshold["value"] = threshold.value("max").toInt();
+  surfaceLocalization["threshold"] = threshold;
+  tools["surfaceLocalization"] = surfaceLocalization;
   root["tools"] = tools;
 
   return saveJsonObject(path, root, errorMessage);

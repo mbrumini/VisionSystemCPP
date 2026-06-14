@@ -1,6 +1,7 @@
 #include "CameraRuntime.h"
 
 #include "camera/FileCamera.h"
+#include "camera/UsbCamera.h"
 
 bool CameraRuntime::start(const CameraConfig& camera, const QString& resolvedFolder, QString* errorMessage)
 {
@@ -130,7 +131,7 @@ void CameraRuntime::clearGeometries()
 
 bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& resolvedFolder, QString* errorMessage)
 {
-  if (camera.type != "file")
+  if (camera.type != "file" && camera.type != "usb")
   {
     if (errorMessage)
     {
@@ -144,13 +145,30 @@ bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& reso
     return true;
   }
 
-  m_source = std::make_unique<FileCamera>(resolvedFolder.toStdString(), m_loop);
+  if (camera.type == "usb")
+  {
+    if (camera.usbIndex < 0)
+    {
+      if (errorMessage)
+      {
+        *errorMessage = "Indice camera USB non valido: " + camera.id;
+      }
+      return false;
+    }
+
+    m_source = std::make_unique<UsbCamera>(camera.usbIndex);
+  }
+  else
+  {
+    m_source = std::make_unique<FileCamera>(resolvedFolder.toStdString(), m_loop);
+  }
+
   if (!m_source->open())
   {
     m_source.reset();
     if (errorMessage)
     {
-      *errorMessage = "Avvio camera fallito: " + camera.id;
+      *errorMessage = QString("Avvio camera fallito: %1 type=%2").arg(camera.id, camera.type);
     }
     return false;
   }

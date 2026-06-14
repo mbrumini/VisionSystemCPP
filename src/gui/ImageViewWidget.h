@@ -20,6 +20,8 @@ public:
   void clearImage();
   void setRoi(const QRect& imageRoi);
   void clearRoi();
+  void setSearchPolygon(const QVector<QPoint>& imagePolygon);
+  void clearSearchPolygon();
   void setExclusionRects(const QVector<QRect>& imageRects);
   void clearExclusionRects();
   void setCircles(const QVector<ImageCircle>& imageCircles);
@@ -34,6 +36,7 @@ public:
   const GeometryOverlay& geometryOverlay() const;
   void clearGeometryOverlay();
   void setRoiDrawingEnabled(bool enabled);
+  void setPolygonDrawingEnabled(bool enabled);
   void setExclusionDrawingEnabled(bool enabled);
   void setGeometryAreaEditingEnabled(bool enabled);
   void setGeometryPointPickingEnabled(bool enabled);
@@ -44,6 +47,7 @@ public:
   void setThreePointCircleDrawingEnabled(bool enabled);
   void setThreePointArcDrawingEnabled(bool enabled);
   void setRoiChangedHandler(std::function<void(const QRect&)> handler);
+  void setPolygonChangedHandler(std::function<void(const QVector<QPoint>&)> handler);
   void setExclusionRectAddedHandler(std::function<void(const QRect&)> handler);
   void setExclusionRectsChangedHandler(std::function<void(const QVector<QRect>&)> handler);
   void setCircleChangedHandler(std::function<void(bool, const ImageCircle&)> handler);
@@ -101,12 +105,18 @@ private:
   ImageRotatedRect normalizedGeometryArea(const ImageRotatedRect& area) const;
   int exclusionRectAt(const QPoint& widgetPoint) const;
   int exclusionHandleAt(const QPoint& widgetPoint, ExclusionHandle& handle) const;
+  bool roiContains(const QPoint& widgetPoint) const;
+  bool roiHandleAt(const QPoint& widgetPoint, ExclusionHandle& handle) const;
+  int polygonVertexAt(const QPoint& widgetPoint) const;
+  bool polygonContains(const QPoint& widgetPoint) const;
+  void finishPolygonDrawing();
   QRect clampImageRectToImage(const QRect& imageRect) const;
 
   enum class DrawingMode
   {
     None,
     Roi,
+    Polygon,
     Exclusion,
     OuterCircle,
     InnerCircle,
@@ -122,6 +132,8 @@ private:
   double m_zoomFactor = 1.0;
   QPointF m_panOffset;
   QRect m_roi;
+  QVector<QPoint> m_searchPolygon;
+  QVector<QPoint> m_pendingPolygon;
   QVector<QRect> m_exclusionRects;
   QVector<ImageCircle> m_circles;
   QVector<ImageLine> m_geometryLines;
@@ -132,12 +144,18 @@ private:
   bool m_hasGeometryArea = false;
   DrawingMode m_drawingMode = DrawingMode::None;
   bool m_dragging = false;
+  bool m_movingRoi = false;
+  bool m_resizingRoi = false;
+  bool m_movingPolygon = false;
+  bool m_movingPolygonVertex = false;
   bool m_movingExclusion = false;
   bool m_resizingExclusion = false;
   bool m_movingGeometryOverlayPoint = false;
+  ExclusionHandle m_activeRoiHandle = ExclusionHandle::None;
   ExclusionHandle m_activeExclusionHandle = ExclusionHandle::None;
   GeometryAreaHandle m_activeGeometryAreaHandle = GeometryAreaHandle::None;
   int m_selectedExclusionIndex = -1;
+  int m_selectedPolygonVertexIndex = -1;
   int m_selectedGeometryOverlayPointIndex = -1;
   QPoint m_dragStart;
   QPoint m_dragEnd;
@@ -147,6 +165,7 @@ private:
   QVector<QPoint> m_threePointCirclePoints;
   QVector<QPoint> m_twoPointLinePoints;
   std::function<void(const QRect&)> m_roiChangedHandler;
+  std::function<void(const QVector<QPoint>&)> m_polygonChangedHandler;
   std::function<void(const QRect&)> m_exclusionRectAddedHandler;
   std::function<void(const QVector<QRect>&)> m_exclusionRectsChangedHandler;
   std::function<void(bool, const ImageCircle&)> m_circleChangedHandler;

@@ -10,6 +10,26 @@ set(CMAKE_AUTORCC ON)
 find_package(OpenCV REQUIRED)
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
+find_path(VIMBAX_INCLUDE_DIR
+    NAMES VmbCPP/VmbCPP.h
+    HINTS
+        $ENV{VIMBA_X_HOME}
+        $ENV{VIMBAX_HOME}
+        "C:/Program Files/Allied Vision/Vimba X"
+        "C:/Program Files/Allied Vision/VimbaX"
+    PATH_SUFFIXES api/include api/VmbCPP/include include Include
+)
+
+find_library(VIMBAX_CPP_LIBRARY
+    NAMES VmbCPP VmbCPP_MD VmbCPP64
+    HINTS
+        $ENV{VIMBA_X_HOME}
+        $ENV{VIMBAX_HOME}
+        "C:/Program Files/Allied Vision/Vimba X"
+        "C:/Program Files/Allied Vision/VimbaX"
+    PATH_SUFFIXES api/lib api/VmbCPP/lib lib Lib
+)
+
 add_executable(VisionSystemCPP
     src/main.cpp
     src/access/AccessTypes.h
@@ -43,12 +63,23 @@ add_executable(VisionSystemCPP
     src/calibration/CalibrationRecipe.h
     src/calibration/CalibrationRecipe.cpp
     src/camera/ICamera.h
+    src/camera/CameraDeviceInfo.h
     src/camera/FileCamera.h
     src/camera/FileCamera.cpp
+    src/camera/UsbCamera.h
+    src/camera/UsbCamera.cpp
+    src/camera/UsbCameraDiscovery.h
+    src/camera/UsbCameraDiscovery.cpp
+    src/camera/VimbaXDiscovery.h
+    src/camera/VimbaXDiscovery.cpp
     src/gui/CameraTileWidget.h
     src/gui/CameraTileWidget.cpp
     src/gui/CameraStripWidget.h
     src/gui/CameraStripWidget.cpp
+    src/gui/CameraAssignmentDialog.h
+    src/gui/CameraAssignmentDialog.cpp
+    src/gui/UsbCameraAssignmentDialog.h
+    src/gui/UsbCameraAssignmentDialog.cpp
     src/gui/CameraSetupPanelWidget.h
     src/gui/CameraSetupPanelWidget.cpp
     src/gui/CommandToolbarWidget.h
@@ -66,6 +97,7 @@ add_executable(VisionSystemCPP
     src/gui/TouchIconButton.cpp
     src/gui/ImageViewWidgetInteraction.cpp
     src/gui/ImageViewWidgetPainting.cpp
+    src/gui/ImageViewWidgetPolygon.cpp
     src/gui/help/HelpAssistantService.h
     src/gui/help/HelpAssistantService.cpp
     src/gui/help/HelpModelBootstrapper.h
@@ -106,6 +138,11 @@ add_executable(VisionSystemCPP
     src/gui/modules/geometry/MainWindowGeometryModule_ArcRuntime.cpp
     src/gui/modules/MainWindowSurfaceModule.h
     src/gui/modules/surface/MainWindowSurfaceModule_Panels.cpp
+    src/gui/modules/surface/MainWindowSurfaceModule_LocalizationToolCircleAnnulus.cpp
+    src/gui/modules/surface/MainWindowSurfaceModule_LocalizationToolMassPca.cpp
+    src/gui/modules/surface/MainWindowSurfaceModule_LocalizationToolEdgePca.cpp
+    src/gui/modules/surface/MainWindowSurfaceModule_LocalizationToolModel.cpp
+    src/gui/modules/surface/MainWindowSurfaceModule_LocalizationToolPlanned.cpp
     src/gui/modules/surface/MainWindowSurfaceModule_Runtime.cpp
     src/gui/modules/surface/MainWindowSurfaceModule_Model.cpp
     src/gui/modules/setup/SetupResultsDialog.h
@@ -221,6 +258,15 @@ target_include_directories(VisionSystemCPP PRIVATE
 target_compile_definitions(VisionSystemCPP PRIVATE
     PROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
 )
+
+if(VIMBAX_INCLUDE_DIR AND VIMBAX_CPP_LIBRARY)
+    target_include_directories(VisionSystemCPP PRIVATE ${VIMBAX_INCLUDE_DIR})
+    target_link_libraries(VisionSystemCPP PRIVATE ${VIMBAX_CPP_LIBRARY})
+    target_compile_definitions(VisionSystemCPP PRIVATE VISION_WITH_VIMBAX)
+    message(STATUS "VimbaX SDK enabled: ${VIMBAX_INCLUDE_DIR}")
+else()
+    message(STATUS "VimbaX SDK not found: discovery UI will report SDK unavailable")
+endif()
 
 add_custom_command(TARGET VisionSystemCPP POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory

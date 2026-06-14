@@ -9,10 +9,6 @@ bool isBwDimensional(const CameraConfig& camera, const AppConfig& /*config*/)
 
 bool isGrayscaleLocalization(const CameraConfig& camera, const AppConfig& /*config*/)
 {
-  const bool hasAi = camera.profile.inspectionTypes.contains("ai");
-  const bool hasGrayscaleWork = camera.profile.inspectionTypes.contains("measurement") ||
-    camera.profile.inspectionTypes.contains("surface");
-
-  return camera.profile.imageMode == "grayscale" && (!hasAi || hasGrayscaleWork);
+  return camera.exists && camera.enabled;
 }
 }
