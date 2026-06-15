@@ -10,6 +10,46 @@ Portare il progetto VisionSystemCPP su un altro PC Windows e poter:
 - opzionalmente usare l'assistente help locale con Ollama.
 
 
+INSTALLAZIONE CONSIGLIATA PER PC PRODUZIONE
+-------------------------------------------
+Sul PC produzione NON serve compilatore.
+
+Sul PC sviluppo creare prima il pacchetto runtime:
+
+cd /d D:\dev\VisionSystemCPP
+Build_Runtime_Package.bat
+
+Output:
+
+dist\VisionSystemCPP-runtime-<versione>.zip
+
+Sul PC destinazione:
+1) copiare lo zip;
+2) estrarre lo zip in una cartella temporanea;
+3) doppio click su:
+
+Install_Runtime.bat
+
+Installazione default:
+
+C:\VisionSystemCPP
+
+Per disinstallare:
+
+C:\VisionSystemCPP\Uninstall_Runtime.bat
+
+L'uninstall chiede se eliminare anche dati, ricette, immagini e modelli.
+
+Update:
+- creare un nuovo pacchetto runtime sul PC sviluppo;
+- sul PC destinazione rilanciare Install_Runtime.bat col nuovo pacchetto;
+- l'installer aggiorna l'app e conserva config, recipes, data, logs e .venv-ai.
+
+Nota importante:
+questa modalita' non installa Visual Studio, Qt SDK o vcpkg sul PC destinazione.
+Installa solo il runtime gia' pronto e le dipendenze Python AI se richieste.
+
+
 1. Prerequisiti Windows
 -----------------------
 Installare:
