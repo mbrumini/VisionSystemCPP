@@ -15,10 +15,12 @@
 
 UsbCameraAssignmentDialog::UsbCameraAssignmentDialog(
   int currentSlot,
+  int currentUsbIndex,
   int maxSlot,
   std::function<void(const QString&)> diagnosticLog,
   QWidget* parent)
   : QDialog(parent),
+    m_currentUsbIndex(currentUsbIndex),
     m_diagnosticLog(std::move(diagnosticLog))
 {
   setWindowTitle("USB camera assignment");
@@ -130,9 +132,19 @@ void UsbCameraAssignmentDialog::populateDevices(const QVector<UsbCameraDeviceInf
     m_table->setItem(row, 3, new QTableWidgetItem(QString::number(device.fps, 'f', 2)));
   }
 
-  if (!devices.isEmpty())
+  int rowToSelect = devices.isEmpty() ? -1 : 0;
+  for (int row = 0; row < devices.size(); ++row)
   {
-    m_table->selectRow(0);
+    if (devices[row].index == m_currentUsbIndex)
+    {
+      rowToSelect = row;
+      break;
+    }
+  }
+
+  if (rowToSelect >= 0)
+  {
+    m_table->selectRow(rowToSelect);
   }
 
   if (m_diagnosticLog)
@@ -149,5 +161,6 @@ void UsbCameraAssignmentDialog::updateSelectionFields()
     return;
   }
 
+  m_currentUsbIndex = device.index;
   m_displayNameEdit->setText(device.displayName);
 }

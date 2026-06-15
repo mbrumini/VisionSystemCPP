@@ -18,6 +18,7 @@ class UsbCameraAssignmentDialog : public QDialog
 public:
   UsbCameraAssignmentDialog(
     int currentSlot,
+    int currentUsbIndex,
     int maxSlot,
     std::function<void(const QString&)> diagnosticLog = {},
     QWidget* parent = nullptr);
@@ -33,6 +34,7 @@ private:
   void updateSelectionFields();
 
   QVector<UsbCameraDeviceInfo> m_devices;
+  int m_currentUsbIndex = -1;
   std::function<void(const QString&)> m_diagnosticLog;
   QLabel* m_statusLabel = nullptr;
   QTableWidget* m_table = nullptr;

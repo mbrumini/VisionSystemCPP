@@ -33,6 +33,25 @@ CameraConfig cameraById(const AppConfig& config, const QString& cameraId)
   return {};
 }
 
+CameraConfig cameraByIdOrSlot(const AppConfig& config, const QString& cameraId, int slot)
+{
+  const CameraConfig byId = cameraById(config, cameraId);
+  if (!byId.id.isEmpty())
+  {
+    return byId;
+  }
+
+  for (const CameraConfig& camera : config.cameras())
+  {
+    if (camera.slot == slot)
+    {
+      return camera;
+    }
+  }
+
+  return {};
+}
+
 cv::Mat currentCameraFrameForSave(MainWindowContext& context, const CameraConfig& camera, QString* errorMessage)
 {
   const auto runtimeIt = context.cameraRuntime->find(camera.id);
@@ -186,6 +205,7 @@ void MainWindowCameraConfigModule::configureUsbCameraSlot(int currentSlot, const
 
   UsbCameraAssignmentDialog dialog(
     defaultSlot,
+    cameraByIdOrSlot(config(), currentCameraId, defaultSlot).usbIndex,
     config().maxCameras(),
     [this](const QString& message) { log(message); },
     window());
