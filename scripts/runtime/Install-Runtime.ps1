@@ -46,6 +46,15 @@ function Get-LatestReleasePackage($RepoName, $DestinationDir) {
   return $target
 }
 
+function Get-LocalPackageRoot {
+  $scriptDir = Split-Path -Parent $PSCommandPath
+  $candidate = Split-Path -Parent $scriptDir
+  if (Test-Path (Join-Path $candidate "VisionSystemCPP.exe")) {
+    return $candidate
+  }
+  return $null
+}
+
 function Find-Python {
   $py = Get-Command py -ErrorAction SilentlyContinue
   if ($py) {
@@ -100,27 +109,39 @@ try {
   $tempRoot = Join-Path $env:TEMP ("VisionSystemCPP_install_" + [guid]::NewGuid().ToString("N"))
   Ensure-Directory $tempRoot
 
+  $localPackageRoot = $null
   if ([string]::IsNullOrWhiteSpace($PackagePath)) {
-    $PackagePath = Get-LatestReleasePackage $Repo $tempRoot
+    $localPackageRoot = Get-LocalPackageRoot
+    if ($localPackageRoot) {
+      Write-Host "Uso pacchetto locale estratto: $localPackageRoot"
+    }
+    else {
+      $PackagePath = Get-LatestReleasePackage $Repo $tempRoot
+    }
   }
   else {
     $PackagePath = [System.IO.Path]::GetFullPath($PackagePath)
   }
 
-  if (-not (Test-Path $PackagePath)) {
+  if (-not $localPackageRoot -and -not (Test-Path $PackagePath)) {
     throw "Pacchetto non trovato: $PackagePath"
   }
 
-  Write-Step "Estrazione pacchetto"
-  $extractDir = Join-Path $tempRoot "extract"
-  Expand-Archive -Force -Path $PackagePath -DestinationPath $extractDir
-
-  $packageRoot = $extractDir
-  $nestedExe = Get-ChildItem -Path $extractDir -Recurse -Filter "VisionSystemCPP.exe" | Select-Object -First 1
-  if (-not $nestedExe) {
-    throw "VisionSystemCPP.exe non trovato nel pacchetto."
+  if ($localPackageRoot) {
+    $packageRoot = $localPackageRoot
   }
-  $packageRoot = Split-Path -Parent $nestedExe.FullName
+  else {
+    Write-Step "Estrazione pacchetto"
+    $extractDir = Join-Path $tempRoot "extract"
+    Expand-Archive -Force -Path $PackagePath -DestinationPath $extractDir
+
+    $packageRoot = $extractDir
+    $nestedExe = Get-ChildItem -Path $extractDir -Recurse -Filter "VisionSystemCPP.exe" | Select-Object -First 1
+    if (-not $nestedExe) {
+      throw "VisionSystemCPP.exe non trovato nel pacchetto."
+    }
+    $packageRoot = Split-Path -Parent $nestedExe.FullName
+  }
 
   $isUpdate = Test-Path (Join-Path $InstallDir "VisionSystemCPP.exe")
   if ($isUpdate) {
