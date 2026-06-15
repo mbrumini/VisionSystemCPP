@@ -12,13 +12,15 @@
 
 ## AI
 
-- [ ] Classificazione: durante il training sostituire l'immagine grande con un grafico live di loss/accuracy letto dal log o da `results.csv`.
 - [ ] Classificazione: visualizzare riepilogo dataset per classe e warning sbilanciamento direttamente nel pannello.
 - [ ] Classificazione: salvare nella ricetta il modello attivo (`best.pt`/`best.onnx`), soglia confidenza e mappa classi.
+- [ ] Classificazione: tenere un solo modello attivo/stabile per camera, evitando una lista ingestibile di modelli. Il training nuovo deve finire in un'area temporanea; al termine mostrare grafico e confronto vecchio vs nuovo (accuracy/loss, confusion matrix se disponibile, esempi inferenza su validation set), poi scegliere se promuovere il nuovo modello sovrascrivendo quello attivo oppure scartarlo e mantenere il precedente.
 - [ ] Classificazione: aggiungere test inferenza su frame corrente con risultato classe/confidenza.
 - [ ] Segmentazione: definire label, raccolta immagini/maschere, dataset YOLO segmentation e training dedicato.
+- [ ] Segmentazione: usare lo stesso schema UI della classificazione: pulsante `Training` apre parametri a destra, grafico live a sinistra, training temporaneo, confronto vecchio/nuovo e promozione esplicita di un solo modello attivo.
 - [ ] Segmentazione: usare la maschera per centro, orientamento, area e controlli dimensionali/forma.
 - [ ] Anomaly detection: definire raccolta immagini buone, training e soglia anomalia.
+- [ ] Anomaly detection: usare lo stesso schema UI della classificazione: parametri training a destra, grafico live a sinistra, confronto modello precedente/nuovo e promozione esplicita di un solo modello attivo.
 - [ ] Anomaly detection: mostrare heatmap/overlay difetto e score OK/NOK.
 
 ## Runtime camera e origine pezzo

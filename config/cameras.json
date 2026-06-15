@@ -1,8 +1,8 @@
 {
     "cameras": [
         {
-            "deviceId": "usb:1",
-            "displayName": "USB Camera 1",
+            "deviceId": "usb:0",
+            "displayName": "USB Camera 0",
             "enabled": true,
             "exists": true,
             "id": "CAM01",
@@ -15,7 +15,7 @@
                 "source": "usbCamera"
             },
             "type": "usb",
-            "usbIndex": 1
+            "usbIndex": 0
         },
         {
             "displayName": "Camera 2",

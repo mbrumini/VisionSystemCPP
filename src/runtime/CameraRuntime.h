@@ -53,4 +53,7 @@ private:
   PartPose m_currentPose;
   GeometrySet m_geometries;
   std::unique_ptr<ICamera> m_source;
+  QString m_sourceType;
+  QString m_sourceFolder;
+  int m_sourceUsbIndex = -1;
 };

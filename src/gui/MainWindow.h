@@ -49,6 +49,8 @@ protected:
 private:
   void bindModules();
   void buildUi();
+  void setupLargeImageHandlers();
+  void applyApplicationStyle();
   void buildMenu();
   void rebuildUi();
   void changeLanguage(const QString& languageCode);
@@ -111,6 +113,7 @@ private:
   QString m_returnToSetupCameraId;
   QWidget* m_toolsContainer = nullptr;
   QVBoxLayout* m_toolsLayout = nullptr;
+  QWidget* m_logBox = nullptr;
   QTextEdit* m_log = nullptr;
   QString m_selectedCameraId;
   CameraConfig m_selectedCamera;

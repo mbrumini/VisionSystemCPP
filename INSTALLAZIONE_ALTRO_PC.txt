@@ -1,0 +1,239 @@
+INSTALLAZIONE VISION SYSTEM CPP SU UN ALTRO PC
+==============================================
+
+Obiettivo
+---------
+Portare il progetto VisionSystemCPP su un altro PC Windows e poter:
+- compilare l'app C++/Qt/OpenCV;
+- avviare VisionSystemCPP.exe;
+- usare le funzioni AI classificazione YOLO;
+- opzionalmente usare l'assistente help locale con Ollama.
+
+
+1. Prerequisiti Windows
+-----------------------
+Installare:
+
+1) Git
+   https://git-scm.com/download/win
+
+2) Visual Studio 2022
+   Installare il workload:
+   - Desktop development with C++
+   Componenti consigliati:
+   - MSVC v143 x64/x86 build tools
+   - Windows 10/11 SDK
+   - CMake tools for Windows
+
+3) CMake
+   Se non gia' incluso da Visual Studio:
+   https://cmake.org/download/
+
+4) Qt per MSVC 2022 x64
+   Versione usata nel preset attuale:
+   - Qt 6.10.3
+   - msvc2022_64
+
+   Percorso atteso dal preset:
+   D:/Qt/6.10.3/msvc2022_64
+
+   Se Qt viene installato in un percorso diverso, modificare CMakePresets.json:
+   - PATH
+   - CMAKE_PREFIX_PATH
+
+5) vcpkg
+   Percorso atteso dal preset:
+   D:/dev/vcpkg
+
+   Installazione tipica:
+   git clone https://github.com/microsoft/vcpkg.git D:/dev/vcpkg
+   D:/dev/vcpkg/bootstrap-vcpkg.bat
+
+   Se vcpkg viene installato altrove, modificare CMakePresets.json:
+   - CMAKE_TOOLCHAIN_FILE
+
+
+2. Clonare il progetto
+----------------------
+Esempio consigliato:
+
+cd /d D:\dev
+git clone https://github.com/mbrumini/VisionSystemCPP.git
+cd VisionSystemCPP
+
+Se si usa un percorso diverso da D:\dev\VisionSystemCPP va bene, ma controllare
+CMakePresets.json per i percorsi assoluti di Qt, vcpkg e cache.
+
+
+3. Cache e directory temporanee
+-------------------------------
+Il preset usa:
+
+D:/temp
+D:/dev/.cache/vcpkg/binary
+D:/dev/.cache/vcpkg/downloads
+D:/dev/.cache/nuget/packages
+
+Crearle se non esistono:
+
+mkdir D:\temp
+mkdir D:\dev\.cache\vcpkg\binary
+mkdir D:\dev\.cache\vcpkg\downloads
+mkdir D:\dev\.cache\nuget\packages
+
+
+4. Compilazione C++
+-------------------
+Dal prompt Developer PowerShell / Developer Command Prompt di Visual Studio:
+
+cd /d D:\dev\VisionSystemCPP
+cmake --preset x64-release
+cmake --build --preset x64-release
+
+Output atteso:
+
+build\Release\VisionSystemCPP.exe
+
+Avvio:
+
+build\Release\VisionSystemCPP.exe
+
+
+5. File e cartelle runtime
+--------------------------
+Il repository contiene configurazioni e ricette di base.
+
+Cartelle importanti:
+- config\cameras.json
+- recipes\
+- data\
+- translations\
+- docs\help\
+- resources\
+
+Non copiare dal vecchio PC le cartelle generate se non servono:
+- build\
+- .venv-ai\
+- recipes\*\datasets\
+- recipes\*\models\
+- recipes\*\images\*\ai\
+- logs\
+
+Se invece si vogliono portare ricette, immagini, dataset o modelli gia' addestrati,
+copiarli esplicitamente dalla vecchia installazione mantenendo la stessa struttura.
+
+
+6. Ambiente Python per AI classificazione
+-----------------------------------------
+Serve solo per training/inferenza YOLO.
+
+Percorso atteso dall'app:
+
+.venv-ai\Scripts\python.exe
+
+Creazione:
+
+cd /d D:\dev\VisionSystemCPP
+py -3.11 -m venv .venv-ai
+.venv-ai\Scripts\python.exe -m pip install --upgrade pip
+
+Pacchetti minimi consigliati:
+
+.venv-ai\Scripts\python.exe -m pip install ultralytics opencv-python numpy
+
+Per GPU NVIDIA installare PyTorch CUDA compatibile con il driver del PC.
+Esempio da verificare sul sito ufficiale PyTorch:
+
+https://pytorch.org/get-started/locally/
+
+Nota:
+- il modello base yolo11s-cls.pt non e' tracciato da git se segue il pattern yolo*-cls.pt;
+- copiarlo manualmente nella root progetto oppure lasciare che Ultralytics lo scarichi se il PC ha internet.
+
+
+7. Modelli e training AI
+------------------------
+I modelli addestrati sono generati sotto:
+
+recipes\<ricetta>\models\classification\
+
+Questa cartella e' ignorata da git.
+
+Se si vuole usare su un altro PC un modello gia' addestrato:
+1) copiare recipes\<ricetta>\models\classification\ dal vecchio PC;
+2) copiare anche eventuale configurazione ricetta/camera collegata;
+3) verificare nell'app quale modello risulta attivo.
+
+
+8. Ollama help locale opzionale
+-------------------------------
+Serve solo per l'assistente help locale.
+
+Installare Ollama:
+https://ollama.com/
+
+Poi:
+
+cd /d D:\dev\VisionSystemCPP\ollama\vision-help
+install_vision_help.bat
+
+Il servizio usa il modello:
+
+vision-help
+
+Se Ollama non serve, l'app puo' comunque essere compilata e usata senza questa parte.
+
+
+9. VimbaX opzionale
+-------------------
+Se si usano camere Vimba:
+- installare VimbaX SDK sul PC;
+- verificare driver e visibilita' camere con tool Allied Vision;
+- configurare serial/device/interface in config\cameras.json o dall'app.
+
+Se VimbaX non e' installato, la build puo' comunque riuscire; l'app segnala SDK non disponibile per quelle funzioni.
+
+
+10. Problemi comuni
+-------------------
+Errore: Qt non trovato
+- Controllare CMAKE_PREFIX_PATH in CMakePresets.json.
+- Controllare che esista D:/Qt/6.10.3/msvc2022_64 o aggiornare il percorso.
+
+Errore: vcpkg toolchain non trovato
+- Controllare CMAKE_TOOLCHAIN_FILE in CMakePresets.json.
+- Eseguire bootstrap-vcpkg.bat.
+
+Errore link su VisionSystemCPP.exe
+- L'eseguibile e' aperto.
+- Chiudere l'app e rilanciare:
+  cmake --build --preset x64-release
+
+Errore AI: Python worker/model missing
+- Creare .venv-ai.
+- Installare ultralytics/opencv/numpy.
+- Verificare che il modello .pt esista o che il PC possa scaricarlo.
+
+Training lento o errore CUDA
+- Verificare installazione PyTorch CUDA.
+- Provare device=cpu solo per diagnosi.
+
+
+11. Comandi rapidi
+------------------
+Build:
+
+cd /d D:\dev\VisionSystemCPP
+cmake --preset x64-release
+cmake --build --preset x64-release
+
+Avvio:
+
+D:\dev\VisionSystemCPP\build\Release\VisionSystemCPP.exe
+
+Ambiente AI:
+
+cd /d D:\dev\VisionSystemCPP
+py -3.11 -m venv .venv-ai
+.venv-ai\Scripts\python.exe -m pip install --upgrade pip
+.venv-ai\Scripts\python.exe -m pip install ultralytics opencv-python numpy

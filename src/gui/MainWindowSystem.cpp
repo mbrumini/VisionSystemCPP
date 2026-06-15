@@ -29,6 +29,10 @@ void MainWindow::showAccessLogin()
   if (m_accessSession.authenticateBackdoor(password))
   {
     const QString roleLabel = accessRoleLabel(m_accessSession.role());
+    if (m_logBox)
+    {
+      m_logBox->setVisible(true);
+    }
     appendLog(QString("%1: %2").arg(trText("access.loginOk"), roleLabel));
     QMessageBox::information(this, trText("access.loginTitle"), QString("%1: %2").arg(trText("access.loginOk"), roleLabel));
     return;

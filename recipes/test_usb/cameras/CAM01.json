@@ -2,6 +2,7 @@
     "cameraId": "CAM01",
     "tools": {
         "aiClassification": {
+            "activeModelPath": "D:/dev/VisionSystemCPP/recipes/test_usb/models/classification/runs/CAM01_yolo11s_cls-6/weights/best.pt",
             "classes": [
                 {
                     "id": 1,
@@ -14,6 +15,22 @@
                 {
                     "id": 3,
                     "name": "2 cent"
+                },
+                {
+                    "id": 4,
+                    "name": "10 cent"
+                },
+                {
+                    "id": 5,
+                    "name": "20 cent"
+                },
+                {
+                    "id": 6,
+                    "name": "1 euro"
+                },
+                {
+                    "id": 7,
+                    "name": "2 euro"
                 }
             ],
             "enabled": true

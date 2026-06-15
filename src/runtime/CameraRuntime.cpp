@@ -28,6 +28,9 @@ void CameraRuntime::stop()
     m_source->close();
     m_source.reset();
   }
+  m_sourceType.clear();
+  m_sourceFolder.clear();
+  m_sourceUsbIndex = -1;
 
   m_status = Status::Stopped;
 }
@@ -140,9 +143,27 @@ bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& reso
     return false;
   }
 
-  if (m_source)
+  const bool sameUsbSource =
+    camera.type == "usb" &&
+    m_sourceType == camera.type &&
+    m_sourceUsbIndex == camera.usbIndex;
+  const bool sameFileSource =
+    camera.type == "file" &&
+    m_sourceType == camera.type &&
+    m_sourceFolder == resolvedFolder;
+
+  if (m_source && (sameUsbSource || sameFileSource))
   {
     return true;
+  }
+
+  if (m_source)
+  {
+    m_source->close();
+    m_source.reset();
+    m_sourceType.clear();
+    m_sourceFolder.clear();
+    m_sourceUsbIndex = -1;
   }
 
   if (camera.type == "usb")
@@ -166,6 +187,9 @@ bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& reso
   if (!m_source->open())
   {
     m_source.reset();
+    m_sourceType.clear();
+    m_sourceFolder.clear();
+    m_sourceUsbIndex = -1;
     if (errorMessage)
     {
       *errorMessage = QString("Avvio camera fallito: %1 type=%2").arg(camera.id, camera.type);
@@ -173,5 +197,8 @@ bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& reso
     return false;
   }
 
+  m_sourceType = camera.type;
+  m_sourceFolder = camera.type == "file" ? resolvedFolder : QString();
+  m_sourceUsbIndex = camera.type == "usb" ? camera.usbIndex : -1;
   return true;
 }

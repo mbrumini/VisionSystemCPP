@@ -121,3 +121,33 @@ bool RecipeManager::addAiClassificationClass(
   }
   return true;
 }
+
+QString RecipeManager::loadAiClassificationActiveModelPath(const QString& cameraId) const
+{
+  QJsonObject root;
+  loadJsonObject(cameraRecipePath(cameraId), root);
+
+  return root.value("tools").toObject()
+    .value("aiClassification").toObject()
+    .value("activeModelPath").toString().trimmed();
+}
+
+bool RecipeManager::saveAiClassificationActiveModelPath(
+  const QString& cameraId,
+  const QString& modelPath,
+  QString* errorMessage) const
+{
+  const QString path = cameraRecipePath(cameraId);
+  QJsonObject root;
+  loadJsonObject(path, root);
+  root["cameraId"] = cameraId;
+
+  QJsonObject tools = root.value("tools").toObject();
+  QJsonObject ai = tools.value("aiClassification").toObject();
+  ai["enabled"] = true;
+  ai["activeModelPath"] = modelPath;
+  tools["aiClassification"] = ai;
+  root["tools"] = tools;
+
+  return saveJsonObject(path, root, errorMessage);
+}

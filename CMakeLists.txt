@@ -49,6 +49,8 @@ add_executable(VisionSystemCPP
     src/config/RecipeManagerAI.cpp
     src/config/RecipeManagerGeometry.cpp
     src/config/RecipeManagerMeasurement.cpp
+    src/config/RecipeManagerSurfaceDefect.cpp
+    src/config/RecipeManagerSurfaceLocalization.cpp
     src/config/RecipeManagerStorage.cpp
     src/config/RecipeJsonUtils.h
     src/config/RecipeJsonUtils.cpp
@@ -90,6 +92,8 @@ add_executable(VisionSystemCPP
     src/gui/ImagePrimitives.h
     src/gui/ImageViewWidget.h
     src/gui/ImageViewWidget.cpp
+    src/gui/ImageViewWidgetState.cpp
+    src/gui/ImageViewWidgetGeometry.cpp
     src/gui/MeasurementResultsWidget.h
     src/gui/MeasurementResultsWidget.cpp
     src/gui/ToolIconBarWidget.h
@@ -97,10 +101,13 @@ add_executable(VisionSystemCPP
     src/gui/TouchIconButton.h
     src/gui/TouchIconButton.cpp
     src/gui/ImageViewWidgetInteraction.cpp
+    src/gui/ImageViewWidgetInteractionRelease.cpp
     src/gui/ImageViewWidgetPainting.cpp
     src/gui/ImageViewWidgetPolygon.cpp
     src/gui/help/HelpAssistantService.h
     src/gui/help/HelpAssistantService.cpp
+    src/gui/help/HelpAssistantService_Retrieval.cpp
+    src/gui/help/HelpAssistantService_DirectReply.cpp
     src/gui/help/HelpModelBootstrapper.h
     src/gui/help/HelpModelBootstrapper.cpp
     src/gui/help/HelpDialog.h
@@ -109,6 +116,11 @@ add_executable(VisionSystemCPP
     src/gui/MainWindow.cpp
     src/gui/MainWindowHelp.cpp
     src/gui/MainWindowSystem.cpp
+    src/gui/MainWindowMenu.cpp
+    src/gui/MainWindowInteractions.cpp
+    src/gui/MainWindowPanels.cpp
+    src/gui/MainWindowStyle.cpp
+    src/gui/MainWindowImageHandlers.cpp
     src/gui/MainWindowUi.cpp
     src/gui/modules/MainWindowCameraProfile.cpp
     src/gui/modules/ConstructedGeometryLineSource.h
@@ -134,7 +146,13 @@ add_executable(VisionSystemCPP
     src/gui/modules/geometry/MainWindowGeometryModule_Recipe.cpp
     src/gui/modules/geometry/MainWindowGeometryModule_Delete.cpp
     src/gui/modules/geometry/GeometryToolPanels.cpp
+    src/gui/modules/geometry/GeometryToolPanels_Point.cpp
+    src/gui/modules/geometry/GeometryToolPanels_Line.cpp
+    src/gui/modules/geometry/GeometryToolPanels_Circle.cpp
     src/gui/modules/geometry/GeometryRuntimeModule.cpp
+    src/gui/modules/geometry/GeometryRuntimeModule_Lines.cpp
+    src/gui/modules/geometry/GeometryRuntimeModule_Configured.cpp
+    src/gui/modules/geometry/GeometryRuntimeModule_PointCircle.cpp
     src/gui/modules/geometry/MainWindowGeometryModule_ArcPanels.cpp
     src/gui/modules/geometry/MainWindowGeometryModule_ArcRuntime.cpp
     src/gui/modules/MainWindowSurfaceModule.h
@@ -150,7 +168,23 @@ add_executable(VisionSystemCPP
     src/gui/modules/setup/SetupResultsDialog.cpp
     src/gui/modules/setup/SetupResultsFormatter.h
     src/gui/modules/setup/SetupResultsFormatter.cpp
+    src/gui/modules/setup/SetupCameraResolver.h
+    src/gui/modules/setup/SetupCameraResolver.cpp
+    src/gui/modules/setup/AiPythonRuntime.h
+    src/gui/modules/setup/AiPythonRuntime.cpp
+    src/gui/modules/setup/AiClassificationPaths.h
+    src/gui/modules/setup/AiClassificationPaths.cpp
+    src/gui/modules/setup/AiModelComparison.h
+    src/gui/modules/setup/AiModelComparison.cpp
+    src/gui/modules/setup/AiTrainingGraph.h
+    src/gui/modules/setup/AiTrainingGraph.cpp
+    src/gui/modules/setup/MainWindowSetupModule_AiPanels.cpp
     src/gui/modules/setup/MainWindowSetupModule_Ai.cpp
+    src/gui/modules/setup/MainWindowSetupModule_AiTraining.cpp
+    src/gui/modules/setup/MainWindowSetupModule_AiInference.cpp
+    src/gui/modules/setup/MainWindowSetupModule_AiCapture.cpp
+    src/gui/modules/setup/MainWindowSetupModule_Runtime.cpp
+    src/gui/modules/setup/MainWindowSetupModule_Details.cpp
     src/gui/modules/MainWindowSetupModule.cpp
     src/gui/modules/MainWindowCameraConfigModule.cpp
     src/gui/SurfaceLocalizationPanelWidget.h
@@ -165,6 +199,8 @@ add_executable(VisionSystemCPP
     src/gui/ToolPanelWidget.cpp
     src/gui/geometry/GeometryOverlay.h
     src/gui/geometry/GeometryOverlay.cpp
+    src/gui/geometry/GeometryOverlayPrimitives.h
+    src/gui/geometry/GeometryOverlayPrimitives.cpp
     src/gui/geometry/GeometryDiagnosticDrawing.h
     src/gui/geometry/GeometryDiagnosticDrawing.cpp
     src/gui/geometry/GeometryMath.h

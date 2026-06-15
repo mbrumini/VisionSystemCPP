@@ -246,6 +246,8 @@ public:
   bool importCameraTestImages(const QString& cameraId, const QString& sourceDirectory, QString* errorMessage = nullptr) const;
   QVector<AiClassificationClassConfig> loadAiClassificationClasses(const QString& cameraId) const;
   bool addAiClassificationClass(const QString& cameraId, const QString& className, AiClassificationClassConfig* createdClass = nullptr, QString* errorMessage = nullptr) const;
+  QString loadAiClassificationActiveModelPath(const QString& cameraId) const;
+  bool saveAiClassificationActiveModelPath(const QString& cameraId, const QString& modelPath, QString* errorMessage = nullptr) const;
 
 private:
   static bool copyDirectory(const QString& sourceDirectory, const QString& destinationDirectory, QString* errorMessage);

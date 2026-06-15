@@ -54,13 +54,54 @@ CameraConfig cameraByIdOrSlot(const AppConfig& config, const QString& cameraId, 
 
 cv::Mat currentCameraFrameForSave(MainWindowContext& context, const CameraConfig& camera, QString* errorMessage)
 {
-  const auto runtimeIt = context.cameraRuntime->find(camera.id);
+  CameraConfig effectiveCamera = camera;
+  if (context.config)
+  {
+    const CameraConfig configured = cameraById(*context.config, camera.id);
+    if (!configured.id.isEmpty())
+    {
+      effectiveCamera = configured;
+    }
+  }
+
+  if (effectiveCamera.type == "usb")
+  {
+    CameraRuntime& runtime = (*context.cameraRuntime)[effectiveCamera.id];
+    QString stepError;
+    const int framesToAcquire = 3;
+    for (int i = 0; i < framesToAcquire; ++i)
+    {
+      if (!runtime.step(effectiveCamera, {}, &stepError))
+      {
+        if (errorMessage)
+        {
+          *errorMessage = stepError.isEmpty()
+            ? QString("Acquisizione USB fallita: %1").arg(effectiveCamera.id)
+            : stepError;
+        }
+        return {};
+      }
+    }
+
+    if (!runtime.currentFrame().empty())
+    {
+      if (context.selectedCameraId && *context.selectedCameraId == effectiveCamera.id &&
+          context.selectedPreview && context.largeImage && context.imaging)
+      {
+        *context.selectedPreview = context.imaging->matToPixmap(runtime.currentFrame());
+        context.largeImage->setImage(*context.selectedPreview);
+      }
+      return runtime.currentFrame().clone();
+    }
+  }
+
+  const auto runtimeIt = context.cameraRuntime->find(effectiveCamera.id);
   if (runtimeIt != context.cameraRuntime->end() && !runtimeIt->second.currentFrame().empty())
   {
     return runtimeIt->second.currentFrame().clone();
   }
 
-  return context.imaging->currentInputImage(camera, errorMessage);
+  return context.imaging->currentInputImage(effectiveCamera, errorMessage);
 }
 }
 
@@ -478,5 +519,11 @@ void MainWindowCameraConfigModule::acquireCameraAiClassificationClassImage(
     return;
   }
 
-  log(QString("%1: %2 class=%3 -> %4").arg(tr("log.cameraAiClassAcquired"), camera.id, classConfig.name, imagePath));
+  log(QString("%1: %2 classId=%3 class=%4 folder=%5 -> %6")
+        .arg(tr("log.cameraAiClassAcquired"))
+        .arg(camera.id)
+        .arg(classConfig.id)
+        .arg(classConfig.name)
+        .arg(folder)
+        .arg(imagePath));
 }
