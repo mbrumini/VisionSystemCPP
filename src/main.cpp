@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
     "border:1px solid #4d9cff;"
     "border-radius:5px;"
     "padding:7px 9px;"
-    "font-size:13px;"
+    "font-size:10pt;"
     "}"
   );
 

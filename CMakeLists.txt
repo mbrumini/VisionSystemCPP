@@ -8,7 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_AUTORCC ON)
 
 find_package(OpenCV REQUIRED)
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Svg)
 
 find_path(VIMBAX_INCLUDE_DIR
     NAMES VmbCPP/VmbCPP.h
@@ -73,6 +73,10 @@ add_executable(VisionSystemCPP
     src/camera/UsbCamera.cpp
     src/camera/UsbCameraDiscovery.h
     src/camera/UsbCameraDiscovery.cpp
+    src/camera/VimbaCamera.h
+    src/camera/VimbaCamera.cpp
+    src/camera/VimbaTriggerController.h
+    src/camera/VimbaTriggerController.cpp
     src/camera/VimbaXDiscovery.h
     src/camera/VimbaXDiscovery.cpp
     src/gui/CameraTileWidget.h
@@ -287,6 +291,7 @@ add_executable(VisionSystemCPP
 target_link_libraries(VisionSystemCPP PRIVATE
     ${OpenCV_LIBS}
     Qt6::Widgets
+    Qt6::Svg
 )
 
 target_include_directories(VisionSystemCPP PRIVATE
@@ -302,11 +307,33 @@ if(VIMBAX_INCLUDE_DIR AND VIMBAX_CPP_LIBRARY)
     target_link_libraries(VisionSystemCPP PRIVATE ${VIMBAX_CPP_LIBRARY})
     target_compile_definitions(VisionSystemCPP PRIVATE VISION_WITH_VIMBAX)
     message(STATUS "VimbaX SDK enabled: ${VIMBAX_INCLUDE_DIR}")
+    file(GLOB VIMBAX_RUNTIME_DLLS
+        "$ENV{VIMBA_X_HOME}/api/bin/*.dll"
+        "$ENV{VIMBAX_HOME}/api/bin/*.dll"
+        "C:/Program Files/Allied Vision/Vimba X/api/bin/*.dll"
+        "C:/Program Files/Allied Vision/VimbaX/api/bin/*.dll"
+    )
+    if(VIMBAX_RUNTIME_DLLS)
+        add_custom_command(TARGET VisionSystemCPP POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                ${VIMBAX_RUNTIME_DLLS}
+                "$<TARGET_FILE_DIR:VisionSystemCPP>"
+        )
+    endif()
 else()
     message(STATUS "VimbaX SDK not found: discovery UI will report SDK unavailable")
 endif()
 
 add_custom_command(TARGET VisionSystemCPP POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+        "$<TARGET_FILE_DIR:VisionSystemCPP>/imageformats"
+        "$<TARGET_FILE_DIR:VisionSystemCPP>/iconengines"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/Qt6/plugins/imageformats/qsvg.dll"
+        "$<TARGET_FILE_DIR:VisionSystemCPP>/imageformats/qsvg.dll"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/Qt6/plugins/iconengines/qsvgicon.dll"
+        "$<TARGET_FILE_DIR:VisionSystemCPP>/iconengines/qsvgicon.dll"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_SOURCE_DIR}/translations"
         "$<TARGET_FILE_DIR:VisionSystemCPP>/translations"

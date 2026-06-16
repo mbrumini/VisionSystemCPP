@@ -2,6 +2,7 @@
 
 #include "camera/FileCamera.h"
 #include "camera/UsbCamera.h"
+#include "camera/VimbaCamera.h"
 
 bool CameraRuntime::start(const CameraConfig& camera, const QString& resolvedFolder, QString* errorMessage)
 {
@@ -134,7 +135,7 @@ void CameraRuntime::clearGeometries()
 
 bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& resolvedFolder, QString* errorMessage)
 {
-  if (camera.type != "file" && camera.type != "usb")
+  if (camera.type != "file" && camera.type != "usb" && camera.type != "vimba")
   {
     if (errorMessage)
     {
@@ -178,6 +179,10 @@ bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& reso
     }
 
     m_source = std::make_unique<UsbCamera>(camera.usbIndex);
+  }
+  else if (camera.type == "vimba")
+  {
+    m_source = std::make_unique<VimbaCamera>(camera);
   }
   else
   {

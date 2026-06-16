@@ -9,6 +9,8 @@
       "features": [
         "widgets"
       ]
-    }
-  ]
+    },
+    "qtsvg"
+  ],
+  "builtin-baseline": "2a5ea1e58fc6776ede8fd1470db0aea26ae320c4"
 }
