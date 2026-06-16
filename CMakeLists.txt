@@ -271,6 +271,19 @@ if(VIMBAX_INCLUDE_DIR AND VIMBAX_CPP_LIBRARY)
     target_link_libraries(VisionSystemCPP PRIVATE ${VIMBAX_CPP_LIBRARY})
     target_compile_definitions(VisionSystemCPP PRIVATE VISION_WITH_VIMBAX)
     message(STATUS "VimbaX SDK enabled: ${VIMBAX_INCLUDE_DIR}")
+    file(GLOB VIMBAX_RUNTIME_DLLS
+        "$ENV{VIMBA_X_HOME}/api/bin/*.dll"
+        "$ENV{VIMBAX_HOME}/api/bin/*.dll"
+        "C:/Program Files/Allied Vision/Vimba X/api/bin/*.dll"
+        "C:/Program Files/Allied Vision/VimbaX/api/bin/*.dll"
+    )
+    if(VIMBAX_RUNTIME_DLLS)
+        add_custom_command(TARGET VisionSystemCPP POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                ${VIMBAX_RUNTIME_DLLS}
+                "$<TARGET_FILE_DIR:VisionSystemCPP>"
+        )
+    endif()
 else()
     message(STATUS "VimbaX SDK not found: discovery UI will report SDK unavailable")
 endif()
