@@ -49,6 +49,18 @@ Nota importante:
 questa modalita' non installa Visual Studio, Qt SDK o vcpkg sul PC destinazione.
 Installa solo il runtime gia' pronto e le dipendenze Python AI se richieste.
 
+Nota icone Qt:
+se su un altro PC l'app si avvia ma spariscono le icone, controllare prima i plugin Qt SVG.
+Devono essere presenti accanto all'eseguibile:
+
+- imageformats/qsvg.dll
+- iconengines/qsvgicon.dll
+
+Il post-build e deploy_release.ps1 provano a copiarli dal Qt installato, con fallback su vcpkg.
+Se Qt e' installato in un percorso diverso, verificare CMAKE_PREFIX_PATH/CMakePresets.json
+e rigenerare la build. Senza questi plugin, le icone SVG possono non essere caricate anche
+se l'eseguibile parte correttamente.
+
 
 1. Prerequisiti Windows
 -----------------------

@@ -26,6 +26,7 @@
 
 ## Runtime camera e origine pezzo
 
+- [ ] Verificare deploy icone su altri PC: quando spariscono, controllare copia plugin Qt SVG `imageformats/qsvg.dll` e `iconengines/qsvgicon.dll` accanto all'exe; validare anche CMakePresets/CMAKE_PREFIX_PATH se Qt non e' in `D:/Qt/6.10.3/msvc2022_64`.
 - [ ] IMPORTANTE: implementare runtime reale multicamera con pipeline/thread separato per ogni camera attiva, fino a 16 camere, e aggiornamento GUI tramite risultati asincroni.
 - [ ] Collegare misure future, controlli superficie e AI alla posa corrente invece che alle sole coordinate pixel assolute.
 - [ ] Gestire il caso posa non valida: blocco tool dipendenti, risultato NOK o stato di allarme configurabile.
