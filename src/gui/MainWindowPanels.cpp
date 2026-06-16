@@ -317,6 +317,7 @@ void MainWindow::addGrabToggleToToolPanel()
   auto* text = new QLabel(QString("Grab: %1").arg(label), bar);
   text->setObjectName("toolPanelNote");
   text->setWordWrap(true);
+  auto* restoreSampleButton = createTouchIconButton("sampleImage", trText("actions.restoreSampleImage"), bar);
 
   connect(button, &QPushButton::clicked, this, [this, button, text]() {
     if (m_selectedCameraId.isEmpty())
@@ -342,7 +343,28 @@ void MainWindow::addGrabToggleToToolPanel()
   });
 
   layout->addWidget(button);
+  layout->addWidget(restoreSampleButton);
   layout->addWidget(text, 1);
   m_toolsLayout->addWidget(bar);
+
+  connect(restoreSampleButton, &QPushButton::clicked, this, [this, button, text]() {
+    if (m_selectedCameraId.isEmpty())
+    {
+      return;
+    }
+
+    if (m_cameraRuntime[m_selectedCameraId].running())
+    {
+      m_setup.stopCameraSimulation(m_selectedCamera, false);
+    }
+
+    m_imaging.reloadCameraReferenceImage(m_selectedCamera);
+    const QString startLabel = trText("commands.start");
+    button->setIcon(IconCatalog::icon("start"));
+    button->setToolTip(startLabel);
+    button->setAccessibleName(startLabel);
+    text->setText(QString("Grab: %1").arg(startLabel));
+    appendLog(trText("actions.restoreSampleImage") + ": " + m_selectedCameraId);
+  });
 }
 

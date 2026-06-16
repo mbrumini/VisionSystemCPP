@@ -356,6 +356,7 @@
     "assignUsbCamera": "Assign USB",
     "assignSampleImage": "Import sample",
     "acquireSampleImage": "Acquire sample",
+    "restoreSampleImage": "Restore sample",
     "acquireAiSampleImage": "Acquire AI",
     "acquireAiRawImage": "Acquire raw",
     "acquireAiClassImage": "Acquire class",

@@ -144,6 +144,27 @@ QPixmap MainWindowImagingModule::matToPixmap(const cv::Mat& image) const
   return QPixmap::fromImage(qimage.copy());
 }
 
+cv::Mat MainWindowImagingModule::sampleInputImage(const CameraConfig& camera, QString* errorMessage) const
+{
+  const QString imagePath = cameraSampleImagePath(camera);
+  if (imagePath.isEmpty())
+  {
+    if (errorMessage)
+    {
+      *errorMessage = tr("log.imageMissing") + ": " + camera.id;
+    }
+    return {};
+  }
+
+  cv::Mat input = cv::imread(imagePath.toStdString(), cv::IMREAD_COLOR);
+  if (input.empty() && errorMessage)
+  {
+    *errorMessage = tr("log.imageMissing") + ": " + imagePath;
+  }
+
+  return input;
+}
+
 cv::Mat MainWindowImagingModule::currentInputImage(const CameraConfig& camera, QString* errorMessage) const
 {
   const auto runtimeIt = cameraRuntime().find(camera.id);

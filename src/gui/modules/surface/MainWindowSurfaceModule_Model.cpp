@@ -47,7 +47,7 @@ void MainWindowSurfaceModule::acquireSurfaceModel(const CameraConfig& camera)
   }
 
   QString imageError;
-  const cv::Mat input = context().imaging->currentInputImage(camera, &imageError);
+  const cv::Mat input = context().imaging->sampleInputImage(camera, &imageError);
   if (input.empty())
   {
     log(imageError);
@@ -113,7 +113,7 @@ void MainWindowSurfaceModule::previewSurfaceModel(const CameraConfig& camera)
   }
 
   QString imageError;
-  const cv::Mat input = context().imaging->currentInputImage(camera, &imageError);
+  const cv::Mat input = context().imaging->sampleInputImage(camera, &imageError);
   if (input.empty())
   {
     log(imageError);

@@ -102,8 +102,9 @@ void MainWindowSurfaceModule::showModelLocalizationPanel(const CameraConfig& cam
     if (!recipes().saveSurfaceModelEdgeSensitivity(camera.id, value, &error))
     {
       log(error);
+      return;
     }
-    previewSurfaceModel(camera);
+    acquireSurfaceModel(camera);
   });
   addSlider(tr("labels.modelMaxShapeDistance"), 2, 1, 500, static_cast<int>(model.maxShapeDistance * 100.0), [this, camera](int value) {
     QString error;
