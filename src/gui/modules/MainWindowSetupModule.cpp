@@ -482,7 +482,7 @@ void MainWindowSetupModule::startCameraSimulation(const CameraConfig& camera, bo
     context().selectCamera(camera);
   }
 
-  if (camera.type != "file" && camera.type != "usb")
+  if (camera.type != "file" && camera.type != "usb" && camera.type != "vimba")
   {
     log(tr("log.cameraSourceUnsupported") + ": " + camera.id);
     return;
@@ -555,7 +555,7 @@ void MainWindowSetupModule::showCameraSampleImage(const CameraConfig& camera)
 
 void MainWindowSetupModule::stepCameraSimulation(const CameraConfig& camera)
 {
-  if (camera.type != "file" && camera.type != "usb")
+  if (camera.type != "file" && camera.type != "usb" && camera.type != "vimba")
   {
     log(tr("log.cameraSourceUnsupported") + ": " + camera.id);
     return;

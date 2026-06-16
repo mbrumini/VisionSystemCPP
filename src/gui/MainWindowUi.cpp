@@ -693,7 +693,7 @@ void MainWindow::buildUi()
   setCentralWidget(root);
 
   setStyleSheet(
-    "QMainWindow,QWidget{background:#0f1419;color:#eef2f6;font-family:'Segoe UI';font-size:13px;}"
+    "QMainWindow,QWidget{background:#0f1419;color:#eef2f6;font-family:'Segoe UI';font-size:10pt;}"
     "QGroupBox{border:1px solid #313b46;border-radius:6px;margin-top:8px;padding:8px 7px 7px 7px;font-weight:600;}"
     "QGroupBox::title{subcontrol-origin:margin;left:8px;padding:0 4px;color:#cdd6df;}"
     "QPushButton{background:#24313d;border:1px solid #3b4652;border-radius:5px;padding:6px;color:#f5f7fa;}"
@@ -716,9 +716,9 @@ void MainWindow::buildUi()
     "#toolbarRecipe{color:#cdd6df;font-weight:600;padding-right:12px;}"
     "#toolbarStatus{color:#35c46a;font-weight:700;}"
     "#measurementResultsTitle{font-weight:700;color:#f4f7fb;}"
-    "#largeTitle{font-size:20px;font-weight:700;color:#f4f7fb;}"
-    "#panelStatus{font-size:17px;font-weight:700;color:#f4f7fb;}"
-    "#toolPanelTitle{font-size:15px;font-weight:700;color:#f4f7fb;}"
+    "#largeTitle{font-size:15pt;font-weight:700;color:#f4f7fb;}"
+    "#panelStatus{font-size:13pt;font-weight:700;color:#f4f7fb;}"
+    "#toolPanelTitle{font-size:11pt;font-weight:700;color:#f4f7fb;}"
     "#toolPanelNote{color:#9aa4ad;}"
   );
 }

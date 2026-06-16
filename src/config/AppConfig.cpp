@@ -223,8 +223,8 @@ bool AppConfig::saveVimbaCameraAssignment(
     cameraObject.remove("usbIndex");
 
     QJsonObject triggerObject;
-    triggerObject["mode"] = "external";
-    triggerObject["source"] = "ioBoard";
+    triggerObject["mode"] = "software";
+    triggerObject["source"] = "camera";
     triggerObject["ioOutput"] = "";
     triggerObject["cameraLine"] = "";
     cameraObject["trigger"] = triggerObject;
@@ -255,8 +255,8 @@ bool AppConfig::saveVimbaCameraAssignment(
     cameraObject["processingProfile"] = "default";
 
     QJsonObject triggerObject;
-    triggerObject["mode"] = "external";
-    triggerObject["source"] = "ioBoard";
+    triggerObject["mode"] = "software";
+    triggerObject["source"] = "camera";
     triggerObject["ioOutput"] = "";
     triggerObject["cameraLine"] = "";
     cameraObject["trigger"] = triggerObject;

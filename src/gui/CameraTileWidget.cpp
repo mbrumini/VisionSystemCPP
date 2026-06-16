@@ -89,13 +89,13 @@ void CameraTileWidget::setSelected(bool selected)
   {
     setStyleSheet("#cameraTile{border:2px solid #2f80ed;background:#1d2731;border-radius:6px;}"
                   "#tileTitle{font-weight:600;color:#f4f7fb;}"
-                  "#tileStatus{color:#b7c0c8;font-size:11px;}");
+                  "#tileStatus{color:#b7c0c8;font-size:8pt;}");
   }
   else
   {
     setStyleSheet("#cameraTile{border:1px solid #323b45;background:#171d23;border-radius:6px;}"
                   "#tileTitle{font-weight:600;color:#edf1f5;}"
-                  "#tileStatus{color:#8f9aa5;font-size:11px;}");
+                  "#tileStatus{color:#8f9aa5;font-size:8pt;}");
   }
 }
 
