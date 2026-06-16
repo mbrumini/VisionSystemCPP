@@ -34,6 +34,7 @@ public:
   int frameIndex() const;
   Status status() const;
   const cv::Mat& currentFrame() const;
+  void clearCurrentFrame();
   const PartPose& currentPose() const;
   void setCurrentPose(const PartPose& pose);
   void clearCurrentPose(const QString& cameraId = {});

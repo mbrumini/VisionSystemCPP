@@ -35,16 +35,52 @@
             ],
             "enabled": true
         },
+        "geometries": {
+            "circles": [
+                {
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 122,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "circle_1",
+                    "innerBand": 20,
+                    "outerBand": 20,
+                    "partCenter": {
+                        "x": -1.5389021137427805,
+                        "y": -3.999430350223654
+                    },
+                    "pickMode": "best",
+                    "radius": 105,
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_circle",
+                    "useSubpixel": true
+                }
+            ],
+            "enabled": true
+        },
+        "measurements": {
+            "enabled": true,
+            "items": [
+                {
+                    "enabled": true,
+                    "id": "measurement_1",
+                    "sourceAId": "circle_1",
+                    "type": "circle_diameter"
+                }
+            ]
+        },
         "surfaceLocalization": {
             "aoes": {
                 "model": {
                     "id": "model",
                     "label": "model",
                     "searchRoi": {
-                        "height": 250,
-                        "width": 242,
-                        "x": 219,
-                        "y": 91
+                        "height": 233,
+                        "width": 232,
+                        "x": 214,
+                        "y": 94
                     }
                 }
             },
@@ -1244,22 +1280,22 @@
                         "y": 97
                     }
                 ],
-                "edgeSensitivity": 232,
-                "maxShapeDistance": 1.71,
+                "edgeSensitivity": 230,
+                "maxShapeDistance": 0.25,
                 "minTemplateScore": 0.45,
                 "searchRoi": {
-                    "height": 250,
-                    "width": 242,
-                    "x": 219,
-                    "y": 91
+                    "height": 233,
+                    "width": 232,
+                    "x": 214,
+                    "y": 94
                 },
                 "templateImagePath": "D:/dev/VisionSystemCPP/recipes/test_usb/assets/CAM01_surface_model_template.png"
             },
             "searchRoi": {
-                "height": 250,
-                "width": 242,
-                "x": 219,
-                "y": 91
+                "height": 233,
+                "width": 232,
+                "x": 214,
+                "y": 94
             }
         }
     }

@@ -94,6 +94,7 @@ public:
 
 private:
   void removeMeasurementsForDeletedGeometry(const CameraConfig& camera, const QString& geometryId);
+  void refreshMeasurementOverlay(const CameraConfig& camera);
 
   DrawingTarget m_drawingTarget = DrawingTarget::None;
 

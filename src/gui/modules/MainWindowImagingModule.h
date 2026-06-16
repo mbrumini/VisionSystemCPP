@@ -23,8 +23,10 @@ public:
   QPixmap loadCameraPreview(const CameraConfig& camera) const;
   QPixmap loadCameraSamplePreview(const CameraConfig& camera) const;
   void reloadCameraReferenceImage(const CameraConfig& camera);
+  void restoreSampleWorkspace(const CameraConfig& camera);
   QPixmap matToPixmap(const cv::Mat& image) const;
   cv::Mat sampleInputImage(const CameraConfig& camera, QString* errorMessage = nullptr) const;
+  cv::Mat validationInputImage(const CameraConfig& camera, QString* errorMessage = nullptr) const;
   cv::Mat currentInputImage(const CameraConfig& camera, QString* errorMessage = nullptr) const;
 
   QString cameraSampleImagePath(const CameraConfig& camera) const;

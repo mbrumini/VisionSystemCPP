@@ -465,6 +465,7 @@ void MainWindowGeometryModule::testGeometryArc(const CameraConfig& camera)
   appendArcPolyline(arcOverlay, result.arc.center, result.arc.radius, result.arc.startAngleRadians, result.arc.endAngleRadians, QColor("#ff4fd8"), 7);
   appendCurrentPartPoseOverlay(camera, arcOverlay);
   largeImage()->setGeometryOverlay(arcOverlay);
+  refreshMeasurementOverlay(camera);
   log(QString("%1: %2 cx=%3 cy=%4 r=%5")
               .arg(tr("log.geometryArcFound"))
               .arg(camera.id)

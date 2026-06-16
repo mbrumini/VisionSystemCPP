@@ -1,5 +1,6 @@
 #include "SurfaceModelStrategy.h"
 
+#include "processing/ShapeCandidateFilter.h"
 #include "processing/SurfaceProcessingUtils.h"
 
 #include <opencv2/imgproc.hpp>
@@ -63,7 +64,15 @@ bool contourPose(const std::vector<cv::Point>& points, cv::Point2d& center, doub
   }
 
   const cv::PCA pca(data, cv::Mat(), cv::PCA::DATA_AS_ROW);
-  center = cv::Point2d(pca.mean.at<double>(0, 0), pca.mean.at<double>(0, 1));
+  const cv::Moments moments = cv::moments(points);
+  if (std::abs(moments.m00) > std::numeric_limits<double>::epsilon())
+  {
+    center = cv::Point2d(moments.m10 / moments.m00, moments.m01 / moments.m00);
+  }
+  else
+  {
+    center = cv::Point2d(pca.mean.at<double>(0, 0), pca.mean.at<double>(0, 1));
+  }
   angleRadians = std::atan2(pca.eigenvectors.at<double>(0, 1), pca.eigenvectors.at<double>(0, 0));
   return std::isfinite(center.x) && std::isfinite(center.y) && std::isfinite(angleRadians);
 }
@@ -141,14 +150,22 @@ SurfaceDefectResult SurfaceModelStrategy::locateByShapeMatching(
 
   double bestDistance = std::numeric_limits<double>::max();
   int bestIndex = -1;
-  const double modelArea = std::abs(cv::contourArea(config.modelContour));
+  const ShapeCandidateMetrics modelMetrics = measureShapeCandidate(config.modelContour);
+  const double modelArea = modelMetrics.valid ? modelMetrics.area : std::abs(cv::contourArea(config.modelContour));
   const double minCandidateArea = std::max(config.minContourArea, modelArea * config.minAreaRatio);
   const double maxCandidateArea = std::max(minCandidateArea, modelArea * config.maxAreaRatio);
 
   for (int i = 0; i < static_cast<int>(contours.size()); ++i)
   {
-    const double area = std::abs(cv::contourArea(contours[i]));
-    if (area < minCandidateArea || area > maxCandidateArea)
+    const ShapeCandidateMetrics candidateMetrics = measureShapeCandidate(contours[i]);
+    if (!candidateMetrics.valid ||
+        candidateMetrics.area < minCandidateArea ||
+        candidateMetrics.area > maxCandidateArea)
+    {
+      continue;
+    }
+
+    if (modelMetrics.valid && !acceptsShapeCandidate(modelMetrics, candidateMetrics))
     {
       continue;
     }

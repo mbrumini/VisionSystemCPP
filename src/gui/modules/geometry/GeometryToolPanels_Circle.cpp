@@ -15,7 +15,7 @@
 #include <QGridLayout>
 #include <QLabel>
 #include <QPushButton>
-#include <QSpinBox>
+#include <QSlider>
 
 #include <opencv2/imgproc.hpp>
 
@@ -25,7 +25,6 @@ void MainWindowGeometryModule::showGeometryCirclePanel(const CameraConfig& camer
   context().clearToolPanel();
   *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Geometry;
   m_drawingTarget = DrawingTarget::Circle;
-  if (context().setup) { context().setup->refreshPoseForCurrentFrame(camera); }
   restoreCleanGeometryImage(camera);
   largeImage()->clearCircles();
   loadGeometryCirclesRecipe(camera);
@@ -73,25 +72,36 @@ void MainWindowGeometryModule::showGeometryCirclePanel(const CameraConfig& camer
   formLayout->setContentsMargins(0, 0, 0, 0);
   formLayout->setHorizontalSpacing(8);
   formLayout->setVerticalSpacing(6);
-  auto* innerBand = new QSpinBox(form);
+  auto* innerBand = new QSlider(Qt::Horizontal, form);
   innerBand->setRange(1, 500);
-  innerBand->setSuffix(" px");
   innerBand->setValue(circleConfig.innerBand);
-  auto* outerBand = new QSpinBox(form);
+  auto* innerBandValue = new QLabel(QString("%1 px").arg(circleConfig.innerBand), form);
+  innerBandValue->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+  innerBandValue->setMinimumWidth(52);
+  auto* outerBand = new QSlider(Qt::Horizontal, form);
   outerBand->setRange(1, 500);
-  outerBand->setSuffix(" px");
   outerBand->setValue(circleConfig.outerBand);
-  auto* sensitivity = new QSpinBox(form);
+  auto* outerBandValue = new QLabel(QString("%1 px").arg(circleConfig.outerBand), form);
+  outerBandValue->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+  outerBandValue->setMinimumWidth(52);
+  auto* sensitivity = new QSlider(Qt::Horizontal, form);
   sensitivity->setRange(1, 255);
   sensitivity->setValue(circleConfig.edgeSensitivity);
-  auto* cleanup = new QSpinBox(form);
+  auto* sensitivityValue = new QLabel(QString::number(circleConfig.edgeSensitivity), form);
+  sensitivityValue->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+  sensitivityValue->setMinimumWidth(36);
+  auto* cleanup = new QSlider(Qt::Horizontal, form);
   cleanup->setRange(0, 100);
-  cleanup->setSuffix(" px");
   cleanup->setValue(circleConfig.edgeCleanupDerivative);
-  auto* statFilter = new QSpinBox(form);
+  auto* cleanupValue = new QLabel(QString("%1 px").arg(circleConfig.edgeCleanupDerivative), form);
+  cleanupValue->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+  cleanupValue->setMinimumWidth(52);
+  auto* statFilter = new QSlider(Qt::Horizontal, form);
   statFilter->setRange(0, 100);
-  statFilter->setSuffix(" px");
   statFilter->setValue(circleConfig.edgeStatisticalFilter);
+  auto* statFilterValue = new QLabel(QString("%1 px").arg(circleConfig.edgeStatisticalFilter), form);
+  statFilterValue->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+  statFilterValue->setMinimumWidth(52);
   auto* subpixel = new QCheckBox(tr("labels.subpixelEdge"), form);
   subpixel->setChecked(circleConfig.useSubpixel);
   auto* scanDirection = new QComboBox(form);
@@ -110,15 +120,20 @@ void MainWindowGeometryModule::showGeometryCirclePanel(const CameraConfig& camer
 
   int row = 0;
   formLayout->addWidget(new QLabel(tr("labels.edgeBandInner"), form), row, 0);
-  formLayout->addWidget(innerBand, row, 1);
+  formLayout->addWidget(innerBandValue, row, 1);
   formLayout->addWidget(new QLabel(tr("labels.edgeBandOuter"), form), row, 2);
-  formLayout->addWidget(outerBand, row++, 3);
+  formLayout->addWidget(outerBandValue, row++, 3);
+  formLayout->addWidget(innerBand, row, 0, 1, 2);
+  formLayout->addWidget(outerBand, row++, 2, 1, 2);
   formLayout->addWidget(new QLabel(tr("labels.edgeSensitivity"), form), row, 0);
-  formLayout->addWidget(sensitivity, row, 1);
+  formLayout->addWidget(sensitivityValue, row, 1);
   formLayout->addWidget(new QLabel(tr("labels.edgeCleanupDerivative"), form), row, 2);
-  formLayout->addWidget(cleanup, row++, 3);
+  formLayout->addWidget(cleanupValue, row++, 3);
+  formLayout->addWidget(sensitivity, row, 0, 1, 2);
+  formLayout->addWidget(cleanup, row++, 2, 1, 2);
   formLayout->addWidget(new QLabel(tr("labels.edgeStatisticalFilter"), form), row, 0);
-  formLayout->addWidget(statFilter, row++, 1);
+  formLayout->addWidget(statFilterValue, row++, 1);
+  formLayout->addWidget(statFilter, row++, 0, 1, 4);
   if (MainWindowCameraProfile::isBwDimensional(camera, config()))
   {
     formLayout->addWidget(subpixel, row++, 0, 1, 4);
@@ -147,53 +162,56 @@ void MainWindowGeometryModule::showGeometryCirclePanel(const CameraConfig& camer
     activateGeometryCircleDrawing(camera);
   });
   QObject::connect(deleteCircleButton, &QPushButton::clicked, window(), [this, camera]() { removeActiveGeometryCircle(camera); });
-  QObject::connect(innerBand, qOverload<int>(&QSpinBox::valueChanged), window(), [this, camera](int value) {
+  QObject::connect(innerBand, &QSlider::valueChanged, window(), [this, camera, innerBandValue](int value) {
+    innerBandValue->setText(QString("%1 px").arg(value));
     activeGeometryCircleConfig(camera.id).innerBand = value;
     saveGeometryCirclesRecipe(camera);
     showConfiguredGeometryCircles(camera);
-    testGeometryCircle(camera);
   });
-  QObject::connect(outerBand, qOverload<int>(&QSpinBox::valueChanged), window(), [this, camera](int value) {
+  QObject::connect(outerBand, &QSlider::valueChanged, window(), [this, camera, outerBandValue](int value) {
+    outerBandValue->setText(QString("%1 px").arg(value));
     activeGeometryCircleConfig(camera.id).outerBand = value;
     saveGeometryCirclesRecipe(camera);
     showConfiguredGeometryCircles(camera);
-    testGeometryCircle(camera);
   });
-  QObject::connect(sensitivity, qOverload<int>(&QSpinBox::valueChanged), window(), [this, camera](int value) {
+  QObject::connect(sensitivity, &QSlider::valueChanged, window(), [this, camera, sensitivityValue](int value) {
+    sensitivityValue->setText(QString::number(value));
     activeGeometryCircleConfig(camera.id).edgeSensitivity = value;
     saveGeometryCirclesRecipe(camera);
-    testGeometryCircle(camera);
+    showConfiguredGeometryCircles(camera);
   });
-  QObject::connect(cleanup, qOverload<int>(&QSpinBox::valueChanged), window(), [this, camera](int value) {
+  QObject::connect(cleanup, &QSlider::valueChanged, window(), [this, camera, cleanupValue](int value) {
+    cleanupValue->setText(QString("%1 px").arg(value));
     activeGeometryCircleConfig(camera.id).edgeCleanupDerivative = value;
     saveGeometryCirclesRecipe(camera);
-    testGeometryCircle(camera);
+    showConfiguredGeometryCircles(camera);
   });
-  QObject::connect(statFilter, qOverload<int>(&QSpinBox::valueChanged), window(), [this, camera](int value) {
+  QObject::connect(statFilter, &QSlider::valueChanged, window(), [this, camera, statFilterValue](int value) {
+    statFilterValue->setText(QString("%1 px").arg(value));
     activeGeometryCircleConfig(camera.id).edgeStatisticalFilter = value;
     saveGeometryCirclesRecipe(camera);
-    testGeometryCircle(camera);
+    showConfiguredGeometryCircles(camera);
   });
   QObject::connect(subpixel, &QCheckBox::toggled, window(), [this, camera](bool checked) {
     activeGeometryCircleConfig(camera.id).useSubpixel = checked;
     saveGeometryCirclesRecipe(camera);
-    testGeometryCircle(camera);
+    showConfiguredGeometryCircles(camera);
   });
   QObject::connect(scanDirection, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
     activeGeometryCircleConfig(camera.id).scanDirection =
       index == 1 ? EdgeLineScanDirection::NormalNegative : EdgeLineScanDirection::NormalPositive;
     saveGeometryCirclesRecipe(camera);
-    testGeometryCircle(camera);
+    showConfiguredGeometryCircles(camera);
   });
   QObject::connect(transition, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
     activeGeometryCircleConfig(camera.id).transition = index == 1 ? EdgeLineTransition::DarkToLight : EdgeLineTransition::LightToDark;
     saveGeometryCirclesRecipe(camera);
-    testGeometryCircle(camera);
+    showConfiguredGeometryCircles(camera);
   });
   QObject::connect(pickMode, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
     activeGeometryCircleConfig(camera.id).pickMode = index == 1 ? EdgeLinePickMode::Last : (index == 2 ? EdgeLinePickMode::Best : EdgeLinePickMode::First);
     saveGeometryCirclesRecipe(camera);
-    testGeometryCircle(camera);
+    showConfiguredGeometryCircles(camera);
   });
 
   auto* testButton = createTouchIconButton("start", tr("actions.testGeometry"), panel);

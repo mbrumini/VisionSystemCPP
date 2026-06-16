@@ -1,6 +1,7 @@
 #include "gui/modules/MainWindowGeometryModule.h"
 #include "gui/modules/MainWindowCameraProfile.h"
 #include "gui/modules/MainWindowImagingModule.h"
+#include "gui/modules/MainWindowSurfaceModule.h"
 #include "gui/modules/MainWindowContext.h"
 
 #include "gui/geometry/GeometryDiagnosticDrawing.h"
@@ -67,7 +68,11 @@ void MainWindowGeometryModule::handleGeometryCirclePoints(const CameraConfig& ca
   config.radius = imageCircle.radius;
   config.hasImageCircle = true;
 
-  const PartPose& pose = cameraRuntime()[camera.id].currentPose();
+  PartPose pose = cameraRuntime()[camera.id].currentPose();
+  if (!pose.valid && context().surface && context().surface->restoreSurfaceModelPoseFromSample(camera))
+  {
+    pose = cameraRuntime()[camera.id].currentPose();
+  }
   if (pose.valid)
   {
     config.partCenter = imageToPart(pose, config.imageCenter);
@@ -83,7 +88,6 @@ void MainWindowGeometryModule::handleGeometryCirclePoints(const CameraConfig& ca
   m_drawingTarget = DrawingTarget::Circle;
   saveGeometryCirclesRecipe(camera);
   showConfiguredGeometryCircles(camera);
-  testGeometryCircle(camera);
 }
 
 void MainWindowGeometryModule::showConfiguredGeometryCircles(const CameraConfig& camera)
@@ -198,6 +202,7 @@ void MainWindowGeometryModule::testGeometryCircle(const CameraConfig& camera)
   appendGeometryCirclePolyline(circleOverlay, result.circle.center, result.circle.radius, QColor("#00d2ff"), 7);
   appendCurrentPartPoseOverlay(camera, circleOverlay);
   largeImage()->setGeometryOverlay(circleOverlay);
+  refreshMeasurementOverlay(camera);
   log(QString("%1: %2 cx=%3 cy=%4 r=%5")
               .arg(tr("log.geometryCircleFound"))
               .arg(camera.id)
@@ -460,6 +465,7 @@ void MainWindowGeometryModule::testGeometryPoint(const CameraConfig& camera)
     }
   }
   geometries.points.append(result.point);
+  refreshMeasurementOverlay(camera);
 
   log(QString("%1: %2 x=%3 y=%4")
               .arg(tr("log.geometryPointFound"))

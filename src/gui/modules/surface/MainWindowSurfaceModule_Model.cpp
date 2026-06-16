@@ -30,6 +30,20 @@ cv::Rect toCvRect(const QRect& rect)
 {
   return cv::Rect(rect.x(), rect.y(), rect.width(), rect.height());
 }
+
+SurfaceShapeMatchConfig shapeMatchConfigFromModel(const SurfaceModelConfig& model, const cv::Mat& input)
+{
+  SurfaceShapeMatchConfig config;
+  config.searchRoi = cv::Rect(0, 0, input.cols, input.rows);
+  config.modelContour.reserve(static_cast<size_t>(model.contour.size()));
+  for (const QPoint& point : model.contour)
+  {
+    config.modelContour.emplace_back(point.x(), point.y());
+  }
+  config.edgeSensitivity = model.edgeSensitivity;
+  config.maxShapeDistance = model.maxShapeDistance;
+  return config;
+}
 }
 
 void MainWindowSurfaceModule::acquireSurfaceModel(const CameraConfig& camera)
@@ -95,7 +109,45 @@ void MainWindowSurfaceModule::acquireSurfaceModel(const CameraConfig& camera)
   largeImage()->setImage(selectedPreview());
   largeImage()->setRoi(roi);
   largeImage()->setExclusionRects(exclusionRects);
+  restoreSurfaceModelPoseFromSample(camera);
   log(QString("%1: %2 points=%3").arg(tr("actions.acquireModel")).arg(camera.id).arg(contour.size()));
+}
+
+bool MainWindowSurfaceModule::restoreSurfaceModelPoseFromSample(const CameraConfig& camera)
+{
+  if (!MainWindowCameraProfile::isGrayscaleLocalization(camera, config()))
+  {
+    return false;
+  }
+
+  const SurfaceModelConfig model = recipes().loadSurfaceModel(camera.id);
+  if (!model.hasModel || model.contour.isEmpty())
+  {
+    return false;
+  }
+
+  QString imageError;
+  const cv::Mat input = context().imaging->sampleInputImage(camera, &imageError);
+  if (input.empty())
+  {
+    return false;
+  }
+
+  const QVector<QRect> exclusionRects = recipes().loadSurfaceDefectExclusionRects(camera.id);
+  SurfaceDefectProcessor processor;
+  const SurfaceDefectResult result = processor.locateByShapeMatching(
+    input,
+    shapeMatchConfigFromModel(model, input),
+    toCvRects(exclusionRects));
+
+  if (!result.processed || !result.localization.found)
+  {
+    return false;
+  }
+
+  context().lastSurfaceLocalizationResults->insert(camera.id, result.localization);
+  cameraRuntime()[camera.id].setCurrentPose(context().imaging->partPoseFromSurfaceReference(camera, result.localization));
+  return true;
 }
 
 void MainWindowSurfaceModule::previewSurfaceModel(const CameraConfig& camera)
@@ -160,23 +212,15 @@ void MainWindowSurfaceModule::testSurfaceShapeModel(const CameraConfig& camera)
   }
 
   QString imageError;
-  const cv::Mat input = context().imaging->currentInputImage(camera, &imageError);
+  const cv::Mat input = context().imaging->validationInputImage(camera, &imageError);
   if (input.empty() || model.contour.isEmpty())
   {
     log(input.empty() ? imageError : tr("surfaceModel.missing"));
     return;
   }
 
-  SurfaceShapeMatchConfig config;
   const QRect searchRoi = fullImageRoi(input);
-  config.searchRoi = toCvRect(searchRoi);
-  config.modelContour.reserve(static_cast<size_t>(model.contour.size()));
-  for (const QPoint& point : model.contour)
-  {
-    config.modelContour.emplace_back(point.x(), point.y());
-  }
-  config.edgeSensitivity = model.edgeSensitivity;
-  config.maxShapeDistance = model.maxShapeDistance;
+  SurfaceShapeMatchConfig config = shapeMatchConfigFromModel(model, input);
 
   const QVector<QRect> exclusionRects = recipes().loadSurfaceDefectExclusionRects(camera.id);
 
@@ -206,6 +250,12 @@ void MainWindowSurfaceModule::testSurfaceShapeModel(const CameraConfig& camera)
 
     context().lastSurfaceLocalizationResults->insert(camera.id, result.localization);
     cameraRuntime()[camera.id].setCurrentPose(context().imaging->partPoseFromSurfaceReference(camera, result.localization));
+    if (*context().setupCameraId == camera.id && *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry)
+    {
+      context().setup->refreshSetupGeometryResults(camera);
+      return;
+    }
+
     if (*context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry && context().setup)
     {
       context().setup->refreshSetupGeometryResults(camera);
@@ -248,7 +298,7 @@ void MainWindowSurfaceModule::testSurfaceTemplateModel(const CameraConfig& camer
   }
 
   QString imageError;
-  const cv::Mat input = context().imaging->currentInputImage(camera, &imageError);
+  const cv::Mat input = context().imaging->validationInputImage(camera, &imageError);
   const cv::Mat modelImage = cv::imread(model.templateImagePath.toStdString(), cv::IMREAD_COLOR);
   if (input.empty() || modelImage.empty())
   {
@@ -294,6 +344,12 @@ void MainWindowSurfaceModule::testSurfaceTemplateModel(const CameraConfig& camer
 
     context().lastSurfaceLocalizationResults->insert(camera.id, result.localization);
     cameraRuntime()[camera.id].setCurrentPose(context().imaging->partPoseFromSurfaceReference(camera, result.localization));
+    if (*context().setupCameraId == camera.id && *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry)
+    {
+      context().setup->refreshSetupGeometryResults(camera);
+      return;
+    }
+
     if (*context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry && context().setup)
     {
       context().setup->refreshSetupGeometryResults(camera);

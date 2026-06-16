@@ -1,5 +1,8 @@
 #include "gui/modules/MainWindowGeometryModule.h"
+#include "gui/modules/MainWindowConstructedGeometryModule.h"
 #include "gui/modules/MainWindowImagingModule.h"
+#include "gui/modules/MainWindowMeasurementModule.h"
+#include "gui/modules/MainWindowSurfaceModule.h"
 #include "gui/modules/MainWindowContext.h"
 
 #include "gui/geometry/GeometryDiagnosticDrawing.h"
@@ -14,6 +17,11 @@ void MainWindowGeometryModule::restoreCleanGeometryImage(const CameraConfig& cam
     return;
   }
 
+  context().imaging->restoreSampleWorkspace(camera);
+  if (context().surface)
+  {
+    context().surface->restoreSurfaceModelPoseFromSample(camera);
+  }
   selectedPreview() = context().imaging->loadCameraSamplePreview(camera);
 
   if (selectedPreview().isNull())
@@ -65,5 +73,31 @@ void MainWindowGeometryModule::showRuntimeGeometryOverlay(const CameraConfig& ca
   }
   appendCurrentPartPoseOverlay(camera, overlay);
   largeImage()->setGeometryOverlay(overlay);
+}
+
+void MainWindowGeometryModule::refreshMeasurementOverlay(const CameraConfig& camera)
+{
+  if (camera.id != selectedCameraId())
+  {
+    return;
+  }
+
+  if (context().constructedGeometry)
+  {
+    context().constructedGeometry->rebuildConstructedGeometryRecipe(camera);
+  }
+
+  if (context().measurement)
+  {
+    context().measurement->rebuildMeasurementRecipe(camera);
+    GeometryOverlay overlay = largeImage()->geometryOverlay();
+    context().measurement->appendMeasurementOverlay(camera, overlay);
+    largeImage()->setGeometryOverlay(overlay);
+  }
+
+  if (context().updateMeasurementResults)
+  {
+    context().updateMeasurementResults();
+  }
 }
 

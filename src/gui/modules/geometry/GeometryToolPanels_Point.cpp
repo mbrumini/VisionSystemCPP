@@ -15,7 +15,7 @@
 #include <QGridLayout>
 #include <QLabel>
 #include <QPushButton>
-#include <QSpinBox>
+#include <QSlider>
 
 #include <opencv2/imgproc.hpp>
 
@@ -25,7 +25,6 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
   context().clearToolPanel();
   *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Geometry;
   m_drawingTarget = DrawingTarget::Point;
-  if (context().setup) { context().setup->refreshPoseForCurrentFrame(camera); }
   restoreCleanGeometryImage(camera);
   largeImage()->clearCircles();
   loadGeometryPointRecipe(camera);
@@ -75,9 +74,12 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
   formLayout->setHorizontalSpacing(8);
   formLayout->setVerticalSpacing(6);
 
-  auto* edgeSensitivity = new QSpinBox(form);
+  auto* edgeSensitivity = new QSlider(Qt::Horizontal, form);
   edgeSensitivity->setRange(1, 255);
   edgeSensitivity->setValue(pointConfig.edgeSensitivity);
+  auto* edgeSensitivityValue = new QLabel(QString::number(pointConfig.edgeSensitivity), form);
+  edgeSensitivityValue->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+  edgeSensitivityValue->setMinimumWidth(36);
 
   auto* subpixelEdge = new QCheckBox(tr("labels.subpixelEdge"), form);
   subpixelEdge->setChecked(pointConfig.useSubpixel);
@@ -95,15 +97,16 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
 
   int row = 0;
   formLayout->addWidget(new QLabel(tr("labels.edgeSensitivity"), form), row, 0);
-  formLayout->addWidget(edgeSensitivity, row++, 1);
+  formLayout->addWidget(edgeSensitivityValue, row, 1);
+  formLayout->addWidget(edgeSensitivity, row++, 2);
   if (MainWindowCameraProfile::isBwDimensional(camera, config()))
   {
-    formLayout->addWidget(subpixelEdge, row++, 0, 1, 2);
+    formLayout->addWidget(subpixelEdge, row++, 0, 1, 3);
   }
   formLayout->addWidget(new QLabel(tr("labels.edgeTransition"), form), row, 0);
-  formLayout->addWidget(edgeTransition, row++, 1);
+  formLayout->addWidget(edgeTransition, row++, 1, 1, 2);
   formLayout->addWidget(new QLabel(tr("labels.edgePickMode"), form), row, 0);
-  formLayout->addWidget(edgePickMode, row++, 1);
+  formLayout->addWidget(edgePickMode, row++, 1, 1, 2);
   layout->addWidget(form);
 
   QObject::connect(pointSelector, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
@@ -125,21 +128,22 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
     removeActiveGeometryPoint(camera);
   });
 
-  QObject::connect(edgeSensitivity, qOverload<int>(&QSpinBox::valueChanged), window(), [this, camera](int value) {
+  QObject::connect(edgeSensitivity, &QSlider::valueChanged, window(), [this, camera, edgeSensitivityValue](int value) {
+    edgeSensitivityValue->setText(QString::number(value));
     activeGeometryPointConfig(camera.id).edgeSensitivity = value;
     saveGeometryPointRecipe(camera);
-    testGeometryPoint(camera);
+    updateGeometryPointOverlay(camera);
   });
   QObject::connect(subpixelEdge, &QCheckBox::toggled, window(), [this, camera](bool checked) {
     activeGeometryPointConfig(camera.id).useSubpixel = checked;
     saveGeometryPointRecipe(camera);
-    testGeometryPoint(camera);
+    updateGeometryPointOverlay(camera);
   });
   QObject::connect(edgeTransition, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
     activeGeometryPointConfig(camera.id).transition =
       index == 1 ? EdgeLineTransition::DarkToLight : EdgeLineTransition::LightToDark;
     saveGeometryPointRecipe(camera);
-    testGeometryPoint(camera);
+    updateGeometryPointOverlay(camera);
   });
   QObject::connect(edgePickMode, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
     if (index == 1)
@@ -155,7 +159,7 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
       activeGeometryPointConfig(camera.id).pickMode = EdgeLinePickMode::First;
     }
     saveGeometryPointRecipe(camera);
-    testGeometryPoint(camera);
+    updateGeometryPointOverlay(camera);
   });
 
   auto* testButton = createTouchIconButton("start", tr("actions.testGeometry"), panel);
@@ -192,7 +196,7 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
     *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Geometry;
     m_drawingTarget = DrawingTarget::Point;
     largeImage()->setGeometryOverlayPointEditingEnabled(true);
-    testGeometryPoint(camera);
+    updateGeometryPointOverlay(camera);
   }
   else if (pointConfig.hasImageGuide)
   {
@@ -203,7 +207,7 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
     *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Geometry;
     m_drawingTarget = DrawingTarget::Point;
     largeImage()->setGeometryOverlayPointEditingEnabled(true);
-    testGeometryPoint(camera);
+    updateGeometryPointOverlay(camera);
   }
   else
   {

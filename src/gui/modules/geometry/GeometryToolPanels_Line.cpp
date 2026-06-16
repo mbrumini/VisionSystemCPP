@@ -15,7 +15,7 @@
 #include <QGridLayout>
 #include <QLabel>
 #include <QPushButton>
-#include <QSpinBox>
+#include <QSlider>
 
 #include <opencv2/imgproc.hpp>
 
@@ -25,7 +25,6 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
   context().clearToolPanel();
   *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Geometry;
   m_drawingTarget = DrawingTarget::Line;
-  if (context().setup) { context().setup->refreshPoseForCurrentFrame(camera); }
   restoreCleanGeometryImage(camera);
   largeImage()->clearCircles();
   loadGeometryLinesRecipe(camera);
@@ -57,25 +56,30 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
   auto* newLineButton = createTouchIconButton("new", tr("actions.newGeometryLine"), panel);
   auto* deleteLineButton = createTouchIconButton("delete", tr("actions.deleteGeometryLine"), panel);
 
-  auto* bandHalfWidth = new QSpinBox(panel);
+  auto* bandHalfWidth = new QSlider(Qt::Horizontal, panel);
   bandHalfWidth->setRange(2, 500);
   bandHalfWidth->setValue(lineConfig.bandHalfWidth);
-  bandHalfWidth->setSuffix(" px");
-  bandHalfWidth->setFixedWidth(82);
-  auto* edgeSensitivity = new QSpinBox(panel);
+  auto* bandHalfWidthValue = new QLabel(QString("%1 px").arg(lineConfig.bandHalfWidth), panel);
+  bandHalfWidthValue->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+  bandHalfWidthValue->setMinimumWidth(52);
+  auto* edgeSensitivity = new QSlider(Qt::Horizontal, panel);
   edgeSensitivity->setRange(1, 255);
   edgeSensitivity->setValue(lineConfig.edgeSensitivity);
-  edgeSensitivity->setFixedWidth(68);
-  auto* edgeCleanupDerivative = new QSpinBox(panel);
+  auto* edgeSensitivityValue = new QLabel(QString::number(lineConfig.edgeSensitivity), panel);
+  edgeSensitivityValue->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+  edgeSensitivityValue->setMinimumWidth(36);
+  auto* edgeCleanupDerivative = new QSlider(Qt::Horizontal, panel);
   edgeCleanupDerivative->setRange(0, 100);
   edgeCleanupDerivative->setValue(lineConfig.edgeCleanupDerivative);
-  edgeCleanupDerivative->setSuffix(" px");
-  edgeCleanupDerivative->setFixedWidth(82);
-  auto* edgeStatisticalFilter = new QSpinBox(panel);
+  auto* edgeCleanupDerivativeValue = new QLabel(QString("%1 px").arg(lineConfig.edgeCleanupDerivative), panel);
+  edgeCleanupDerivativeValue->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+  edgeCleanupDerivativeValue->setMinimumWidth(52);
+  auto* edgeStatisticalFilter = new QSlider(Qt::Horizontal, panel);
   edgeStatisticalFilter->setRange(0, 100);
   edgeStatisticalFilter->setValue(lineConfig.edgeStatisticalFilter);
-  edgeStatisticalFilter->setSuffix(" px");
-  edgeStatisticalFilter->setFixedWidth(82);
+  auto* edgeStatisticalFilterValue = new QLabel(QString("%1 px").arg(lineConfig.edgeStatisticalFilter), panel);
+  edgeStatisticalFilterValue->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+  edgeStatisticalFilterValue->setMinimumWidth(52);
   auto* subpixelEdge = new QCheckBox(tr("labels.subpixelEdge"), panel);
   subpixelEdge->setChecked(lineConfig.useSubpixel);
   auto* scanDirection = new QComboBox(panel);
@@ -102,9 +106,11 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
   lineControlsLayout->addWidget(newLineButton, 0, 2);
   lineControlsLayout->addWidget(deleteLineButton, 0, 3);
   lineControlsLayout->addWidget(new QLabel(tr("labels.geometryLineBand"), lineControls), 1, 0);
-  lineControlsLayout->addWidget(bandHalfWidth, 1, 1);
+  lineControlsLayout->addWidget(bandHalfWidthValue, 1, 1);
   lineControlsLayout->addWidget(new QLabel(tr("labels.edgeSensitivity"), lineControls), 1, 2);
-  lineControlsLayout->addWidget(edgeSensitivity, 1, 3);
+  lineControlsLayout->addWidget(edgeSensitivityValue, 1, 3);
+  lineControlsLayout->addWidget(bandHalfWidth, 2, 0, 1, 2);
+  lineControlsLayout->addWidget(edgeSensitivity, 2, 2, 1, 2);
   lineControlsLayout->setColumnStretch(1, 1);
   layout->addWidget(lineControls);
 
@@ -114,9 +120,11 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
   filterControlsLayout->setHorizontalSpacing(6);
   filterControlsLayout->setVerticalSpacing(4);
   filterControlsLayout->addWidget(new QLabel(tr("labels.edgeCleanupDerivative"), filterControls), 0, 0);
-  filterControlsLayout->addWidget(edgeCleanupDerivative, 0, 1);
+  filterControlsLayout->addWidget(edgeCleanupDerivativeValue, 0, 1);
   filterControlsLayout->addWidget(new QLabel(tr("labels.edgeStatisticalFilter"), filterControls), 0, 2);
-  filterControlsLayout->addWidget(edgeStatisticalFilter, 0, 3);
+  filterControlsLayout->addWidget(edgeStatisticalFilterValue, 0, 3);
+  filterControlsLayout->addWidget(edgeCleanupDerivative, 1, 0, 1, 2);
+  filterControlsLayout->addWidget(edgeStatisticalFilter, 1, 2, 1, 2);
   filterControlsLayout->setColumnStretch(3, 1);
   layout->addWidget(filterControls);
 
@@ -158,44 +166,48 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
   QObject::connect(deleteLineButton, &QPushButton::clicked, window(), [this, camera]() {
     removeActiveGeometryLine(camera);
   });
-  QObject::connect(bandHalfWidth, qOverload<int>(&QSpinBox::valueChanged), window(), [this, camera](int value) {
+  QObject::connect(bandHalfWidth, &QSlider::valueChanged, window(), [this, camera, bandHalfWidthValue](int value) {
+    bandHalfWidthValue->setText(QString("%1 px").arg(value));
     activeGeometryLineConfig(camera.id).bandHalfWidth = value;
     m_lineMouseControllers[camera.id].setBandHalfWidth(value);
     updateGeometryLineOverlay(camera);
     saveGeometryLinesRecipe(camera);
-    testGeometryLine(camera);
+    updateGeometryLineOverlay(camera);
   });
-  QObject::connect(edgeSensitivity, qOverload<int>(&QSpinBox::valueChanged), window(), [this, camera](int value) {
+  QObject::connect(edgeSensitivity, &QSlider::valueChanged, window(), [this, camera, edgeSensitivityValue](int value) {
+    edgeSensitivityValue->setText(QString::number(value));
     activeGeometryLineConfig(camera.id).edgeSensitivity = value;
     saveGeometryLinesRecipe(camera);
-    testGeometryLine(camera);
+    updateGeometryLineOverlay(camera);
   });
-  QObject::connect(edgeCleanupDerivative, qOverload<int>(&QSpinBox::valueChanged), window(), [this, camera](int value) {
+  QObject::connect(edgeCleanupDerivative, &QSlider::valueChanged, window(), [this, camera, edgeCleanupDerivativeValue](int value) {
+    edgeCleanupDerivativeValue->setText(QString("%1 px").arg(value));
     activeGeometryLineConfig(camera.id).edgeCleanupDerivative = value;
     saveGeometryLinesRecipe(camera);
-    testGeometryLine(camera);
+    updateGeometryLineOverlay(camera);
   });
-  QObject::connect(edgeStatisticalFilter, qOverload<int>(&QSpinBox::valueChanged), window(), [this, camera](int value) {
+  QObject::connect(edgeStatisticalFilter, &QSlider::valueChanged, window(), [this, camera, edgeStatisticalFilterValue](int value) {
+    edgeStatisticalFilterValue->setText(QString("%1 px").arg(value));
     activeGeometryLineConfig(camera.id).edgeStatisticalFilter = value;
     saveGeometryLinesRecipe(camera);
-    testGeometryLine(camera);
+    updateGeometryLineOverlay(camera);
   });
   QObject::connect(subpixelEdge, &QCheckBox::toggled, window(), [this, camera](bool checked) {
     activeGeometryLineConfig(camera.id).useSubpixel = checked;
     saveGeometryLinesRecipe(camera);
-    testGeometryLine(camera);
+    updateGeometryLineOverlay(camera);
   });
   QObject::connect(scanDirection, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
     activeGeometryLineConfig(camera.id).scanDirection =
       index == 1 ? EdgeLineScanDirection::NormalNegative : EdgeLineScanDirection::NormalPositive;
     saveGeometryLinesRecipe(camera);
-    testGeometryLine(camera);
+    updateGeometryLineOverlay(camera);
   });
   QObject::connect(edgeTransition, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
     activeGeometryLineConfig(camera.id).transition =
       index == 1 ? EdgeLineTransition::DarkToLight : EdgeLineTransition::LightToDark;
     saveGeometryLinesRecipe(camera);
-    testGeometryLine(camera);
+    updateGeometryLineOverlay(camera);
   });
   QObject::connect(edgePickMode, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
     if (index == 1)
@@ -211,7 +223,7 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
       activeGeometryLineConfig(camera.id).pickMode = EdgeLinePickMode::First;
     }
     saveGeometryLinesRecipe(camera);
-    testGeometryLine(camera);
+    updateGeometryLineOverlay(camera);
   });
 
   auto* testButton = createTouchIconButton("start", tr("actions.testGeometry"), panel);
@@ -266,7 +278,7 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
   toolsLayout()->addWidget(panel);
   if (shouldRefreshLine)
   {
-    testGeometryLine(camera);
+    updateGeometryLineOverlay(camera);
   }
   else
   {

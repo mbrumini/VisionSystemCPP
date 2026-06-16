@@ -353,12 +353,7 @@ void MainWindow::addGrabToggleToToolPanel()
       return;
     }
 
-    if (m_cameraRuntime[m_selectedCameraId].running())
-    {
-      m_setup.stopCameraSimulation(m_selectedCamera, false);
-    }
-
-    m_imaging.reloadCameraReferenceImage(m_selectedCamera);
+    m_imaging.restoreSampleWorkspace(m_selectedCamera);
     const QString startLabel = trText("commands.start");
     button->setIcon(IconCatalog::icon("start"));
     button->setToolTip(startLabel);

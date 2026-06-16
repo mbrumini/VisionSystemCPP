@@ -123,6 +123,37 @@ void MainWindowImagingModule::reloadCameraReferenceImage(const CameraConfig& cam
   }
 }
 
+void MainWindowImagingModule::restoreSampleWorkspace(const CameraConfig& camera)
+{
+  const auto runtimeIt = cameraRuntime().find(camera.id);
+  if (runtimeIt != cameraRuntime().end())
+  {
+    runtimeIt->second.stop();
+    runtimeIt->second.clearCurrentFrame();
+    runtimeIt->second.clearCurrentPose(camera.id);
+  }
+
+  if (camera.id == selectedCameraId() && context().simulationTimer)
+  {
+    context().simulationTimer->stop();
+  }
+
+  if (context().lastSurfaceLocalizationResults)
+  {
+    context().lastSurfaceLocalizationResults->remove(camera.id);
+  }
+  if (context().lastLocalizationResults)
+  {
+    context().lastLocalizationResults->remove(camera.id);
+  }
+
+  reloadCameraReferenceImage(camera);
+  if (camera.id == selectedCameraId() && largeImage())
+  {
+    largeImage()->clearGeometryOverlay();
+  }
+}
+
 QPixmap MainWindowImagingModule::matToPixmap(const cv::Mat& image) const
 {
   if (image.empty())
@@ -163,6 +194,11 @@ cv::Mat MainWindowImagingModule::sampleInputImage(const CameraConfig& camera, QS
   }
 
   return input;
+}
+
+cv::Mat MainWindowImagingModule::validationInputImage(const CameraConfig& camera, QString* errorMessage) const
+{
+  return currentInputImage(camera, errorMessage);
 }
 
 cv::Mat MainWindowImagingModule::currentInputImage(const CameraConfig& camera, QString* errorMessage) const

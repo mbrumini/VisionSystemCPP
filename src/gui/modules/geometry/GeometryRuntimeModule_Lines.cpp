@@ -285,6 +285,7 @@ void MainWindowGeometryModule::testGeometryLine(const CameraConfig& camera)
       6
     });
     updateGeometryLineOverlay(camera, detectedOverlay);
+    refreshMeasurementOverlay(camera);
 
     log(QString("%1: %2 x1=%3 y1=%4 x2=%5 y2=%6")
                 .arg(tr("log.geometryLineFound"))

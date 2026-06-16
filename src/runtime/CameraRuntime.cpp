@@ -103,6 +103,12 @@ const cv::Mat& CameraRuntime::currentFrame() const
   return m_currentFrame;
 }
 
+void CameraRuntime::clearCurrentFrame()
+{
+  m_currentFrame.release();
+  m_frameIndex = 0;
+}
+
 const PartPose& CameraRuntime::currentPose() const
 {
   return m_currentPose;

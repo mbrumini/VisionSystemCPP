@@ -269,6 +269,8 @@ add_executable(VisionSystemCPP
     src/processing/SurfaceDefectProcessor.cpp
     src/processing/SurfaceEdgeStrategy.h
     src/processing/SurfaceEdgeStrategy.cpp
+    src/processing/ShapeCandidateFilter.h
+    src/processing/ShapeCandidateFilter.cpp
     src/processing/SurfaceModelStrategy.h
     src/processing/SurfaceModelStrategy.cpp
     src/processing/SurfaceModelTrainer.h

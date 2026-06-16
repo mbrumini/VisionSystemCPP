@@ -58,6 +58,7 @@ public:
   void testSurfaceEdgePcaLocalization(const CameraConfig& camera);
   void previewSurfaceModel(const CameraConfig& camera);
   void acquireSurfaceModel(const CameraConfig& camera);
+  bool restoreSurfaceModelPoseFromSample(const CameraConfig& camera);
   void testSurfaceShapeModel(const CameraConfig& camera);
   void testSurfaceTemplateModel(const CameraConfig& camera);
 
