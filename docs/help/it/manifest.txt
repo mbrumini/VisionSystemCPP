@@ -12,6 +12,7 @@ Categorie principali:
 - Misure e tolleranze.
 - Illuminazione, ottica e meccanica.
 - Diagnostica e buone pratiche.
+- AI classificazione, segmentazione e anomaly detection.
 
 Schede misura principali:
 - functions/misure.txt
@@ -36,6 +37,19 @@ Schede misura principali:
 - functions/misura_distanza_fori_superficie.txt
 - functions/misura_foro_bordo_superficie.txt
 - functions/misure_superficiali_errori_comuni.txt
+
+Schede AI principali:
+- functions/ai_modello.txt
+- functions/ai_classificazione_training.txt
+- functions/ai_classificazione_inferenza.txt
+- functions/ai_segmentazione_feature.txt
+- functions/ai_segmentazione_labeling.txt
+- functions/ai_segmentazione_training.txt
+- functions/ai_anomaly_training.txt
+- functions/ai_dataset_sbilanciato.txt
+- functions/ai_falsi_negativi.txt
+- functions/ai_falsi_positivi.txt
+- functions/ai_soglia_confidenza.txt
 
 Nota:
 L'indice operativo completo e' in index.txt.

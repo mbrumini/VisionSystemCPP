@@ -41,6 +41,7 @@ void MainWindowSetupModule::startAiClassificationCapture(
 void MainWindowSetupModule::stopAiClassificationCapture()
 {
   const QString cameraId = m_aiClassificationCaptureCameraId;
+  const bool wasActive = !cameraId.isEmpty();
 
   if (m_aiClassificationCaptureTimer)
   {
@@ -52,7 +53,7 @@ void MainWindowSetupModule::stopAiClassificationCapture()
   m_aiClassificationCaptureToClass = false;
   m_aiClassificationCaptureClass = {};
 
-  if (!cameraId.isEmpty())
+  if (wasActive)
   {
     const auto runtimeIt = cameraRuntime().find(cameraId);
     if (runtimeIt != cameraRuntime().end())
@@ -66,7 +67,10 @@ void MainWindowSetupModule::stopAiClassificationCapture()
     }
   }
 
-  log(tr("log.aiCaptureStopped"));
+  if (wasActive)
+  {
+    log(tr("log.aiCaptureStopped"));
+  }
 }
 
 void MainWindowSetupModule::captureAiClassificationFrame()

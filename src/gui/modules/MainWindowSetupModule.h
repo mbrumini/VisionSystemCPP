@@ -24,7 +24,9 @@ public:
   void showAiPanel(const CameraConfig& camera);
   void showAiClassificationPanel(const CameraConfig& camera);
   void showAiClassificationTrainingPanel(const CameraConfig& camera);
+  void showAiSegmentationPanel(const CameraConfig& camera);
   void showAiPlaceholderPanel(const CameraConfig& camera, const QString& toolId);
+  void stopAiClassificationCapture();
   void startCameraSimulation(const CameraConfig& camera, bool refreshSetupPanel = true);
   void stopCameraSimulation(const CameraConfig& camera, bool refreshSetupPanel = true);
   void showCameraSampleImage(const CameraConfig& camera);
@@ -40,7 +42,6 @@ public:
 
 private:
   void startAiClassificationCapture(const CameraConfig& camera, bool toClass, const AiClassificationClassConfig& classConfig = {});
-  void stopAiClassificationCapture();
   void captureAiClassificationFrame();
   void prepareAiClassificationDataset(const CameraConfig& camera);
   void startAiClassificationTraining(

@@ -1,0 +1,19 @@
+Titolo: Training anomaly detection AI
+Area: AI / Anomaly Detection / Training
+Parole chiave: anomaly detection, anomalie, immagini buone, soglia, heatmap
+
+Anomaly detection AI impara l'aspetto dei pezzi buoni e segnala differenze non previste.
+E' utile quando i difetti sono molti, rari o difficili da classificare uno per uno.
+
+Dataset consigliato:
+- molte immagini buone reali;
+- variazioni normali di luce, posizione, superficie e lotto;
+- pochi difetti usati solo per validazione, non per insegnare il buono.
+
+Output atteso:
+- score anomalia;
+- soglia OK/NOK;
+- heatmap o overlay dell'area sospetta.
+
+Regola:
+Se nel dataset buono entrano pezzi difettosi, il modello puo' imparare che quel difetto e' normale.

@@ -1,0 +1,19 @@
+Titolo: Inferenza classificazione AI
+Area: AI / Classificazione / Inferenza
+Parole chiave: inferenza, classificazione, classe, confidenza, modello caricato
+
+Inferenza classificazione AI acquisisce un'immagine dalla camera e la passa al modello attivo.
+Il risultato deve indicare a schermo la classe riconosciuta e la confidenza.
+
+Comportamento atteso:
+- se la camera non e' aperta, viene aperta prima dell'acquisizione;
+- viene usata l'immagine appena acquisita, non quella precedente;
+- il modello pronto resta caricato e non viene ricaricato a ogni test;
+- il log serve per diagnostica, ma il risultato operativo deve essere visibile nel pannello.
+
+Se il risultato e' sempre la stessa classe:
+1. Controllare che il modello attivo sia quello appena validato.
+2. Verificare bilanciamento e varieta' immagini per classe.
+3. Provare immagini reali non usate in training.
+4. Controllare luce, fuoco e posizione rispetto al dataset.
+

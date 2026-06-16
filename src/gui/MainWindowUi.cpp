@@ -153,6 +153,14 @@ void MainWindow::buildUi()
       updateControlPanel(&m_selectedCamera);
       return;
     }
+    if (toolId != "setup" && m_setupCameraId == m_selectedCameraId)
+    {
+      m_setup.stopCameraSimulation(m_selectedCamera, false);
+    }
+    if (toolId != "ai")
+    {
+      m_setup.stopAiClassificationCapture();
+    }
     m_toolIconBar->setActiveTool(toolId);
     if (toolId == "setup")
     {

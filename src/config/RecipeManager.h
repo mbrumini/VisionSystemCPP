@@ -163,6 +163,12 @@ struct AiClassificationClassConfig
   QString name;
 };
 
+struct AiSegmentationFeatureConfig
+{
+  int id = 0;
+  QString name;
+};
+
 class RecipeManager
 {
 public:
@@ -239,6 +245,10 @@ public:
   QString cameraAiRawImagesPath(const QString& cameraId) const;
   QString cameraAiClassificationRawImagesPath(const QString& cameraId) const;
   QString cameraAiClassificationClassImagesPath(const QString& cameraId, const AiClassificationClassConfig& classConfig) const;
+  QString cameraAiSegmentationRawImagesPath(const QString& cameraId) const;
+  QString cameraAiSegmentationFeatureImagesPath(const QString& cameraId, const AiSegmentationFeatureConfig& featureConfig) const;
+  QString cameraAiSegmentationFeatureMasksPath(const QString& cameraId, const AiSegmentationFeatureConfig& featureConfig) const;
+  QString cameraAiSegmentationFeatureLabelsPath(const QString& cameraId, const AiSegmentationFeatureConfig& featureConfig) const;
   QString firstCameraSampleImagePath(const QString& cameraId) const;
   QString firstCameraTestImagePath(const QString& cameraId) const;
   bool ensureCameraImageFolders(const QString& cameraId, QString* errorMessage = nullptr) const;
@@ -248,6 +258,8 @@ public:
   bool addAiClassificationClass(const QString& cameraId, const QString& className, AiClassificationClassConfig* createdClass = nullptr, QString* errorMessage = nullptr) const;
   QString loadAiClassificationActiveModelPath(const QString& cameraId) const;
   bool saveAiClassificationActiveModelPath(const QString& cameraId, const QString& modelPath, QString* errorMessage = nullptr) const;
+  QVector<AiSegmentationFeatureConfig> loadAiSegmentationFeatures(const QString& cameraId) const;
+  bool addAiSegmentationFeature(const QString& cameraId, const QString& featureName, AiSegmentationFeatureConfig* createdFeature = nullptr, QString* errorMessage = nullptr) const;
 
 private:
   static bool copyDirectory(const QString& sourceDirectory, const QString& destinationDirectory, QString* errorMessage);

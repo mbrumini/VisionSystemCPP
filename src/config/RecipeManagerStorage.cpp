@@ -36,7 +36,12 @@ QString RecipeManager::firstCameraTestImagePath(const QString& cameraId) const
 bool RecipeManager::ensureCameraImageFolders(const QString& cameraId, QString* errorMessage) const
 {
   QDir directory;
-  for (const QString& path : {cameraSampleImagesPath(cameraId), cameraTestImagesPath(cameraId), cameraAiRawImagesPath(cameraId)})
+  for (const QString& path : {
+         cameraSampleImagesPath(cameraId),
+         cameraTestImagesPath(cameraId),
+         cameraAiRawImagesPath(cameraId),
+         cameraAiClassificationRawImagesPath(cameraId),
+         cameraAiSegmentationRawImagesPath(cameraId)})
   {
     if (!directory.mkpath(path))
     {

@@ -16,8 +16,8 @@ struct CameraSetupPanelTexts
   QString importSample;
   QString showSample;
   QString importTests;
-  QString start;
-  QString stop;
+  QString grabToggle;
+  QString grabToggleIcon = "start";
   QString nextFrame;
   QString results;
   QString back;
@@ -39,8 +39,7 @@ public:
     std::function<void()> importSample,
     std::function<void()> showSample,
     std::function<void()> importTests,
-    std::function<void()> start,
-    std::function<void()> stop,
+    std::function<void()> toggleGrab,
     std::function<void()> nextFrame,
     std::function<void()> results,
     QVector<std::function<void()>> toolHandlers,

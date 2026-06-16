@@ -60,19 +60,23 @@ void MainWindowSetupModule::showAiClassificationPanel(const CameraConfig& camera
   });
   buttonsLayout->addWidget(rawButton, 0, 0);
 
-  auto* rawPlayButton = new QPushButton(tr("commands.start") + " raw", buttons);
+  const bool rawCaptureActive =
+    m_aiClassificationCaptureCameraId == camera.id &&
+    !m_aiClassificationCaptureToClass;
+  auto* rawPlayButton = new QPushButton((rawCaptureActive ? tr("commands.stop") : tr("commands.start")) + " raw", buttons);
   rawPlayButton->setObjectName("touchButton");
   QObject::connect(rawPlayButton, &QPushButton::clicked, window(), [this, camera]() {
-    startAiClassificationCapture(camera, false);
+    if (m_aiClassificationCaptureCameraId == camera.id && !m_aiClassificationCaptureToClass)
+    {
+      stopAiClassificationCapture();
+    }
+    else
+    {
+      startAiClassificationCapture(camera, false);
+    }
+    showAiClassificationPanel(camera);
   });
   buttonsLayout->addWidget(rawPlayButton, 0, 1);
-
-  auto* stopCaptureButton = new QPushButton(tr("commands.stop"), buttons);
-  stopCaptureButton->setObjectName("touchButton");
-  QObject::connect(stopCaptureButton, &QPushButton::clicked, window(), [this]() {
-    stopAiClassificationCapture();
-  });
-  buttonsLayout->addWidget(stopCaptureButton, 0, 2);
 
   auto* addClassButton = new QPushButton(tr("actions.addAiClass"), buttons);
   addClassButton->setObjectName("touchButton");
@@ -99,7 +103,7 @@ void MainWindowSetupModule::showAiClassificationPanel(const CameraConfig& camera
 
     showAiClassificationPanel(camera);
   });
-  buttonsLayout->addWidget(addClassButton, 0, 3);
+  buttonsLayout->addWidget(addClassButton, 0, 2, 1, 2);
 
   auto* prepareDatasetButton = new QPushButton(tr("actions.prepareAiDataset"), buttons);
   prepareDatasetButton->setObjectName("touchButton");
@@ -133,21 +137,29 @@ void MainWindowSetupModule::showAiClassificationPanel(const CameraConfig& camera
     QObject::connect(classButton, &QPushButton::clicked, window(), [this, camera, classConfig]() {
       context().cameraConfig->acquireCameraAiClassificationClassImage(camera, classConfig);
     });
+    const bool classCaptureActive =
+      m_aiClassificationCaptureCameraId == camera.id &&
+      m_aiClassificationCaptureToClass &&
+      m_aiClassificationCaptureClass.id == classConfig.id;
     auto* classPlayButton = new QPushButton(
-      QString("%1 %2").arg(tr("commands.start"), classConfig.name),
+      QString("%1 %2").arg(classCaptureActive ? tr("commands.stop") : tr("commands.start"), classConfig.name),
       buttons);
     classPlayButton->setObjectName("touchButton");
     QObject::connect(classPlayButton, &QPushButton::clicked, window(), [this, camera, classConfig]() {
-      startAiClassificationCapture(camera, true, classConfig);
-    });
-    auto* classStopButton = new QPushButton(tr("commands.stop"), buttons);
-    classStopButton->setObjectName("touchButton");
-    QObject::connect(classStopButton, &QPushButton::clicked, window(), [this]() {
-      stopAiClassificationCapture();
+      if (m_aiClassificationCaptureCameraId == camera.id &&
+          m_aiClassificationCaptureToClass &&
+          m_aiClassificationCaptureClass.id == classConfig.id)
+      {
+        stopAiClassificationCapture();
+      }
+      else
+      {
+        startAiClassificationCapture(camera, true, classConfig);
+      }
+      showAiClassificationPanel(camera);
     });
     buttonsLayout->addWidget(classButton, 3 + index, 0, 1, 2);
-    buttonsLayout->addWidget(classPlayButton, 3 + index, 2);
-    buttonsLayout->addWidget(classStopButton, 3 + index, 3);
+    buttonsLayout->addWidget(classPlayButton, 3 + index, 2, 1, 2);
     ++index;
   }
 
@@ -161,6 +173,10 @@ void MainWindowSetupModule::showAiClassificationPanel(const CameraConfig& camera
   auto* backButton = new QPushButton(tr("commands.backToCameraTools"), panel);
   backButton->setObjectName("touchButton");
   QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() {
+    if (m_aiClassificationCaptureCameraId == camera.id)
+    {
+      stopAiClassificationCapture();
+    }
     showAiPanel(camera);
   });
   layout->addWidget(backButton);

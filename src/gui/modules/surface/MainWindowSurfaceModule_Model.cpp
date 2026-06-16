@@ -19,6 +19,19 @@
 using AsyncExecutor::runAsyncTask;
 using namespace SurfaceLocalizationAdapters;
 
+namespace
+{
+QRect fullImageRoi(const cv::Mat& image)
+{
+  return QRect(0, 0, image.cols, image.rows);
+}
+
+cv::Rect toCvRect(const QRect& rect)
+{
+  return cv::Rect(rect.x(), rect.y(), rect.width(), rect.height());
+}
+}
+
 void MainWindowSurfaceModule::acquireSurfaceModel(const CameraConfig& camera)
 {
   if (!MainWindowCameraProfile::isGrayscaleLocalization(camera, config()) || camera.id != selectedCameraId())
@@ -155,7 +168,8 @@ void MainWindowSurfaceModule::testSurfaceShapeModel(const CameraConfig& camera)
   }
 
   SurfaceShapeMatchConfig config;
-  config.searchRoi = cv::Rect(model.searchRoi.x(), model.searchRoi.y(), model.searchRoi.width(), model.searchRoi.height());
+  const QRect searchRoi = fullImageRoi(input);
+  config.searchRoi = toCvRect(searchRoi);
   config.modelContour.reserve(static_cast<size_t>(model.contour.size()));
   for (const QPoint& point : model.contour)
   {
@@ -173,7 +187,7 @@ void MainWindowSurfaceModule::testSurfaceShapeModel(const CameraConfig& camera)
 
   const QString __pendingCameraId_testSurfaceShapeModel = camera.id;
   context().incPendingJobs(__pendingCameraId_testSurfaceShapeModel);
-  runAsyncTask(decltype(job)(job), window(), [this, camera, model, exclusionRects, __pendingCameraId_testSurfaceShapeModel](const SurfaceDefectResult& result) {
+  runAsyncTask(decltype(job)(job), window(), [this, camera, searchRoi, exclusionRects, __pendingCameraId_testSurfaceShapeModel](const SurfaceDefectResult& result) {
     auto __dec_guard = std::shared_ptr<void>(nullptr, [this, __pendingCameraId_testSurfaceShapeModel](void*) { context().decPendingJobs(__pendingCameraId_testSurfaceShapeModel); });
     const bool suppressViewUpdate =
       camera.id == selectedCameraId() &&
@@ -202,7 +216,7 @@ void MainWindowSurfaceModule::testSurfaceShapeModel(const CameraConfig& camera)
     {
       selectedPreview() = context().imaging->matToPixmap(result.diagnosticImage);
       largeImage()->setImage(selectedPreview());
-      largeImage()->setRoi(model.searchRoi);
+      largeImage()->setRoi(searchRoi);
       largeImage()->setExclusionRects(exclusionRects);
       largeImage()->clearCircles();
     }
@@ -243,7 +257,8 @@ void MainWindowSurfaceModule::testSurfaceTemplateModel(const CameraConfig& camer
   }
 
   SurfaceTemplateMatchConfig config;
-  config.searchRoi = cv::Rect(model.searchRoi.x(), model.searchRoi.y(), model.searchRoi.width(), model.searchRoi.height());
+  const QRect searchRoi = fullImageRoi(input);
+  config.searchRoi = toCvRect(searchRoi);
   config.modelImage = modelImage;
   config.edgeSensitivity = model.edgeSensitivity;
   config.minScore = model.minTemplateScore;
@@ -260,7 +275,7 @@ void MainWindowSurfaceModule::testSurfaceTemplateModel(const CameraConfig& camer
 
   const QString __pendingCameraId_testSurfaceTemplateModel = camera.id;
   context().incPendingJobs(__pendingCameraId_testSurfaceTemplateModel);
-  runAsyncTask(decltype(job)(job), window(), [this, camera, model, exclusionRects, __pendingCameraId_testSurfaceTemplateModel](const SurfaceDefectResult& result) {
+  runAsyncTask(decltype(job)(job), window(), [this, camera, searchRoi, exclusionRects, __pendingCameraId_testSurfaceTemplateModel](const SurfaceDefectResult& result) {
     auto __dec_guard = std::shared_ptr<void>(nullptr, [this, __pendingCameraId_testSurfaceTemplateModel](void*) { context().decPendingJobs(__pendingCameraId_testSurfaceTemplateModel); });
     const bool suppressViewUpdate =
       camera.id == selectedCameraId() &&
@@ -289,7 +304,7 @@ void MainWindowSurfaceModule::testSurfaceTemplateModel(const CameraConfig& camer
     {
       selectedPreview() = context().imaging->matToPixmap(result.diagnosticImage);
       largeImage()->setImage(selectedPreview());
-      largeImage()->setRoi(model.searchRoi);
+      largeImage()->setRoi(searchRoi);
       largeImage()->setExclusionRects(exclusionRects);
       largeImage()->clearCircles();
     }

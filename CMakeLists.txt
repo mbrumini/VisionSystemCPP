@@ -183,6 +183,7 @@ add_executable(VisionSystemCPP
     src/gui/modules/setup/AiTrainingGraph.h
     src/gui/modules/setup/AiTrainingGraph.cpp
     src/gui/modules/setup/MainWindowSetupModule_AiPanels.cpp
+    src/gui/modules/setup/MainWindowSetupModule_AiSegmentationPanels.cpp
     src/gui/modules/setup/MainWindowSetupModule_Ai.cpp
     src/gui/modules/setup/MainWindowSetupModule_AiTraining.cpp
     src/gui/modules/setup/MainWindowSetupModule_AiInference.cpp
@@ -324,15 +325,21 @@ else()
     message(STATUS "VimbaX SDK not found: discovery UI will report SDK unavailable")
 endif()
 
+get_filename_component(QT6_INSTALL_PREFIX "${Qt6_DIR}/../../.." ABSOLUTE)
+set(QT6_PLUGINS_DIR "${QT6_INSTALL_PREFIX}/plugins")
+if(NOT EXISTS "${QT6_PLUGINS_DIR}/imageformats/qsvg.dll" AND DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
+    set(QT6_PLUGINS_DIR "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/Qt6/plugins")
+endif()
+
 add_custom_command(TARGET VisionSystemCPP POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory
         "$<TARGET_FILE_DIR:VisionSystemCPP>/imageformats"
         "$<TARGET_FILE_DIR:VisionSystemCPP>/iconengines"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/Qt6/plugins/imageformats/qsvg.dll"
+        "${QT6_PLUGINS_DIR}/imageformats/qsvg.dll"
         "$<TARGET_FILE_DIR:VisionSystemCPP>/imageformats/qsvg.dll"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/Qt6/plugins/iconengines/qsvgicon.dll"
+        "${QT6_PLUGINS_DIR}/iconengines/qsvgicon.dll"
         "$<TARGET_FILE_DIR:VisionSystemCPP>/iconengines/qsvgicon.dll"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_SOURCE_DIR}/translations"

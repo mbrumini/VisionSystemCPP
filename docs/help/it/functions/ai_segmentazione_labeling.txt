@@ -1,0 +1,20 @@
+Titolo: Labeling segmentazione AI
+Area: AI / Segmentazione / Labeling
+Parole chiave: labeling, pennello, maschera, zoom, pan, poligono automatico
+
+Il labeling segmentazione serve a disegnare la zona reale che il modello dovra' riconoscere.
+L'obiettivo e' lavorare con un pennello sulla maschera, poi generare automaticamente il contorno o poligono necessario al dataset.
+
+Comandi previsti:
+- rotella mouse: zoom nell'area da labellare;
+- shift + mouse: spostamento immagine quando e' zoomata;
+- pennello: aggiunge area alla maschera;
+- gomma o correzione: rimuove area dalla maschera;
+- generazione automatica contorno: crea il poligono intorno all'area pennellata.
+
+Buone pratiche:
+- labellare solo il difetto o l'area utile;
+- evitare maschere approssimative sui bordi importanti;
+- includere casi facili, difficili e borderline;
+- verificare che la maschera non copra parti sane del pezzo.
+

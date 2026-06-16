@@ -64,8 +64,9 @@ void MainWindowSetupModule::showCameraSetupPanel(const CameraConfig& camera)
   texts.importSample = tr("actions.assignSampleImage");
   texts.showSample = tr("labels.sampleImage");
   texts.importTests = tr("actions.assignTestImages");
-  texts.start = tr("commands.start");
-  texts.stop = tr("commands.stop");
+  const bool grabRunning = cameraRuntime()[camera.id].running();
+  texts.grabToggle = grabRunning ? tr("commands.stop") : tr("commands.start");
+  texts.grabToggleIcon = grabRunning ? "stop" : "start";
   texts.nextFrame = tr("actions.nextFrame");
   texts.results = tr("actions.frameResults");
   texts.back = tr("commands.backToCameraTools");
@@ -93,8 +94,14 @@ void MainWindowSetupModule::showCameraSetupPanel(const CameraConfig& camera)
     [this, camera]() { context().cameraConfig->configureCameraSampleImage(camera); },
     [this, camera]() { showCameraSampleImage(camera); },
     [this, camera]() { context().cameraConfig->configureCameraTestImages(camera); },
-    [this, camera]() { startCameraSimulation(camera); },
-    [this, camera]() { stopCameraSimulation(camera); },
+    [this, camera]() {
+      if (cameraRuntime()[camera.id].running())
+      {
+        stopCameraSimulation(camera);
+        return;
+      }
+      startCameraSimulation(camera);
+    },
     [this, camera]() { stepCameraSimulation(camera); },
     [this, camera]() { showSetupResultsPopup(camera); },
     {

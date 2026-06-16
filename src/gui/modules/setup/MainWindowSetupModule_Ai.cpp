@@ -80,7 +80,7 @@ void MainWindowSetupModule::showAiPanel(const CameraConfig& camera)
 
   auto* segmentationButton = createAiButton("aiSegmentation", tr("tools.aiSegmentation"), grid);
   QObject::connect(segmentationButton, &QPushButton::clicked, window(), [this, camera]() {
-    showAiPlaceholderPanel(camera, "aiSegmentation");
+    showAiSegmentationPanel(camera);
   });
   gridLayout->addWidget(segmentationButton, 1, 0);
 
@@ -88,6 +88,10 @@ void MainWindowSetupModule::showAiPanel(const CameraConfig& camera)
 
   auto* backButton = createAiButton("back", tr("commands.backToCameraTools"), panel);
   QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() {
+    if (m_aiClassificationCaptureCameraId == camera.id)
+    {
+      stopAiClassificationCapture();
+    }
     context().showCameraToolList(camera);
   });
   layout->addWidget(backButton);

@@ -69,6 +69,7 @@ private:
   void showCameraToolList(const CameraConfig& camera);
   void showLocalizationStrategyList(const CameraConfig& camera);
   void clearToolPanel();
+  void addGrabToggleToToolPanel();
   void appendLog(const QString& message);
   void setDetailedLogEnabled(bool enabled);
   void setSetupDetailsVisible(bool visible);

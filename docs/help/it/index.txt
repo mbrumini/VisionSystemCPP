@@ -82,6 +82,12 @@ File funzione disponibili:
 - functions/surface_due_cerchi.txt
 - functions/surface_difetti.txt
 - functions/ai_modello.txt
+- functions/ai_classificazione_training.txt
+- functions/ai_classificazione_inferenza.txt
+- functions/ai_segmentazione_feature.txt
+- functions/ai_segmentazione_labeling.txt
+- functions/ai_segmentazione_training.txt
+- functions/ai_anomaly_training.txt
 - functions/dataset_capture.txt
 - functions/confidenza_ai.txt
 - functions/classi_ai.txt

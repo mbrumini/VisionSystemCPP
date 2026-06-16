@@ -67,8 +67,7 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
   std::function<void()> importSample,
   std::function<void()> showSample,
   std::function<void()> importTests,
-  std::function<void()> start,
-  std::function<void()> stop,
+  std::function<void()> toggleGrab,
   std::function<void()> nextFrame,
   std::function<void()> results,
   QVector<std::function<void()>> toolHandlers,
@@ -133,8 +132,6 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
   auto* sampleButton = createTouchButton("assignSampleImage", texts.importSample, buttons);
   auto* showSampleButton = createTouchButton("sampleImage", texts.showSample, buttons);
   auto* testImagesButton = createTouchButton("assignTestImages", texts.importTests, buttons);
-  auto* startButton = createTouchButton("start", texts.start, buttons);
-  auto* stopButton = createTouchButton("stop", texts.stop, buttons);
   auto* stepButton = createTouchButton("nextFrame", texts.nextFrame, buttons);
   auto* resultsButton = createTouchButton("measurements", texts.results, buttons);
   auto* backButton = createTouchButton("back", texts.back, buttons);
@@ -144,9 +141,7 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
   buttonsLayout->addWidget(sampleButton, 0, 2);
   buttonsLayout->addWidget(showSampleButton, 0, 3);
   buttonsLayout->addWidget(testImagesButton, 1, 0);
-  buttonsLayout->addWidget(startButton, 1, 1);
-  buttonsLayout->addWidget(stopButton, 1, 2);
-  buttonsLayout->addWidget(stepButton, 1, 3);
+  buttonsLayout->addWidget(stepButton, 1, 1);
   buttonsLayout->addWidget(resultsButton, 2, 0);
   buttonsLayout->addWidget(backButton, 2, 1);
   layout->addWidget(buttons);
@@ -156,8 +151,7 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
   connectButton(sampleButton, importSample);
   connectButton(showSampleButton, showSample);
   connectButton(testImagesButton, importTests);
-  connectButton(startButton, start);
-  connectButton(stopButton, stop);
+  Q_UNUSED(toggleGrab);
   connectButton(stepButton, nextFrame);
   connectButton(resultsButton, results);
   connectButton(backButton, back);

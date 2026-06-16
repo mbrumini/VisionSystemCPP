@@ -1,10 +1,12 @@
 #include "gui/MainWindow.h"
 
+#include "gui/IconCatalog.h"
 #include "gui/SurfaceLocalizationStrategies.h"
 #include "gui/ToolCatalog.h"
 #include "gui/TouchIconButton.h"
 
 #include <QGridLayout>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QLayout>
 #include <QPushButton>
@@ -291,5 +293,56 @@ void MainWindow::clearToolPanel()
 
     delete item;
   }
+
+  addGrabToggleToToolPanel();
+}
+
+void MainWindow::addGrabToggleToToolPanel()
+{
+  if (m_selectedCameraId.isEmpty() || m_machineRunning || !m_toolsLayout || !m_toolsContainer)
+  {
+    return;
+  }
+
+  const auto runtimeIt = m_cameraRuntime.find(m_selectedCameraId);
+  const bool running = runtimeIt != m_cameraRuntime.end() && runtimeIt->second.running();
+  const QString label = running ? trText("commands.stop") : trText("commands.start");
+
+  auto* bar = new QWidget(m_toolsContainer);
+  auto* layout = new QHBoxLayout(bar);
+  layout->setContentsMargins(0, 0, 0, 4);
+  layout->setSpacing(8);
+
+  auto* button = createTouchIconButton(running ? "stop" : "start", label, bar);
+  auto* text = new QLabel(QString("Grab: %1").arg(label), bar);
+  text->setObjectName("toolPanelNote");
+  text->setWordWrap(true);
+
+  connect(button, &QPushButton::clicked, this, [this, button, text]() {
+    if (m_selectedCameraId.isEmpty())
+    {
+      return;
+    }
+
+    if (m_cameraRuntime[m_selectedCameraId].running())
+    {
+      m_setup.stopCameraSimulation(m_selectedCamera, false);
+    }
+    else
+    {
+      m_setup.startCameraSimulation(m_selectedCamera, false);
+    }
+
+    const bool isRunning = m_cameraRuntime[m_selectedCameraId].running();
+    const QString nextLabel = isRunning ? trText("commands.stop") : trText("commands.start");
+    button->setIcon(IconCatalog::icon(isRunning ? "stop" : "start"));
+    button->setToolTip(nextLabel);
+    button->setAccessibleName(nextLabel);
+    text->setText(QString("Grab: %1").arg(nextLabel));
+  });
+
+  layout->addWidget(button);
+  layout->addWidget(text, 1);
+  m_toolsLayout->addWidget(bar);
 }
 

@@ -1,0 +1,18 @@
+Titolo: Training classificazione AI
+Area: AI / Classificazione / Training
+Parole chiave: classificazione, training, epoch, accuracy, modello attivo, confronto modello
+
+Il training classificazione AI addestra un modello per scegliere una classe tra quelle configurate.
+Si usa quando il controllo deve distinguere categorie come OK, difetto, taglio, moneta o variante pezzo.
+
+Flusso corretto:
+1. Aggiungere le classi necessarie.
+2. Salvare immagini in ogni classe, con luce e posizione realistiche.
+3. Premere Training per aprire i parametri.
+4. Controllare epoch, image size, batch, validation split e device.
+5. Avviare il training e leggere il grafico a sinistra.
+6. Alla fine confrontare modello nuovo e modello attivo prima di promuovere il nuovo.
+
+Regola:
+Non scegliere il modello nuovo solo perche' e' l'ultimo. Usare accuracy, loss e test su immagini di validazione per decidere.
+
