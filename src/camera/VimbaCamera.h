@@ -20,12 +20,13 @@ public:
   bool open() override;
   bool getFrame(cv::Mat& frame) override;
   void close() override;
+  QString lastError() const;
 
 private:
 #ifdef VISION_WITH_VIMBAX
   class FrameObserver;
 
-  bool copyFrameToMat(const VmbCPP::FramePtr& vimbaFrame, cv::Mat& frame) const;
+  bool copyFrameToMat(const VmbCPP::FramePtr& vimbaFrame, cv::Mat& frame);
   bool setPreferredPixelFormat();
   bool prepareCapture();
 
@@ -39,4 +40,5 @@ private:
 #else
   CameraConfig m_config;
 #endif
+  QString m_lastError;
 };

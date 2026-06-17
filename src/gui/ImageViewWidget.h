@@ -56,6 +56,7 @@ public:
   void setGeometryPointPickedHandler(std::function<void(const QPointF&)> handler);
   void setGeometryPointMovedHandler(std::function<void(const QPointF&)> handler);
   void setGeometryOverlayPointMovedHandler(std::function<void(int, const QPointF&)> handler);
+  void setGeometryOverlayDimensionLabelMovedHandler(std::function<void(const QString&, const QPointF&)> handler);
   void setTwoPointLineHandler(std::function<void(const QVector<QPoint>&)> handler);
 
 protected:
@@ -151,12 +152,14 @@ private:
   bool m_movingExclusion = false;
   bool m_resizingExclusion = false;
   bool m_movingGeometryOverlayPoint = false;
+  bool m_movingGeometryOverlayDimensionLabel = false;
   ExclusionHandle m_activeRoiHandle = ExclusionHandle::None;
   ExclusionHandle m_activeExclusionHandle = ExclusionHandle::None;
   GeometryAreaHandle m_activeGeometryAreaHandle = GeometryAreaHandle::None;
   int m_selectedExclusionIndex = -1;
   int m_selectedPolygonVertexIndex = -1;
   int m_selectedGeometryOverlayPointIndex = -1;
+  int m_selectedGeometryOverlayDimensionIndex = -1;
   QPoint m_dragStart;
   QPoint m_dragEnd;
   QPoint m_moveStartImagePoint;
@@ -174,7 +177,10 @@ private:
   std::function<void(const QPointF&)> m_geometryPointPickedHandler;
   std::function<void(const QPointF&)> m_geometryPointMovedHandler;
   std::function<void(int, const QPointF&)> m_geometryOverlayPointMovedHandler;
+  std::function<void(const QString&, const QPointF&)> m_geometryOverlayDimensionLabelMovedHandler;
   std::function<void(const QVector<QPoint>&)> m_twoPointLineHandler;
 
   int geometryOverlayPointAt(const QPoint& widgetPoint) const;
+  int geometryOverlayDimensionLabelAt(const QPoint& widgetPoint) const;
+  QPointF geometryOverlayDimensionLabelPoint(const GeometryOverlayDimension& dimension) const;
 };

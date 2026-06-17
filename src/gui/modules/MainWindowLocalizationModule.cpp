@@ -117,13 +117,7 @@ void MainWindowLocalizationModule::testLocalization(const CameraConfig& camera)
       }
 
       cameraRuntime()[camera.id].setCurrentPose(context().imaging->partPoseFromLocalizationResult(camera, result));
-      if (*context().setupCameraId == camera.id && *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry)
-      {
-        context().setup->refreshSetupGeometryResults(camera);
-        return;
-      }
-
-      if (*context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry && context().setup)
+      if (context().setup)
       {
         context().setup->refreshSetupGeometryResults(camera);
         return;

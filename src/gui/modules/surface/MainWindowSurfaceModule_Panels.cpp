@@ -75,6 +75,7 @@ void MainWindowSurfaceModule::activateLocalizationRoiDrawing(const CameraConfig&
     return;
   }
 
+  context().imaging->ensureReferenceImageVisible(camera);
   largeImage()->setRoiDrawingEnabled(true);
   *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Localization;
   log(tr("log.localizationRoiDrawing") + ": " + camera.id);
@@ -94,6 +95,7 @@ void MainWindowSurfaceModule::activateLocalizationExclusionDrawing(const CameraC
     return;
   }
 
+  context().imaging->ensureReferenceImageVisible(camera);
   largeImage()->setExclusionDrawingEnabled(true);
   *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Localization;
   log(tr("log.localizationExclusionDrawing") + ": " + camera.id);
@@ -269,7 +271,14 @@ void MainWindowSurfaceModule::showStoredSurfaceDefectAoe(const CameraConfig& cam
   }
 
   selectedPreview() = context().imaging->loadCameraSamplePreview(camera);
-  largeImage()->setImage(selectedPreview());
+  if (!selectedPreview().isNull())
+  {
+    largeImage()->setImage(selectedPreview());
+  }
+  else
+  {
+    context().imaging->ensureReferenceImageVisible(camera);
+  }
 
   QRect roi;
   if (recipes().loadSurfaceDefectRoi(camera.id, roi))
@@ -549,7 +558,14 @@ void MainWindowSurfaceModule::showStoredSurfaceLocalizationGeometry(const Camera
   }
 
   selectedPreview() = context().imaging->loadCameraSamplePreview(camera);
-  largeImage()->setImage(selectedPreview());
+  if (!selectedPreview().isNull())
+  {
+    largeImage()->setImage(selectedPreview());
+  }
+  else
+  {
+    context().imaging->ensureReferenceImageVisible(camera);
+  }
   largeImage()->setExclusionRects(recipes().loadSurfaceDefectExclusionRects(camera.id));
   largeImage()->setSearchPolygon(recipes().loadSurfaceDefectPolygon(camera.id));
 

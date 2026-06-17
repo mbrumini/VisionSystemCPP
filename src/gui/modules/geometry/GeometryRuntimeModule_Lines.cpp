@@ -3,6 +3,8 @@
 #include "gui/modules/MainWindowImagingModule.h"
 #include "gui/modules/MainWindowContext.h"
 
+#include "gui/geometry/GeometryOverlayPrimitives.h"
+
 #include "processing/geometry/EdgeLineDetector.h"
 #include "util/AsyncExecutor.h"
 
@@ -147,6 +149,14 @@ GeometryOverlay MainWindowGeometryModule::configuredGeometryLinesOverlay(const C
     const QColor bandColor = highlightActive ? QColor(0, 210, 255, 35) : QColor(120, 170, 190, 22);
     overlay.bands.append({center, QSizeF(length, line.bandHalfWidth * 2.0), angleDegrees, lineColor, bandColor});
     overlay.lines.append({start, end, lineColor, highlightActive ? 3 : 1});
+    appendGeometrySegmentSearchBandGuides(
+      overlay,
+      start,
+      end,
+      line.bandHalfWidth,
+      line.scanDirection != EdgeLineScanDirection::NormalNegative,
+      highlightActive ? QColor(0, 210, 255, 170) : QColor(170, 205, 220, 120),
+      highlightActive ? 2 : 1);
     if (includeActive && highlightActive)
     {
       overlay.points.append({start, "1"});

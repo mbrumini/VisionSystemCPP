@@ -127,7 +127,7 @@ void MainWindow::startMachine()
     deactivateImageDrawingTools();
   }
   if (!m_selectedCameraId.isEmpty() &&
-      (m_selectedCamera.type == "file" || m_selectedCamera.type == "usb"))
+      (m_selectedCamera.type == "file" || m_selectedCamera.type == "usb" || m_selectedCamera.type == "vimba"))
   {
     m_setup.startCameraSimulation(m_selectedCamera, false);
   }

@@ -350,6 +350,64 @@ bool AppConfig::saveUsbCameraAssignment(
   return writeJsonObject(filePath, root, errorMessage);
 }
 
+bool AppConfig::saveCameraSystemSettings(
+  const QString& filePath,
+  const QVector<CameraConfig>& updatedCameras,
+  QString* errorMessage)
+{
+  QJsonObject root = loadJsonObject(filePath, errorMessage);
+  if (root.isEmpty())
+  {
+    return false;
+  }
+
+  QJsonArray cameras = root.value("cameras").toArray();
+  QHash<QString, CameraConfig> byId;
+  QHash<int, CameraConfig> bySlot;
+  for (const CameraConfig& camera : updatedCameras)
+  {
+    byId.insert(camera.id, camera);
+    bySlot.insert(camera.slot, camera);
+  }
+
+  for (int i = 0; i < cameras.size(); ++i)
+  {
+    QJsonObject cameraObject = cameras[i].toObject();
+    const QString id = cameraObject.value("id").toString();
+    const int slot = cameraObject.value("slot").toInt(i + 1);
+    const CameraConfig camera = byId.contains(id) ? byId.value(id) : bySlot.value(slot);
+    if (camera.id.isEmpty())
+    {
+      continue;
+    }
+
+    cameraObject["slot"] = camera.slot;
+    cameraObject["id"] = camera.id;
+    cameraObject["displayName"] = camera.displayName;
+    cameraObject["exists"] = camera.exists;
+    cameraObject["enabled"] = camera.enabled;
+    if (!camera.type.isEmpty())
+    {
+      cameraObject["type"] = camera.type;
+    }
+    cameraObject["processingProfile"] = camera.processingProfileId.isEmpty()
+      ? QString("default")
+      : camera.processingProfileId;
+    if (!camera.modelName.isEmpty())
+    {
+      cameraObject["modelName"] = camera.modelName;
+    }
+    if (!camera.interfaceId.isEmpty())
+    {
+      cameraObject["interfaceId"] = camera.interfaceId;
+    }
+    cameras[i] = cameraObject;
+  }
+
+  root["cameras"] = cameras;
+  return writeJsonObject(filePath, root, errorMessage);
+}
+
 int AppConfig::maxCameras() const
 {
   return m_maxCameras;

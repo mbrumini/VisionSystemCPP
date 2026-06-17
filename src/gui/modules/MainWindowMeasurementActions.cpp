@@ -62,6 +62,28 @@ void appendMeasurement(GeometrySet& set,
   result.valid = true;
   set.measurements.append(result);
 }
+
+QString measurementKey(const QString& type, const QString& sourceAId, const QString& sourceBId)
+{
+  return QString("%1|%2|%3").arg(type, sourceAId, sourceBId);
+}
+
+GeometryOverlayDimension measurementDimension(const QPointF& start,
+                                              const QPointF& end,
+                                              const QString& label,
+                                              const QString& type,
+                                              const QString& sourceAId,
+                                              const QString& sourceBId)
+{
+  GeometryOverlayDimension dimension;
+  dimension.imageStart = start;
+  dimension.imageEnd = end;
+  dimension.label = label;
+  dimension.color = QColor("#ff8a00");
+  dimension.width = 3;
+  dimension.id = measurementKey(type, sourceAId, sourceBId);
+  return dimension;
+}
 }
 
 void MainWindowMeasurementModule::createPointPointDistance(const CameraConfig& camera,
@@ -93,13 +115,13 @@ void MainWindowMeasurementModule::createPointPointDistance(const CameraConfig& c
   saveMeasurementRecipeAction(camera, "point_point_distance", pointA->meta.id, pointB->meta.id);
 
   GeometryOverlay overlay;
-  overlay.dimensions.append({
+  overlay.dimensions.append(measurementDimension(
     toPointF(pointA->point),
     toPointF(pointB->point),
     QString("%1 px").arg(distancePixels, 0, 'f', 3),
-    QColor("#ff8a00"),
-    3
-  });
+    "point_point_distance",
+    pointA->meta.id,
+    pointB->meta.id));
   overlay.points.append({toPointF(pointA->point), "A", QColor("#35c46a")});
   overlay.points.append({toPointF(pointB->point), "B", QColor("#35c46a")});
   largeImage()->setGeometryOverlay(overlay);
@@ -147,13 +169,13 @@ void MainWindowMeasurementModule::createPointLineDistance(const CameraConfig& ca
 
   GeometryOverlay overlay;
   overlay.lines.append({toPointF(line->start), toPointF(line->end), QColor("#35c46a"), 4});
-  overlay.dimensions.append({
+  overlay.dimensions.append(measurementDimension(
     toPointF(point->point),
     toPointF(projectedPoint.point),
     QString("%1 px").arg(distancePixels, 0, 'f', 3),
-    QColor("#ff8a00"),
-    3
-  });
+    "point_line_distance",
+    point->meta.id,
+    line->meta.id));
   overlay.points.append({toPointF(point->point), "P", QColor("#35c46a")});
   overlay.points.append({toPointF(projectedPoint.point), "H", QColor("#ff8a00")});
   largeImage()->setGeometryOverlay(overlay);
@@ -203,13 +225,13 @@ void MainWindowMeasurementModule::createLineLineDistance(const CameraConfig& cam
   GeometryOverlay overlay;
   overlay.lines.append({toPointF(lineA->start), toPointF(lineA->end), QColor("#35c46a"), 4});
   overlay.lines.append({toPointF(lineB->start), toPointF(lineB->end), QColor("#35c46a"), 4});
-  overlay.dimensions.append({
+  overlay.dimensions.append(measurementDimension(
     toPointF(pointOnA.point),
     toPointF(pointOnB.point),
     QString("%1 px").arg(distancePixels, 0, 'f', 3),
-    QColor("#ff8a00"),
-    3
-  });
+    "line_line_distance",
+    lineA->meta.id,
+    lineB->meta.id));
   overlay.points.append({toPointF(pointOnA.point), "A", QColor("#ff8a00")});
   overlay.points.append({toPointF(pointOnB.point), "H", QColor("#ff8a00")});
   largeImage()->setGeometryOverlay(overlay);
@@ -230,6 +252,22 @@ void MainWindowMeasurementModule::createCircleDiameter(const CameraConfig& camer
 {
   GeometrySet& set = cameraRuntime()[camera.id].geometries();
   const CircleGeometry* circle = findConstructedGeometryCircleSource(set.circles, circleId);
+  CircleGeometry arcCircle;
+  if (!circle)
+  {
+    for (const ArcGeometry& arc : set.arcs)
+    {
+      if (arc.meta.id == circleId)
+      {
+        arcCircle.meta = arc.meta;
+        arcCircle.center = arc.center;
+        arcCircle.radius = arc.radius;
+        arcCircle.meanError = arc.meanError;
+        circle = &arcCircle;
+        break;
+      }
+    }
+  }
   if (!circle)
   {
     log(QString("%1: %2").arg(tr("log.measurementCircleDiameterMissing"), camera.id));
@@ -258,13 +296,13 @@ void MainWindowMeasurementModule::createCircleDiameter(const CameraConfig& camer
 
   GeometryOverlay overlay;
   overlay.lines.append({toPointF(top), toPointF(bottom), QColor("#35c46a"), 2});
-  overlay.dimensions.append({
+  overlay.dimensions.append(measurementDimension(
     toPointF(left),
     toPointF(right),
     QString("%1 px").arg(diameterPixels, 0, 'f', 3),
-    QColor("#ff8a00"),
-    3
-  });
+    "circle_diameter",
+    circle->meta.id,
+    {}));
   overlay.points.append({toPointF(circle->center), "C", QColor("#35c46a")});
   largeImage()->setGeometryOverlay(overlay);
   if (context().updateMeasurementResults)

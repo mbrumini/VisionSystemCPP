@@ -19,6 +19,7 @@ void MainWindowGeometryModule::showGeometryArcPanel(const CameraConfig& camera)
   context().clearToolPanel();
   *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Geometry;
   m_drawingTarget = DrawingTarget::Arc;
+  largeImage()->setGeometryOverlayPointEditingEnabled(true);
   restoreCleanGeometryImage(camera);
   largeImage()->clearCircles();
   loadGeometryArcsRecipe(camera);

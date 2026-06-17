@@ -64,11 +64,11 @@ cv::Mat currentCameraFrameForSave(MainWindowContext& context, const CameraConfig
     }
   }
 
-  if (effectiveCamera.type == "usb")
+  if (effectiveCamera.type == "usb" || effectiveCamera.type == "vimba")
   {
     CameraRuntime& runtime = (*context.cameraRuntime)[effectiveCamera.id];
     QString stepError;
-    const int framesToAcquire = 3;
+    const int framesToAcquire = effectiveCamera.type == "usb" ? 3 : 1;
     for (int i = 0; i < framesToAcquire; ++i)
     {
       if (!runtime.step(effectiveCamera, {}, &stepError))
@@ -76,7 +76,7 @@ cv::Mat currentCameraFrameForSave(MainWindowContext& context, const CameraConfig
         if (errorMessage)
         {
           *errorMessage = stepError.isEmpty()
-            ? QString("Acquisizione USB fallita: %1").arg(effectiveCamera.id)
+            ? QString("Acquisizione camera fallita: %1").arg(effectiveCamera.id)
             : stepError;
         }
         return {};
@@ -388,21 +388,12 @@ void MainWindowCameraConfigModule::configureCameraTestImages(const CameraConfig&
 void MainWindowCameraConfigModule::acquireCameraSampleImage(const CameraConfig& camera)
 {
   MainWindowImagingModule& imaging = *context().imaging;
-  cv::Mat sample;
-  const auto runtimeIt = cameraRuntime().find(camera.id);
-  if (runtimeIt != cameraRuntime().end() && !runtimeIt->second.currentFrame().empty())
+  QString imageError;
+  const cv::Mat sample = currentCameraFrameForSave(context(), camera, &imageError);
+  if (sample.empty())
   {
-    sample = runtimeIt->second.currentFrame().clone();
-  }
-  else
-  {
-    QString imageError;
-    sample = imaging.currentInputImage(camera, &imageError);
-    if (sample.empty())
-    {
-      log(imageError);
-      return;
-    }
+    log(imageError.isEmpty() ? tr("log.cameraSampleAcquireFailed") + ": " + camera.id : imageError);
+    return;
   }
 
   QString error;

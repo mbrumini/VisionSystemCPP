@@ -100,9 +100,19 @@ void MainWindowGeometryModule::showConfiguredGeometryCircles(const CameraConfig&
   if (usePartCircle || circle.hasImageCircle)
   {
     const cv::Point2d center = usePartCircle ? partToImage(pose, circle.partCenter) : circle.imageCenter;
-    appendGeometryCirclePolyline(overlay, center, std::max(1.0, circle.radius - circle.innerBand), QColor(0, 210, 255, 90), 1);
+    const double innerRadius = std::max(1.0, circle.radius - circle.innerBand);
+    const double outerRadius = circle.radius + circle.outerBand;
+    appendGeometryCirclePolyline(overlay, center, innerRadius, QColor(0, 210, 255, 90), 1);
     appendGeometryCirclePolyline(overlay, center, circle.radius, QColor("#00d2ff"), 5);
-    appendGeometryCirclePolyline(overlay, center, circle.radius + circle.outerBand, QColor(0, 210, 255, 90), 1);
+    appendGeometryCirclePolyline(overlay, center, outerRadius, QColor(0, 210, 255, 90), 1);
+    appendGeometryCircleSearchBandGuides(
+      overlay,
+      center,
+      innerRadius,
+      outerRadius,
+      circle.scanDirection != EdgeLineScanDirection::NormalNegative,
+      QColor(0, 210, 255, 150),
+      2);
   }
   appendCurrentPartPoseOverlay(camera, overlay);
   largeImage()->setGeometryOverlay(overlay);
@@ -325,6 +335,12 @@ GeometryOverlay MainWindowGeometryModule::configuredGeometryPointsOverlay(const 
     const QColor bandColor = highlightActive ? QColor(255, 79, 216, 24) : QColor(120, 170, 190, 18);
     overlay.bands.append({center, QSizeF(length, 6.0), angleDegrees, lineColor, bandColor});
     overlay.lines.append({start, end, lineColor, highlightActive ? 3 : 1});
+    appendGeometrySegmentDirectionArrow(
+      overlay,
+      start,
+      end,
+      highlightActive ? QColor("#ff4fd8") : QColor(170, 205, 220, 130),
+      highlightActive ? 2 : 1);
     if (includeActive && highlightActive)
     {
       overlay.points.append({start, "1"});

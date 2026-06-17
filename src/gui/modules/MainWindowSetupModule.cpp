@@ -139,6 +139,12 @@ void MainWindowSetupModule::showCameraSetupPanel(const CameraConfig& camera)
 void MainWindowSetupModule::showToolPanel(const CameraConfig& camera, const QString& toolId)
 {
   context().deactivateImageDrawingTools();
+  if (camera.id == selectedCameraId() &&
+      !cameraRuntime()[camera.id].running() &&
+      cameraRuntime()[camera.id].currentFrame().empty())
+  {
+    context().imaging->ensureReferenceImageVisible(camera);
+  }
 
   if (toolId == "geometries")
   {
@@ -188,12 +194,14 @@ void MainWindowSetupModule::showToolPanel(const CameraConfig& camera, const QStr
     [this, camera, tool](const ToolActionDefinition& action) {
       if (tool.id == "localization" && action.id == "searchRoi")
       {
+        context().imaging->ensureReferenceImageVisible(camera);
         context().surface->activateLocalizationRoiDrawing(camera);
         return;
       }
 
       if (tool.id == "localization" && action.id == "addExclusion")
       {
+        context().imaging->ensureReferenceImageVisible(camera);
         context().surface->activateLocalizationExclusionDrawing(camera);
         return;
       }
@@ -206,6 +214,7 @@ void MainWindowSetupModule::showToolPanel(const CameraConfig& camera, const QStr
 
       if (tool.id == "localization" && action.id == "testLocalization")
       {
+        context().imaging->ensureReferenceImageVisible(camera);
         context().localization->testLocalization(camera);
         return;
       }

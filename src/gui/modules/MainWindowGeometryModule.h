@@ -56,6 +56,7 @@ public:
   void updateGeometryLineOverlay(const CameraConfig& camera, const GeometryOverlay& extraOverlay = {});
   void restoreCleanGeometryImage(const CameraConfig& camera);
   void showRuntimeGeometryOverlay(const CameraConfig& camera);
+  void refreshMeasurementOverlay(const CameraConfig& camera);
   void testGeometryLine(const CameraConfig& camera);
   void testConfiguredGeometryLines(const CameraConfig& camera);
 
@@ -86,6 +87,7 @@ public:
   const GeometryArcRuntimeConfig& activeGeometryArcConfig(const QString& cameraId) const;
   void activateGeometryArcDrawing(const CameraConfig& camera);
   void handleGeometryArcPoints(const CameraConfig& camera, const QVector<QPoint>& points);
+  void handleGeometryArcHandleMoved(const CameraConfig& camera, int pointIndex, const QPointF& imagePoint);
   void showConfiguredGeometryArcs(const CameraConfig& camera);
   void testGeometryArc(const CameraConfig& camera);
 
@@ -94,7 +96,6 @@ public:
 
 private:
   void removeMeasurementsForDeletedGeometry(const CameraConfig& camera, const QString& geometryId);
-  void refreshMeasurementOverlay(const CameraConfig& camera);
 
   DrawingTarget m_drawingTarget = DrawingTarget::None;
 

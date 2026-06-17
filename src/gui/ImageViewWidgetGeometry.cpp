@@ -1,5 +1,6 @@
 #include "ImageViewWidget.h"
 
+#include <QFontMetrics>
 #include <QPolygonF>
 
 #include <algorithm>
@@ -368,6 +369,51 @@ int ImageViewWidget::geometryOverlayPointAt(const QPoint& widgetPoint) const
   {
     const QPointF widgetHandle = imagePointToWidget(m_geometryOverlay.points[i].imagePoint);
     if (QRectF(widgetHandle - QPointF(9, 9), QSizeF(18, 18)).contains(widgetPoint))
+    {
+      return i;
+    }
+  }
+
+  return -1;
+}
+
+QPointF ImageViewWidget::geometryOverlayDimensionLabelPoint(const GeometryOverlayDimension& dimension) const
+{
+  if (dimension.hasLabelPoint)
+  {
+    return imagePointToWidget(dimension.labelPoint);
+  }
+
+  return (imagePointToWidget(dimension.imageStart) + imagePointToWidget(dimension.imageEnd)) * 0.5 + QPointF(10, -10);
+}
+
+int ImageViewWidget::geometryOverlayDimensionLabelAt(const QPoint& widgetPoint) const
+{
+  QFont labelFont = font();
+  if (labelFont.pointSize() > 0)
+  {
+    labelFont.setPointSize(labelFont.pointSize() + 4);
+  }
+  else
+  {
+    labelFont.setPixelSize(std::max(18, labelFont.pixelSize() + 5));
+  }
+  labelFont.setBold(true);
+  const QFontMetrics metrics(labelFont);
+
+  for (int i = m_geometryOverlay.dimensions.size() - 1; i >= 0; --i)
+  {
+    const GeometryOverlayDimension& dimension = m_geometryOverlay.dimensions[i];
+    if (dimension.id.isEmpty() || dimension.label.isEmpty())
+    {
+      continue;
+    }
+
+    const QPointF labelPoint = geometryOverlayDimensionLabelPoint(dimension);
+    QRectF labelRect = metrics.boundingRect(dimension.label);
+    labelRect.moveTopLeft(labelPoint + QPointF(0, -labelRect.height()));
+    labelRect = labelRect.adjusted(-12, -10, 12, 10);
+    if (labelRect.contains(widgetPoint))
     {
       return i;
     }

@@ -171,9 +171,11 @@ void ImageViewWidget::setRoiDrawingEnabled(bool enabled)
   m_movingExclusion = false;
   m_resizingExclusion = false;
   m_movingGeometryOverlayPoint = false;
+  m_movingGeometryOverlayDimensionLabel = false;
   m_activeRoiHandle = ExclusionHandle::None;
   m_selectedExclusionIndex = -1;
   m_selectedGeometryOverlayPointIndex = -1;
+  m_selectedGeometryOverlayDimensionIndex = -1;
   m_threePointCirclePoints.clear();
   update();
 }
@@ -190,10 +192,12 @@ void ImageViewWidget::setPolygonDrawingEnabled(bool enabled)
   m_movingExclusion = false;
   m_resizingExclusion = false;
   m_movingGeometryOverlayPoint = false;
+  m_movingGeometryOverlayDimensionLabel = false;
   m_activeRoiHandle = ExclusionHandle::None;
   m_selectedExclusionIndex = -1;
   m_selectedPolygonVertexIndex = -1;
   m_selectedGeometryOverlayPointIndex = -1;
+  m_selectedGeometryOverlayDimensionIndex = -1;
   m_pendingPolygon.clear();
   update();
 }
@@ -210,6 +214,7 @@ void ImageViewWidget::setExclusionDrawingEnabled(bool enabled)
   m_movingExclusion = false;
   m_resizingExclusion = false;
   m_movingGeometryOverlayPoint = false;
+  m_movingGeometryOverlayDimensionLabel = false;
   m_activeRoiHandle = ExclusionHandle::None;
   m_threePointCirclePoints.clear();
   update();
@@ -225,6 +230,7 @@ void ImageViewWidget::setGeometryAreaEditingEnabled(bool enabled)
   m_movingExclusion = false;
   m_resizingExclusion = false;
   m_movingGeometryOverlayPoint = false;
+  m_movingGeometryOverlayDimensionLabel = false;
   m_activeRoiHandle = ExclusionHandle::None;
   m_selectedExclusionIndex = -1;
   m_selectedGeometryOverlayPointIndex = -1;
@@ -244,9 +250,11 @@ void ImageViewWidget::setGeometryPointPickingEnabled(bool enabled)
   m_movingExclusion = false;
   m_resizingExclusion = false;
   m_movingGeometryOverlayPoint = false;
+  m_movingGeometryOverlayDimensionLabel = false;
   m_activeRoiHandle = ExclusionHandle::None;
   m_selectedExclusionIndex = -1;
   m_selectedGeometryOverlayPointIndex = -1;
+  m_selectedGeometryOverlayDimensionIndex = -1;
   m_activeGeometryAreaHandle = GeometryAreaHandle::None;
   m_threePointCirclePoints.clear();
   m_twoPointLinePoints.clear();
@@ -263,9 +271,11 @@ void ImageViewWidget::setGeometryOverlayPointEditingEnabled(bool enabled)
   m_movingExclusion = false;
   m_resizingExclusion = false;
   m_movingGeometryOverlayPoint = false;
+  m_movingGeometryOverlayDimensionLabel = false;
   m_activeRoiHandle = ExclusionHandle::None;
   m_selectedExclusionIndex = -1;
   m_selectedGeometryOverlayPointIndex = -1;
+  m_selectedGeometryOverlayDimensionIndex = -1;
   m_activeGeometryAreaHandle = GeometryAreaHandle::None;
   m_threePointCirclePoints.clear();
   m_twoPointLinePoints.clear();
@@ -398,6 +408,11 @@ void ImageViewWidget::setGeometryPointMovedHandler(std::function<void(const QPoi
 void ImageViewWidget::setGeometryOverlayPointMovedHandler(std::function<void(int, const QPointF&)> handler)
 {
   m_geometryOverlayPointMovedHandler = std::move(handler);
+}
+
+void ImageViewWidget::setGeometryOverlayDimensionLabelMovedHandler(std::function<void(const QString&, const QPointF&)> handler)
+{
+  m_geometryOverlayDimensionLabelMovedHandler = std::move(handler);
 }
 
 void ImageViewWidget::setTwoPointLineHandler(std::function<void(const QVector<QPoint>&)> handler)

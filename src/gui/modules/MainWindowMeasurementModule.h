@@ -2,6 +2,8 @@
 
 #include "gui/modules/MainWindowModuleBase.h"
 
+#include <QPointF>
+
 class CameraConfig;
 class GeometryOverlay;
 
@@ -18,6 +20,7 @@ public:
   void showLineLineAnglePanel(const CameraConfig& camera);
   void rebuildMeasurementRecipe(const CameraConfig& camera);
   void appendMeasurementOverlay(const CameraConfig& camera, GeometryOverlay& overlay) const;
+  void setMeasurementLabelPosition(const CameraConfig& camera, const QString& measurementKey, const QPointF& imagePoint);
 
 private:
   void refreshMeasurementSources(const CameraConfig& camera);

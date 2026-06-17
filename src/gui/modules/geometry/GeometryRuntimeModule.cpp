@@ -26,7 +26,7 @@ void MainWindowGeometryModule::restoreCleanGeometryImage(const CameraConfig& cam
 
   if (selectedPreview().isNull())
   {
-    largeImage()->clearImage();
+    context().imaging->ensureReferenceImageVisible(camera);
   }
   else
   {
@@ -72,6 +72,15 @@ void MainWindowGeometryModule::showRuntimeGeometryOverlay(const CameraConfig& ca
     appendGeometryArcPolyline(overlay, arc.center, arc.radius, arc.startAngleRadians, arc.endAngleRadians, QColor("#ff4fd8"), 7);
   }
   appendCurrentPartPoseOverlay(camera, overlay);
+  if (context().constructedGeometry)
+  {
+    context().constructedGeometry->rebuildConstructedGeometryRecipe(camera);
+  }
+  if (context().measurement)
+  {
+    context().measurement->rebuildMeasurementRecipe(camera);
+    context().measurement->appendMeasurementOverlay(camera, overlay);
+  }
   largeImage()->setGeometryOverlay(overlay);
 }
 

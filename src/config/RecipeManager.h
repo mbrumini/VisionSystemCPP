@@ -155,6 +155,8 @@ struct MeasurementRecipeConfig
   QString type;
   QString sourceAId;
   QString sourceBId;
+  QPointF labelPoint;
+  bool hasLabelPoint = false;
 };
 
 struct AiClassificationClassConfig

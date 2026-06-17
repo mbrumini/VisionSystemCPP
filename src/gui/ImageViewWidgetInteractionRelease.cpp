@@ -75,6 +75,28 @@ void ImageViewWidget::mouseReleaseEvent(QMouseEvent* event)
     return;
   }
 
+  if (m_movingGeometryOverlayDimensionLabel)
+  {
+    if (m_geometryOverlayDimensionLabelMovedHandler &&
+        m_selectedGeometryOverlayDimensionIndex >= 0 &&
+        m_selectedGeometryOverlayDimensionIndex < m_geometryOverlay.dimensions.size() &&
+        imageDrawRect().contains(event->pos()))
+    {
+      const QPointF imagePoint = widgetToImageF(event->pos());
+      GeometryOverlayDimension& dimension = m_geometryOverlay.dimensions[m_selectedGeometryOverlayDimensionIndex];
+      dimension.labelPoint = imagePoint;
+      dimension.hasLabelPoint = true;
+      m_geometryOverlayDimensionLabelMovedHandler(dimension.id, imagePoint);
+    }
+
+    m_movingGeometryOverlayDimensionLabel = false;
+    m_selectedGeometryOverlayDimensionIndex = -1;
+    m_dragging = false;
+    setCursor(Qt::ArrowCursor);
+    update();
+    return;
+  }
+
   if (m_drawingMode == DrawingMode::GeometryArea &&
       m_activeGeometryAreaHandle != GeometryAreaHandle::None)
   {

@@ -455,6 +455,18 @@ void MainWindow::setupLargeImageHandlers()
     {
       m_geometry.handleGeometryPointHandleMoved(m_selectedCamera, pointIndex, imagePoint);
     }
+    else if (m_geometry.drawingTarget() == MainWindowGeometryModule::DrawingTarget::Arc)
+    {
+      m_geometry.handleGeometryArcHandleMoved(m_selectedCamera, pointIndex, imagePoint);
+    }
+  });
+  m_largeImage->setGeometryOverlayDimensionLabelMovedHandler([this](const QString& measurementKey, const QPointF& imagePoint) {
+    if (m_selectedCameraId.isEmpty())
+    {
+      return;
+    }
+
+    m_measurement.setMeasurementLabelPosition(m_selectedCamera, measurementKey, imagePoint);
   });
   m_largeImage->setGeometryAreaChangedHandler([this](const ImageRotatedRect& area) {
     if (m_selectedCameraId.isEmpty() || m_geometry.drawingTarget() != MainWindowGeometryModule::DrawingTarget::Line)

@@ -37,6 +37,9 @@ struct GeometryOverlayDimension
   QString label;
   QColor color = QColor("#ff8a00");
   int width = 3;
+  QString id;
+  QPointF labelPoint;
+  bool hasLabelPoint = false;
 };
 
 struct GeometryOverlayAngle

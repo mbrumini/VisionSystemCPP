@@ -70,6 +70,7 @@ void MainWindow::buildMenu()
     stopMachine();
   });
   systemMenu->addAction(trText("commands.gridView"), this, [this]() { showGridView(); });
+  systemMenu->addAction("Configura telecamere", this, [this]() { showCameraSystemSettings(); });
   systemMenu->addAction(trText("commands.reloadConfig"), this, [this]() { loadConfiguration(); });
   systemMenu->addAction(trText("commands.toggleFullScreen"), this, [this]() { toggleFullScreen(); });
   systemMenu->addAction(trText("commands.setMaxThreads"), this, [this]() { setThreadLimitPrompt(); });

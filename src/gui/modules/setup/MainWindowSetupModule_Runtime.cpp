@@ -27,7 +27,7 @@ void MainWindowSetupModule::startCameraSimulation(const CameraConfig& camera, bo
     context().selectCamera(effectiveCamera);
   }
 
-  if (effectiveCamera.type != "file" && effectiveCamera.type != "usb")
+  if (effectiveCamera.type != "file" && effectiveCamera.type != "usb" && effectiveCamera.type != "vimba")
   {
     log(tr("log.cameraSourceUnsupported") + ": " + effectiveCamera.id);
     return;
@@ -102,7 +102,7 @@ void MainWindowSetupModule::stepCameraSimulation(const CameraConfig& camera)
 {
   const CameraConfig effectiveCamera = currentConfiguredCamera(config(), camera);
 
-  if (effectiveCamera.type != "file" && effectiveCamera.type != "usb")
+  if (effectiveCamera.type != "file" && effectiveCamera.type != "usb" && effectiveCamera.type != "vimba")
   {
     log(tr("log.cameraSourceUnsupported") + ": " + effectiveCamera.id);
     return;
@@ -134,8 +134,13 @@ void MainWindowSetupModule::advanceCameraFrame(const CameraConfig& camera)
   const QString testFolder = context().imaging->cameraTestImagesFolder(effectiveCamera);
   if (!runtime.step(effectiveCamera, testFolder, &error))
   {
-    context().simulationTimer->stop();
     log(error.isEmpty() ? tr("log.cameraNoMoreFrames") + ": " + effectiveCamera.id : error);
+    if (effectiveCamera.type == "vimba" && runtime.running())
+    {
+      updateCameraSetupDetails(effectiveCamera);
+      return;
+    }
+    context().simulationTimer->stop();
     return;
   }
 

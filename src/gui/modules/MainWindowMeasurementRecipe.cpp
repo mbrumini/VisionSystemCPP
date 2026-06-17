@@ -84,11 +84,23 @@ const PointGeometry* findPointByMetaId(const GeometrySet& set, const QString& id
 
 const CircleGeometry* findCircleByMetaId(const GeometrySet& set, const QString& id)
 {
+  static thread_local CircleGeometry arcCircle;
   for (const CircleGeometry& circle : set.circles)
   {
     if (circle.meta.id == id)
     {
       return &circle;
+    }
+  }
+  for (const ArcGeometry& arc : set.arcs)
+  {
+    if (arc.meta.id == id)
+    {
+      arcCircle.meta = arc.meta;
+      arcCircle.center = arc.center;
+      arcCircle.radius = arc.radius;
+      arcCircle.meanError = arc.meanError;
+      return &arcCircle;
     }
   }
   return nullptr;
@@ -107,6 +119,8 @@ void appendMeasurementResult(GeometrySet& set,
   result.sourceBId = sourceBId;
   result.valuePixels = value;
   result.valid = true;
+  result.labelPoint = config.labelPoint;
+  result.hasLabelPoint = config.hasLabelPoint;
   set.measurements.append(result);
 }
 
@@ -118,6 +132,27 @@ QString measurementLabel(const MeasurementResult& measurement, const QString& un
 QString measurementKey(const MeasurementRecipeConfig& config)
 {
   return QString("%1|%2|%3").arg(config.type, config.sourceAId, config.sourceBId);
+}
+
+QString measurementKey(const QString& type, const QString& sourceAId, const QString& sourceBId)
+{
+  return QString("%1|%2|%3").arg(type, sourceAId, sourceBId);
+}
+
+GeometryOverlayDimension measurementDimension(const QPointF& start,
+                                              const QPointF& end,
+                                              const MeasurementResult& measurement)
+{
+  GeometryOverlayDimension dimension;
+  dimension.imageStart = start;
+  dimension.imageEnd = end;
+  dimension.label = measurementLabel(measurement, "px");
+  dimension.color = QColor("#ff8a00");
+  dimension.width = 3;
+  dimension.id = measurementKey(measurement.type, measurement.sourceAId, measurement.sourceBId);
+  dimension.labelPoint = measurement.labelPoint;
+  dimension.hasLabelPoint = measurement.hasLabelPoint;
+  return dimension;
 }
 }
 
@@ -134,6 +169,35 @@ void MainWindowMeasurementModule::saveMeasurementRecipeAction(const CameraConfig
 
   QString error;
   if (!recipes().appendMeasurement(camera.id, config, &error))
+  {
+    log(QString("%1: %2").arg(tr("log.measurementRecipeSaveFailed"), error));
+  }
+}
+
+void MainWindowMeasurementModule::setMeasurementLabelPosition(const CameraConfig& camera,
+                                                              const QString& key,
+                                                              const QPointF& imagePoint)
+{
+  QVector<MeasurementRecipeConfig> configs = recipes().loadMeasurements(camera.id);
+  bool changed = false;
+  for (MeasurementRecipeConfig& config : configs)
+  {
+    if (measurementKey(config) == key)
+    {
+      config.labelPoint = imagePoint;
+      config.hasLabelPoint = true;
+      changed = true;
+      break;
+    }
+  }
+
+  if (!changed)
+  {
+    return;
+  }
+
+  QString error;
+  if (!recipes().saveMeasurements(camera.id, configs, &error))
   {
     log(QString("%1: %2").arg(tr("log.measurementRecipeSaveFailed"), error));
   }
@@ -240,13 +304,7 @@ void MainWindowMeasurementModule::appendMeasurementOverlay(const CameraConfig& c
         continue;
       }
 
-      overlay.dimensions.append({
-        toPointF(pointA->point),
-        toPointF(pointB->point),
-        measurementLabel(measurement, "px"),
-        QColor("#ff8a00"),
-        3
-      });
+      overlay.dimensions.append(measurementDimension(toPointF(pointA->point), toPointF(pointB->point), measurement));
       overlay.points.append({toPointF(pointA->point), "A", QColor("#35c46a")});
       overlay.points.append({toPointF(pointB->point), "B", QColor("#35c46a")});
       continue;
@@ -263,13 +321,7 @@ void MainWindowMeasurementModule::appendMeasurementOverlay(const CameraConfig& c
         continue;
       }
 
-      overlay.dimensions.append({
-        toPointF(point->point),
-        toPointF(projectedPoint.point),
-        measurementLabel(measurement, "px"),
-        QColor("#ff8a00"),
-        3
-      });
+      overlay.dimensions.append(measurementDimension(toPointF(point->point), toPointF(projectedPoint.point), measurement));
       overlay.points.append({toPointF(point->point), "P", QColor("#35c46a")});
       overlay.points.append({toPointF(projectedPoint.point), "H", QColor("#ff8a00")});
       continue;
@@ -287,13 +339,7 @@ void MainWindowMeasurementModule::appendMeasurementOverlay(const CameraConfig& c
         continue;
       }
 
-      overlay.dimensions.append({
-        toPointF(pointOnA.point),
-        toPointF(pointOnB.point),
-        measurementLabel(measurement, "px"),
-        QColor("#ff8a00"),
-        3
-      });
+      overlay.dimensions.append(measurementDimension(toPointF(pointOnA.point), toPointF(pointOnB.point), measurement));
       overlay.points.append({toPointF(pointOnA.point), "A", QColor("#ff8a00")});
       overlay.points.append({toPointF(pointOnB.point), "H", QColor("#ff8a00")});
       continue;
@@ -312,13 +358,7 @@ void MainWindowMeasurementModule::appendMeasurementOverlay(const CameraConfig& c
       const cv::Point2d top(circle->center.x, circle->center.y - circle->radius);
       const cv::Point2d bottom(circle->center.x, circle->center.y + circle->radius);
       overlay.lines.append({toPointF(top), toPointF(bottom), QColor("#35c46a"), 2});
-      overlay.dimensions.append({
-        toPointF(left),
-        toPointF(right),
-        measurementLabel(measurement, "px"),
-        QColor("#ff8a00"),
-        3
-      });
+      overlay.dimensions.append(measurementDimension(toPointF(left), toPointF(right), measurement));
       overlay.points.append({toPointF(circle->center), "C", QColor("#35c46a")});
       continue;
     }

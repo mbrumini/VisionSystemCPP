@@ -31,6 +31,7 @@ void CameraRuntime::stop()
   }
   m_sourceType.clear();
   m_sourceFolder.clear();
+  m_sourceDeviceId.clear();
   m_sourceUsbIndex = -1;
 
   m_status = Status::Stopped;
@@ -48,11 +49,23 @@ bool CameraRuntime::step(const CameraConfig& camera, const QString& resolvedFold
   cv::Mat frame;
   if (!m_source->getFrame(frame))
   {
-    m_running = false;
-    m_status = Status::Stopped;
+    const bool transientLiveGrabFailure = camera.type == "vimba" && m_running;
+    if (!transientLiveGrabFailure)
+    {
+      m_running = false;
+    }
+    m_status = transientLiveGrabFailure ? Status::Running : Status::Stopped;
     if (errorMessage)
     {
-      *errorMessage = "Nessun altro frame";
+      if (const auto* vimbaCamera = dynamic_cast<const VimbaCamera*>(m_source.get());
+          vimbaCamera && !vimbaCamera->lastError().isEmpty())
+      {
+        *errorMessage = "Grab Vimba fallito: " + vimbaCamera->lastError();
+      }
+      else
+      {
+        *errorMessage = "Nessun altro frame";
+      }
     }
     return false;
   }
@@ -158,8 +171,12 @@ bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& reso
     camera.type == "file" &&
     m_sourceType == camera.type &&
     m_sourceFolder == resolvedFolder;
+  const bool sameVimbaSource =
+    camera.type == "vimba" &&
+    m_sourceType == camera.type &&
+    m_sourceDeviceId == camera.deviceId;
 
-  if (m_source && (sameUsbSource || sameFileSource))
+  if (m_source && (sameUsbSource || sameFileSource || sameVimbaSource))
   {
     return true;
   }
@@ -170,6 +187,7 @@ bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& reso
     m_source.reset();
     m_sourceType.clear();
     m_sourceFolder.clear();
+    m_sourceDeviceId.clear();
     m_sourceUsbIndex = -1;
   }
 
@@ -197,19 +215,27 @@ bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& reso
 
   if (!m_source->open())
   {
+    const QString sourceError =
+      camera.type == "vimba"
+        ? static_cast<VimbaCamera*>(m_source.get())->lastError()
+        : QString();
     m_source.reset();
     m_sourceType.clear();
     m_sourceFolder.clear();
+    m_sourceDeviceId.clear();
     m_sourceUsbIndex = -1;
     if (errorMessage)
     {
-      *errorMessage = QString("Avvio camera fallito: %1 type=%2").arg(camera.id, camera.type);
+      *errorMessage = sourceError.isEmpty()
+        ? QString("Avvio camera fallito: %1 type=%2").arg(camera.id, camera.type)
+        : QString("Avvio camera fallito: %1 type=%2 - %3").arg(camera.id, camera.type, sourceError);
     }
     return false;
   }
 
   m_sourceType = camera.type;
   m_sourceFolder = camera.type == "file" ? resolvedFolder : QString();
+  m_sourceDeviceId = camera.type == "vimba" ? camera.deviceId : QString();
   m_sourceUsbIndex = camera.type == "usb" ? camera.usbIndex : -1;
   return true;
 }

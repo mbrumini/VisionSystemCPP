@@ -66,6 +66,10 @@ public:
     const QString& displayName,
     bool enabled,
     QString* errorMessage = nullptr);
+  bool saveCameraSystemSettings(
+    const QString& filePath,
+    const QVector<CameraConfig>& cameras,
+    QString* errorMessage = nullptr);
 
   int maxCameras() const;
   const QVector<CameraConfig>& cameras() const;

@@ -188,7 +188,7 @@ void MainWindowMeasurementModule::showCircleDiameterPanel(const CameraConfig& ca
   refreshMeasurementSources(camera);
 
   const GeometrySet& set = cameraRuntime()[camera.id].geometries();
-  const QVector<ConstructedGeometryCircleSource> circleSources = constructedGeometryCircleSources(set.circles);
+  const QVector<ConstructedGeometryCircleSource> circleSources = constructedGeometryCircleSources(set);
 
   auto* panel = new QWidget(toolsContainer());
   auto* layout = createMeasurementPage(panel, QString("%1 | %2").arg(tr("actions.circleDiameterMeasure"), camera.id));

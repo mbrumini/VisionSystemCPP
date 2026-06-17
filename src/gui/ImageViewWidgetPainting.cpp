@@ -31,6 +31,28 @@ void drawArrowHead(QPainter& painter, const QPointF& tip, const QPointF& from, c
   painter.drawPolygon(arrow);
 }
 
+void drawMeasurementLabel(QPainter& painter, const QPointF& point, const QString& label)
+{
+  const QFont previousFont = painter.font();
+  QFont labelFont = previousFont;
+  if (labelFont.pointSize() > 0)
+  {
+    labelFont.setPointSize(labelFont.pointSize() + 4);
+  }
+  else
+  {
+    labelFont.setPixelSize(std::max(18, labelFont.pixelSize() + 5));
+  }
+  labelFont.setBold(true);
+  painter.setFont(labelFont);
+
+  painter.setPen(QPen(QColor("#101418"), 7));
+  painter.drawText(point, label);
+  painter.setPen(QPen(QColor("#ff2f2f"), 2));
+  painter.drawText(point, label);
+  painter.setFont(previousFont);
+}
+
 void drawAngleOverlay(QPainter& painter,
                       const QPointF& center,
                       const QPointF& armA,
@@ -79,10 +101,7 @@ void drawAngleOverlay(QPainter& painter,
 
   const double labelAngle = startAngle + delta * 0.5;
   const QPointF labelPoint = center + QPointF(std::cos(labelAngle), std::sin(labelAngle)) * (radius + 14.0);
-  painter.setPen(QPen(QColor("#101418"), 5));
-  painter.drawText(labelPoint, label);
-  painter.setPen(QPen(QColor("#ffffff"), 2));
-  painter.drawText(labelPoint, label);
+  drawMeasurementLabel(painter, labelPoint, label);
 }
 }
 
@@ -328,11 +347,10 @@ void ImageViewWidget::paintEvent(QPaintEvent* event)
       drawArrowHead(painter, start, end, dimension.color);
       drawArrowHead(painter, end, start, dimension.color);
 
-      const QPointF labelPoint = (start + end) * 0.5 + QPointF(10, -10);
-      painter.setPen(QPen(QColor("#101418"), 5));
-      painter.drawText(labelPoint, dimension.label);
-      painter.setPen(QPen(QColor("#ffffff"), 2));
-      painter.drawText(labelPoint, dimension.label);
+      const QPointF labelPoint = dimension.hasLabelPoint
+        ? imagePointToWidget(dimension.labelPoint)
+        : (start + end) * 0.5 + QPointF(10, -10);
+      drawMeasurementLabel(painter, labelPoint, dimension.label);
     }
 
     for (const GeometryOverlayAngle& angle : m_geometryOverlay.angles)

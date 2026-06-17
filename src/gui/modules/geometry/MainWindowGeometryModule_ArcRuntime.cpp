@@ -3,6 +3,8 @@
 #include "gui/modules/MainWindowImagingModule.h"
 #include "gui/modules/MainWindowContext.h"
 
+#include "gui/geometry/GeometryOverlayPrimitives.h"
+
 #include "processing/geometry/EdgeCircleDetector.h"
 
 #include <QColor>
@@ -81,6 +83,21 @@ bool arcGuideFromThreePoints(
     std::swap(startAngle, endAngle);
   }
   return true;
+}
+
+cv::Point2d pointOnArc(const cv::Point2d& center, double radius, double angle)
+{
+  return cv::Point2d(center.x + std::cos(angle) * radius, center.y + std::sin(angle) * radius);
+}
+
+double arcMidAngle(double startAngle, double endAngle)
+{
+  double span = endAngle - startAngle;
+  while (span < 0.0)
+  {
+    span += 2.0 * CV_PI;
+  }
+  return normalizedAngle(startAngle + span * 0.5);
 }
 
 QString transitionToRecipeLocal(EdgeLineTransition transition)
@@ -330,8 +347,84 @@ void MainWindowGeometryModule::handleGeometryArcPoints(const CameraConfig& camer
   }
 
   largeImage()->setThreePointArcDrawingEnabled(false);
+  largeImage()->setGeometryOverlayPointEditingEnabled(true);
   *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Geometry;
   m_drawingTarget = DrawingTarget::Arc;
+  saveGeometryArcsRecipe(camera);
+  showConfiguredGeometryArcs(camera);
+  testGeometryArc(camera);
+}
+
+void MainWindowGeometryModule::handleGeometryArcHandleMoved(const CameraConfig& camera, int pointIndex, const QPointF& imagePoint)
+{
+  if (camera.id != selectedCameraId() || pointIndex < 0 || pointIndex > 3)
+  {
+    return;
+  }
+
+  GeometryArcRuntimeConfig& arc = activeGeometryArcConfig(camera.id);
+  const PartPose& pose = cameraRuntime()[camera.id].currentPose();
+  const bool usePartArc = pose.valid && arc.hasArc;
+  if (!usePartArc && !arc.hasImageArc)
+  {
+    return;
+  }
+
+  cv::Point2d center = usePartArc ? partToImage(pose, arc.partCenter) : arc.imageCenter;
+  cv::Point2d start = usePartArc ? partToImage(pose, arc.partStart) : arc.imageStart;
+  cv::Point2d end = usePartArc ? partToImage(pose, arc.partEnd) : arc.imageEnd;
+  const cv::Point2d movedPoint(imagePoint.x(), imagePoint.y());
+
+  if (pointIndex == 0)
+  {
+    const cv::Point2d delta = movedPoint - center;
+    center = movedPoint;
+    start += delta;
+    end += delta;
+  }
+  else if (pointIndex == 1)
+  {
+    const double radius = std::max(1.0, std::hypot(movedPoint.x - center.x, movedPoint.y - center.y));
+    const double endAngle = std::atan2(end.y - center.y, end.x - center.x);
+    start = movedPoint;
+    end = pointOnArc(center, radius, endAngle);
+  }
+  else if (pointIndex == 2)
+  {
+    const double radius = std::max(1.0, std::hypot(movedPoint.x - center.x, movedPoint.y - center.y));
+    const double startAngle = std::atan2(start.y - center.y, start.x - center.x);
+    const double endAngle = std::atan2(end.y - center.y, end.x - center.x);
+    start = pointOnArc(center, radius, startAngle);
+    end = pointOnArc(center, radius, endAngle);
+  }
+  else
+  {
+    const double radius = std::max(1.0, std::hypot(movedPoint.x - center.x, movedPoint.y - center.y));
+    const double startAngle = std::atan2(start.y - center.y, start.x - center.x);
+    end = movedPoint;
+    start = pointOnArc(center, radius, startAngle);
+  }
+
+  arc.imageCenter = center;
+  arc.imageStart = start;
+  arc.imageEnd = end;
+  arc.radius = std::max(1.0, std::hypot(start.x - center.x, start.y - center.y));
+  arc.startAngleRadians = normalizedAngle(std::atan2(start.y - center.y, start.x - center.x));
+  arc.endAngleRadians = normalizedAngle(std::atan2(end.y - center.y, end.x - center.x));
+  arc.hasImageArc = true;
+
+  if (pose.valid)
+  {
+    arc.partCenter = imageToPart(pose, arc.imageCenter);
+    arc.partStart = imageToPart(pose, arc.imageStart);
+    arc.partEnd = imageToPart(pose, arc.imageEnd);
+    arc.hasArc = true;
+  }
+  else
+  {
+    arc.hasArc = false;
+  }
+
   saveGeometryArcsRecipe(camera);
   showConfiguredGeometryArcs(camera);
   testGeometryArc(camera);
@@ -351,14 +444,32 @@ void MainWindowGeometryModule::showConfiguredGeometryArcs(const CameraConfig& ca
   const double endAngle = normalizedAngle(std::atan2(end.y - center.y, end.x - center.x));
 
   GeometryOverlay overlay;
-  appendCurrentPartPoseOverlay(camera, overlay);
   if ((usePartArc || arc.hasImageArc) && arc.radius > arc.innerBand)
   {
-    appendArcPolyline(overlay, center, std::max(1.0, radius - arc.innerBand), startAngle, endAngle, QColor(0, 210, 255, 90), 2);
+    const double innerRadius = std::max(1.0, radius - arc.innerBand);
+    const double outerRadius = radius + arc.outerBand;
+    appendArcPolyline(overlay, center, innerRadius, startAngle, endAngle, QColor(0, 210, 255, 90), 2);
     appendArcPolyline(overlay, center, radius, startAngle, endAngle, QColor("#ff4fd8"), 5);
-    appendArcPolyline(overlay, center, radius + arc.outerBand, startAngle, endAngle, QColor(0, 210, 255, 90), 2);
+    appendArcPolyline(overlay, center, outerRadius, startAngle, endAngle, QColor(0, 210, 255, 90), 2);
+    appendGeometryArcSearchBandGuides(
+      overlay,
+      center,
+      innerRadius,
+      outerRadius,
+      startAngle,
+      endAngle,
+      arc.scanDirection != EdgeLineScanDirection::NormalNegative,
+      QColor(0, 210, 255, 150),
+      2);
     overlay.lines.append({QPointF(start.x, start.y), QPointF(end.x, end.y), QColor("#808a93"), 1});
+    const double midAngle = arcMidAngle(startAngle, endAngle);
+    const cv::Point2d radiusHandle = pointOnArc(center, radius, midAngle);
+    overlay.points.append({QPointF(center.x, center.y), "C", QColor("#ff4fd8")});
+    overlay.points.append({QPointF(start.x, start.y), "1", QColor("#ff4fd8")});
+    overlay.points.append({QPointF(radiusHandle.x, radiusHandle.y), "R", QColor("#ff4fd8")});
+    overlay.points.append({QPointF(end.x, end.y), "2", QColor("#ff4fd8")});
   }
+  appendCurrentPartPoseOverlay(camera, overlay);
   largeImage()->setGeometryOverlay(overlay);
 }
 
@@ -463,6 +574,13 @@ void MainWindowGeometryModule::testGeometryArc(const CameraConfig& camera)
   geometries.arcs.append(result.arc);
   GeometryOverlay arcOverlay;
   appendArcPolyline(arcOverlay, result.arc.center, result.arc.radius, result.arc.startAngleRadians, result.arc.endAngleRadians, QColor("#ff4fd8"), 7);
+  const double guideStartAngle = normalizedAngle(std::atan2(guideStart.y - guideCenter.y, guideStart.x - guideCenter.x));
+  const double guideEndAngle = normalizedAngle(std::atan2(guideEnd.y - guideCenter.y, guideEnd.x - guideCenter.x));
+  const cv::Point2d guideRadiusHandle = pointOnArc(guideCenter, guideRadius, arcMidAngle(guideStartAngle, guideEndAngle));
+  arcOverlay.points.append({QPointF(guideCenter.x, guideCenter.y), "C", QColor("#ff4fd8")});
+  arcOverlay.points.append({QPointF(guideStart.x, guideStart.y), "1", QColor("#ff4fd8")});
+  arcOverlay.points.append({QPointF(guideRadiusHandle.x, guideRadiusHandle.y), "R", QColor("#ff4fd8")});
+  arcOverlay.points.append({QPointF(guideEnd.x, guideEnd.y), "2", QColor("#ff4fd8")});
   appendCurrentPartPoseOverlay(camera, arcOverlay);
   largeImage()->setGeometryOverlay(arcOverlay);
   refreshMeasurementOverlay(camera);

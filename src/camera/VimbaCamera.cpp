@@ -64,6 +64,11 @@ namespace
 {
 constexpr int kFrameTimeoutMs = 1500;
 
+QString vimbaErrorText(const QString& action, VmbErrorType error)
+{
+  return QString("%1: Vimba error %2").arg(action).arg(static_cast<int>(error));
+}
+
 bool featureIntValue(const VmbCPP::CameraPtr& camera, const char* name, VmbInt64_t& value)
 {
   VmbCPP::FeaturePtr feature;
@@ -100,9 +105,12 @@ VimbaCamera::~VimbaCamera()
 bool VimbaCamera::open()
 {
 #ifdef VISION_WITH_VIMBAX
+  m_lastError.clear();
   VmbCPP::VmbSystem& system = VmbCPP::VmbSystem::GetInstance();
-  if (system.Startup() != VmbErrorSuccess)
+  VmbErrorType error = system.Startup();
+  if (error != VmbErrorSuccess)
   {
+    m_lastError = vimbaErrorText("VimbaX Startup fallito", error);
     return false;
   }
   m_systemStarted = true;
@@ -110,12 +118,15 @@ bool VimbaCamera::open()
   const std::string id = m_config.deviceId.toStdString();
   if (id.empty())
   {
+    m_lastError = "DeviceId Vimba vuoto";
     close();
     return false;
   }
 
-  if (system.OpenCameraByID(id.c_str(), VmbAccessModeFull, m_camera) != VmbErrorSuccess || !m_camera)
+  error = system.OpenCameraByID(id.c_str(), VmbAccessModeFull, m_camera);
+  if (error != VmbErrorSuccess || !m_camera)
   {
+    m_lastError = vimbaErrorText(QString("OpenCameraByID fallito: %1").arg(m_config.deviceId), error);
     close();
     return false;
   }
@@ -129,24 +140,39 @@ bool VimbaCamera::open()
     : trigger.configureExternal(m_config.trigger, &triggerError);
   if (!triggerConfigured)
   {
+    m_lastError = triggerError.isEmpty() ? "Configurazione trigger Vimba fallita" : triggerError;
     close();
     return false;
   }
 
   if (!prepareCapture())
   {
+    if (m_lastError.isEmpty())
+    {
+      m_lastError = "Preparazione capture Vimba fallita";
+    }
     close();
     return false;
   }
 
-  if (!trigger.startAcquisition())
+  error = m_camera->QueueFrame(m_frame);
+  if (error != VmbErrorSuccess)
   {
+    m_lastError = vimbaErrorText("QueueFrame iniziale fallito", error);
+    close();
+    return false;
+  }
+
+  if (!trigger.startAcquisition(&triggerError))
+  {
+    m_lastError = triggerError.isEmpty() ? "AcquisitionStart fallito" : triggerError;
     close();
     return false;
   }
   m_acquisitionStarted = true;
   return true;
 #else
+  m_lastError = "SDK VimbaX non disponibile";
   return false;
 #endif
 }
@@ -154,39 +180,59 @@ bool VimbaCamera::open()
 bool VimbaCamera::getFrame(cv::Mat& frame)
 {
 #ifdef VISION_WITH_VIMBAX
+  m_lastError.clear();
   if (!m_camera || !m_frame || !m_observer)
   {
+    m_lastError = "Camera Vimba non pronta per acquisire";
     return false;
   }
 
   auto observer = std::static_pointer_cast<FrameObserver>(m_observer);
   observer->reset();
-  if (m_camera->QueueFrame(m_frame) != VmbErrorSuccess)
-  {
-    return false;
-  }
 
   VimbaTriggerController trigger(m_camera);
-  if (!trigger.sendSoftwareTrigger())
+  QString triggerError;
+  if (!trigger.sendSoftwareTrigger(&triggerError))
   {
+    m_lastError = triggerError.isEmpty() ? "TriggerSoftware fallito" : triggerError;
     return false;
   }
 
   const VmbCPP::FramePtr receivedFrame = observer->wait(kFrameTimeoutMs);
   if (!receivedFrame)
   {
+    m_camera->FlushQueue();
+    m_camera->QueueFrame(m_frame);
+    m_lastError = QString("Timeout frame Vimba dopo %1 ms dal TriggerSoftware").arg(kFrameTimeoutMs);
     return false;
   }
 
   if (!copyFrameToMat(receivedFrame, frame))
   {
+    if (m_lastError.isEmpty())
+    {
+      m_lastError = "Conversione frame Vimba fallita";
+    }
+    return false;
+  }
+
+  VmbErrorType error = m_camera->QueueFrame(m_frame);
+  if (error != VmbErrorSuccess)
+  {
+    m_lastError = vimbaErrorText("QueueFrame successivo fallito", error);
     return false;
   }
 
   return !frame.empty();
 #else
+  m_lastError = "SDK VimbaX non disponibile";
   return false;
 #endif
+}
+
+QString VimbaCamera::lastError() const
+{
+  return m_lastError;
 }
 
 void VimbaCamera::close()
@@ -251,21 +297,28 @@ bool VimbaCamera::prepareCapture()
   VmbInt64_t payloadSize = 0;
   if (!featureIntValue(m_camera, "PayloadSize", payloadSize) || payloadSize <= 0)
   {
+    m_lastError = "PayloadSize Vimba non valido";
     return false;
   }
 
   m_frame = std::make_shared<VmbCPP::Frame>(payloadSize);
   m_observer = std::make_shared<FrameObserver>(m_camera);
-  if (m_frame->RegisterObserver(m_observer) != VmbErrorSuccess)
+  VmbErrorType error = m_frame->RegisterObserver(m_observer);
+  if (error != VmbErrorSuccess)
   {
+    m_lastError = vimbaErrorText("RegisterObserver fallito", error);
     return false;
   }
-  if (m_camera->AnnounceFrame(m_frame) != VmbErrorSuccess)
+  error = m_camera->AnnounceFrame(m_frame);
+  if (error != VmbErrorSuccess)
   {
+    m_lastError = vimbaErrorText("AnnounceFrame fallito", error);
     return false;
   }
-  if (m_camera->StartCapture() != VmbErrorSuccess)
+  error = m_camera->StartCapture();
+  if (error != VmbErrorSuccess)
   {
+    m_lastError = vimbaErrorText("StartCapture fallito", error);
     return false;
   }
 
@@ -273,11 +326,12 @@ bool VimbaCamera::prepareCapture()
   return true;
 }
 
-bool VimbaCamera::copyFrameToMat(const VmbCPP::FramePtr& vimbaFrame, cv::Mat& frame) const
+bool VimbaCamera::copyFrameToMat(const VmbCPP::FramePtr& vimbaFrame, cv::Mat& frame)
 {
   VmbFrameStatusType status = VmbFrameStatusIncomplete;
   if (vimbaFrame->GetReceiveStatus(status) != VmbErrorSuccess || status != VmbFrameStatusComplete)
   {
+    m_lastError = QString("Frame Vimba incompleto: status=%1").arg(static_cast<int>(status));
     return false;
   }
 
@@ -293,6 +347,7 @@ bool VimbaCamera::copyFrameToMat(const VmbCPP::FramePtr& vimbaFrame, cv::Mat& fr
       width == 0 ||
       height == 0)
   {
+    m_lastError = "Lettura buffer/dimensioni/pixel format Vimba fallita";
     return false;
   }
 
@@ -303,6 +358,7 @@ bool VimbaCamera::copyFrameToMat(const VmbCPP::FramePtr& vimbaFrame, cv::Mat& fr
   }
   else if (pixelFormat != VmbPixelFormatMono8)
   {
+    m_lastError = QString("PixelFormat Vimba non supportato: %1").arg(static_cast<qulonglong>(pixelFormat));
     return false;
   }
 

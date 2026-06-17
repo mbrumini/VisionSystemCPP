@@ -51,7 +51,7 @@ void ImageViewWidget::keyPressEvent(QKeyEvent* event)
 
 void ImageViewWidget::mousePressEvent(QMouseEvent* event)
 {
-  if (m_drawingMode == DrawingMode::None || event->button() != Qt::LeftButton || m_image.isNull())
+  if (event->button() != Qt::LeftButton || m_image.isNull())
   {
     QWidget::mousePressEvent(event);
     return;
@@ -63,6 +63,26 @@ void ImageViewWidget::mousePressEvent(QMouseEvent* event)
   }
 
   setFocus();
+
+  if (m_geometryOverlayDimensionLabelMovedHandler)
+  {
+    const int labelIndex = geometryOverlayDimensionLabelAt(event->pos());
+    if (labelIndex >= 0)
+    {
+      m_selectedGeometryOverlayDimensionIndex = labelIndex;
+      m_movingGeometryOverlayDimensionLabel = true;
+      m_dragging = true;
+      setCursor(Qt::ClosedHandCursor);
+      update();
+      return;
+    }
+  }
+
+  if (m_drawingMode == DrawingMode::None)
+  {
+    QWidget::mousePressEvent(event);
+    return;
+  }
 
   if (m_drawingMode == DrawingMode::Polygon)
   {
@@ -264,6 +284,22 @@ void ImageViewWidget::mouseMoveEvent(QMouseEvent* event)
   if (!m_dragging)
   {
     QWidget::mouseMoveEvent(event);
+    return;
+  }
+
+  if (m_movingGeometryOverlayDimensionLabel &&
+      m_selectedGeometryOverlayDimensionIndex >= 0 &&
+      m_selectedGeometryOverlayDimensionIndex < m_geometryOverlay.dimensions.size())
+  {
+    if (m_geometryOverlayDimensionLabelMovedHandler && imageDrawRect().contains(event->pos()))
+    {
+      const QPointF imagePoint = widgetToImageF(event->pos());
+      GeometryOverlayDimension& dimension = m_geometryOverlay.dimensions[m_selectedGeometryOverlayDimensionIndex];
+      dimension.labelPoint = imagePoint;
+      dimension.hasLabelPoint = true;
+      m_geometryOverlayDimensionLabelMovedHandler(dimension.id, imagePoint);
+    }
+    update();
     return;
   }
 

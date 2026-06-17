@@ -61,6 +61,7 @@ private:
   void startMachine();
   void stopMachine();
   void showAccessLogin();
+  void showCameraSystemSettings();
   void showHelp();
   void updateControlPanel(const CameraConfig* camera);
   void updateMeasurementResults();

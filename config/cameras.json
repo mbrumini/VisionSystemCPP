@@ -1,26 +1,28 @@
 {
     "cameras": [
         {
-            "deviceId": "usb:0",
-            "displayName": "USB Camera 0",
+            "deviceId": "DEV_000A4706197B",
+            "displayName": "Allied Vision Alvium G1-234m (DEV_000A4706197B)",
             "enabled": true,
             "exists": true,
             "id": "CAM01",
+            "interfaceId": "Ethernet 2",
+            "modelName": "Alvium G1-234m",
             "processingProfile": "profile_cam01",
+            "serial": "0G9W6",
             "slot": 1,
             "trigger": {
                 "cameraLine": "",
                 "ioOutput": "",
                 "mode": "software",
-                "source": "usbCamera"
+                "source": "camera"
             },
-            "type": "usb",
-            "usbIndex": 0
+            "type": "vimba"
         },
         {
             "displayName": "Camera 2",
-            "enabled": true,
-            "exists": true,
+            "enabled": false,
+            "exists": false,
             "folder": "data/images/cam02",
             "id": "CAM02",
             "processingProfile": "profile_cam02",
@@ -29,8 +31,8 @@
         },
         {
             "displayName": "Camera 3",
-            "enabled": true,
-            "exists": true,
+            "enabled": false,
+            "exists": false,
             "folder": "data/images/cam03",
             "id": "CAM03",
             "processingProfile": "profile_cam03",
@@ -39,8 +41,8 @@
         },
         {
             "displayName": "Camera 4",
-            "enabled": true,
-            "exists": true,
+            "enabled": false,
+            "exists": false,
             "folder": "data/images/cam04",
             "id": "CAM04",
             "processingProfile": "profile_cam04",
@@ -49,8 +51,8 @@
         },
         {
             "displayName": "Camera 5",
-            "enabled": true,
-            "exists": true,
+            "enabled": false,
+            "exists": false,
             "folder": "data/images/cam05",
             "id": "CAM05",
             "processingProfile": "profile_cam05",
@@ -59,8 +61,8 @@
         },
         {
             "displayName": "Camera 6",
-            "enabled": true,
-            "exists": true,
+            "enabled": false,
+            "exists": false,
             "folder": "data/images/cam06",
             "id": "CAM06",
             "processingProfile": "profile_cam06",
@@ -69,8 +71,8 @@
         },
         {
             "displayName": "Camera 7",
-            "enabled": true,
-            "exists": true,
+            "enabled": false,
+            "exists": false,
             "folder": "data/images/cam07",
             "id": "CAM07",
             "processingProfile": "profile_cam07",
@@ -79,8 +81,8 @@
         },
         {
             "displayName": "Camera 8",
-            "enabled": true,
-            "exists": true,
+            "enabled": false,
+            "exists": false,
             "folder": "data/images/cam08",
             "id": "CAM08",
             "processingProfile": "profile_cam08",

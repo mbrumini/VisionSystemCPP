@@ -56,5 +56,6 @@ private:
   std::unique_ptr<ICamera> m_source;
   QString m_sourceType;
   QString m_sourceFolder;
+  QString m_sourceDeviceId;
   int m_sourceUsbIndex = -1;
 };
