@@ -7,6 +7,7 @@ Formato consigliato:
 
 Categorie principali:
 - Setup e acquisizione campione.
+- Camera e trigger acquisizione.
 - Localizzazione e maschere.
 - Edge e geometrie.
 - Misure e tolleranze.
@@ -22,6 +23,8 @@ Schede misura principali:
 - functions/misura_distanza_punto_linea.txt
 - functions/misura_distanza_linea_linea.txt
 - functions/misura_diametro_cerchio.txt
+- functions/misura_diametro_arco.txt
+- functions/misura_label_trascinabile.txt
 - functions/misura_angolo_linea_linea.txt
 - functions/misura_interasse_fori.txt
 - functions/misura_spessore.txt
@@ -37,6 +40,12 @@ Schede misura principali:
 - functions/misura_distanza_fori_superficie.txt
 - functions/misura_foro_bordo_superficie.txt
 - functions/misure_superficiali_errori_comuni.txt
+
+Schede operative aggiunte da prove macchina:
+- functions/workflow_campione_riferimento_setup.txt
+- functions/camera_vimba_trigger_software.txt
+- functions/edge_arco_maniglie.txt
+- functions/geometria_centro_cerchio_arco.txt
 
 Schede AI principali:
 - functions/ai_modello.txt

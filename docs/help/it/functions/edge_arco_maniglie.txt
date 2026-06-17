@@ -1,0 +1,27 @@
+Titolo: Maniglie arco edge
+Area: Rilevamento edge
+Parole chiave: arco, maniglie, centro, raggio, estremi, fascia, scan
+
+L'arco edge deve essere regolabile direttamente sull'immagine con maniglie.
+
+Maniglie:
+- C sposta il centro geometrico dell'arco;
+- 1 sposta il punto iniziale;
+- 2 sposta il punto finale;
+- R cambia il raggio mantenendo centro e angoli.
+
+Guide visive:
+- fascia interna;
+- fascia esterna;
+- lineette tra i due limiti di ricerca;
+- freccia o indicazione della direzione di scansione.
+
+Uso corretto:
+1. Disegnare l'arco sui tre punti.
+2. Usare 1 e 2 per limitare la porzione utile.
+3. Usare R per correggere il raggio.
+4. Usare C solo se il centro geometrico e' sbagliato.
+5. Verificare il rilevamento con Test.
+
+Regola:
+L'arco e' utile quando il cerchio completo non e' affidabile, ma per misure di diametro puo' comunque fornire centro e raggio del cerchio stimato.

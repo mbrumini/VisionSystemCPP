@@ -15,6 +15,7 @@ File funzione disponibili:
 - functions/toolbar_start_stop.txt
 - functions/toolbar_grid_reload_fullscreen_help.txt
 - functions/setup_acquisizione_campione.txt
+- functions/workflow_campione_riferimento_setup.txt
 - functions/setup_importa_campione.txt
 - functions/setup_importa_test.txt
 - functions/setup_cartella_immagini.txt
@@ -29,6 +30,7 @@ File funzione disponibili:
 - functions/edge_linea.txt
 - functions/edge_cerchio.txt
 - functions/edge_arco.txt
+- functions/edge_arco_maniglie.txt
 - functions/geometrie_costruite.txt
 - functions/misure.txt
 - functions/misura_lunghezza_larghezza.txt
@@ -37,6 +39,8 @@ File funzione disponibili:
 - functions/misura_distanza_punto_linea.txt
 - functions/misura_distanza_linea_linea.txt
 - functions/misura_diametro_cerchio.txt
+- functions/misura_diametro_arco.txt
+- functions/misura_label_trascinabile.txt
 - functions/misura_angolo_linea_linea.txt
 - functions/misura_interasse_fori.txt
 - functions/misura_spessore.txt
@@ -123,6 +127,7 @@ File funzione disponibili:
 - functions/pezzi_trasparenti.txt
 - functions/scelta_punto_linea_cerchio_arco.txt
 - functions/quando_usare_geometrie_costruite.txt
+- functions/geometria_centro_cerchio_arco.txt
 - functions/validazione_produzione.txt
 - functions/pezzi_borderline.txt
 - functions/cambio_articolo.txt
@@ -139,6 +144,7 @@ File funzione disponibili:
 - functions/camera_calibrazione.txt
 - functions/camera_esposizione_gain.txt
 - functions/camera_fuoco.txt
+- functions/camera_vimba_trigger_software.txt
 - functions/debug_log_quando_attivare.txt
 - functions/diagnostica_camera_non_attiva.txt
 - functions/diagnostica_falsi_ok_nok.txt

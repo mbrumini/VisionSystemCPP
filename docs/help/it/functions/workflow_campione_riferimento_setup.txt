@@ -1,0 +1,28 @@
+Titolo: Workflow campione di riferimento in Setup
+Area: Setup ricetta
+Parole chiave: campione, riferimento, setup, ricetta, immagine base, no image
+
+Il campione acquisito in Setup e' l'immagine base della camera per impostare localizzazione, geometrie, misure e controlli.
+
+Regola operativa:
+- acquisire il campione dalla camera selezionata;
+- salvare il campione nella ricetta della camera;
+- usare sempre quel campione come riferimento per localizzazione e tool geometrici;
+- non entrare nei tool se il campione non e' visibile o se compare NO IMAGE.
+
+Flusso corretto:
+1. Selezionare camera.
+2. Entrare in Setup.
+3. Acquisire campione.
+4. Verificare che l'immagine resti visibile.
+5. Impostare localizzazione.
+6. Impostare geometrie, misure e tolleranze sulla stessa immagine.
+7. Provare con acquisizione reale e controllare overlay e risultati.
+
+Diagnostica:
+- se il campione sparisce entrando in un tool, il tool sta leggendo una sorgente immagine diversa dal riferimento;
+- se compare NO IMAGE ma il campione esiste, controllare il percorso della ricetta camera e il fallback immagine;
+- se con USB funziona e con Vimba no, verificare che entrambi i flussi aggiornino la stessa immagine corrente e lo stesso sample della ricetta.
+
+Regola:
+Il campione non e' un frame temporaneo. E' il riferimento salvato della camera nella ricetta.
