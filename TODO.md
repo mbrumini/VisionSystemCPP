@@ -2,15 +2,17 @@
 
 ## PRIORITA ALTA - Misure reali e calibrazione
 
-- [ ] Modalita' 1, pezzo campione: per ogni misura salvare valore reale del master, unita', fattore scala e nominale/tolleranze.
-- [ ] Modalita' 2, calibrazione camera fissa: associare a ogni camera nel menu Sistema un file calibrazione ottica/camera.
-- [ ] Calibrazione con pattern a scacchiera: acquisizione immagini, rilevamento corner, calcolo pixel/mm e futura distorsione.
+- [x] Modalita' 1, pezzo campione: per ogni misura salvare valore reale del master, unita' e fattore scala base.
+- [x] Modalita' 2, calibrazione camera fissa: associare a ogni camera nel menu Sistema un file calibrazione ottica/camera.
+- [x] Calibrazione checkerboard base: pagina live, blocco frame, rilevamento corner, calcolo pixel/mm e salvataggio file camera.
 - [x] Helper base checkerboard: detector corner, stima scala planare, recipe JSON e mappa pixel/mm riusabili.
 - [x] Comando Sistema > Calibra checkerboard: calcola scala planare, salva file calibrazione e aggiorna la camera.
+- [ ] Validare end-to-end calibrazione base con checkerboard reale: acquisizione live, file `calibrations/CAMxx_checkerboard.json`, associazione camera e misure in mm senza pezzo campione.
+- [ ] Risultati misura: indicare chiaramente se il valore reale arriva da pezzo campione o da calibrazione camera.
 - [ ] Calibrazione completa: usare gli stessi frame per stimare matrice camera, distorsione e correzione punti/immagine.
-- [ ] Risultati misura: mostrare valore reale in mm/gradi quando disponibile, mantenendo pixel come diagnostica.
+- [x] Risultati misura: mostrare valore reale in mm/gradi quando disponibile, mantenendo pixel come diagnostica.
 - [ ] Tolleranze: nominale, min/max o +/-; giudizio OK/NOK collegato a overview, strip camera e futuro IO.
-- [ ] Geometrie costruite prioritarie per misure reali: centro cerchio/arco come punto, distanza tra centri, proiezioni e intersezioni.
+- [x] Geometrie costruite prioritarie per misure reali: centro cerchio/arco come punto, distanza tra centri, proiezioni e intersezioni.
 
 ## Localizzazione superficie grayscale
 
@@ -60,15 +62,15 @@
 
 ## Misure reali e calibrazione
 
-- [ ] PRIORITA: completare modello dati misura reale prima della GUI avanzata.
+- [x] PRIORITA: completare modello dati misura reale base prima della GUI avanzata.
 - [ ] Implementare acquisizione pattern calibrazione per camera: scatto singolo, lista frame accettati/scartati e salvataggio immagini pattern.
-- [ ] Implementare detector pattern calibrazione: checkerboard, dot grid/circle grid, pattern custom.
-- [ ] Calcolare modello calibrazione camera: pixel/mm, origine, rotazione e futura mappa distorsione.
-- [ ] Salvare/ricaricare calibrazione nella ricetta camera.
-- [ ] Convertire `MeasurementResult` pixel in risultati reali: mm/gradi, unita' display, esito.
+- [x] Implementare detector pattern calibrazione base: checkerboard e predisposizione dot/circle grid.
+- [x] Calcolare modello calibrazione camera base: pixel/mm, origine e rotazione.
+- [x] Salvare/ricaricare calibrazione nella configurazione camera.
+- [x] Convertire `MeasurementResult` pixel in risultati reali: mm/gradi e unita' display.
 - [ ] Implementare tolleranze nominale/min/max per misura.
 - [ ] Collegare esito misura OK/NOK a overview, camera strip e futuro IO.
-- [ ] Aggiungere pannello GUI calibrazione solo dopo aver validato modello dati e formato ricetta.
+- [x] Aggiungere pannello GUI calibrazione base con live, blocco frame e invio calibrazione.
 
 ## Livelli di accesso
 

@@ -48,6 +48,11 @@ const CircleGeometry* findCircleByMetaId(const GeometrySet& set, const QString& 
 {
   return findConstructedGeometryCircleSource(set.circles, id);
 }
+
+bool findCircleLikeByMetaId(const GeometrySet& set, const QString& id, CircleGeometry& result)
+{
+  return constructedGeometryCircleSourceValue(set, id, result);
+}
 }
 
 void MainWindowConstructedGeometryModule::saveConstructedGeometryRecipeAction(const CameraConfig& camera,
@@ -99,13 +104,13 @@ void MainWindowConstructedGeometryModule::rebuildConstructedGeometryRecipe(const
     if (config.type == "line_circle_intersection")
     {
       const LineGeometry* line = findLineByMetaId(set, config.sourceAId);
-      const CircleGeometry* circle = findCircleByMetaId(set, config.sourceBId);
-      if (line && circle)
+      CircleGeometry circle;
+      if (line && findCircleLikeByMetaId(set, config.sourceBId, circle))
       {
-        const QVector<PointGeometry> points = ConstructedGeometryMath::lineCircleIntersections(*line, *circle);
+        const QVector<PointGeometry> points = ConstructedGeometryMath::lineCircleIntersections(*line, circle);
         for (const PointGeometry& point : points)
         {
-          set.constructedPoints.append({point, line->meta.id, circle->meta.id});
+          set.constructedPoints.append({point, line->meta.id, circle.meta.id});
         }
       }
       continue;
@@ -113,15 +118,27 @@ void MainWindowConstructedGeometryModule::rebuildConstructedGeometryRecipe(const
 
     if (config.type == "circle_circle_intersection")
     {
-      const CircleGeometry* first = findCircleByMetaId(set, config.sourceAId);
-      const CircleGeometry* second = findCircleByMetaId(set, config.sourceBId);
-      if (first && second)
+      CircleGeometry first;
+      CircleGeometry second;
+      if (findCircleLikeByMetaId(set, config.sourceAId, first) &&
+          findCircleLikeByMetaId(set, config.sourceBId, second))
       {
-        const QVector<PointGeometry> points = ConstructedGeometryMath::circleCircleIntersections(*first, *second);
+        const QVector<PointGeometry> points = ConstructedGeometryMath::circleCircleIntersections(first, second);
         for (const PointGeometry& point : points)
         {
-          set.constructedPoints.append({point, first->meta.id, second->meta.id});
+          set.constructedPoints.append({point, first.meta.id, second.meta.id});
         }
+      }
+      continue;
+    }
+
+    if (config.type == "circle_center")
+    {
+      CircleGeometry circle;
+      if (findCircleLikeByMetaId(set, config.sourceAId, circle))
+      {
+        const PointGeometry point = ConstructedGeometryMath::circleCenter(circle);
+        set.constructedPoints.append({point, circle.meta.id, {}});
       }
       continue;
     }
@@ -167,13 +184,13 @@ void MainWindowConstructedGeometryModule::rebuildConstructedGeometryRecipe(const
     if (config.type == "tangent_line")
     {
       const PointGeometry* point = findPointByMetaId(set, config.sourceAId);
-      const CircleGeometry* circle = findCircleByMetaId(set, config.sourceBId);
-      if (point && circle)
+      CircleGeometry circle;
+      if (point && findCircleLikeByMetaId(set, config.sourceBId, circle))
       {
-        const QVector<LineGeometry> lines = ConstructedGeometryMath::tangentLinesFromPointToCircle(*point, *circle);
+        const QVector<LineGeometry> lines = ConstructedGeometryMath::tangentLinesFromPointToCircle(*point, circle);
         for (const LineGeometry& line : lines)
         {
-          set.constructedLines.append({line, point->meta.id, circle->meta.id, 0.0});
+          set.constructedLines.append({line, point->meta.id, circle.meta.id, 0.0});
         }
       }
       continue;

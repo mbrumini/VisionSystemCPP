@@ -182,6 +182,7 @@ void MainWindowGeometryModule::loadGeometryPointRecipe(const CameraConfig& camer
     GeometryPointRuntimeConfig point;
     point.enabled = recipe.enabled;
     point.id = recipe.id;
+    point.alias = recipe.alias;
     point.partStart = cv::Point2d(recipe.partStart.x(), recipe.partStart.y());
     point.partEnd = cv::Point2d(recipe.partEnd.x(), recipe.partEnd.y());
     point.edgeSensitivity = recipe.edgeSensitivity;
@@ -220,6 +221,7 @@ void MainWindowGeometryModule::loadGeometryCirclesRecipe(const CameraConfig& cam
     GeometryCircleRuntimeConfig circle;
     circle.enabled = recipe.enabled;
     circle.id = recipe.id;
+    circle.alias = recipe.alias;
     circle.partCenter = cv::Point2d(recipe.partCenter.x(), recipe.partCenter.y());
     circle.radius = recipe.radius;
     circle.innerBand = recipe.innerBand;
@@ -257,6 +259,7 @@ void MainWindowGeometryModule::saveGeometryPointRecipe(const CameraConfig& camer
     GeometryPointRecipeConfig recipe;
     recipe.enabled = point.enabled;
     recipe.id = point.id;
+    recipe.alias = point.alias;
     recipe.partStart = QPointF(point.partStart.x, point.partStart.y);
     recipe.partEnd = QPointF(point.partEnd.x, point.partEnd.y);
     recipe.edgeSensitivity = point.edgeSensitivity;
@@ -286,6 +289,7 @@ void MainWindowGeometryModule::saveGeometryCirclesRecipe(const CameraConfig& cam
     GeometryCircleRecipeConfig recipe;
     recipe.enabled = circle.enabled;
     recipe.id = circle.id;
+    recipe.alias = circle.alias;
     recipe.partCenter = QPointF(circle.partCenter.x, circle.partCenter.y);
     recipe.radius = circle.radius;
     recipe.innerBand = circle.innerBand;
@@ -327,6 +331,7 @@ void MainWindowGeometryModule::addGeometryPoint(const CameraConfig& camera)
 
   GeometryPointRuntimeConfig point = activeGeometryPointConfig(camera.id);
   point.id = QString("point_%1").arg(points.size() + 1);
+  point.alias.clear();
   point.hasImageGuide = false;
   point.hasGuide = false;
   points.append(point);
@@ -353,6 +358,7 @@ void MainWindowGeometryModule::addGeometryCircle(const CameraConfig& camera)
 
   GeometryCircleRuntimeConfig circle = activeCircle;
   circle.id = QString("circle_%1").arg(circles.size() + 1);
+  circle.alias.clear();
   circle.hasImageCircle = false;
   circle.hasCircle = false;
   circles.append(circle);
@@ -433,6 +439,7 @@ void MainWindowGeometryModule::loadGeometryLinesRecipe(const CameraConfig& camer
 
     GeometryLineRuntimeConfig line;
     line.id = recipe.id;
+    line.alias = recipe.alias;
     line.enabled = recipe.enabled;
     line.partStart = cv::Point2d(recipe.partStart.x(), recipe.partStart.y());
     line.partEnd = cv::Point2d(recipe.partEnd.x(), recipe.partEnd.y());
@@ -470,6 +477,7 @@ void MainWindowGeometryModule::saveGeometryLinesRecipe(const CameraConfig& camer
     GeometryLineRecipeConfig recipe;
     recipe.enabled = line.enabled;
     recipe.id = line.id;
+    recipe.alias = line.alias;
     recipe.partStart = QPointF(line.partStart.x, line.partStart.y);
     recipe.partEnd = QPointF(line.partEnd.x, line.partEnd.y);
     recipe.bandHalfWidth = line.bandHalfWidth;

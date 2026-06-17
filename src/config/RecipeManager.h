@@ -76,6 +76,7 @@ struct GeometryLineRecipeConfig
 {
   bool enabled = false;
   QString id = "line_1";
+  QString alias;
   QPointF partStart;
   QPointF partEnd;
   int bandHalfWidth = 20;
@@ -92,6 +93,7 @@ struct GeometryPointRecipeConfig
 {
   bool enabled = false;
   QString id = "point_1";
+  QString alias;
   QPointF partStart;
   QPointF partEnd;
   int edgeSensitivity = 60;
@@ -104,6 +106,7 @@ struct GeometryCircleRecipeConfig
 {
   bool enabled = false;
   QString id = "circle_1";
+  QString alias;
   QPointF partCenter;
   double radius = 0.0;
   int innerBand = 20;
@@ -121,6 +124,7 @@ struct GeometryArcRecipeConfig
 {
   bool enabled = false;
   QString id = "arc_1";
+  QString alias;
   QPointF partCenter;
   QPointF partStart;
   QPointF partEnd;
@@ -152,6 +156,7 @@ struct MeasurementRecipeConfig
 {
   bool enabled = true;
   QString id;
+  QString alias;
   QString type;
   QString sourceAId;
   QString sourceBId;

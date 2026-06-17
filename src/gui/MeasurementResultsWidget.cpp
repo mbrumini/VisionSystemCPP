@@ -29,6 +29,13 @@ QString measurementJudgement(const MeasurementResult& measurement)
 {
   return measurement.judgement.isEmpty() ? "-" : measurement.judgement;
 }
+
+QString measurementName(const MeasurementResult& measurement)
+{
+  return measurement.alias.trimmed().isEmpty()
+    ? measurement.id
+    : QString("%1 (%2)").arg(measurement.alias.trimmed(), measurement.id);
+}
 }
 
 MeasurementResultsWidget::MeasurementResultsWidget(QWidget* parent)
@@ -70,7 +77,7 @@ void MeasurementResultsWidget::setMeasurements(const QString& cameraId, const QV
   {
     const MeasurementResult& measurement = measurements[row];
     m_table->setItem(row, 0, new QTableWidgetItem(cameraId));
-    m_table->setItem(row, 1, new QTableWidgetItem(measurement.id));
+    m_table->setItem(row, 1, new QTableWidgetItem(measurementName(measurement)));
     m_table->setItem(row, 2, new QTableWidgetItem(measurement.type));
     m_table->setItem(row, 3, new QTableWidgetItem(measurement.sourceAId));
     m_table->setItem(row, 4, new QTableWidgetItem(measurement.sourceBId));
@@ -90,7 +97,7 @@ void MeasurementResultsWidget::setAllCameraMeasurements(const QVector<CameraMeas
     const CameraMeasurementResultRow& result = measurements[row];
     const MeasurementResult& measurement = result.measurement;
     m_table->setItem(row, 0, new QTableWidgetItem(result.cameraId));
-    m_table->setItem(row, 1, new QTableWidgetItem(measurement.id));
+    m_table->setItem(row, 1, new QTableWidgetItem(measurementName(measurement)));
     m_table->setItem(row, 2, new QTableWidgetItem(measurement.type));
     m_table->setItem(row, 3, new QTableWidgetItem(measurement.sourceAId));
     m_table->setItem(row, 4, new QTableWidgetItem(measurement.sourceBId));

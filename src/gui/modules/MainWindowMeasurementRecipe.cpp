@@ -115,6 +115,7 @@ void appendMeasurementResult(GeometrySet& set,
 {
   MeasurementResult result;
   result.id = config.id;
+  result.alias = config.alias;
   result.type = config.type;
   result.sourceAId = sourceAId;
   result.sourceBId = sourceBId;
@@ -166,11 +167,13 @@ void appendMeasurementResult(GeometrySet& set,
 
 QString measurementLabel(const MeasurementResult& measurement, const QString& unit)
 {
+  const QString name = measurement.alias.trimmed();
+  const QString prefix = name.isEmpty() ? QString() : name + ": ";
   if (measurement.hasRealValue)
   {
-    return QString("%1 %2").arg(measurement.valueReal, 0, 'f', 3).arg(measurement.unit);
+    return prefix + QString("%1 %2").arg(measurement.valueReal, 0, 'f', 3).arg(measurement.unit);
   }
-  return QString("%1 %2").arg(measurement.valuePixels, 0, 'f', 3).arg(unit);
+  return prefix + QString("%1 %2").arg(measurement.valuePixels, 0, 'f', 3).arg(unit);
 }
 
 QString measurementKey(const MeasurementRecipeConfig& config)

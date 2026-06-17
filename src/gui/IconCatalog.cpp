@@ -52,7 +52,7 @@ QColor iconColor(const QString& id)
 
   if (id == "constructedGeometries" || id == "lineLineIntersection" ||
       id == "lineCircleIntersection" || id == "circleCircleIntersection" ||
-      id == "midpoint" || id == "offsetLine" ||
+      id == "circleCenter" || id == "midpoint" || id == "offsetLine" ||
       id == "angleBisector" || id == "tangentLine" ||
       id == "projectPoint")
   {
@@ -207,6 +207,7 @@ QIcon IconCatalog::icon(const QString& id)
     ,{"lineLineIntersection", ":/icons/constructed-line-line.svg"}
     ,{"lineCircleIntersection", ":/icons/constructed-line-circle.svg"}
     ,{"circleCircleIntersection", ":/icons/constructed-circle-circle.svg"}
+    ,{"circleCenter", ":/icons/geometry-point.svg"}
     ,{"midpoint", ":/icons/geometry-point.svg"}
     ,{"offsetLine", ":/icons/constructed-offset.svg"}
     ,{"angleBisector", ":/icons/constructed-bisector.svg"}

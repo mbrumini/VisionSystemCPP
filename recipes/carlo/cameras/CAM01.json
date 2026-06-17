@@ -87,7 +87,7 @@
                 },
                 {
                     "coordinateSpace": "part",
-                    "edgeCleanupDerivative": 12,
+                    "edgeCleanupDerivative": 7,
                     "edgeSensitivity": 138,
                     "edgeStatisticalFilter": 3,
                     "enabled": true,
@@ -103,7 +103,7 @@
                     "scanDirection": "normal_positive",
                     "transition": "light_to_dark",
                     "type": "edge_circle",
-                    "useSubpixel": false
+                    "useSubpixel": true
                 }
             ],
             "enabled": true,
@@ -158,8 +158,8 @@
                     "id": "measurement_1",
                     "label": {
                         "custom": true,
-                        "x": 1199.774647887324,
-                        "y": 1030.3641456582632
+                        "x": 1247.4929577464789,
+                        "y": 405.3333333333333
                     },
                     "max": -0.05,
                     "min": 0.05,
@@ -179,8 +179,8 @@
                     "id": "measurement_2",
                     "label": {
                         "custom": true,
-                        "x": 1201.4788732394366,
-                        "y": 943.5070028011204
+                        "x": 1242.380281690141,
+                        "y": 444.5042016806723
                     },
                     "max": -0.05,
                     "min": 0.05,
@@ -201,8 +201,8 @@
                     "id": "measurement_3",
                     "label": {
                         "custom": true,
-                        "x": 1206.5915492957747,
-                        "y": 892.4145658263305
+                        "x": 1225.338028169014,
+                        "y": 495.5966386554622
                     },
                     "max": 0,
                     "min": 0,
@@ -222,8 +222,8 @@
                     "id": "measurement_4",
                     "label": {
                         "custom": true,
-                        "x": 1198.0704225352113,
-                        "y": 986.0840336134454
+                        "x": 1223.6338028169014,
+                        "y": 546.6890756302521
                     },
                     "max": 0,
                     "min": 0,
@@ -255,8 +255,8 @@
             "method": "model",
             "model": {
                 "angleRange": {
-                    "end": 180,
-                    "start": -180,
+                    "end": 0,
+                    "start": 0,
                     "step": 5
                 },
                 "contour": [
@@ -2377,7 +2377,7 @@
                         "y": 391
                     }
                 ],
-                "edgeSensitivity": 196,
+                "edgeSensitivity": 176,
                 "maxShapeDistance": 0.25,
                 "minTemplateScore": 0.5,
                 "searchRoi": {

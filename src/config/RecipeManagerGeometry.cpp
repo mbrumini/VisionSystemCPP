@@ -27,6 +27,7 @@ QVector<GeometryLineRecipeConfig> RecipeManager::loadGeometryLines(const QString
     const QJsonObject line = value.toObject();
     GeometryLineRecipeConfig config;
     config.id = line.value("id").toString(config.id);
+    config.alias = line.value("alias").toString();
     if (config.id.isEmpty())
     {
       continue;
@@ -81,6 +82,10 @@ bool RecipeManager::saveGeometryLines(const QString& cameraId, const QVector<Geo
     QJsonObject line;
     line["enabled"] = config.enabled;
     line["id"] = config.id.isEmpty() ? QString("line_%1").arg(lines.size() + 1) : config.id;
+    if (!config.alias.trimmed().isEmpty())
+    {
+      line["alias"] = config.alias.trimmed();
+    }
     line["type"] = "edge_line";
     line["coordinateSpace"] = "part";
     line["partStart"] = pointFToJson(config.partStart);
@@ -143,6 +148,7 @@ QVector<GeometryPointRecipeConfig> RecipeManager::loadGeometryPoints(const QStri
     const QJsonObject point = value.toObject();
     GeometryPointRecipeConfig config;
     config.id = point.value("id").toString(QString("point_%1").arg(configs.size() + 1));
+    config.alias = point.value("alias").toString();
     if (config.id.isEmpty())
     {
       continue;
@@ -194,6 +200,10 @@ bool RecipeManager::saveGeometryPoints(const QString& cameraId, const QVector<Ge
     QJsonObject point;
     point["enabled"] = config.enabled;
     point["id"] = config.id.isEmpty() ? QString("point_%1").arg(points.size() + 1) : config.id;
+    if (!config.alias.trimmed().isEmpty())
+    {
+      point["alias"] = config.alias.trimmed();
+    }
     point["type"] = "edge_point";
     point["coordinateSpace"] = "part";
     point["partStart"] = pointFToJson(config.partStart);
@@ -252,6 +262,7 @@ QVector<GeometryCircleRecipeConfig> RecipeManager::loadGeometryCircles(const QSt
     const QJsonObject circle = value.toObject();
     GeometryCircleRecipeConfig config;
     config.id = circle.value("id").toString(QString("circle_%1").arg(configs.size() + 1));
+    config.alias = circle.value("alias").toString();
     if (config.id.isEmpty())
     {
       continue;
@@ -292,6 +303,10 @@ bool RecipeManager::saveGeometryCircles(const QString& cameraId, const QVector<G
     QJsonObject circle;
     circle["enabled"] = config.enabled;
     circle["id"] = config.id.isEmpty() ? QString("circle_%1").arg(circles.size() + 1) : config.id;
+    if (!config.alias.trimmed().isEmpty())
+    {
+      circle["alias"] = config.alias.trimmed();
+    }
     circle["type"] = "edge_circle";
     circle["coordinateSpace"] = "part";
     circle["partCenter"] = pointFToJson(config.partCenter);
@@ -333,6 +348,7 @@ QVector<GeometryArcRecipeConfig> RecipeManager::loadGeometryArcs(const QString& 
     const QJsonObject arc = value.toObject();
     GeometryArcRecipeConfig config;
     config.id = arc.value("id").toString(QString("arc_%1").arg(configs.size() + 1));
+    config.alias = arc.value("alias").toString();
     if (config.id.isEmpty())
     {
       continue;
@@ -377,6 +393,10 @@ bool RecipeManager::saveGeometryArcs(const QString& cameraId, const QVector<Geom
     QJsonObject arc;
     arc["enabled"] = config.enabled;
     arc["id"] = config.id.isEmpty() ? QString("arc_%1").arg(arcs.size() + 1) : config.id;
+    if (!config.alias.trimmed().isEmpty())
+    {
+      arc["alias"] = config.alias.trimmed();
+    }
     arc["type"] = "edge_arc";
     arc["coordinateSpace"] = "part";
     arc["partCenter"] = pointFToJson(config.partCenter);

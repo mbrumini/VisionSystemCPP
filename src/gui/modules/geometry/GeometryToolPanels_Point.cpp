@@ -14,6 +14,7 @@
 #include <QComboBox>
 #include <QGridLayout>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QSlider>
 
@@ -50,7 +51,10 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
   auto* pointSelector = new QComboBox(panel);
   for (int i = 0; i < pointConfigs.size(); ++i)
   {
-    pointSelector->addItem(pointConfigs[i].id, i);
+    const QString display = pointConfigs[i].alias.trimmed().isEmpty()
+      ? pointConfigs[i].id
+      : QString("%1 (%2)").arg(pointConfigs[i].alias.trimmed(), pointConfigs[i].id);
+    pointSelector->addItem(display, i);
   }
   pointSelector->setCurrentIndex(qBound(0, m_activePointIndexes.value(camera.id, 0), pointConfigs.size() - 1));
   auto* newPointButton = createTouchIconButton("new", tr("actions.newGeometryPoint"), panel);
@@ -94,6 +98,8 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
   edgePickMode->addItem(tr("labels.edgePickLast"), "last");
   edgePickMode->addItem(tr("labels.edgePickBest"), "best");
   edgePickMode->setCurrentIndex(static_cast<int>(pointConfig.pickMode));
+  auto* aliasEdit = new QLineEdit(pointConfig.alias, form);
+  aliasEdit->setPlaceholderText(tr("labels.operatorAlias"));
 
   int row = 0;
   formLayout->addWidget(new QLabel(tr("labels.edgeSensitivity"), form), row, 0);
@@ -107,6 +113,8 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
   formLayout->addWidget(edgeTransition, row++, 1, 1, 2);
   formLayout->addWidget(new QLabel(tr("labels.edgePickMode"), form), row, 0);
   formLayout->addWidget(edgePickMode, row++, 1, 1, 2);
+  formLayout->addWidget(new QLabel(tr("labels.operatorAlias"), form), row, 0);
+  formLayout->addWidget(aliasEdit, row++, 1, 1, 2);
   layout->addWidget(form);
 
   QObject::connect(pointSelector, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
@@ -160,6 +168,11 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
     }
     saveGeometryPointRecipe(camera);
     updateGeometryPointOverlay(camera);
+  });
+  QObject::connect(aliasEdit, &QLineEdit::editingFinished, window(), [this, camera, aliasEdit]() {
+    activeGeometryPointConfig(camera.id).alias = aliasEdit->text().trimmed();
+    saveGeometryPointRecipe(camera);
+    testGeometryPoint(camera);
   });
 
   auto* testButton = createTouchIconButton("start", tr("actions.testGeometry"), panel);

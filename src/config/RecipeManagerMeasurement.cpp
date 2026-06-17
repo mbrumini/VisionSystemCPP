@@ -26,6 +26,7 @@ QVector<MeasurementRecipeConfig> RecipeManager::loadMeasurements(const QString& 
     const QJsonObject item = value.toObject();
     MeasurementRecipeConfig config;
     config.id = item.value("id").toString(QString("measurement_%1").arg(configs.size() + 1));
+    config.alias = item.value("alias").toString();
     config.enabled = item.value("enabled").toBool(config.enabled);
     config.type = item.value("type").toString();
     config.sourceAId = item.value("sourceAId").toString();
@@ -77,6 +78,10 @@ bool RecipeManager::saveMeasurements(const QString& cameraId, const QVector<Meas
     QJsonObject item;
     item["enabled"] = config.enabled;
     item["id"] = config.id.isEmpty() ? QString("measurement_%1").arg(items.size() + 1) : config.id;
+    if (!config.alias.trimmed().isEmpty())
+    {
+      item["alias"] = config.alias.trimmed();
+    }
     item["type"] = config.type;
     item["sourceAId"] = config.sourceAId;
     item["unit"] = config.unit;
@@ -129,6 +134,10 @@ bool RecipeManager::appendMeasurement(const QString& cameraId, const Measurement
         existing.sourceBId == config.sourceBId)
     {
       existing.enabled = config.enabled;
+      if (!config.alias.trimmed().isEmpty())
+      {
+        existing.alias = config.alias.trimmed();
+      }
       if (config.hasLabelPoint)
       {
         existing.labelPoint = config.labelPoint;

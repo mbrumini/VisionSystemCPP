@@ -6,6 +6,7 @@
 struct MeasurementResult
 {
   QString id;
+  QString alias;
   QString type;
   QString sourceAId;
   QString sourceBId;

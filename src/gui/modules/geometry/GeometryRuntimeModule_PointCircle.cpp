@@ -153,7 +153,7 @@ void MainWindowGeometryModule::testGeometryCircle(const CameraConfig& camera)
   const cv::Point2d guideCenter = usePartCircle ? partToImage(pose, circleConfig.partCenter) : circleConfig.imageCenter;
   EdgeCircleDetectorConfig config;
   config.id = circleConfig.id;
-  config.label = circleConfig.id;
+  config.label = circleConfig.alias.trimmed().isEmpty() ? circleConfig.id : circleConfig.alias.trimmed();
   config.guideCenter = guideCenter;
   config.guideRadius = circleConfig.radius;
   config.innerBand = circleConfig.innerBand;
@@ -435,7 +435,7 @@ void MainWindowGeometryModule::testGeometryPoint(const CameraConfig& camera)
 
   EdgePointDetectorConfig config;
   config.id = pointConfig.id;
-  config.label = pointConfig.id;
+  config.label = pointConfig.alias.trimmed().isEmpty() ? pointConfig.id : pointConfig.alias.trimmed();
   config.scanStart = imageStart;
   config.scanEnd = imageEnd;
   config.edgeSensitivity = pointConfig.edgeSensitivity;

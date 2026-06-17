@@ -14,6 +14,7 @@
 #include <QComboBox>
 #include <QGridLayout>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QSlider>
 
@@ -50,7 +51,10 @@ void MainWindowGeometryModule::showGeometryCirclePanel(const CameraConfig& camer
   auto* circleSelector = new QComboBox(panel);
   for (int i = 0; i < circleConfigs.size(); ++i)
   {
-    circleSelector->addItem(circleConfigs[i].id, i);
+    const QString display = circleConfigs[i].alias.trimmed().isEmpty()
+      ? circleConfigs[i].id
+      : QString("%1 (%2)").arg(circleConfigs[i].alias.trimmed(), circleConfigs[i].id);
+    circleSelector->addItem(display, i);
   }
   circleSelector->setCurrentIndex(qBound(0, m_activeCircleIndexes.value(camera.id, 0), circleConfigs.size() - 1));
   auto* newCircleButton = createTouchIconButton("new", tr("actions.newGeometryCircle"), panel);
@@ -117,6 +121,8 @@ void MainWindowGeometryModule::showGeometryCirclePanel(const CameraConfig& camer
   pickMode->addItem(tr("labels.edgePickLast"), "last");
   pickMode->addItem(tr("labels.edgePickBest"), "best");
   pickMode->setCurrentIndex(static_cast<int>(circleConfig.pickMode));
+  auto* aliasEdit = new QLineEdit(circleConfig.alias, form);
+  aliasEdit->setPlaceholderText(tr("labels.operatorAlias"));
 
   int row = 0;
   formLayout->addWidget(new QLabel(tr("labels.edgeBandInner"), form), row, 0);
@@ -144,6 +150,8 @@ void MainWindowGeometryModule::showGeometryCirclePanel(const CameraConfig& camer
   formLayout->addWidget(transition, row++, 3);
   formLayout->addWidget(new QLabel(tr("labels.edgePickMode"), form), row, 0);
   formLayout->addWidget(pickMode, row++, 1, 1, 3);
+  formLayout->addWidget(new QLabel(tr("labels.operatorAlias"), form), row, 0);
+  formLayout->addWidget(aliasEdit, row++, 1, 1, 3);
   layout->addWidget(form);
 
   QObject::connect(circleSelector, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
@@ -210,6 +218,11 @@ void MainWindowGeometryModule::showGeometryCirclePanel(const CameraConfig& camer
   });
   QObject::connect(pickMode, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
     activeGeometryCircleConfig(camera.id).pickMode = index == 1 ? EdgeLinePickMode::Last : (index == 2 ? EdgeLinePickMode::Best : EdgeLinePickMode::First);
+    saveGeometryCirclesRecipe(camera);
+    showConfiguredGeometryCircles(camera);
+  });
+  QObject::connect(aliasEdit, &QLineEdit::editingFinished, window(), [this, camera, aliasEdit]() {
+    activeGeometryCircleConfig(camera.id).alias = aliasEdit->text().trimmed();
     saveGeometryCirclesRecipe(camera);
     showConfiguredGeometryCircles(camera);
   });

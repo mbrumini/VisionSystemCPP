@@ -90,7 +90,7 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
 
     EdgeLineDetectorConfig config;
     config.id = line.id;
-    config.label = line.id;
+    config.label = line.alias.trimmed().isEmpty() ? line.id : line.alias.trimmed();
     config.guideStart = imageStart;
     config.guideEnd = imageEnd;
     config.bandHalfWidth = line.bandHalfWidth;
@@ -179,7 +179,7 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
 
     EdgePointDetectorConfig config;
     config.id = point.id;
-    config.label = point.id;
+    config.label = point.alias.trimmed().isEmpty() ? point.id : point.alias.trimmed();
     config.scanStart = imageStart;
     config.scanEnd = imageEnd;
     config.edgeSensitivity = point.edgeSensitivity;
@@ -232,7 +232,7 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
 
     EdgeCircleDetectorConfig config;
     config.id = circle.id;
-    config.label = circle.id;
+    config.label = circle.alias.trimmed().isEmpty() ? circle.id : circle.alias.trimmed();
     config.guideCenter = guideCenter;
     config.guideRadius = circle.radius;
     config.innerBand = circle.innerBand;
@@ -309,7 +309,7 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
 
     EdgeCircleDetectorConfig config;
     config.id = arc.id;
-    config.label = arc.id;
+    config.label = arc.alias.trimmed().isEmpty() ? arc.id : arc.alias.trimmed();
     config.guideCenter = guideCenter;
     config.guideRadius = guideRadius;
     config.innerBand = arc.innerBand;

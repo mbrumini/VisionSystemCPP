@@ -121,25 +121,29 @@ void MainWindowConstructedGeometryModule::showConstructedGeometryPanel(const Cam
   QObject::connect(circleCircleButton, &QPushButton::clicked, window(), [this, camera]() { showCircleCircleIntersectionPanel(camera); });
   buttonLayout->addWidget(circleCircleButton, 0, 2);
 
+  auto* circleCenterButton = createTouchIconButton("circleCenter", tr("actions.circleCenter"), panel);
+  QObject::connect(circleCenterButton, &QPushButton::clicked, window(), [this, camera]() { showCircleCenterPanel(camera); });
+  buttonLayout->addWidget(circleCenterButton, 0, 3);
+
   auto* midpointButton = createTouchIconButton("midpoint", tr("actions.midpoint"), panel);
   QObject::connect(midpointButton, &QPushButton::clicked, window(), [this, camera]() { showMidpointPanel(camera); });
-  buttonLayout->addWidget(midpointButton, 0, 3);
+  buttonLayout->addWidget(midpointButton, 1, 0);
 
   auto* offsetButton = createTouchIconButton("offsetLine", tr("actions.offsetLine"), panel);
   QObject::connect(offsetButton, &QPushButton::clicked, window(), [this, camera]() { showOffsetLinePanel(camera); });
-  buttonLayout->addWidget(offsetButton, 1, 0);
+  buttonLayout->addWidget(offsetButton, 1, 1);
 
   auto* bisectorButton = createTouchIconButton("angleBisector", tr("actions.angleBisector"), panel);
   QObject::connect(bisectorButton, &QPushButton::clicked, window(), [this, camera]() { showAngleBisectorPanel(camera); });
-  buttonLayout->addWidget(bisectorButton, 1, 1);
+  buttonLayout->addWidget(bisectorButton, 1, 2);
 
   auto* tangentButton = createTouchIconButton("tangentLine", tr("actions.tangentLine"), panel);
   QObject::connect(tangentButton, &QPushButton::clicked, window(), [this, camera]() { showTangentLinePanel(camera); });
-  buttonLayout->addWidget(tangentButton, 1, 2);
+  buttonLayout->addWidget(tangentButton, 1, 3);
 
   auto* projectButton = createTouchIconButton("projectPoint", tr("actions.projectPoint"), panel);
   QObject::connect(projectButton, &QPushButton::clicked, window(), [this, camera]() { showProjectPointPanel(camera); });
-  buttonLayout->addWidget(projectButton, 1, 3);
+  buttonLayout->addWidget(projectButton, 2, 0);
 
   auto* backButton = createTouchIconButton("back",
     GeometryPanelNavigation::backLabel(context(), camera, tr("commands.backToCameraTools")),
@@ -150,7 +154,7 @@ void MainWindowConstructedGeometryModule::showConstructedGeometryPanel(const Cam
       context().showCameraToolList(camera);
     }
   });
-  buttonLayout->addWidget(backButton, 2, 0);
+  buttonLayout->addWidget(backButton, 2, 1);
   layout->addWidget(buttonGrid);
   layout->addStretch(1);
 
@@ -201,7 +205,7 @@ void MainWindowConstructedGeometryModule::showLineCircleIntersectionPanel(const 
 
   const GeometrySet& set = cameraRuntime()[camera.id].geometries();
   const QVector<ConstructedGeometryLineSource> lineSources = constructedGeometryLineSources(set);
-  const QVector<ConstructedGeometryCircleSource> circleSources = constructedGeometryCircleSources(set.circles);
+  const QVector<ConstructedGeometryCircleSource> circleSources = constructedGeometryCircleSources(set);
   auto* panel = createPanel(toolsContainer());
   auto* layout = createPanelLayout(panel);
   addTitle(layout, panel, QString("%1 | %2").arg(tr("actions.lineCircleIntersection"), camera.id));
@@ -236,7 +240,7 @@ void MainWindowConstructedGeometryModule::showCircleCircleIntersectionPanel(cons
   refreshConstructedGeometrySources(camera);
 
   const QVector<ConstructedGeometryCircleSource> circleSources =
-    constructedGeometryCircleSources(cameraRuntime()[camera.id].geometries().circles);
+    constructedGeometryCircleSources(cameraRuntime()[camera.id].geometries());
   auto* panel = createPanel(toolsContainer());
   auto* layout = createPanelLayout(panel);
   addTitle(layout, panel, QString("%1 | %2").arg(tr("actions.circleCircleIntersection"), camera.id));
@@ -256,6 +260,37 @@ void MainWindowConstructedGeometryModule::showCircleCircleIntersectionPanel(cons
   createButton->setEnabled(circleSources.size() >= 2);
   QObject::connect(createButton, &QPushButton::clicked, window(), [this, camera, firstCombo, secondCombo]() {
     createCircleCircleIntersection(camera, firstCombo->currentData().toString(), secondCombo->currentData().toString());
+  });
+  layout->addWidget(createButton);
+
+  auto* backButton = createTouchIconButton("back", tr("tools.constructedGeometries"), panel);
+  QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() { showConstructedGeometryPanel(camera); });
+  layout->addWidget(backButton);
+  layout->addStretch(1);
+  toolsLayout()->addWidget(panel);
+}
+
+void MainWindowConstructedGeometryModule::showCircleCenterPanel(const CameraConfig& camera)
+{
+  context().clearToolPanel();
+  refreshConstructedGeometrySources(camera);
+
+  const GeometrySet& set = cameraRuntime()[camera.id].geometries();
+  const QVector<ConstructedGeometryCircleSource> circleSources = constructedGeometryCircleSources(set);
+  auto* panel = createPanel(toolsContainer());
+  auto* layout = createPanelLayout(panel);
+  addTitle(layout, panel, QString("%1 | %2").arg(tr("actions.circleCenter"), camera.id));
+  auto* formLayout = addForm(layout, panel);
+
+  auto* circleCombo = new QComboBox(panel);
+  addCircleSources(circleCombo, circleSources);
+  formLayout->addWidget(new QLabel(tr("labels.sourceCircleOrArc"), panel), 0, 0);
+  formLayout->addWidget(circleCombo, 0, 1);
+
+  auto* createButton = createTouchIconButton("circleCenter", tr("actions.circleCenter"), panel);
+  createButton->setEnabled(!circleSources.isEmpty());
+  QObject::connect(createButton, &QPushButton::clicked, window(), [this, camera, circleCombo]() {
+    createCircleCenter(camera, circleCombo->currentData().toString());
   });
   layout->addWidget(createButton);
 
@@ -381,7 +416,7 @@ void MainWindowConstructedGeometryModule::showTangentLinePanel(const CameraConfi
 
   const GeometrySet& set = cameraRuntime()[camera.id].geometries();
   const QVector<ConstructedGeometryPointSource> pointSources = constructedGeometryPointSources(set);
-  const QVector<ConstructedGeometryCircleSource> circleSources = constructedGeometryCircleSources(set.circles);
+  const QVector<ConstructedGeometryCircleSource> circleSources = constructedGeometryCircleSources(set);
   auto* panel = createPanel(toolsContainer());
   auto* layout = createPanelLayout(panel);
   addTitle(layout, panel, QString("%1 | %2").arg(tr("actions.tangentLine"), camera.id));

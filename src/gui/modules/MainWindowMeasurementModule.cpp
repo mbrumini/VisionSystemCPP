@@ -11,6 +11,7 @@
 #include <QDoubleSpinBox>
 #include <QFormLayout>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QGridLayout>
 #include <QVBoxLayout>
@@ -143,9 +144,12 @@ void MainWindowMeasurementModule::showMeasurementRealValuesPanel(const CameraCon
     for (int i = 0; i < configs.size(); ++i)
     {
       const MeasurementRecipeConfig& config = configs[i];
-      measureCombo->addItem(QString("%1 | %2").arg(config.id, config.type), i);
+      const QString name = config.alias.trimmed().isEmpty() ? config.id : QString("%1 (%2)").arg(config.alias.trimmed(), config.id);
+      measureCombo->addItem(QString("%1 | %2").arg(name, config.type), i);
     }
 
+    auto* aliasEdit = new QLineEdit(form);
+    aliasEdit->setPlaceholderText("Alias operatore");
     auto* realValuesEnabled = new QCheckBox("Abilita valori reali", form);
     auto* sampleValue = new QDoubleSpinBox(form);
     sampleValue->setRange(-1000000.0, 1000000.0);
@@ -171,6 +175,7 @@ void MainWindowMeasurementModule::showMeasurementRealValuesPanel(const CameraCon
         return;
       }
       const MeasurementRecipeConfig& config = configs[index];
+      aliasEdit->setText(config.alias);
       const bool angle = config.type == "line_line_angle";
       const QString suffix = angle ? " deg" : " mm";
       sampleValue->setSuffix(suffix);
@@ -188,6 +193,7 @@ void MainWindowMeasurementModule::showMeasurementRealValuesPanel(const CameraCon
     loadConfig();
 
     formLayout->addRow("Misura", measureCombo);
+    formLayout->addRow("Alias operatore", aliasEdit);
     formLayout->addRow(realValuesEnabled);
     formLayout->addRow("Valore campione", sampleValue);
     formLayout->addRow("Nominale", nominal);
@@ -203,6 +209,7 @@ void MainWindowMeasurementModule::showMeasurementRealValuesPanel(const CameraCon
         return;
       }
       MeasurementRecipeConfig config = configs[index];
+      config.alias = aliasEdit->text().trimmed();
       const bool angle = config.type == "line_line_angle";
       config.unit = angle ? "deg" : "mm";
       const bool enabled = realValuesEnabled->isChecked();

@@ -204,6 +204,7 @@ void MainWindowGeometryModule::loadGeometryArcsRecipe(const CameraConfig& camera
     GeometryArcRuntimeConfig arc;
     arc.enabled = recipe.enabled;
     arc.id = recipe.id;
+    arc.alias = recipe.alias;
     arc.partCenter = cv::Point2d(recipe.partCenter.x(), recipe.partCenter.y());
     arc.partStart = cv::Point2d(recipe.partStart.x(), recipe.partStart.y());
     arc.partEnd = cv::Point2d(recipe.partEnd.x(), recipe.partEnd.y());
@@ -245,6 +246,7 @@ void MainWindowGeometryModule::saveGeometryArcsRecipe(const CameraConfig& camera
     GeometryArcRecipeConfig recipe;
     recipe.enabled = arc.enabled;
     recipe.id = arc.id;
+    recipe.alias = arc.alias;
     recipe.partCenter = QPointF(arc.partCenter.x, arc.partCenter.y);
     recipe.partStart = QPointF(arc.partStart.x, arc.partStart.y);
     recipe.partEnd = QPointF(arc.partEnd.x, arc.partEnd.y);
@@ -514,7 +516,7 @@ void MainWindowGeometryModule::testGeometryArc(const CameraConfig& camera)
 
   EdgeCircleDetectorConfig config;
   config.id = arcConfig.id;
-  config.label = arcConfig.id;
+  config.label = arcConfig.alias.trimmed().isEmpty() ? arcConfig.id : arcConfig.alias.trimmed();
   config.guideCenter = guideCenter;
   config.guideRadius = guideRadius;
   config.innerBand = arcConfig.innerBand;

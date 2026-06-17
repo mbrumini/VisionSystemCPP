@@ -10,6 +10,7 @@
 #include <QComboBox>
 #include <QGridLayout>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QSlider>
 
@@ -45,7 +46,10 @@ void MainWindowGeometryModule::showGeometryArcPanel(const CameraConfig& camera)
   auto* arcSelector = new QComboBox(panel);
   for (int i = 0; i < arcConfigs.size(); ++i)
   {
-    arcSelector->addItem(arcConfigs[i].id, i);
+    const QString display = arcConfigs[i].alias.trimmed().isEmpty()
+      ? arcConfigs[i].id
+      : QString("%1 (%2)").arg(arcConfigs[i].alias.trimmed(), arcConfigs[i].id);
+    arcSelector->addItem(display, i);
   }
   arcSelector->setCurrentIndex(qBound(0, m_activeArcIndexes.value(camera.id, 0), arcConfigs.size() - 1));
   auto* newArcButton = createTouchIconButton("arcGeometry", tr("actions.newGeometryArc"), panel);
@@ -112,6 +116,8 @@ void MainWindowGeometryModule::showGeometryArcPanel(const CameraConfig& camera)
   pickMode->addItem(tr("labels.edgePickLast"), "last");
   pickMode->addItem(tr("labels.edgePickBest"), "best");
   pickMode->setCurrentIndex(static_cast<int>(arcConfig.pickMode));
+  auto* aliasEdit = new QLineEdit(arcConfig.alias, form);
+  aliasEdit->setPlaceholderText(tr("labels.operatorAlias"));
 
   int row = 0;
   formLayout->addWidget(new QLabel(tr("labels.edgeBandInner"), form), row, 0);
@@ -139,6 +145,8 @@ void MainWindowGeometryModule::showGeometryArcPanel(const CameraConfig& camera)
   formLayout->addWidget(transition, row++, 3);
   formLayout->addWidget(new QLabel(tr("labels.edgePickMode"), form), row, 0);
   formLayout->addWidget(pickMode, row++, 1, 1, 3);
+  formLayout->addWidget(new QLabel(tr("labels.operatorAlias"), form), row, 0);
+  formLayout->addWidget(aliasEdit, row++, 1, 1, 3);
   layout->addWidget(form);
 
   QObject::connect(arcSelector, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
@@ -207,6 +215,11 @@ void MainWindowGeometryModule::showGeometryArcPanel(const CameraConfig& camera)
   });
   QObject::connect(pickMode, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
     activeGeometryArcConfig(camera.id).pickMode = index == 1 ? EdgeLinePickMode::Last : (index == 2 ? EdgeLinePickMode::Best : EdgeLinePickMode::First);
+    saveGeometryArcsRecipe(camera);
+    showConfiguredGeometryArcs(camera);
+  });
+  QObject::connect(aliasEdit, &QLineEdit::editingFinished, window(), [this, camera, aliasEdit]() {
+    activeGeometryArcConfig(camera.id).alias = aliasEdit->text().trimmed();
     saveGeometryArcsRecipe(camera);
     showConfiguredGeometryArcs(camera);
   });

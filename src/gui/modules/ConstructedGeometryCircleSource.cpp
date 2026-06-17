@@ -1,5 +1,7 @@
 #include "gui/modules/ConstructedGeometryCircleSource.h"
 
+#include "geometry/GeometrySet.h"
+
 QVector<ConstructedGeometryCircleSource> constructedGeometryCircleSources(const QVector<CircleGeometry>& circles)
 {
   QVector<ConstructedGeometryCircleSource> sources;
@@ -28,6 +30,7 @@ QVector<ConstructedGeometryCircleSource> constructedGeometryCircleSources(const 
     source.id = arc.meta.id;
     const QString label = arc.meta.label.isEmpty() ? arc.meta.id : QString("%1 (%2)").arg(arc.meta.label, arc.meta.id);
     source.label = QString("Arc %1").arg(label);
+    source.arcSource = true;
     sources.append(source);
   }
 
@@ -45,4 +48,27 @@ const CircleGeometry* findConstructedGeometryCircleSource(const QVector<CircleGe
   }
 
   return nullptr;
+}
+
+bool constructedGeometryCircleSourceValue(const GeometrySet& set, const QString& id, CircleGeometry& result)
+{
+  if (const CircleGeometry* circle = findConstructedGeometryCircleSource(set.circles, id))
+  {
+    result = *circle;
+    return true;
+  }
+
+  for (const ArcGeometry& arc : set.arcs)
+  {
+    if (arc.meta.id == id)
+    {
+      result.meta = arc.meta;
+      result.center = arc.center;
+      result.radius = arc.radius;
+      result.meanError = arc.meanError;
+      return true;
+    }
+  }
+
+  return false;
 }

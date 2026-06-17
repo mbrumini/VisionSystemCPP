@@ -43,6 +43,11 @@ void appendCircleOverlay(GeometryOverlay& overlay, const CircleGeometry& circle)
 }
 }
 
+bool findCircleLikeSource(const GeometrySet& set, const QString& id, CircleGeometry& circle)
+{
+  return constructedGeometryCircleSourceValue(set, id, circle);
+}
+
 MainWindowConstructedGeometryModule::MainWindowConstructedGeometryModule(MainWindowContext& context)
   : MainWindowModuleBase(context)
 {
@@ -96,14 +101,14 @@ void MainWindowConstructedGeometryModule::createLineCircleIntersection(const Cam
 {
   GeometrySet& set = cameraRuntime()[camera.id].geometries();
   const LineGeometry* line = findConstructedGeometryLineSource(set, lineId);
-  const CircleGeometry* circle = findConstructedGeometryCircleSource(set.circles, circleId);
-  if (!line || !circle)
+  CircleGeometry circle;
+  if (!line || !findCircleLikeSource(set, circleId, circle))
   {
     log(QString("%1: %2").arg(tr("log.constructedLineCircleIntersectionMissing"), camera.id));
     return;
   }
 
-  const QVector<PointGeometry> points = ConstructedGeometryMath::lineCircleIntersections(*line, *circle);
+  const QVector<PointGeometry> points = ConstructedGeometryMath::lineCircleIntersections(*line, circle);
   if (points.isEmpty())
   {
     log(QString("%1: %2").arg(tr("log.constructedLineCircleIntersectionNone"), camera.id));
@@ -112,25 +117,25 @@ void MainWindowConstructedGeometryModule::createLineCircleIntersection(const Cam
 
   GeometryOverlay overlay;
   overlay.lines.append({toPointF(line->start), toPointF(line->end), QColor("#35c46a"), 5});
-  appendCircleOverlay(overlay, *circle);
+  appendCircleOverlay(overlay, circle);
 
   for (int i = 0; i < points.size(); ++i)
   {
     ConstructedPointGeometry constructed;
     constructed.point = points[i];
     constructed.sourceAId = line->meta.id;
-    constructed.sourceBId = circle->meta.id;
+    constructed.sourceBId = circle.meta.id;
     set.constructedPoints.append(constructed);
     overlay.points.append({QPointF(points[i].point.x, points[i].point.y), QString("X%1").arg(i + 1), QColor("#ff8a00")});
   }
-  saveConstructedGeometryRecipeAction(camera, "line_circle_intersection", line->meta.id, circle->meta.id);
+  saveConstructedGeometryRecipeAction(camera, "line_circle_intersection", line->meta.id, circle.meta.id);
 
   largeImage()->setGeometryOverlay(overlay);
   log(QString("%1: %2 %3/%4 punti=%5")
         .arg(tr("log.constructedLineCircleIntersectionCreated"))
         .arg(camera.id)
         .arg(line->meta.id)
-        .arg(circle->meta.id)
+        .arg(circle.meta.id)
         .arg(points.size()));
 }
 
@@ -139,15 +144,17 @@ void MainWindowConstructedGeometryModule::createCircleCircleIntersection(const C
                                                                          const QString& secondCircleId)
 {
   GeometrySet& set = cameraRuntime()[camera.id].geometries();
-  const CircleGeometry* firstCircle = findConstructedGeometryCircleSource(set.circles, firstCircleId);
-  const CircleGeometry* secondCircle = findConstructedGeometryCircleSource(set.circles, secondCircleId);
-  if (!firstCircle || !secondCircle || firstCircleId == secondCircleId)
+  CircleGeometry firstCircle;
+  CircleGeometry secondCircle;
+  if (!findCircleLikeSource(set, firstCircleId, firstCircle) ||
+      !findCircleLikeSource(set, secondCircleId, secondCircle) ||
+      firstCircleId == secondCircleId)
   {
     log(QString("%1: %2").arg(tr("log.constructedCircleIntersectionMissing"), camera.id));
     return;
   }
 
-  const QVector<PointGeometry> points = ConstructedGeometryMath::circleCircleIntersections(*firstCircle, *secondCircle);
+  const QVector<PointGeometry> points = ConstructedGeometryMath::circleCircleIntersections(firstCircle, secondCircle);
   if (points.isEmpty())
   {
     log(QString("%1: %2").arg(tr("log.constructedCircleIntersectionNone"), camera.id));
@@ -155,27 +162,57 @@ void MainWindowConstructedGeometryModule::createCircleCircleIntersection(const C
   }
 
   GeometryOverlay overlay;
-  appendCircleOverlay(overlay, *firstCircle);
-  appendCircleOverlay(overlay, *secondCircle);
+  appendCircleOverlay(overlay, firstCircle);
+  appendCircleOverlay(overlay, secondCircle);
 
   for (int i = 0; i < points.size(); ++i)
   {
     ConstructedPointGeometry constructed;
     constructed.point = points[i];
-    constructed.sourceAId = firstCircle->meta.id;
-    constructed.sourceBId = secondCircle->meta.id;
+    constructed.sourceAId = firstCircle.meta.id;
+    constructed.sourceBId = secondCircle.meta.id;
     set.constructedPoints.append(constructed);
     overlay.points.append({QPointF(points[i].point.x, points[i].point.y), QString("X%1").arg(i + 1), QColor("#ff8a00")});
   }
-  saveConstructedGeometryRecipeAction(camera, "circle_circle_intersection", firstCircle->meta.id, secondCircle->meta.id);
+  saveConstructedGeometryRecipeAction(camera, "circle_circle_intersection", firstCircle.meta.id, secondCircle.meta.id);
 
   largeImage()->setGeometryOverlay(overlay);
   log(QString("%1: %2 %3/%4 punti=%5")
         .arg(tr("log.constructedCircleIntersectionCreated"))
         .arg(camera.id)
-        .arg(firstCircle->meta.id)
-        .arg(secondCircle->meta.id)
+        .arg(firstCircle.meta.id)
+        .arg(secondCircle.meta.id)
         .arg(points.size()));
+}
+
+void MainWindowConstructedGeometryModule::createCircleCenter(const CameraConfig& camera, const QString& circleId)
+{
+  GeometrySet& set = cameraRuntime()[camera.id].geometries();
+  CircleGeometry circle;
+  if (!findCircleLikeSource(set, circleId, circle))
+  {
+    log(QString("%1: %2").arg(tr("log.constructedCircleCenterMissing"), camera.id));
+    return;
+  }
+
+  const PointGeometry point = ConstructedGeometryMath::circleCenter(circle);
+  ConstructedPointGeometry constructed;
+  constructed.point = point;
+  constructed.sourceAId = circle.meta.id;
+  set.constructedPoints.append(constructed);
+  saveConstructedGeometryRecipeAction(camera, "circle_center", constructed.sourceAId);
+
+  GeometryOverlay overlay;
+  appendCircleOverlay(overlay, circle);
+  overlay.points.append({QPointF(point.point.x, point.point.y), "C", QColor("#ff8a00")});
+  largeImage()->setGeometryOverlay(overlay);
+
+  log(QString("%1: %2 %3 x=%4 y=%5")
+        .arg(tr("log.constructedCircleCenterCreated"))
+        .arg(camera.id)
+        .arg(constructed.sourceAId)
+        .arg(point.point.x, 0, 'f', 2)
+        .arg(point.point.y, 0, 'f', 2));
 }
 
 void MainWindowConstructedGeometryModule::createMidpoint(const CameraConfig& camera,
@@ -303,14 +340,14 @@ void MainWindowConstructedGeometryModule::createTangentLines(const CameraConfig&
 {
   GeometrySet& set = cameraRuntime()[camera.id].geometries();
   const PointGeometry* point = findConstructedGeometryPointSource(set, pointId);
-  const CircleGeometry* circle = findConstructedGeometryCircleSource(set.circles, circleId);
-  if (!point || !circle)
+  CircleGeometry circle;
+  if (!point || !findCircleLikeSource(set, circleId, circle))
   {
     log(QString("%1: %2").arg(tr("log.constructedTangentMissing"), camera.id));
     return;
   }
 
-  const QVector<LineGeometry> lines = ConstructedGeometryMath::tangentLinesFromPointToCircle(*point, *circle);
+  const QVector<LineGeometry> lines = ConstructedGeometryMath::tangentLinesFromPointToCircle(*point, circle);
   if (lines.isEmpty())
   {
     log(QString("%1: %2").arg(tr("log.constructedTangentInvalid"), camera.id));
@@ -318,7 +355,7 @@ void MainWindowConstructedGeometryModule::createTangentLines(const CameraConfig&
   }
 
   GeometryOverlay overlay;
-  appendCircleOverlay(overlay, *circle);
+  appendCircleOverlay(overlay, circle);
   overlay.points.append({QPointF(point->point.x, point->point.y), "P", QColor("#35c46a")});
 
   for (const LineGeometry& line : lines)
@@ -326,18 +363,18 @@ void MainWindowConstructedGeometryModule::createTangentLines(const CameraConfig&
     ConstructedLineGeometry constructed;
     constructed.line = line;
     constructed.sourceAId = point->meta.id;
-    constructed.sourceBId = circle->meta.id;
+    constructed.sourceBId = circle.meta.id;
     set.constructedLines.append(constructed);
     overlay.lines.append({toPointF(line.start), toPointF(line.end), QColor("#ff8a00"), 5});
   }
-  saveConstructedGeometryRecipeAction(camera, "tangent_line", point->meta.id, circle->meta.id);
+  saveConstructedGeometryRecipeAction(camera, "tangent_line", point->meta.id, circle.meta.id);
 
   largeImage()->setGeometryOverlay(overlay);
   log(QString("%1: %2 %3/%4 linee=%5")
         .arg(tr("log.constructedTangentCreated"))
         .arg(camera.id)
         .arg(point->meta.id)
-        .arg(circle->meta.id)
+        .arg(circle.meta.id)
         .arg(lines.size()));
 }
 

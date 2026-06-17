@@ -9,6 +9,7 @@
 struct GeometryLineRuntimeConfig
 {
   QString id = "line_1";
+  QString alias;
   bool enabled = true;
   cv::Point2d imageStart;
   cv::Point2d imageEnd;
@@ -29,6 +30,7 @@ struct GeometryLineRuntimeConfig
 struct GeometryPointRuntimeConfig
 {
   QString id = "point_1";
+  QString alias;
   bool enabled = true;
   cv::Point2d imageStart;
   cv::Point2d imageEnd;
@@ -45,6 +47,7 @@ struct GeometryPointRuntimeConfig
 struct GeometryCircleRuntimeConfig
 {
   QString id = "circle_1";
+  QString alias;
   bool enabled = true;
   cv::Point2d imageCenter;
   cv::Point2d partCenter;
@@ -65,6 +68,7 @@ struct GeometryCircleRuntimeConfig
 struct GeometryArcRuntimeConfig
 {
   QString id = "arc_1";
+  QString alias;
   bool enabled = true;
   cv::Point2d imageCenter;
   cv::Point2d imageStart;

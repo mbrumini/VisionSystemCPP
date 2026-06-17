@@ -153,6 +153,19 @@ QVector<PointGeometry> circleCircleIntersections(const CircleGeometry& a, const 
   return results;
 }
 
+PointGeometry circleCenter(const CircleGeometry& circle)
+{
+  PointGeometry result;
+  result.point = circle.center;
+  result.meta.id = QString("%1_center").arg(circle.meta.id);
+  result.meta.label = result.meta.id;
+  result.meta.method = "constructed_circle_center";
+  result.meta.coordinateSpace = GeometryCoordinateSpace::Image;
+  result.meta.valid = circle.meta.valid;
+  result.meta.score = circle.meta.score;
+  return result;
+}
+
 PointGeometry midpoint(const PointGeometry& a, const PointGeometry& b)
 {
   PointGeometry result;

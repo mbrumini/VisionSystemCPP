@@ -235,7 +235,7 @@ void MainWindowGeometryModule::testGeometryLine(const CameraConfig& camera)
 
   EdgeLineDetectorConfig config;
   config.id = lineConfig.id;
-  config.label = lineConfig.id;
+  config.label = lineConfig.alias.trimmed().isEmpty() ? lineConfig.id : lineConfig.alias.trimmed();
   config.guideStart = imageStart;
   config.guideEnd = imageEnd;
   config.bandHalfWidth = lineConfig.bandHalfWidth;

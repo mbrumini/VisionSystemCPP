@@ -14,6 +14,7 @@
 #include <QComboBox>
 #include <QGridLayout>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QSlider>
 
@@ -50,7 +51,10 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
   auto* lineSelector = new QComboBox(panel);
   for (int i = 0; i < lineConfigs.size(); ++i)
   {
-    lineSelector->addItem(lineConfigs[i].id, i);
+    const QString display = lineConfigs[i].alias.trimmed().isEmpty()
+      ? lineConfigs[i].id
+      : QString("%1 (%2)").arg(lineConfigs[i].alias.trimmed(), lineConfigs[i].id);
+    lineSelector->addItem(display, i);
   }
   lineSelector->setCurrentIndex(qBound(0, m_activeLineIndexes.value(camera.id, 0), lineConfigs.size() - 1));
   auto* newLineButton = createTouchIconButton("new", tr("actions.newGeometryLine"), panel);
@@ -95,6 +99,8 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
   edgePickMode->addItem(tr("labels.edgePickLast"), "last");
   edgePickMode->addItem(tr("labels.edgePickBest"), "best");
   edgePickMode->setCurrentIndex(static_cast<int>(lineConfig.pickMode));
+  auto* aliasEdit = new QLineEdit(lineConfig.alias, panel);
+  aliasEdit->setPlaceholderText(tr("labels.operatorAlias"));
 
   auto* lineControls = new QWidget(panel);
   auto* lineControlsLayout = new QGridLayout(lineControls);
@@ -113,6 +119,7 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
   lineControlsLayout->addWidget(edgeSensitivity, 2, 2, 1, 2);
   lineControlsLayout->setColumnStretch(1, 1);
   layout->addWidget(lineControls);
+  layout->addWidget(aliasEdit);
 
   auto* filterControls = new QWidget(panel);
   auto* filterControlsLayout = new QGridLayout(filterControls);
@@ -224,6 +231,11 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
     }
     saveGeometryLinesRecipe(camera);
     updateGeometryLineOverlay(camera);
+  });
+  QObject::connect(aliasEdit, &QLineEdit::editingFinished, window(), [this, camera, aliasEdit]() {
+    activeGeometryLineConfig(camera.id).alias = aliasEdit->text().trimmed();
+    saveGeometryLinesRecipe(camera);
+    testConfiguredGeometryLines(camera);
   });
 
   auto* testButton = createTouchIconButton("start", tr("actions.testGeometry"), panel);
