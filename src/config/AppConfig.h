@@ -12,6 +12,16 @@ struct CameraTriggerConfig
   QString cameraLine;
 };
 
+struct CameraCalibrationConfig
+{
+  bool enabled = false;
+  QString type = "none";
+  QString file;
+  double pixelSizeXMm = 0.0;
+  double pixelSizeYMm = 0.0;
+  QString updatedAt;
+};
+
 struct ProcessingProfile
 {
   QString id;
@@ -35,6 +45,7 @@ struct CameraConfig
   QString modelName;
   QString interfaceId;
   CameraTriggerConfig trigger;
+  CameraCalibrationConfig calibration;
   QString processingProfileId;
   ProcessingProfile profile;
 };

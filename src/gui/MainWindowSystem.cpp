@@ -1,10 +1,13 @@
 #include "gui/MainWindow.h"
 
+#include "calibration/CalibrationRecipe.h"
+#include "gui/CheckerboardCalibrationDialog.h"
 #include "util/AsyncExecutor.h"
 
 #include <QDir>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDateTime>
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QFormLayout>
@@ -12,6 +15,8 @@
 #include <QInputDialog>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QDoubleSpinBox>
+#include <QPushButton>
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QSettings>
@@ -87,7 +92,7 @@ void MainWindow::showCameraSystemSettings()
 
   auto* layout = new QVBoxLayout(&dialog);
   auto* table = new QTableWidget(&dialog);
-  table->setColumnCount(10);
+  table->setColumnCount(12);
   table->setHorizontalHeaderLabels({
     "Slot",
     "ID",
@@ -97,8 +102,10 @@ void MainWindow::showCameraSystemSettings()
     "Tipo",
     "Funzione",
     "Device / cartella",
-    "Futuro 1",
-    "Futuro 2"
+    "Calib.",
+    "Tipo calib.",
+    "mm/px",
+    "File calib."
   });
   table->verticalHeader()->setVisible(false);
   table->setAlternatingRowColors(true);
@@ -160,8 +167,26 @@ void MainWindow::showCameraSystemSettings()
       source = camera.deviceId;
     }
     table->setItem(row, 7, readOnlyItem(source));
-    table->setItem(row, 8, new QTableWidgetItem(""));
-    table->setItem(row, 9, new QTableWidgetItem(""));
+
+    auto* calibrationEnabled = new QCheckBox(table);
+    calibrationEnabled->setChecked(camera.calibration.enabled);
+    table->setCellWidget(row, 8, calibrationEnabled);
+
+    auto* calibrationType = new QComboBox(table);
+    calibrationType->addItems({"none", "manual", "checkerboard"});
+    const int calibrationTypeIndex = calibrationType->findText(camera.calibration.type);
+    calibrationType->setCurrentIndex(calibrationTypeIndex >= 0 ? calibrationTypeIndex : 0);
+    table->setCellWidget(row, 9, calibrationType);
+
+    auto* pixelSize = new QDoubleSpinBox(table);
+    pixelSize->setRange(0.0, 1000.0);
+    pixelSize->setDecimals(8);
+    pixelSize->setSingleStep(0.001);
+    pixelSize->setSuffix(" mm/px");
+    pixelSize->setValue(camera.calibration.pixelSizeXMm > 0.0 ? camera.calibration.pixelSizeXMm : camera.calibration.pixelSizeYMm);
+    table->setCellWidget(row, 10, pixelSize);
+
+    table->setItem(row, 11, new QTableWidgetItem(camera.calibration.file));
   }
 
   table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
@@ -174,6 +199,8 @@ void MainWindow::showCameraSystemSettings()
   table->horizontalHeader()->setSectionResizeMode(7, QHeaderView::Stretch);
   table->horizontalHeader()->setSectionResizeMode(8, QHeaderView::ResizeToContents);
   table->horizontalHeader()->setSectionResizeMode(9, QHeaderView::ResizeToContents);
+  table->horizontalHeader()->setSectionResizeMode(10, QHeaderView::ResizeToContents);
+  table->horizontalHeader()->setSectionResizeMode(11, QHeaderView::Stretch);
   layout->addWidget(table);
 
   auto* buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, &dialog);
@@ -210,6 +237,23 @@ void MainWindow::showCameraSystemSettings()
     {
       camera.processingProfileId = profileCombo->currentText();
     }
+    if (auto* calibrationEnabled = qobject_cast<QCheckBox*>(table->cellWidget(row, 8)))
+    {
+      camera.calibration.enabled = calibrationEnabled->isChecked();
+    }
+    if (auto* calibrationType = qobject_cast<QComboBox*>(table->cellWidget(row, 9)))
+    {
+      camera.calibration.type = calibrationType->currentText();
+    }
+    if (auto* pixelSize = qobject_cast<QDoubleSpinBox*>(table->cellWidget(row, 10)))
+    {
+      camera.calibration.pixelSizeXMm = pixelSize->value();
+      camera.calibration.pixelSizeYMm = pixelSize->value();
+    }
+    if (QTableWidgetItem* calibrationFile = table->item(row, 11))
+    {
+      camera.calibration.file = calibrationFile->text().trimmed();
+    }
   }
 
   QString error;
@@ -221,6 +265,79 @@ void MainWindow::showCameraSystemSettings()
   }
 
   appendLog("Configurazione telecamere salvata: " + configPath());
+  loadConfiguration();
+}
+
+void MainWindow::showCheckerboardCalibrationDialog()
+{
+  CheckerboardCalibrationDialog dialog(
+    m_config.cameras(),
+    m_selectedCameraId,
+    [this](const CameraConfig& camera, QString* error) {
+      return m_imaging.currentInputImage(camera, error);
+    },
+    [this](const cv::Mat& image) {
+      return m_imaging.matToPixmap(image);
+    },
+    [this](const CameraConfig& camera) {
+      const auto runtimeIt = m_cameraRuntime.find(camera.id);
+      if (runtimeIt == m_cameraRuntime.end() || !runtimeIt->second.running())
+      {
+        m_setup.startCameraSimulation(camera, false);
+      }
+    },
+    [this](const CameraConfig& camera) {
+      m_setup.stopCameraSimulation(camera, false);
+    },
+    this);
+
+  if (dialog.exec() != QDialog::Accepted)
+  {
+    return;
+  }
+
+  const CheckerboardCalibrationDialog::Result result = dialog.result();
+  if (result.cameraIndex < 0 || result.cameraIndex >= m_config.cameras().size() || !result.model.valid)
+  {
+    return;
+  }
+
+  QDir projectDir(QString::fromUtf8(PROJECT_SOURCE_DIR));
+  projectDir.mkpath("calibrations");
+  const QString relativeFile = QString("calibrations/%1_checkerboard.json").arg(result.model.cameraId);
+  const QString absoluteFile = projectDir.filePath(relativeFile);
+
+  QString error;
+  CalibrationRecipe calibrationRecipe;
+  if (!calibrationRecipe.save(absoluteFile, result.model, &error))
+  {
+    QMessageBox::warning(this, "Calibrazione checkerboard", error);
+    appendLog(error);
+    return;
+  }
+
+  QVector<CameraConfig> updated = m_config.cameras();
+  CameraConfig& updatedCamera = updated[result.cameraIndex];
+  updatedCamera.calibration.enabled = true;
+  updatedCamera.calibration.type = "checkerboard";
+  updatedCamera.calibration.file = relativeFile;
+  updatedCamera.calibration.pixelSizeXMm = result.model.pixelSizeXMm;
+  updatedCamera.calibration.pixelSizeYMm = result.model.pixelSizeYMm;
+  updatedCamera.calibration.updatedAt = QDateTime::currentDateTime().toString(Qt::ISODate);
+  if (!m_config.saveCameraSystemSettings(configPath(), updated, &error))
+  {
+    QMessageBox::warning(this, "Calibrazione checkerboard", error);
+    appendLog(error);
+    return;
+  }
+
+  const QString message = QString("Calibrazione salvata: %1 | X=%2 mm/px Y=%3 mm/px errore=%4 px")
+    .arg(relativeFile)
+    .arg(result.model.pixelSizeXMm, 0, 'f', 8)
+    .arg(result.model.pixelSizeYMm, 0, 'f', 8)
+    .arg(result.model.rmsErrorPixels, 0, 'f', 3);
+  appendLog(message);
+  QMessageBox::information(this, "Calibrazione checkerboard", message);
   loadConfiguration();
 }
 

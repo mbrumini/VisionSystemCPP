@@ -118,6 +118,13 @@ bool AppConfig::load(const QString& filePath, QString* errorMessage)
     camera.trigger.source = triggerObject.value("source").toString();
     camera.trigger.ioOutput = triggerObject.value("ioOutput").toString();
     camera.trigger.cameraLine = triggerObject.value("cameraLine").toString();
+    const QJsonObject calibrationObject = cameraObject.value("calibration").toObject();
+    camera.calibration.enabled = calibrationObject.value("enabled").toBool(false);
+    camera.calibration.type = calibrationObject.value("type").toString("none");
+    camera.calibration.file = calibrationObject.value("file").toString();
+    camera.calibration.pixelSizeXMm = calibrationObject.value("pixelSizeXMm").toDouble(0.0);
+    camera.calibration.pixelSizeYMm = calibrationObject.value("pixelSizeYMm").toDouble(camera.calibration.pixelSizeXMm);
+    camera.calibration.updatedAt = calibrationObject.value("updatedAt").toString();
     camera.processingProfileId = cameraObject.value("processingProfile").toString("default");
     camera.profile = profiles.value(camera.processingProfileId, profiles.value("default"));
 
@@ -393,6 +400,14 @@ bool AppConfig::saveCameraSystemSettings(
     cameraObject["processingProfile"] = camera.processingProfileId.isEmpty()
       ? QString("default")
       : camera.processingProfileId;
+    QJsonObject calibrationObject;
+    calibrationObject["enabled"] = camera.calibration.enabled;
+    calibrationObject["type"] = camera.calibration.type.isEmpty() ? QString("none") : camera.calibration.type;
+    calibrationObject["file"] = camera.calibration.file;
+    calibrationObject["pixelSizeXMm"] = camera.calibration.pixelSizeXMm;
+    calibrationObject["pixelSizeYMm"] = camera.calibration.pixelSizeYMm;
+    calibrationObject["updatedAt"] = camera.calibration.updatedAt;
+    cameraObject["calibration"] = calibrationObject;
     if (!camera.modelName.isEmpty())
     {
       cameraObject["modelName"] = camera.modelName;

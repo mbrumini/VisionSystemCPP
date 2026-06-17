@@ -5,6 +5,9 @@
 - [ ] Modalita' 1, pezzo campione: per ogni misura salvare valore reale del master, unita', fattore scala e nominale/tolleranze.
 - [ ] Modalita' 2, calibrazione camera fissa: associare a ogni camera nel menu Sistema un file calibrazione ottica/camera.
 - [ ] Calibrazione con pattern a scacchiera: acquisizione immagini, rilevamento corner, calcolo pixel/mm e futura distorsione.
+- [x] Helper base checkerboard: detector corner, stima scala planare, recipe JSON e mappa pixel/mm riusabili.
+- [x] Comando Sistema > Calibra checkerboard: calcola scala planare, salva file calibrazione e aggiorna la camera.
+- [ ] Calibrazione completa: usare gli stessi frame per stimare matrice camera, distorsione e correzione punti/immagine.
 - [ ] Risultati misura: mostrare valore reale in mm/gradi quando disponibile, mantenendo pixel come diagnostica.
 - [ ] Tolleranze: nominale, min/max o +/-; giudizio OK/NOK collegato a overview, strip camera e futuro IO.
 - [ ] Geometrie costruite prioritarie per misure reali: centro cerchio/arco come punto, distanza tra centri, proiezioni e intersezioni.

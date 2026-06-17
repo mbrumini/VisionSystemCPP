@@ -33,9 +33,12 @@ struct CameraCalibrationModel
 {
   QString cameraId;
   QString modelId;
+  QString calibrationType = "none";
+  QString sourceFile;
   double pixelSizeXMm = 0.0;
   double pixelSizeYMm = 0.0;
   double rotationDegrees = 0.0;
+  double rmsErrorPixels = 0.0;
   QPointF originImagePoint;
   QPointF originWorldMm;
   bool valid = false;

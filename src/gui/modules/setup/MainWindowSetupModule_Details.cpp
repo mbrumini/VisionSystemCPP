@@ -49,7 +49,14 @@ QString MainWindowSetupModule::cameraSetupDetailsText(const CameraConfig& camera
       .arg(camera.trigger.source.isEmpty() ? tr("status.invalid") : camera.trigger.source);
   }
 
-  return QString("%1: %2\n%3: %4\n%5: %6\n%7: %8\n%9: %10\n%11: %12\n%13: %14\n%15: %16")
+  const QString calibrationDetails = camera.calibration.enabled
+    ? QString("%1 %2 mm/px file=%3")
+        .arg(camera.calibration.type)
+        .arg((camera.calibration.pixelSizeXMm + camera.calibration.pixelSizeYMm) * 0.5, 0, 'f', 8)
+        .arg(camera.calibration.file.isEmpty() ? tr("status.notAvailable") : camera.calibration.file)
+    : tr("status.notAvailable");
+
+  return QString("%1: %2\n%3: %4\n%5: %6\n%7: %8\n%9: %10\n%11: %12\n%13: %14\n%15: %16\n%17: %18")
     .arg(tr("labels.source"), camera.type)
     .arg(sourceLabel, sourceDetails)
     .arg(tr("labels.sampleImage"), samplePath.isEmpty() ? tr("status.invalid") : samplePath)
@@ -65,7 +72,8 @@ QString MainWindowSetupModule::cameraSetupDetailsText(const CameraConfig& camera
             .arg(pose.angleRadians * 180.0 / CV_PI, 0, 'f', 1)
             .arg(pose.score, 0, 'f', 2)
         : tr("status.invalid"))
-    .arg(tr("labels.scanTime"), scanElapsedMs >= 0 ? QString("%1 ms").arg(scanElapsedMs) : tr("status.invalid"));
+    .arg(tr("labels.scanTime"), scanElapsedMs >= 0 ? QString("%1 ms").arg(scanElapsedMs) : tr("status.invalid"))
+    .arg("Calibrazione", calibrationDetails);
 }
 
 void MainWindowSetupModule::showSetupResultsPopup(const CameraConfig& camera)

@@ -62,6 +62,7 @@ private:
   void stopMachine();
   void showAccessLogin();
   void showCameraSystemSettings();
+  void showCheckerboardCalibrationDialog();
   void showHelp();
   void updateControlPanel(const CameraConfig* camera);
   void updateMeasurementResults();

@@ -59,6 +59,10 @@ add_executable(VisionSystemCPP
     src/calibration/CalibrationTypes.h
     src/calibration/CalibrationPatternDetector.h
     src/calibration/CalibrationPatternDetector.cpp
+    src/calibration/PlanarCalibrationEstimator.h
+    src/calibration/PlanarCalibrationEstimator.cpp
+    src/calibration/CalibrationSolver.h
+    src/calibration/CalibrationSolver.cpp
     src/calibration/CalibrationSession.h
     src/calibration/CalibrationSession.cpp
     src/calibration/ImageCalibrationMap.h
@@ -85,6 +89,8 @@ add_executable(VisionSystemCPP
     src/gui/CameraStripWidget.cpp
     src/gui/CameraAssignmentDialog.h
     src/gui/CameraAssignmentDialog.cpp
+    src/gui/CheckerboardCalibrationDialog.h
+    src/gui/CheckerboardCalibrationDialog.cpp
     src/gui/UsbCameraAssignmentDialog.h
     src/gui/UsbCameraAssignmentDialog.cpp
     src/gui/CameraSetupPanelWidget.h

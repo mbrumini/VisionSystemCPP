@@ -107,6 +107,7 @@ const CircleGeometry* findCircleByMetaId(const GeometrySet& set, const QString& 
 }
 
 void appendMeasurementResult(GeometrySet& set,
+                             const CameraConfig& camera,
                              const MeasurementRecipeConfig& config,
                              const QString& sourceAId,
                              const QString& sourceBId,
@@ -138,6 +139,15 @@ void appendMeasurementResult(GeometrySet& set,
   {
     result.valueReal = value * (config.sampleValue / config.samplePixels);
     result.unit = config.unit.isEmpty() || config.unit == "px" ? "mm" : config.unit;
+    result.hasRealValue = true;
+  }
+  else if (camera.calibration.enabled &&
+           camera.calibration.pixelSizeXMm > 0.000001 &&
+           camera.calibration.pixelSizeYMm > 0.000001)
+  {
+    const double pixelSizeMm = (camera.calibration.pixelSizeXMm + camera.calibration.pixelSizeYMm) * 0.5;
+    result.valueReal = value * pixelSizeMm;
+    result.unit = "mm";
     result.hasRealValue = true;
   }
   else
@@ -303,7 +313,7 @@ void MainWindowMeasurementModule::rebuildMeasurementRecipe(const CameraConfig& c
       double distancePixels = 0.0;
       if (pointA && pointB && MeasurementGeometryMath::pointPointDistance(*pointA, *pointB, distancePixels))
       {
-        appendMeasurementResult(set, config, pointA->meta.id, pointB->meta.id, distancePixels);
+        appendMeasurementResult(set, camera, config, pointA->meta.id, pointB->meta.id, distancePixels);
       }
       continue;
     }
@@ -315,7 +325,7 @@ void MainWindowMeasurementModule::rebuildMeasurementRecipe(const CameraConfig& c
       double distancePixels = 0.0;
       if (point && line && MeasurementGeometryMath::pointLineDistance(*point, *line, distancePixels))
       {
-        appendMeasurementResult(set, config, point->meta.id, line->meta.id, distancePixels);
+        appendMeasurementResult(set, camera, config, point->meta.id, line->meta.id, distancePixels);
       }
       continue;
     }
@@ -327,7 +337,7 @@ void MainWindowMeasurementModule::rebuildMeasurementRecipe(const CameraConfig& c
       double distancePixels = 0.0;
       if (lineA && lineB && MeasurementGeometryMath::parallelLineDistance(*lineA, *lineB, distancePixels))
       {
-        appendMeasurementResult(set, config, lineA->meta.id, lineB->meta.id, distancePixels);
+        appendMeasurementResult(set, camera, config, lineA->meta.id, lineB->meta.id, distancePixels);
       }
       continue;
     }
@@ -338,7 +348,7 @@ void MainWindowMeasurementModule::rebuildMeasurementRecipe(const CameraConfig& c
       double diameterPixels = 0.0;
       if (circle && MeasurementGeometryMath::circleDiameterPixels(*circle, diameterPixels))
       {
-        appendMeasurementResult(set, config, circle->meta.id, {}, diameterPixels);
+        appendMeasurementResult(set, camera, config, circle->meta.id, {}, diameterPixels);
       }
       continue;
     }
@@ -350,7 +360,7 @@ void MainWindowMeasurementModule::rebuildMeasurementRecipe(const CameraConfig& c
       double angleDegrees = 0.0;
       if (lineA && lineB && MeasurementGeometryMath::lineLineAngleDegrees(*lineA, *lineB, angleDegrees))
       {
-        appendMeasurementResult(set, config, lineA->meta.id, lineB->meta.id, angleDegrees);
+        appendMeasurementResult(set, camera, config, lineA->meta.id, lineB->meta.id, angleDegrees);
       }
       continue;
     }
