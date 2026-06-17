@@ -1,5 +1,14 @@
 # TODO - VisionSystemCPP
 
+## PRIORITA ALTA - Misure reali e calibrazione
+
+- [ ] Modalita' 1, pezzo campione: per ogni misura salvare valore reale del master, unita', fattore scala e nominale/tolleranze.
+- [ ] Modalita' 2, calibrazione camera fissa: associare a ogni camera nel menu Sistema un file calibrazione ottica/camera.
+- [ ] Calibrazione con pattern a scacchiera: acquisizione immagini, rilevamento corner, calcolo pixel/mm e futura distorsione.
+- [ ] Risultati misura: mostrare valore reale in mm/gradi quando disponibile, mantenendo pixel come diagnostica.
+- [ ] Tolleranze: nominale, min/max o +/-; giudizio OK/NOK collegato a overview, strip camera e futuro IO.
+- [ ] Geometrie costruite prioritarie per misure reali: centro cerchio/arco come punto, distanza tra centri, proiezioni e intersezioni.
+
 ## Localizzazione superficie grayscale
 
 - [ ] Usare sempre il centro localizzato del pezzo corrente come origine dinamica per le misure successive.
@@ -48,6 +57,7 @@
 
 ## Misure reali e calibrazione
 
+- [ ] PRIORITA: completare modello dati misura reale prima della GUI avanzata.
 - [ ] Implementare acquisizione pattern calibrazione per camera: scatto singolo, lista frame accettati/scartati e salvataggio immagini pattern.
 - [ ] Implementare detector pattern calibrazione: checkerboard, dot grid/circle grid, pattern custom.
 - [ ] Calcolare modello calibrazione camera: pixel/mm, origine, rotazione e futura mappa distorsione.

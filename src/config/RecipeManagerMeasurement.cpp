@@ -30,6 +30,16 @@ QVector<MeasurementRecipeConfig> RecipeManager::loadMeasurements(const QString& 
     config.type = item.value("type").toString();
     config.sourceAId = item.value("sourceAId").toString();
     config.sourceBId = item.value("sourceBId").toString();
+    config.unit = item.value("unit").toString(config.unit);
+    config.samplePixels = item.value("samplePixels").toDouble(config.samplePixels);
+    config.sampleValue = item.value("sampleValue").toDouble(config.sampleValue);
+    config.hasSampleScale = item.value("hasSampleScale").toBool(config.hasSampleScale);
+    config.nominal = item.value("nominal").toDouble(config.nominal);
+    config.min = item.value("min").toDouble(config.min);
+    config.max = item.value("max").toDouble(config.max);
+    config.hasNominal = item.value("hasNominal").toBool(config.hasNominal);
+    config.hasMin = item.value("hasMin").toBool(config.hasMin);
+    config.hasMax = item.value("hasMax").toBool(config.hasMax);
     const QJsonObject label = item.value("label").toObject();
     if (label.value("custom").toBool(false))
     {
@@ -69,6 +79,16 @@ bool RecipeManager::saveMeasurements(const QString& cameraId, const QVector<Meas
     item["id"] = config.id.isEmpty() ? QString("measurement_%1").arg(items.size() + 1) : config.id;
     item["type"] = config.type;
     item["sourceAId"] = config.sourceAId;
+    item["unit"] = config.unit;
+    item["samplePixels"] = config.samplePixels;
+    item["sampleValue"] = config.sampleValue;
+    item["hasSampleScale"] = config.hasSampleScale;
+    item["nominal"] = config.nominal;
+    item["min"] = config.min;
+    item["max"] = config.max;
+    item["hasNominal"] = config.hasNominal;
+    item["hasMin"] = config.hasMin;
+    item["hasMax"] = config.hasMax;
     if (!config.sourceBId.isEmpty())
     {
       item["sourceBId"] = config.sourceBId;
@@ -113,6 +133,10 @@ bool RecipeManager::appendMeasurement(const QString& cameraId, const Measurement
       {
         existing.labelPoint = config.labelPoint;
         existing.hasLabelPoint = true;
+      }
+      if (config.samplePixels > 0.0)
+      {
+        existing.samplePixels = config.samplePixels;
       }
       return saveMeasurements(cameraId, configs, errorMessage);
     }

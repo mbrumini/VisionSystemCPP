@@ -6,6 +6,7 @@
 
 class CameraConfig;
 class GeometryOverlay;
+struct MeasurementRecipeConfig;
 
 class MainWindowMeasurementModule : public MainWindowModuleBase
 {
@@ -18,6 +19,7 @@ public:
   void showLineLineDistancePanel(const CameraConfig& camera);
   void showCircleDiameterPanel(const CameraConfig& camera);
   void showLineLineAnglePanel(const CameraConfig& camera);
+  void showMeasurementRealValuesPanel(const CameraConfig& camera);
   void rebuildMeasurementRecipe(const CameraConfig& camera);
   void appendMeasurementOverlay(const CameraConfig& camera, GeometryOverlay& overlay) const;
   void setMeasurementLabelPosition(const CameraConfig& camera, const QString& measurementKey, const QPointF& imagePoint);
@@ -29,8 +31,10 @@ private:
   void createLineLineDistance(const CameraConfig& camera, const QString& lineAId, const QString& lineBId);
   void createCircleDiameter(const CameraConfig& camera, const QString& circleId);
   void createLineLineAngle(const CameraConfig& camera, const QString& lineAId, const QString& lineBId);
+  void saveMeasurementRealSettings(const CameraConfig& camera, const MeasurementRecipeConfig& config);
   void saveMeasurementRecipeAction(const CameraConfig& camera,
                                    const QString& type,
                                    const QString& sourceAId,
-                                   const QString& sourceBId = {});
+                                   const QString& sourceBId = {},
+                                   double samplePixels = 0.0);
 };

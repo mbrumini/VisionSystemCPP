@@ -121,11 +121,45 @@ void appendMeasurementResult(GeometrySet& set,
   result.valid = true;
   result.labelPoint = config.labelPoint;
   result.hasLabelPoint = config.hasLabelPoint;
+  result.unit = config.unit;
+  result.nominal = config.nominal;
+  result.min = config.min;
+  result.max = config.max;
+  result.hasNominal = config.hasNominal;
+  result.hasMin = config.hasMin;
+  result.hasMax = config.hasMax;
+  if (config.type == "line_line_angle")
+  {
+    result.valueReal = value;
+    result.unit = "deg";
+    result.hasRealValue = true;
+  }
+  else if (config.hasSampleScale && config.samplePixels > 0.000001)
+  {
+    result.valueReal = value * (config.sampleValue / config.samplePixels);
+    result.unit = config.unit.isEmpty() || config.unit == "px" ? "mm" : config.unit;
+    result.hasRealValue = true;
+  }
+  else
+  {
+    result.unit = "px";
+  }
+
+  if (result.hasRealValue && (result.hasMin || result.hasMax))
+  {
+    const bool belowMin = result.hasMin && result.valueReal < result.min;
+    const bool aboveMax = result.hasMax && result.valueReal > result.max;
+    result.judgement = (belowMin || aboveMax) ? "NOK" : "OK";
+  }
   set.measurements.append(result);
 }
 
 QString measurementLabel(const MeasurementResult& measurement, const QString& unit)
 {
+  if (measurement.hasRealValue)
+  {
+    return QString("%1 %2").arg(measurement.valueReal, 0, 'f', 3).arg(measurement.unit);
+  }
   return QString("%1 %2").arg(measurement.valuePixels, 0, 'f', 3).arg(unit);
 }
 
@@ -159,13 +193,16 @@ GeometryOverlayDimension measurementDimension(const QPointF& start,
 void MainWindowMeasurementModule::saveMeasurementRecipeAction(const CameraConfig& camera,
                                                               const QString& type,
                                                               const QString& sourceAId,
-                                                              const QString& sourceBId)
+                                                              const QString& sourceBId,
+                                                              double samplePixels)
 {
   MeasurementRecipeConfig config;
   config.enabled = true;
   config.type = type;
   config.sourceAId = sourceAId;
   config.sourceBId = sourceBId;
+  config.samplePixels = samplePixels;
+  config.unit = type == "line_line_angle" ? "deg" : "px";
 
   QString error;
   if (!recipes().appendMeasurement(camera.id, config, &error))
@@ -186,6 +223,42 @@ void MainWindowMeasurementModule::setMeasurementLabelPosition(const CameraConfig
     {
       config.labelPoint = imagePoint;
       config.hasLabelPoint = true;
+      changed = true;
+      break;
+    }
+  }
+
+  if (!changed)
+  {
+    return;
+  }
+
+  QString error;
+  if (!recipes().saveMeasurements(camera.id, configs, &error))
+  {
+    log(QString("%1: %2").arg(tr("log.measurementRecipeSaveFailed"), error));
+  }
+}
+
+void MainWindowMeasurementModule::saveMeasurementRealSettings(const CameraConfig& camera,
+                                                              const MeasurementRecipeConfig& updatedConfig)
+{
+  QVector<MeasurementRecipeConfig> configs = recipes().loadMeasurements(camera.id);
+  bool changed = false;
+  for (MeasurementRecipeConfig& config : configs)
+  {
+    if (measurementKey(config) == measurementKey(updatedConfig))
+    {
+      config.unit = updatedConfig.unit;
+      config.samplePixels = updatedConfig.samplePixels;
+      config.sampleValue = updatedConfig.sampleValue;
+      config.hasSampleScale = updatedConfig.hasSampleScale;
+      config.nominal = updatedConfig.nominal;
+      config.min = updatedConfig.min;
+      config.max = updatedConfig.max;
+      config.hasNominal = updatedConfig.hasNominal;
+      config.hasMin = updatedConfig.hasMin;
+      config.hasMax = updatedConfig.hasMax;
       changed = true;
       break;
     }

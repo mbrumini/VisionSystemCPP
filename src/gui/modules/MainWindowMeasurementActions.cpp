@@ -112,7 +112,7 @@ void MainWindowMeasurementModule::createPointPointDistance(const CameraConfig& c
                     pointA->meta.id,
                     pointB->meta.id,
                     distancePixels);
-  saveMeasurementRecipeAction(camera, "point_point_distance", pointA->meta.id, pointB->meta.id);
+  saveMeasurementRecipeAction(camera, "point_point_distance", pointA->meta.id, pointB->meta.id, distancePixels);
 
   GeometryOverlay overlay;
   overlay.dimensions.append(measurementDimension(
@@ -165,7 +165,7 @@ void MainWindowMeasurementModule::createPointLineDistance(const CameraConfig& ca
                     point->meta.id,
                     line->meta.id,
                     distancePixels);
-  saveMeasurementRecipeAction(camera, "point_line_distance", point->meta.id, line->meta.id);
+  saveMeasurementRecipeAction(camera, "point_line_distance", point->meta.id, line->meta.id, distancePixels);
 
   GeometryOverlay overlay;
   overlay.lines.append({toPointF(line->start), toPointF(line->end), QColor("#35c46a"), 4});
@@ -220,7 +220,7 @@ void MainWindowMeasurementModule::createLineLineDistance(const CameraConfig& cam
                     lineA->meta.id,
                     lineB->meta.id,
                     distancePixels);
-  saveMeasurementRecipeAction(camera, "line_line_distance", lineA->meta.id, lineB->meta.id);
+  saveMeasurementRecipeAction(camera, "line_line_distance", lineA->meta.id, lineB->meta.id, distancePixels);
 
   GeometryOverlay overlay;
   overlay.lines.append({toPointF(lineA->start), toPointF(lineA->end), QColor("#35c46a"), 4});
@@ -287,7 +287,7 @@ void MainWindowMeasurementModule::createCircleDiameter(const CameraConfig& camer
                     circle->meta.id,
                     {},
                     diameterPixels);
-  saveMeasurementRecipeAction(camera, "circle_diameter", circle->meta.id);
+  saveMeasurementRecipeAction(camera, "circle_diameter", circle->meta.id, {}, diameterPixels);
 
   const cv::Point2d left(circle->center.x - circle->radius, circle->center.y);
   const cv::Point2d right(circle->center.x + circle->radius, circle->center.y);
@@ -343,7 +343,7 @@ void MainWindowMeasurementModule::createLineLineAngle(const CameraConfig& camera
                     lineA->meta.id,
                     lineB->meta.id,
                     angleDegrees);
-  saveMeasurementRecipeAction(camera, "line_line_angle", lineA->meta.id, lineB->meta.id);
+  saveMeasurementRecipeAction(camera, "line_line_angle", lineA->meta.id, lineB->meta.id, angleDegrees);
 
   cv::Point2d center;
   if (!lineIntersection(*lineA, *lineB, center))

@@ -157,6 +157,16 @@ struct MeasurementRecipeConfig
   QString sourceBId;
   QPointF labelPoint;
   bool hasLabelPoint = false;
+  QString unit = "px";
+  double samplePixels = 0.0;
+  double sampleValue = 0.0;
+  bool hasSampleScale = false;
+  double nominal = 0.0;
+  double min = 0.0;
+  double max = 0.0;
+  bool hasNominal = false;
+  bool hasMin = false;
+  bool hasMax = false;
 };
 
 struct AiClassificationClassConfig

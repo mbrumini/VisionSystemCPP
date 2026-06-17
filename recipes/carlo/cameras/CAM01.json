@@ -151,48 +151,88 @@
             "items": [
                 {
                     "enabled": true,
+                    "hasMax": true,
+                    "hasMin": true,
+                    "hasNominal": true,
+                    "hasSampleScale": true,
                     "id": "measurement_1",
                     "label": {
                         "custom": true,
                         "x": 1199.774647887324,
                         "y": 1030.3641456582632
                     },
+                    "max": -0.05,
+                    "min": 0.05,
+                    "nominal": 21,
+                    "samplePixels": 373.67406931489467,
+                    "sampleValue": 21,
                     "sourceAId": "circle_1",
-                    "type": "circle_diameter"
+                    "type": "circle_diameter",
+                    "unit": "mm"
                 },
                 {
                     "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": true,
                     "id": "measurement_2",
                     "label": {
                         "custom": true,
                         "x": 1201.4788732394366,
                         "y": 943.5070028011204
                     },
+                    "max": -0.05,
+                    "min": 0.05,
+                    "nominal": 11,
+                    "samplePixels": 83.80145157404803,
+                    "sampleValue": 11,
                     "sourceAId": "point_1",
                     "sourceBId": "point_2",
-                    "type": "point_point_distance"
+                    "type": "point_point_distance",
+                    "unit": "mm"
                 },
                 {
                     "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
                     "id": "measurement_3",
                     "label": {
                         "custom": true,
                         "x": 1206.5915492957747,
                         "y": 892.4145658263305
                     },
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 0,
+                    "sampleValue": 0,
                     "sourceAId": "circle_2",
-                    "type": "circle_diameter"
+                    "type": "circle_diameter",
+                    "unit": "px"
                 },
                 {
                     "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
                     "id": "measurement_4",
                     "label": {
                         "custom": true,
                         "x": 1198.0704225352113,
                         "y": 986.0840336134454
                     },
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 0,
+                    "sampleValue": 0,
                     "sourceAId": "arc_2",
-                    "type": "circle_diameter"
+                    "type": "circle_diameter",
+                    "unit": "px"
                 }
             ]
         },

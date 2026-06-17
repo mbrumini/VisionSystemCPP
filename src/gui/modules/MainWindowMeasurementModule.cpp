@@ -6,6 +6,10 @@
 #include "gui/modules/geometry/GeometryPanelNavigation.h"
 #include "gui/TouchIconButton.h"
 
+#include <QCheckBox>
+#include <QComboBox>
+#include <QDoubleSpinBox>
+#include <QFormLayout>
 #include <QLabel>
 #include <QPushButton>
 #include <QGridLayout>
@@ -83,6 +87,12 @@ void MainWindowMeasurementModule::showMeasurementPanel(const CameraConfig& camer
   });
   buttonLayout->addWidget(lineAngleButton, 1, 0);
 
+  auto* realValuesButton = createTouchIconButton("nominal", "Valori reali", panel);
+  QObject::connect(realValuesButton, &QPushButton::clicked, window(), [this, camera]() {
+    showMeasurementRealValuesPanel(camera);
+  });
+  buttonLayout->addWidget(realValuesButton, 1, 1);
+
   auto* backButton = createTouchIconButton("back",
     GeometryPanelNavigation::backLabel(context(), camera, tr("commands.backToCameraTools")),
     panel);
@@ -92,8 +102,150 @@ void MainWindowMeasurementModule::showMeasurementPanel(const CameraConfig& camer
       context().showCameraToolList(camera);
     }
   });
-  buttonLayout->addWidget(backButton, 1, 1);
+  buttonLayout->addWidget(backButton, 1, 2);
   layout->addWidget(buttonGrid);
+  layout->addStretch(1);
+
+  toolsLayout()->addWidget(panel);
+}
+
+void MainWindowMeasurementModule::showMeasurementRealValuesPanel(const CameraConfig& camera)
+{
+  context().clearToolPanel();
+  refreshMeasurementSources(camera);
+
+  QVector<MeasurementRecipeConfig> configs = recipes().loadMeasurements(camera.id);
+
+  auto* panel = new QWidget(toolsContainer());
+  auto* layout = new QVBoxLayout(panel);
+  layout->setContentsMargins(0, 0, 0, 0);
+  layout->setSpacing(8);
+
+  auto* title = new QLabel(QString("Valori reali | %1").arg(camera.id), panel);
+  title->setObjectName("toolPanelTitle");
+  layout->addWidget(title);
+
+  if (configs.isEmpty())
+  {
+    auto* note = new QLabel("Nessuna misura configurata.", panel);
+    note->setObjectName("toolPanelNote");
+    note->setWordWrap(true);
+    layout->addWidget(note);
+  }
+  else
+  {
+    auto* form = new QWidget(panel);
+    auto* formLayout = new QFormLayout(form);
+    formLayout->setContentsMargins(0, 0, 0, 0);
+    formLayout->setSpacing(8);
+
+    auto* measureCombo = new QComboBox(form);
+    for (int i = 0; i < configs.size(); ++i)
+    {
+      const MeasurementRecipeConfig& config = configs[i];
+      measureCombo->addItem(QString("%1 | %2").arg(config.id, config.type), i);
+    }
+
+    auto* realValuesEnabled = new QCheckBox("Abilita valori reali", form);
+    auto* sampleValue = new QDoubleSpinBox(form);
+    sampleValue->setRange(-1000000.0, 1000000.0);
+    sampleValue->setDecimals(4);
+    sampleValue->setSuffix(" mm");
+    auto* nominal = new QDoubleSpinBox(form);
+    nominal->setRange(-1000000.0, 1000000.0);
+    nominal->setDecimals(4);
+    nominal->setSuffix(" mm");
+    auto* min = new QDoubleSpinBox(form);
+    min->setRange(-1000000.0, 1000000.0);
+    min->setDecimals(4);
+    min->setSuffix(" mm");
+    auto* max = new QDoubleSpinBox(form);
+    max->setRange(-1000000.0, 1000000.0);
+    max->setDecimals(4);
+    max->setSuffix(" mm");
+
+    auto loadConfig = [=]() {
+      const int index = measureCombo->currentData().toInt();
+      if (index < 0 || index >= configs.size())
+      {
+        return;
+      }
+      const MeasurementRecipeConfig& config = configs[index];
+      const bool angle = config.type == "line_line_angle";
+      const QString suffix = angle ? " deg" : " mm";
+      sampleValue->setSuffix(suffix);
+      nominal->setSuffix(suffix);
+      min->setSuffix(suffix);
+      max->setSuffix(suffix);
+      realValuesEnabled->setChecked(config.hasSampleScale || config.hasNominal || config.hasMin || config.hasMax);
+      sampleValue->setValue(config.sampleValue);
+      nominal->setValue(config.nominal);
+      min->setValue(config.min);
+      max->setValue(config.max);
+    };
+
+    QObject::connect(measureCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), loadConfig);
+    loadConfig();
+
+    formLayout->addRow("Misura", measureCombo);
+    formLayout->addRow(realValuesEnabled);
+    formLayout->addRow("Valore campione", sampleValue);
+    formLayout->addRow("Nominale", nominal);
+    formLayout->addRow("Limite minimo", min);
+    formLayout->addRow("Limite massimo", max);
+    layout->addWidget(form);
+
+    auto* saveButton = createTouchIconButton("save", "Salva valori", panel);
+    QObject::connect(saveButton, &QPushButton::clicked, window(), [=]() mutable {
+      const int index = measureCombo->currentData().toInt();
+      if (index < 0 || index >= configs.size())
+      {
+        return;
+      }
+      MeasurementRecipeConfig config = configs[index];
+      const bool angle = config.type == "line_line_angle";
+      config.unit = angle ? "deg" : "mm";
+      const bool enabled = realValuesEnabled->isChecked();
+      if (config.samplePixels <= 0.000001)
+      {
+        const GeometrySet& set = cameraRuntime()[camera.id].geometries();
+        for (const MeasurementResult& measurement : set.measurements)
+        {
+          if (measurement.type == config.type &&
+              measurement.sourceAId == config.sourceAId &&
+              measurement.sourceBId == config.sourceBId)
+          {
+            config.samplePixels = measurement.valuePixels;
+            break;
+          }
+        }
+      }
+      config.hasSampleScale = enabled && config.samplePixels > 0.000001;
+      config.sampleValue = sampleValue->value();
+      config.hasNominal = enabled;
+      config.nominal = nominal->value();
+      config.hasMin = enabled;
+      config.min = min->value();
+      config.hasMax = enabled;
+      config.max = max->value();
+      saveMeasurementRealSettings(camera, config);
+      configs[index] = config;
+      rebuildMeasurementRecipe(camera);
+      if (context().geometry)
+      {
+        context().geometry->refreshMeasurementOverlay(camera);
+      }
+      if (context().updateMeasurementResults)
+      {
+        context().updateMeasurementResults();
+      }
+    });
+    layout->addWidget(saveButton);
+  }
+
+  auto* backButton = createTouchIconButton("back", tr("tools.measurements"), panel);
+  QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() { showMeasurementPanel(camera); });
+  layout->addWidget(backButton);
   layout->addStretch(1);
 
   toolsLayout()->addWidget(panel);

@@ -11,8 +11,23 @@ namespace
 {
 QString measurementValue(const MeasurementResult& measurement)
 {
+  if (measurement.hasRealValue)
+  {
+    return QString("%1 %2").arg(measurement.valueReal, 0, 'f', 3).arg(measurement.unit);
+  }
   const QString suffix = measurement.type == "line_line_angle" ? " deg" : " px";
   return QString("%1%2").arg(measurement.valuePixels, 0, 'f', 3).arg(suffix);
+}
+
+QString measurementDiagnosticValue(const MeasurementResult& measurement)
+{
+  const QString suffix = measurement.type == "line_line_angle" ? " deg" : " px";
+  return QString("%1%2").arg(measurement.valuePixels, 0, 'f', 3).arg(suffix);
+}
+
+QString measurementJudgement(const MeasurementResult& measurement)
+{
+  return measurement.judgement.isEmpty() ? "-" : measurement.judgement;
 }
 }
 
@@ -29,8 +44,8 @@ MeasurementResultsWidget::MeasurementResultsWidget(QWidget* parent)
   layout->addWidget(m_title);
 
   m_table = new QTableWidget(this);
-  m_table->setColumnCount(6);
-  m_table->setHorizontalHeaderLabels({"Camera", "ID", "Tipo", "A", "B", "Valore"});
+  m_table->setColumnCount(8);
+  m_table->setHorizontalHeaderLabels({"Camera", "ID", "Tipo", "A", "B", "Valore", "Pixel", "Esito"});
   m_table->verticalHeader()->setVisible(false);
   m_table->horizontalHeader()->setStretchLastSection(true);
   m_table->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -60,6 +75,8 @@ void MeasurementResultsWidget::setMeasurements(const QString& cameraId, const QV
     m_table->setItem(row, 3, new QTableWidgetItem(measurement.sourceAId));
     m_table->setItem(row, 4, new QTableWidgetItem(measurement.sourceBId));
     m_table->setItem(row, 5, new QTableWidgetItem(measurementValue(measurement)));
+    m_table->setItem(row, 6, new QTableWidgetItem(measurementDiagnosticValue(measurement)));
+    m_table->setItem(row, 7, new QTableWidgetItem(measurementJudgement(measurement)));
   }
 }
 
@@ -78,6 +95,8 @@ void MeasurementResultsWidget::setAllCameraMeasurements(const QVector<CameraMeas
     m_table->setItem(row, 3, new QTableWidgetItem(measurement.sourceAId));
     m_table->setItem(row, 4, new QTableWidgetItem(measurement.sourceBId));
     m_table->setItem(row, 5, new QTableWidgetItem(measurementValue(measurement)));
+    m_table->setItem(row, 6, new QTableWidgetItem(measurementDiagnosticValue(measurement)));
+    m_table->setItem(row, 7, new QTableWidgetItem(measurementJudgement(measurement)));
   }
 }
 
