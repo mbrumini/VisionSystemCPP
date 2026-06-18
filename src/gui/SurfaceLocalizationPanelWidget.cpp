@@ -42,9 +42,11 @@ SurfaceLocalizationPanelWidget::SurfaceLocalizationPanelWidget(
 
   auto* centerRadiusButton = createTouchIconButton("circleGeometry", trText("labels.circleDrawingCenterRadius"), drawingMode);
   centerRadiusButton->setCheckable(true);
-  centerRadiusButton->setChecked(true);
+  centerRadiusButton->setChecked(false);
+  centerRadiusButton->setVisible(false);
   auto* threePointButton = createTouchIconButton("arcGeometry", trText("labels.circleDrawingThreePoints"), drawingMode);
   threePointButton->setCheckable(true);
+  threePointButton->setChecked(true);
 
   connect(centerRadiusButton, &QPushButton::clicked, this, [centerRadiusButton, threePointButton]() {
     centerRadiusButton->setChecked(true);
@@ -117,18 +119,6 @@ SurfaceLocalizationPanelWidget::SurfaceLocalizationPanelWidget(
         handlers.drawEdgeCircle();
       }
     }},
-    {trText("actions.surfaceAddExclusion"), "surfaceAddExclusion", [handlers]() {
-      if (handlers.addExclusion)
-      {
-        handlers.addExclusion();
-      }
-    }},
-    {trText("actions.surfaceClearExclusions"), "surfaceClearExclusions", [handlers]() {
-      if (handlers.clearExclusions)
-      {
-        handlers.clearExclusions();
-      }
-    }},
     {trText("actions.clearLocalization"), "clear", [handlers]() {
       if (handlers.clearLocalization)
       {
@@ -142,7 +132,7 @@ SurfaceLocalizationPanelWidget::SurfaceLocalizationPanelWidget(
     auto* button = createTouchIconButton(actions[i].iconId, actions[i].label, buttons);
     button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     connect(button, &QPushButton::clicked, this, actions[i].handler);
-    buttonsLayout->addWidget(button, i / 3, i % 3);
+    buttonsLayout->addWidget(button, i < 3 ? 0 : 1, i < 3 ? i : 0, i < 3 ? 1 : 1, i < 3 ? 1 : 3);
   }
 
   layout->addWidget(buttons);
@@ -184,20 +174,6 @@ SurfaceLocalizationPanelWidget::SurfaceLocalizationPanelWidget(
   edgeBandLayout->setHorizontalSpacing(8);
   edgeBandLayout->setVerticalSpacing(2);
 
-  auto* innerBandTitle = new QLabel(trText("labels.edgeBandInner"), edgeBandBox);
-  auto* innerBandValue = new QLabel(QString::number(annulus.edgeBandInner), edgeBandBox);
-  innerBandValue->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-  auto* innerBandSlider = new QSlider(Qt::Horizontal, edgeBandBox);
-  innerBandSlider->setRange(1, 200);
-  innerBandSlider->setValue(annulus.edgeBandInner);
-
-  auto* outerBandTitle = new QLabel(trText("labels.edgeBandOuter"), edgeBandBox);
-  auto* outerBandValue = new QLabel(QString::number(annulus.edgeBandOuter), edgeBandBox);
-  outerBandValue->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-  auto* outerBandSlider = new QSlider(Qt::Horizontal, edgeBandBox);
-  outerBandSlider->setRange(1, 200);
-  outerBandSlider->setValue(annulus.edgeBandOuter);
-
   auto* fitErrorTitle = new QLabel(trText("labels.edgeFitMaxError"), edgeBandBox);
   auto* fitErrorValue = new QLabel(QString::number(annulus.edgeFitMaxError), edgeBandBox);
   fitErrorValue->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
@@ -205,15 +181,9 @@ SurfaceLocalizationPanelWidget::SurfaceLocalizationPanelWidget(
   fitErrorSlider->setRange(1, 50);
   fitErrorSlider->setValue(annulus.edgeFitMaxError);
 
-  edgeBandLayout->addWidget(innerBandTitle, 0, 0);
-  edgeBandLayout->addWidget(innerBandValue, 0, 1);
-  edgeBandLayout->addWidget(innerBandSlider, 1, 0, 1, 2);
-  edgeBandLayout->addWidget(outerBandTitle, 2, 0);
-  edgeBandLayout->addWidget(outerBandValue, 2, 1);
-  edgeBandLayout->addWidget(outerBandSlider, 3, 0, 1, 2);
-  edgeBandLayout->addWidget(fitErrorTitle, 4, 0);
-  edgeBandLayout->addWidget(fitErrorValue, 4, 1);
-  edgeBandLayout->addWidget(fitErrorSlider, 5, 0, 1, 2);
+  edgeBandLayout->addWidget(fitErrorTitle, 0, 0);
+  edgeBandLayout->addWidget(fitErrorValue, 0, 1);
+  edgeBandLayout->addWidget(fitErrorSlider, 1, 0, 1, 2);
   edgeBandBox->setVisible(methodCombo->currentData().toString() == "edge");
   methodLayout->addWidget(edgeBandBox, 3, 0, 1, 3);
 
@@ -245,20 +215,6 @@ SurfaceLocalizationPanelWidget::SurfaceLocalizationPanelWidget(
     if (handlers.thresholdChanged)
     {
       handlers.thresholdChanged(value);
-    }
-  });
-  connect(innerBandSlider, &QSlider::valueChanged, this, [=](int value) {
-    innerBandValue->setText(QString::number(value));
-    if (handlers.edgeBandChanged)
-    {
-      handlers.edgeBandChanged(value, outerBandSlider->value());
-    }
-  });
-  connect(outerBandSlider, &QSlider::valueChanged, this, [=](int value) {
-    outerBandValue->setText(QString::number(value));
-    if (handlers.edgeBandChanged)
-    {
-      handlers.edgeBandChanged(innerBandSlider->value(), value);
     }
   });
   connect(fitErrorSlider, &QSlider::valueChanged, this, [=](int value) {

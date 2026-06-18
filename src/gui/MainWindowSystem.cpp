@@ -76,6 +76,7 @@ void MainWindow::showAccessLogin()
       m_logBox->setVisible(true);
     }
     appendLog(QString("%1: %2").arg(trText("access.loginOk"), roleLabel));
+    updateMeasurementResults();
     QMessageBox::information(this, trText("access.loginTitle"), QString("%1: %2").arg(trText("access.loginOk"), roleLabel));
     return;
   }

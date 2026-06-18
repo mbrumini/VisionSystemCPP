@@ -49,6 +49,18 @@ void UsbCamera::close()
   }
 }
 
+bool UsbCamera::setAcquisitionSettings(const CameraAcquisitionConfig& acquisition)
+{
+  if (!m_capture.isOpened())
+  {
+    return false;
+  }
+
+  m_config.acquisition = acquisition;
+  applyAcquisitionSettings();
+  return true;
+}
+
 void UsbCamera::applyAcquisitionSettings()
 {
   if (!m_capture.isOpened())

@@ -26,6 +26,8 @@ public:
   void clearExclusionRects();
   void setCircles(const QVector<ImageCircle>& imageCircles);
   void clearCircles();
+  void setDetectedCircle(const ImageCircle& circle);
+  void clearDetectedCircle();
   void setGeometryArea(const ImageRotatedRect& imageArea);
   void clearGeometryArea();
   void setGeometryPoints(const QVector<QPointF>& imagePoints);
@@ -44,6 +46,7 @@ public:
   void setTwoPointLineDrawingEnabled(bool enabled);
   void setOuterCircleDrawingEnabled(bool enabled);
   void setInnerCircleDrawingEnabled(bool enabled);
+  void setCircleBandEditingEnabled(bool enabled);
   void setThreePointCircleDrawingEnabled(bool enabled);
   void setThreePointArcDrawingEnabled(bool enabled);
   void setRoiChangedHandler(std::function<void(const QRect&)> handler);
@@ -51,6 +54,7 @@ public:
   void setExclusionRectAddedHandler(std::function<void(const QRect&)> handler);
   void setExclusionRectsChangedHandler(std::function<void(const QVector<QRect>&)> handler);
   void setCircleChangedHandler(std::function<void(bool, const ImageCircle&)> handler);
+  void setCircleBandChangedHandler(std::function<void(const QVector<ImageCircle>&, int)> handler);
   void setThreePointCircleHandler(std::function<void(const QVector<QPoint>&)> handler);
   void setGeometryAreaChangedHandler(std::function<void(const ImageRotatedRect&)> handler);
   void setGeometryPointPickedHandler(std::function<void(const QPointF&)> handler);
@@ -121,6 +125,7 @@ private:
     Exclusion,
     OuterCircle,
     InnerCircle,
+    CircleBandEdit,
     ThreePointCircle,
     ThreePointArc,
     GeometryArea,
@@ -137,12 +142,15 @@ private:
   QVector<QPoint> m_pendingPolygon;
   QVector<QRect> m_exclusionRects;
   QVector<ImageCircle> m_circles;
+  ImageCircle m_detectedCircle;
+  bool m_hasDetectedCircle = false;
   QVector<ImageLine> m_geometryLines;
   QVector<QPointF> m_geometryPoints;
   GeometryOverlay m_geometryOverlay;
   ImageRotatedRect m_geometryArea;
   bool m_hasRoi = false;
   bool m_hasGeometryArea = false;
+  bool m_circleBandEditing = false;
   DrawingMode m_drawingMode = DrawingMode::None;
   bool m_dragging = false;
   bool m_movingRoi = false;
@@ -153,6 +161,8 @@ private:
   bool m_resizingExclusion = false;
   bool m_movingGeometryOverlayPoint = false;
   bool m_movingGeometryOverlayDimensionLabel = false;
+  bool m_movingCircleBandCenter = false;
+  int m_selectedCircleBandRadius = -1;
   ExclusionHandle m_activeRoiHandle = ExclusionHandle::None;
   ExclusionHandle m_activeExclusionHandle = ExclusionHandle::None;
   GeometryAreaHandle m_activeGeometryAreaHandle = GeometryAreaHandle::None;
@@ -172,6 +182,7 @@ private:
   std::function<void(const QRect&)> m_exclusionRectAddedHandler;
   std::function<void(const QVector<QRect>&)> m_exclusionRectsChangedHandler;
   std::function<void(bool, const ImageCircle&)> m_circleChangedHandler;
+  std::function<void(const QVector<ImageCircle>&, int)> m_circleBandChangedHandler;
   std::function<void(const QVector<QPoint>&)> m_threePointCircleHandler;
   std::function<void(const ImageRotatedRect&)> m_geometryAreaChangedHandler;
   std::function<void(const QPointF&)> m_geometryPointPickedHandler;

@@ -37,6 +37,8 @@
     "generalCommands": "General commands",
     "selectedCamera": "Selected camera",
     "cameraTools": "Camera tools",
+    "recipeImages": "Recipe sample images",
+    "cameraSetup": "Camera setup",
     "eventLog": "Event log",
     "localizationStrategies": "Localization strategies",
     "strategyControls": "Strategy controls"

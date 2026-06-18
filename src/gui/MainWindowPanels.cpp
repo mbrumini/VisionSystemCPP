@@ -113,6 +113,10 @@ void MainWindow::updateMeasurementResults()
     return;
   }
 
+  const AccessRole role = m_accessSession.role();
+  m_measurementResults->setShowScanTime(
+    role == AccessRole::Administrator || role == AccessRole::Guru);
+
   if (m_selectedCameraId.isEmpty())
   {
     QVector<CameraMeasurementResultRow> rows;
@@ -127,7 +131,11 @@ void MainWindow::updateMeasurementResults()
       const QVector<MeasurementResult>& measurements = runtimeIt->second.geometries().measurements;
       for (const MeasurementResult& measurement : measurements)
       {
-        rows.append({camera.id, measurement});
+        rows.append({
+          camera.id,
+          measurement,
+          m_lastSetupScanElapsedMs.value(camera.id, -1)
+        });
       }
     }
     m_measurementResults->setAllCameraMeasurements(rows);
@@ -136,7 +144,8 @@ void MainWindow::updateMeasurementResults()
 
   m_measurementResults->setMeasurements(
     m_selectedCameraId,
-    m_cameraRuntime[m_selectedCameraId].geometries().measurements);
+    m_cameraRuntime[m_selectedCameraId].geometries().measurements,
+    m_lastSetupScanElapsedMs.value(m_selectedCameraId, -1));
 }
 
 void MainWindow::updateCameraStripStatus(const QString& cameraId)
@@ -165,6 +174,8 @@ void MainWindow::deactivateImageDrawingTools()
   m_largeImage->setExclusionDrawingEnabled(false);
   m_largeImage->setOuterCircleDrawingEnabled(false);
   m_largeImage->setInnerCircleDrawingEnabled(false);
+  m_largeImage->setCircleBandEditingEnabled(false);
+  m_largeImage->clearDetectedCircle();
   m_largeImage->setThreePointCircleDrawingEnabled(false);
   m_largeImage->setThreePointArcDrawingEnabled(false);
   m_largeImage->setGeometryPointPickingEnabled(false);
@@ -198,7 +209,6 @@ void MainWindow::showCameraToolList(const CameraConfig& camera)
   addTool("constructedGeometries");
   addTool("measurements");
   addTool("ai");
-  addTool("tolerances");
 
   for (const QString& tool : camera.profile.guiTools)
   {
@@ -317,7 +327,10 @@ void MainWindow::addGrabToggleToToolPanel()
   auto* text = new QLabel(QString("Grab: %1").arg(label), bar);
   text->setObjectName("toolPanelNote");
   text->setWordWrap(true);
-  auto* restoreSampleButton = createTouchIconButton("sampleImage", trText("actions.restoreSampleImage"), bar);
+  auto* restoreSampleButton = createTouchIconButton(
+    "reload",
+    trText("actions.restoreSampleImage"),
+    bar);
 
   connect(button, &QPushButton::clicked, this, [this, button, text]() {
     if (m_selectedCameraId.isEmpty())

@@ -71,13 +71,8 @@ void MainWindowSetupModule::showCameraSetupPanel(const CameraConfig& camera)
   texts.nextFrame = tr("actions.nextFrame");
   texts.results = tr("actions.frameResults");
   texts.back = tr("commands.backToCameraTools");
-  texts.toolsTitle = tr("tools.geometries");
-  texts.toolLabels = {
-    tr("actions.pointGeometry"),
-    tr("actions.lineGeometry"),
-    tr("actions.circleGeometry"),
-    tr("actions.arcGeometry")
-  };
+  texts.recipeImagesTitle = tr("groups.recipeImages");
+  texts.cameraSetupTitle = tr("groups.cameraSetup");
 
   auto* panel = new CameraSetupPanelWidget(
     texts,
@@ -91,7 +86,6 @@ void MainWindowSetupModule::showCameraSetupPanel(const CameraConfig& camera)
       }
     },
     [this, camera]() { context().cameraConfig->acquireCameraSampleImage(camera); },
-    [this, camera]() { showAiPanel(camera); },
     [this, camera]() { context().cameraConfig->configureCameraSampleImage(camera); },
     [this, camera]() { showCameraSampleImage(camera); },
     [this, camera]() { context().cameraConfig->configureCameraTestImages(camera); },
@@ -106,24 +100,7 @@ void MainWindowSetupModule::showCameraSetupPanel(const CameraConfig& camera)
     },
     [this, camera]() { stepCameraSimulation(camera); },
     [this, camera]() { showSetupResultsPopup(camera); },
-    {
-      [this, camera]() {
-        *context().returnToSetupCameraId = camera.id;
-        context().geometry->showGeometryPointPanel(camera);
-      },
-      [this, camera]() {
-        *context().returnToSetupCameraId = camera.id;
-        context().geometry->showGeometryLinePanel(camera);
-      },
-      [this, camera]() {
-        *context().returnToSetupCameraId = camera.id;
-        context().geometry->showGeometryCirclePanel(camera);
-      },
-      [this, camera]() {
-        *context().returnToSetupCameraId = camera.id;
-        context().geometry->showGeometryArcPanel(camera);
-      }
-    },
+    {},
     [this, camera]() {
       stopCameraSimulation(camera);
       context().returnToSetupCameraId->clear();

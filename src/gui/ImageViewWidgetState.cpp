@@ -17,6 +17,7 @@ void ImageViewWidget::clearImage()
   m_hasGeometryArea = false;
   m_exclusionRects.clear();
   m_circles.clear();
+  m_hasDetectedCircle = false;
   m_geometryPoints.clear();
   m_geometryLines.clear();
   m_geometryOverlay.clear();
@@ -100,7 +101,25 @@ void ImageViewWidget::setCircles(const QVector<ImageCircle>& imageCircles)
 
 void ImageViewWidget::clearCircles()
 {
+  if (m_circleBandEditing)
+  {
+    return;
+  }
   m_circles.clear();
+  update();
+}
+
+void ImageViewWidget::setDetectedCircle(const ImageCircle& circle)
+{
+  m_detectedCircle = circle;
+  m_hasDetectedCircle = circle.radius > 0;
+  update();
+}
+
+void ImageViewWidget::clearDetectedCircle()
+{
+  m_detectedCircle = {};
+  m_hasDetectedCircle = false;
   update();
 }
 
@@ -330,6 +349,17 @@ void ImageViewWidget::setInnerCircleDrawingEnabled(bool enabled)
   update();
 }
 
+void ImageViewWidget::setCircleBandEditingEnabled(bool enabled)
+{
+  m_circleBandEditing = enabled;
+  m_drawingMode = enabled ? DrawingMode::CircleBandEdit : DrawingMode::None;
+  setCursor(enabled ? Qt::OpenHandCursor : Qt::ArrowCursor);
+  m_dragging = false;
+  m_movingCircleBandCenter = false;
+  m_selectedCircleBandRadius = -1;
+  update();
+}
+
 void ImageViewWidget::setThreePointCircleDrawingEnabled(bool enabled)
 {
   m_drawingMode = enabled ? DrawingMode::ThreePointCircle : DrawingMode::None;
@@ -383,6 +413,11 @@ void ImageViewWidget::setExclusionRectsChangedHandler(std::function<void(const Q
 void ImageViewWidget::setCircleChangedHandler(std::function<void(bool, const ImageCircle&)> handler)
 {
   m_circleChangedHandler = std::move(handler);
+}
+
+void ImageViewWidget::setCircleBandChangedHandler(std::function<void(const QVector<ImageCircle>&, int)> handler)
+{
+  m_circleBandChangedHandler = std::move(handler);
 }
 
 void ImageViewWidget::setThreePointCircleHandler(std::function<void(const QVector<QPoint>&)> handler)

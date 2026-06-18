@@ -78,7 +78,7 @@ void ImageViewWidget::mousePressEvent(QMouseEvent* event)
     }
   }
 
-  if (m_drawingMode == DrawingMode::None)
+  if (m_drawingMode == DrawingMode::None && !m_circleBandEditing)
   {
     QWidget::mousePressEvent(event);
     return;
@@ -218,6 +218,40 @@ void ImageViewWidget::mousePressEvent(QMouseEvent* event)
     return;
   }
 
+  if (m_circleBandEditing && !m_circles.isEmpty())
+  {
+    constexpr int handleRadius = 16;
+    const QPoint centerWidget = imagePointToWidget(m_circles.first().center);
+    if (QRect(centerWidget - QPoint(handleRadius, handleRadius), QSize(handleRadius * 2, handleRadius * 2)).contains(event->pos()))
+    {
+      m_movingCircleBandCenter = true;
+      m_moveStartImagePoint = widgetToImage(event->pos());
+      m_dragging = true;
+      setCursor(Qt::ClosedHandCursor);
+      return;
+    }
+
+    for (int i = 0; i < m_circles.size(); ++i)
+    {
+      if (m_circles.size() == 3 && i == 1)
+      {
+        continue;
+      }
+      const int offset = qRound(m_circles[i].radius * 0.70710678118);
+      const bool innerCircle = i == m_circles.size() - 1;
+      const QPoint radiusHandle = imagePointToWidget(
+        m_circles[i].center + QPoint(offset, innerCircle ? offset : -offset));
+      if (QRect(radiusHandle - QPoint(handleRadius, handleRadius), QSize(handleRadius * 2, handleRadius * 2)).contains(event->pos()))
+      {
+        m_selectedCircleBandRadius = i;
+        m_dragging = true;
+        setCursor(Qt::SizeFDiagCursor);
+        return;
+      }
+    }
+    return;
+  }
+
   if (m_drawingMode == DrawingMode::ThreePointCircle || m_drawingMode == DrawingMode::ThreePointArc)
   {
     m_threePointCirclePoints.append(widgetToImage(event->pos()));
@@ -311,6 +345,33 @@ void ImageViewWidget::mouseMoveEvent(QMouseEvent* event)
     {
       m_geometryOverlayPointMovedHandler(m_selectedGeometryOverlayPointIndex, widgetToImageF(event->pos()));
     }
+    update();
+    return;
+  }
+
+  if (m_movingCircleBandCenter && !m_circles.isEmpty())
+  {
+    const QPoint currentImagePoint = widgetToImage(event->pos());
+    const QPoint delta = currentImagePoint - m_moveStartImagePoint;
+    for (ImageCircle& circle : m_circles)
+    {
+      circle.center += delta;
+    }
+    m_moveStartImagePoint = currentImagePoint;
+    update();
+    return;
+  }
+
+  if (m_selectedCircleBandRadius >= 0 &&
+      m_selectedCircleBandRadius < m_circles.size())
+  {
+    ImageCircle& circle = m_circles[m_selectedCircleBandRadius];
+    const QPoint imagePoint = widgetToImage(event->pos());
+    circle.radius = qMax(
+      2,
+      static_cast<int>(std::hypot(
+        imagePoint.x() - circle.center.x(),
+        imagePoint.y() - circle.center.y())));
     update();
     return;
   }

@@ -422,7 +422,27 @@ bool AppConfig::saveCameraAcquisitionSettings(
   }
 
   root["cameras"] = cameras;
-  return writeJsonObject(filePath, root, errorMessage);
+  if (!writeJsonObject(filePath, root, errorMessage))
+  {
+    return false;
+  }
+  updateCameraAcquisitionSettings(cameraId, acquisition);
+  return true;
+}
+
+bool AppConfig::updateCameraAcquisitionSettings(
+  const QString& cameraId,
+  const CameraAcquisitionConfig& acquisition)
+{
+  for (CameraConfig& camera : m_cameras)
+  {
+    if (camera.id == cameraId)
+    {
+      camera.acquisition = acquisition;
+      return true;
+    }
+  }
+  return false;
 }
 
 bool AppConfig::saveCameraSystemSettings(

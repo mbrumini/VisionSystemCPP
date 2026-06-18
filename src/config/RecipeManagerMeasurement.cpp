@@ -41,6 +41,12 @@ QVector<MeasurementRecipeConfig> RecipeManager::loadMeasurements(const QString& 
     config.hasNominal = item.value("hasNominal").toBool(config.hasNominal);
     config.hasMin = item.value("hasMin").toBool(config.hasMin);
     config.hasMax = item.value("hasMax").toBool(config.hasMax);
+    if (!config.hasMin && !config.hasMax && config.max > config.min)
+    {
+      config.hasNominal = true;
+      config.hasMin = true;
+      config.hasMax = true;
+    }
     const QJsonObject label = item.value("label").toObject();
     if (label.value("custom").toBool(false))
     {

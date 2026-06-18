@@ -88,7 +88,7 @@ void MainWindowMeasurementModule::showMeasurementPanel(const CameraConfig& camer
   });
   buttonLayout->addWidget(lineAngleButton, 1, 0);
 
-  auto* realValuesButton = createTouchIconButton("nominal", "Valori reali", panel);
+  auto* realValuesButton = createTouchIconButton("tolerances", tr("tools.tolerances"), panel);
   QObject::connect(realValuesButton, &QPushButton::clicked, window(), [this, camera]() {
     showMeasurementRealValuesPanel(camera);
   });
@@ -122,7 +122,7 @@ void MainWindowMeasurementModule::showMeasurementRealValuesPanel(const CameraCon
   layout->setContentsMargins(0, 0, 0, 0);
   layout->setSpacing(8);
 
-  auto* title = new QLabel(QString("Valori reali | %1").arg(camera.id), panel);
+  auto* title = new QLabel(QString("%1 | %2").arg(tr("tools.tolerances"), camera.id), panel);
   title->setObjectName("toolPanelTitle");
   layout->addWidget(title);
 
@@ -150,7 +150,7 @@ void MainWindowMeasurementModule::showMeasurementRealValuesPanel(const CameraCon
 
     auto* aliasEdit = new QLineEdit(form);
     aliasEdit->setPlaceholderText("Alias operatore");
-    auto* realValuesEnabled = new QCheckBox("Abilita valori reali", form);
+    auto* realValuesEnabled = new QCheckBox("Abilita tolleranza OK/NOK", form);
     auto* sampleValue = new QDoubleSpinBox(form);
     sampleValue->setRange(-1000000.0, 1000000.0);
     sampleValue->setDecimals(4);
@@ -190,6 +190,12 @@ void MainWindowMeasurementModule::showMeasurementRealValuesPanel(const CameraCon
     };
 
     QObject::connect(measureCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), loadConfig);
+    const auto enableTolerance = [realValuesEnabled]() {
+      realValuesEnabled->setChecked(true);
+    };
+    QObject::connect(nominal, &QDoubleSpinBox::editingFinished, window(), enableTolerance);
+    QObject::connect(min, &QDoubleSpinBox::editingFinished, window(), enableTolerance);
+    QObject::connect(max, &QDoubleSpinBox::editingFinished, window(), enableTolerance);
     loadConfig();
 
     formLayout->addRow("Misura", measureCombo);

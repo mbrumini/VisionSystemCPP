@@ -97,6 +97,20 @@ void ImageViewWidget::mouseReleaseEvent(QMouseEvent* event)
     return;
   }
 
+  if (m_movingCircleBandCenter || m_selectedCircleBandRadius >= 0)
+  {
+    const int changedRadiusIndex = m_movingCircleBandCenter ? -1 : m_selectedCircleBandRadius;
+    m_movingCircleBandCenter = false;
+    m_selectedCircleBandRadius = -1;
+    setCursor(Qt::OpenHandCursor);
+    if (m_circleBandChangedHandler)
+    {
+      m_circleBandChangedHandler(m_circles, changedRadiusIndex);
+    }
+    update();
+    return;
+  }
+
   if (m_drawingMode == DrawingMode::GeometryArea &&
       m_activeGeometryAreaHandle != GeometryAreaHandle::None)
   {

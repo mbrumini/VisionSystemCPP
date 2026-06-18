@@ -27,19 +27,28 @@ QVector<QPointF> CalibrationPatternDetector::detect(const cv::Mat& image, const 
 
   if (pattern.type == CalibrationPatternType::Checkerboard)
   {
-    found = cv::findChessboardCorners(
+    found = cv::findChessboardCornersSB(
       gray,
       patternSize,
       corners,
-      cv::CALIB_CB_ADAPTIVE_THRESH | cv::CALIB_CB_NORMALIZE_IMAGE | cv::CALIB_CB_FAST_CHECK);
-    if (found)
+      cv::CALIB_CB_NORMALIZE_IMAGE | cv::CALIB_CB_EXHAUSTIVE | cv::CALIB_CB_ACCURACY);
+    if (!found)
     {
-      cv::cornerSubPix(
+      corners.clear();
+      found = cv::findChessboardCorners(
         gray,
+        patternSize,
         corners,
-        cv::Size(7, 7),
-        cv::Size(-1, -1),
-        cv::TermCriteria(cv::TermCriteria::EPS | cv::TermCriteria::MAX_ITER, 30, 0.01));
+        cv::CALIB_CB_ADAPTIVE_THRESH | cv::CALIB_CB_NORMALIZE_IMAGE);
+      if (found)
+      {
+        cv::cornerSubPix(
+          gray,
+          corners,
+          cv::Size(7, 7),
+          cv::Size(-1, -1),
+          cv::TermCriteria(cv::TermCriteria::EPS | cv::TermCriteria::MAX_ITER, 30, 0.01));
+      }
     }
   }
   else if (pattern.type == CalibrationPatternType::CircleGrid || pattern.type == CalibrationPatternType::DotGrid)

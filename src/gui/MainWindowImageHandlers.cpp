@@ -175,10 +175,24 @@ void MainWindow::setupLargeImageHandlers()
         return;
       }
 
-      m_largeImage->setCircles({
-        {circle.center, outerRadius},
-        {circle.center, innerRadius}
-      });
+      const SurfaceAnnulusLocalizationConfig annulus = m_recipeManager.loadSurfaceAnnulusLocalization(m_selectedCameraId);
+      if (annulus.method == "edge")
+      {
+        m_largeImage->setCircles({
+          {circle.center, outerRadius},
+          {circle.center, circle.radius},
+          {circle.center, innerRadius}
+        });
+      }
+      else
+      {
+        m_largeImage->setCircles({
+          {circle.center, outerRadius},
+          {circle.center, innerRadius}
+        });
+      }
+      m_largeImage->setThreePointCircleDrawingEnabled(false);
+      m_largeImage->setCircleBandEditingEnabled(true);
 
       appendLog(QString("%1: %2 cx=%3 cy=%4 r=%5")
                   .arg(trText("log.surfaceThreePointCircleSaved"))
@@ -187,12 +201,6 @@ void MainWindow::setupLargeImageHandlers()
                   .arg(circle.center.y())
                   .arg(circle.radius));
 
-      const SurfaceAnnulusLocalizationConfig annulus = m_recipeManager.loadSurfaceAnnulusLocalization(m_selectedCameraId);
-      if ((annulus.method == "edge" && annulus.hasEdgeCircle && annulus.edgeRadius > annulus.edgeBandInner) ||
-          (annulus.method != "edge" && annulus.hasOuterCircle && annulus.hasInnerCircle && annulus.outerRadius > annulus.innerRadius))
-      {
-        m_surface.testSurfaceAnnulusLocalization(m_selectedCamera);
-      }
       return;
     }
 
@@ -207,8 +215,11 @@ void MainWindow::setupLargeImageHandlers()
       const SurfaceAnnulusLocalizationConfig annulus = m_recipeManager.loadSurfaceAnnulusLocalization(m_selectedCameraId);
       m_largeImage->setCircles({
         {circle.center, circle.radius + annulus.edgeBandOuter},
+        {circle.center, circle.radius},
         {circle.center, qMax(1, circle.radius - annulus.edgeBandInner)}
       });
+      m_largeImage->setThreePointCircleDrawingEnabled(false);
+      m_largeImage->setCircleBandEditingEnabled(true);
 
       appendLog(QString("%1: %2 cx=%3 cy=%4 r=%5")
                   .arg(trText("log.surfaceEdgeCircleSaved"))
@@ -239,6 +250,8 @@ void MainWindow::setupLargeImageHandlers()
       circles.append({annulus.center, annulus.innerRadius});
     }
     m_largeImage->setCircles(circles);
+    m_largeImage->setThreePointCircleDrawingEnabled(false);
+    m_largeImage->setCircleBandEditingEnabled(circles.size() >= 2);
 
     appendLog(QString("%1: %2 cx=%3 cy=%4 r=%5")
                 .arg(targetOuter ? trText("log.surfaceOuterCircleSaved") : trText("log.surfaceInnerCircleSaved"))
@@ -246,6 +259,70 @@ void MainWindow::setupLargeImageHandlers()
                 .arg(circle.center.x())
                 .arg(circle.center.y())
                 .arg(circle.radius));
+  });
+  m_largeImage->setCircleBandChangedHandler([this](const QVector<ImageCircle>& circles, int changedRadiusIndex) {
+    if (m_selectedCameraId.isEmpty())
+    {
+      return;
+    }
+
+    const SurfaceAnnulusLocalizationConfig current =
+      m_recipeManager.loadSurfaceAnnulusLocalization(m_selectedCameraId);
+    QString error;
+
+    if (current.method == "edge" && circles.size() >= 3)
+    {
+      const QPoint center = circles[0].center;
+      const int guideRadius = qMax(2, current.edgeRadius);
+      const int outerRadius = changedRadiusIndex == 0
+        ? qMax(guideRadius + 1, circles[0].radius)
+        : guideRadius + current.edgeBandOuter;
+      const int innerRadius = changedRadiusIndex == 2
+        ? qBound(1, circles[2].radius, guideRadius - 1)
+        : qMax(1, guideRadius - current.edgeBandInner);
+      const int innerBand = guideRadius - innerRadius;
+      const int outerBand = outerRadius - guideRadius;
+
+      if (!m_recipeManager.saveSurfaceEdgeCircle(m_selectedCameraId, center, guideRadius, &error) ||
+          !m_recipeManager.saveSurfaceEdgeBand(m_selectedCameraId, innerBand, outerBand, &error) ||
+          !m_recipeManager.saveSurfaceAnnulusCircle(m_selectedCameraId, true, center, outerRadius, &error) ||
+          !m_recipeManager.saveSurfaceAnnulusCircle(m_selectedCameraId, false, center, innerRadius, &error))
+      {
+        appendLog(error);
+        return;
+      }
+
+      m_largeImage->setCircles({
+        {center, outerRadius},
+        {center, guideRadius},
+        {center, innerRadius}
+      });
+      m_surface.testSurfaceAnnulusLocalization(m_selectedCamera);
+      return;
+    }
+
+    if (circles.size() >= 2)
+    {
+      const QPoint center = circles[0].center;
+      const int outerRadius = changedRadiusIndex == 0
+        ? qMax(circles[0].radius, current.innerRadius + 1)
+        : current.outerRadius;
+      const int innerRadius = changedRadiusIndex == 1
+        ? qBound(1, circles[1].radius, outerRadius - 1)
+        : current.innerRadius;
+      if (!m_recipeManager.saveSurfaceAnnulusCircle(m_selectedCameraId, true, center, outerRadius, &error) ||
+          !m_recipeManager.saveSurfaceAnnulusCircle(m_selectedCameraId, false, center, innerRadius, &error))
+      {
+        appendLog(error);
+        return;
+      }
+
+      m_largeImage->setCircles({
+        {center, outerRadius},
+        {center, innerRadius}
+      });
+      m_surface.testSurfaceAnnulusLocalization(m_selectedCamera);
+    }
   });
   m_largeImage->setThreePointCircleHandler([this](const QVector<QPoint>& points) {
     if (m_selectedCameraId.isEmpty())
@@ -289,10 +366,25 @@ void MainWindow::setupLargeImageHandlers()
         return;
       }
 
-      m_largeImage->setCircles({
-        {circle.center, outerRadius},
-        {circle.center, innerRadius}
-      });
+      const SurfaceAnnulusLocalizationConfig annulus =
+        m_recipeManager.loadSurfaceAnnulusLocalization(m_selectedCameraId);
+      if (annulus.method == "edge")
+      {
+        m_largeImage->setCircles({
+          {circle.center, outerRadius},
+          {circle.center, circle.radius},
+          {circle.center, innerRadius}
+        });
+      }
+      else
+      {
+        m_largeImage->setCircles({
+          {circle.center, outerRadius},
+          {circle.center, innerRadius}
+        });
+      }
+      m_largeImage->setThreePointCircleDrawingEnabled(false);
+      m_largeImage->setCircleBandEditingEnabled(true);
 
       appendLog(QString("%1: %2 cx=%3 cy=%4 r=%5")
                   .arg(trText("log.surfaceThreePointCircleSaved"))
@@ -301,7 +393,6 @@ void MainWindow::setupLargeImageHandlers()
                   .arg(circle.center.y())
                   .arg(circle.radius));
 
-      const SurfaceAnnulusLocalizationConfig annulus = m_recipeManager.loadSurfaceAnnulusLocalization(m_selectedCameraId);
       if ((annulus.method == "edge" && annulus.hasEdgeCircle && annulus.edgeRadius > annulus.edgeBandInner) ||
           (annulus.method != "edge" && annulus.hasOuterCircle && annulus.hasInnerCircle && annulus.outerRadius > annulus.innerRadius))
       {
@@ -321,8 +412,11 @@ void MainWindow::setupLargeImageHandlers()
       const SurfaceAnnulusLocalizationConfig annulus = m_recipeManager.loadSurfaceAnnulusLocalization(m_selectedCameraId);
       m_largeImage->setCircles({
         {circle.center, circle.radius + annulus.edgeBandOuter},
+        {circle.center, circle.radius},
         {circle.center, qMax(1, circle.radius - annulus.edgeBandInner)}
       });
+      m_largeImage->setThreePointCircleDrawingEnabled(false);
+      m_largeImage->setCircleBandEditingEnabled(true);
 
       appendLog(QString("%1: %2 cx=%3 cy=%4 r=%5")
                   .arg(trText("log.surfaceEdgeCircleSaved"))
@@ -353,6 +447,8 @@ void MainWindow::setupLargeImageHandlers()
       circles.append({annulus.center, annulus.innerRadius});
     }
     m_largeImage->setCircles(circles);
+    m_largeImage->setThreePointCircleDrawingEnabled(false);
+    m_largeImage->setCircleBandEditingEnabled(circles.size() >= 2);
 
     appendLog(QString("%1: %2 cx=%3 cy=%4 r=%5")
                 .arg(targetOuter ? trText("log.surfaceOuterCircleSaved") : trText("log.surfaceInnerCircleSaved"))

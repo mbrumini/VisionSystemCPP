@@ -13,6 +13,7 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QSlider>
+#include <QToolButton>
 
 void MainWindowGeometryModule::showGeometryArcPanel(const CameraConfig& camera)
 {
@@ -68,9 +69,9 @@ void MainWindowGeometryModule::showGeometryArcPanel(const CameraConfig& camera)
 
   auto* form = new QWidget(panel);
   auto* formLayout = new QGridLayout(form);
-  formLayout->setContentsMargins(0, 0, 0, 0);
+  formLayout->setContentsMargins(6, 6, 6, 6);
   formLayout->setHorizontalSpacing(8);
-  formLayout->setVerticalSpacing(6);
+  formLayout->setVerticalSpacing(8);
   auto* innerBand = new QSlider(Qt::Horizontal, form);
   innerBand->setRange(1, 500);
   innerBand->setValue(arcConfig.innerBand);
@@ -104,14 +105,20 @@ void MainWindowGeometryModule::showGeometryArcPanel(const CameraConfig& camera)
   auto* subpixel = new QCheckBox(tr("labels.subpixelEdge"), form);
   subpixel->setChecked(arcConfig.useSubpixel);
   auto* scanDirection = new QComboBox(form);
+  scanDirection->setObjectName("geometryChoice");
+  scanDirection->setMinimumHeight(38);
   scanDirection->addItem(tr("labels.scanNormalPositive"), "normal_positive");
   scanDirection->addItem(tr("labels.scanNormalNegative"), "normal_negative");
   scanDirection->setCurrentIndex(arcConfig.scanDirection == EdgeLineScanDirection::NormalNegative ? 1 : 0);
   auto* transition = new QComboBox(form);
+  transition->setObjectName("geometryChoice");
+  transition->setMinimumHeight(38);
   transition->addItem(tr("labels.transitionLightToDark"), "light_to_dark");
   transition->addItem(tr("labels.transitionDarkToLight"), "dark_to_light");
   transition->setCurrentIndex(arcConfig.transition == EdgeLineTransition::DarkToLight ? 1 : 0);
   auto* pickMode = new QComboBox(form);
+  pickMode->setObjectName("geometryChoice");
+  pickMode->setMinimumHeight(38);
   pickMode->addItem(tr("labels.edgePickFirst"), "first");
   pickMode->addItem(tr("labels.edgePickLast"), "last");
   pickMode->addItem(tr("labels.edgePickBest"), "best");
@@ -126,28 +133,47 @@ void MainWindowGeometryModule::showGeometryArcPanel(const CameraConfig& camera)
   formLayout->addWidget(outerBandValue, row++, 3);
   formLayout->addWidget(innerBand, row, 0, 1, 2);
   formLayout->addWidget(outerBand, row++, 2, 1, 2);
-  formLayout->addWidget(new QLabel(tr("labels.edgeSensitivity"), form), row, 0);
-  formLayout->addWidget(sensitivityValue, row, 1);
-  formLayout->addWidget(new QLabel(tr("labels.edgeCleanupDerivative"), form), row, 2);
-  formLayout->addWidget(cleanupValue, row++, 3);
-  formLayout->addWidget(sensitivity, row, 0, 1, 2);
-  formLayout->addWidget(cleanup, row++, 2, 1, 2);
-  formLayout->addWidget(new QLabel(tr("labels.edgeStatisticalFilter"), form), row, 0);
-  formLayout->addWidget(statFilterValue, row++, 1);
-  formLayout->addWidget(statFilter, row++, 0, 1, 4);
+  formLayout->addWidget(new QLabel(tr("labels.edgeSensitivity"), form), row, 0, 1, 3);
+  formLayout->addWidget(sensitivityValue, row++, 3);
+  formLayout->addWidget(sensitivity, row++, 0, 1, 4);
+  formLayout->addWidget(new QLabel(tr("labels.scanDirection"), form), row++, 0, 1, 4);
+  formLayout->addWidget(scanDirection, row++, 0, 1, 4);
+  formLayout->addWidget(new QLabel(tr("labels.edgeTransition"), form), row++, 0, 1, 4);
+  formLayout->addWidget(transition, row++, 0, 1, 4);
+  formLayout->addWidget(new QLabel(tr("labels.edgePickMode"), form), row++, 0, 1, 4);
+  formLayout->addWidget(pickMode, row++, 0, 1, 4);
+  layout->addWidget(form);
+
+  auto* advancedButton = new QToolButton(panel);
+  advancedButton->setText(tr("groups.strategyControls"));
+  advancedButton->setCheckable(true);
+  advancedButton->setArrowType(Qt::RightArrow);
+  advancedButton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+  auto* advancedPanel = new QWidget(panel);
+  auto* advancedLayout = new QGridLayout(advancedPanel);
+  advancedLayout->setContentsMargins(6, 6, 6, 6);
+  advancedLayout->setVerticalSpacing(8);
+  int advancedRow = 0;
+  advancedLayout->addWidget(new QLabel(tr("labels.edgeCleanupDerivative"), advancedPanel), advancedRow, 0, 1, 3);
+  advancedLayout->addWidget(cleanupValue, advancedRow++, 3);
+  advancedLayout->addWidget(cleanup, advancedRow++, 0, 1, 4);
+  advancedLayout->addWidget(new QLabel(tr("labels.edgeStatisticalFilter"), advancedPanel), advancedRow, 0, 1, 3);
+  advancedLayout->addWidget(statFilterValue, advancedRow++, 3);
+  advancedLayout->addWidget(statFilter, advancedRow++, 0, 1, 4);
   if (MainWindowCameraProfile::isBwDimensional(camera, config()))
   {
-    formLayout->addWidget(subpixel, row++, 0, 1, 4);
+    advancedLayout->addWidget(subpixel, advancedRow++, 0, 1, 4);
   }
-  formLayout->addWidget(new QLabel(tr("labels.scanDirection"), form), row, 0);
-  formLayout->addWidget(scanDirection, row, 1);
-  formLayout->addWidget(new QLabel(tr("labels.edgeTransition"), form), row, 2);
-  formLayout->addWidget(transition, row++, 3);
-  formLayout->addWidget(new QLabel(tr("labels.edgePickMode"), form), row, 0);
-  formLayout->addWidget(pickMode, row++, 1, 1, 3);
-  formLayout->addWidget(new QLabel(tr("labels.operatorAlias"), form), row, 0);
-  formLayout->addWidget(aliasEdit, row++, 1, 1, 3);
-  layout->addWidget(form);
+  advancedLayout->addWidget(new QLabel(tr("labels.operatorAlias"), advancedPanel), advancedRow++, 0, 1, 4);
+  aliasEdit->setMinimumHeight(34);
+  advancedLayout->addWidget(aliasEdit, advancedRow++, 0, 1, 4);
+  advancedPanel->setVisible(false);
+  QObject::connect(advancedButton, &QToolButton::toggled, window(), [advancedButton, advancedPanel](bool checked) {
+    advancedButton->setArrowType(checked ? Qt::DownArrow : Qt::RightArrow);
+    advancedPanel->setVisible(checked);
+  });
+  layout->addWidget(advancedButton);
+  layout->addWidget(advancedPanel);
 
   QObject::connect(arcSelector, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
     if (index < 0)

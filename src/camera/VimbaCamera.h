@@ -20,6 +20,7 @@ public:
   bool open() override;
   bool getFrame(cv::Mat& frame) override;
   void close() override;
+  bool setAcquisitionSettings(const CameraAcquisitionConfig& acquisition);
   QString lastError() const;
 
 private:
@@ -28,7 +29,7 @@ private:
 
   bool copyFrameToMat(const VmbCPP::FramePtr& vimbaFrame, cv::Mat& frame);
   bool setPreferredPixelFormat();
-  void applyAcquisitionSettings();
+  bool applyAcquisitionSettings();
   bool prepareCapture();
 
   CameraConfig m_config;

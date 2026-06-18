@@ -96,6 +96,9 @@ public:
     const QString& cameraId,
     const CameraAcquisitionConfig& acquisition,
     QString* errorMessage = nullptr);
+  bool updateCameraAcquisitionSettings(
+    const QString& cameraId,
+    const CameraAcquisitionConfig& acquisition);
   bool saveCameraSystemSettings(
     const QString& filePath,
     const QVector<CameraConfig>& cameras,
