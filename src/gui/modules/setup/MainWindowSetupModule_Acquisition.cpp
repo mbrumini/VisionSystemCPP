@@ -7,8 +7,10 @@
 #include <QDoubleSpinBox>
 #include <QFormLayout>
 #include <QGroupBox>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
+#include <QSlider>
 #include <QVBoxLayout>
 
 namespace
@@ -36,6 +38,16 @@ void MainWindowSetupModule::showCameraAcquisitionPanel(const CameraConfig& camer
   context().clearToolPanel();
 
   CameraAcquisitionConfig acquisition = camera.acquisition;
+  CameraRuntime& runtime = cameraRuntime()[camera.id];
+  if (!runtime.running() && (camera.type == "vimba" || camera.type == "usb"))
+  {
+    startCameraSimulation(camera, false);
+  }
+  runtime.setIntervalMs(100);
+  if (runtime.running() && camera.id == selectedCameraId())
+  {
+    context().simulationTimer->start(runtime.intervalMs());
+  }
 
   auto* panel = new QWidget(toolsContainer());
   auto* layout = new QVBoxLayout(panel);
@@ -75,10 +87,22 @@ void MainWindowSetupModule::showCameraAcquisitionPanel(const CameraConfig& camer
   auto* gainLayout = new QFormLayout(gainBox);
   auto* autoGain = new QCheckBox(tr("labels.automatic"), gainBox);
   autoGain->setChecked(acquisition.autoGain);
-  auto* gain = createNumericControl(acquisition.hasGain ? acquisition.gain : 0.0, 0.0, 48.0, "", gainBox);
-  gain->setEnabled(!autoGain->isChecked());
+  auto* gainControl = new QWidget(gainBox);
+  auto* gainControlLayout = new QHBoxLayout(gainControl);
+  gainControlLayout->setContentsMargins(0, 0, 0, 0);
+  auto* gain = new QSlider(Qt::Horizontal, gainControl);
+  gain->setRange(0, 480);
+  gain->setSingleStep(1);
+  gain->setPageStep(10);
+  gain->setValue(qRound((acquisition.hasGain ? acquisition.gain : 0.0) * 10.0));
+  auto* gainValue = new QLabel(QString::number(gain->value() / 10.0, 'f', 1) + " dB", gainControl);
+  gainValue->setMinimumWidth(62);
+  gainValue->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+  gainControlLayout->addWidget(gain, 1);
+  gainControlLayout->addWidget(gainValue);
+  gainControl->setEnabled(!autoGain->isChecked());
   gainLayout->addRow(autoGain);
-  gainLayout->addRow(tr("actions.gain"), gain);
+  gainLayout->addRow(tr("actions.gain"), gainControl);
   layout->addWidget(gainBox);
 
   auto* whiteBox = new QGroupBox("White balance", panel);
@@ -92,8 +116,59 @@ void MainWindowSetupModule::showCameraAcquisitionPanel(const CameraConfig& camer
   layout->addWidget(whiteBox);
 
   QObject::connect(autoExposure, &QCheckBox::toggled, exposure, &QDoubleSpinBox::setDisabled);
-  QObject::connect(autoGain, &QCheckBox::toggled, gain, &QDoubleSpinBox::setDisabled);
+  QObject::connect(autoGain, &QCheckBox::toggled, gainControl, &QWidget::setDisabled);
   QObject::connect(autoWhite, &QCheckBox::toggled, whiteBalance, &QDoubleSpinBox::setDisabled);
+
+  auto currentSettings = [autoExposure, exposure, autoGain, gain, autoWhite, whiteBalance]() {
+    CameraAcquisitionConfig updated;
+    updated.autoExposure = autoExposure->isChecked();
+    updated.hasExposure = !updated.autoExposure;
+    updated.exposure = exposure->value();
+    updated.autoGain = autoGain->isChecked();
+    updated.hasGain = !updated.autoGain;
+    updated.gain = gain->value() / 10.0;
+    updated.autoWhiteBalance = autoWhite->isChecked();
+    updated.hasWhiteBalance = !updated.autoWhiteBalance;
+    updated.whiteBalance = whiteBalance->value();
+    return updated;
+  };
+
+  auto applyLive = [this, camera, currentSettings]() {
+    CameraRuntime& cameraRuntime = this->cameraRuntime()[camera.id];
+    if (!cameraRuntime.running())
+    {
+      return;
+    }
+
+    const CameraAcquisitionConfig updated = currentSettings();
+    QString error;
+    if (!cameraRuntime.applyAcquisitionSettings(updated, &error))
+    {
+      log(QString("Parametri acquisizione live %1: %2").arg(camera.id, error));
+      return;
+    }
+
+    config().updateCameraAcquisitionSettings(camera.id, updated);
+    if (selectedCameraId() == camera.id)
+    {
+      selectedCamera().acquisition = updated;
+    }
+  };
+
+  QObject::connect(exposure, qOverload<double>(&QDoubleSpinBox::valueChanged), window(), [applyLive](double) {
+    applyLive();
+  });
+  QObject::connect(autoExposure, &QCheckBox::toggled, window(), [applyLive](bool) {
+    applyLive();
+  });
+  QObject::connect(gain, &QSlider::valueChanged, window(), [gainValue, applyLive](int value) {
+    gainValue->setText(QString::number(value / 10.0, 'f', 1) + " dB");
+    applyLive();
+  });
+  QObject::connect(autoGain, &QCheckBox::toggled, window(), [applyLive](bool) {
+    applyLive();
+  });
+  applyLive();
 
   auto* saveButton = createTouchIconButton("saveSample", tr("actions.saveOk"), panel);
   auto* backButton = createTouchIconButton("back", tr("commands.backToSetup"), panel);
@@ -101,17 +176,8 @@ void MainWindowSetupModule::showCameraAcquisitionPanel(const CameraConfig& camer
   layout->addWidget(backButton);
   layout->addStretch(1);
 
-  QObject::connect(saveButton, &QPushButton::clicked, window(), [this, camera, autoExposure, exposure, autoGain, gain, autoWhite, whiteBalance]() {
-    CameraAcquisitionConfig updated;
-    updated.autoExposure = autoExposure->isChecked();
-    updated.hasExposure = !updated.autoExposure;
-    updated.exposure = exposure->value();
-    updated.autoGain = autoGain->isChecked();
-    updated.hasGain = !updated.autoGain;
-    updated.gain = gain->value();
-    updated.autoWhiteBalance = autoWhite->isChecked();
-    updated.hasWhiteBalance = !updated.autoWhiteBalance;
-    updated.whiteBalance = whiteBalance->value();
+  QObject::connect(saveButton, &QPushButton::clicked, window(), [this, camera, currentSettings]() {
+    const CameraAcquisitionConfig updated = currentSettings();
 
     QString error;
     if (!config().saveCameraAcquisitionSettings(camerasConfigPath(), camera.id, updated, &error))
@@ -127,10 +193,8 @@ void MainWindowSetupModule::showCameraAcquisitionPanel(const CameraConfig& camer
       selectedCamera() = updatedCamera;
     }
 
-    const bool wasRunning = cameraRuntime()[camera.id].running();
-    if (wasRunning)
+    if (!cameraRuntime()[camera.id].running())
     {
-      stopCameraSimulation(updatedCamera, false);
       startCameraSimulation(updatedCamera, false);
     }
 

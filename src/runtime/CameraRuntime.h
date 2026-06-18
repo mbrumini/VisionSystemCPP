@@ -23,6 +23,9 @@ public:
   bool start(const CameraConfig& camera, const QString& resolvedFolder, QString* errorMessage = nullptr);
   void stop();
   bool step(const CameraConfig& camera, const QString& resolvedFolder, QString* errorMessage = nullptr);
+  bool applyAcquisitionSettings(
+    const CameraAcquisitionConfig& acquisition,
+    QString* errorMessage = nullptr);
 
   bool running() const;
   bool loop() const;

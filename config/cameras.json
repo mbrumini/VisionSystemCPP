@@ -5,35 +5,42 @@
                 "autoExposure": false,
                 "autoGain": false,
                 "autoWhiteBalance": false,
-                "exposure": -6,
+                "exposure": 200,
                 "gain": 0,
                 "whiteBalance": 4497
             },
             "calibration": {
                 "enabled": true,
                 "file": "calibrations/CAM01_checkerboard.json",
-                "pixelSizeXMm": 0.12631321368404366,
-                "pixelSizeYMm": 0.12573587254870924,
+                "pixelSizeXMm": 0.06793325451040623,
+                "pixelSizeYMm": 0.0674921292807563,
                 "type": "checkerboard",
-                "updatedAt": "2026-06-17T22:34:06"
+                "updatedAt": "2026-06-18T10:00:52"
             },
-            "deviceId": "usb:0",
-            "displayName": "USB Camera 0",
+            "deviceId": "DEV_000A4706197B",
+            "displayName": "Allied Vision Alvium G1-234m (DEV_000A4706197B)",
             "enabled": true,
             "exists": true,
             "id": "CAM01",
+            "interfaceId": "Ethernet 2",
+            "modelName": "Alvium G1-234m",
             "processingProfile": "profile_cam01",
+            "serial": "0G9W6",
             "slot": 1,
             "trigger": {
                 "cameraLine": "",
                 "ioOutput": "",
                 "mode": "software",
-                "source": "usbCamera"
+                "source": "camera"
             },
-            "type": "usb",
-            "usbIndex": 0
+            "type": "vimba"
         },
         {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
             "calibration": {
                 "enabled": false,
                 "file": "",
@@ -52,6 +59,11 @@
             "type": "file"
         },
         {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
             "calibration": {
                 "enabled": false,
                 "file": "",
@@ -70,6 +82,11 @@
             "type": "file"
         },
         {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
             "calibration": {
                 "enabled": false,
                 "file": "",
@@ -88,6 +105,11 @@
             "type": "file"
         },
         {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
             "calibration": {
                 "enabled": false,
                 "file": "",
@@ -106,6 +128,11 @@
             "type": "file"
         },
         {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
             "calibration": {
                 "enabled": false,
                 "file": "",
@@ -124,6 +151,11 @@
             "type": "file"
         },
         {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
             "calibration": {
                 "enabled": false,
                 "file": "",
@@ -142,6 +174,11 @@
             "type": "file"
         },
         {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
             "calibration": {
                 "enabled": false,
                 "file": "",
@@ -160,6 +197,11 @@
             "type": "file"
         },
         {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
             "calibration": {
                 "enabled": false,
                 "file": "",
@@ -178,6 +220,11 @@
             "type": "file"
         },
         {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
             "calibration": {
                 "enabled": false,
                 "file": "",
@@ -196,6 +243,11 @@
             "type": "file"
         },
         {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
             "calibration": {
                 "enabled": false,
                 "file": "",
@@ -214,6 +266,11 @@
             "type": "file"
         },
         {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
             "calibration": {
                 "enabled": false,
                 "file": "",
@@ -232,6 +289,11 @@
             "type": "file"
         },
         {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
             "calibration": {
                 "enabled": false,
                 "file": "",
@@ -250,6 +312,11 @@
             "type": "file"
         },
         {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
             "calibration": {
                 "enabled": false,
                 "file": "",
@@ -268,6 +335,11 @@
             "type": "file"
         },
         {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
             "calibration": {
                 "enabled": false,
                 "file": "",
@@ -286,6 +358,11 @@
             "type": "file"
         },
         {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
             "calibration": {
                 "enabled": false,
                 "file": "",

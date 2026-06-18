@@ -37,6 +37,43 @@ void CameraRuntime::stop()
   m_status = Status::Stopped;
 }
 
+bool CameraRuntime::applyAcquisitionSettings(
+  const CameraAcquisitionConfig& acquisition,
+  QString* errorMessage)
+{
+  if (auto* vimbaCamera = dynamic_cast<VimbaCamera*>(m_source.get()))
+  {
+    if (vimbaCamera->setAcquisitionSettings(acquisition))
+    {
+      return true;
+    }
+    if (errorMessage)
+    {
+      *errorMessage = vimbaCamera->lastError();
+    }
+    return false;
+  }
+
+  if (auto* usbCamera = dynamic_cast<UsbCamera*>(m_source.get()))
+  {
+    if (usbCamera->setAcquisitionSettings(acquisition))
+    {
+      return true;
+    }
+    if (errorMessage)
+    {
+      *errorMessage = "Applicazione parametri USB fallita";
+    }
+    return false;
+  }
+
+  if (errorMessage)
+  {
+    *errorMessage = "La sorgente camera non supporta parametri acquisizione live";
+  }
+  return false;
+}
+
 bool CameraRuntime::step(const CameraConfig& camera, const QString& resolvedFolder, QString* errorMessage)
 {
   if (!ensureSource(camera, resolvedFolder, errorMessage))

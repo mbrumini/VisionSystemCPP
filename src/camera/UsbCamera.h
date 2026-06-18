@@ -13,6 +13,7 @@ public:
   bool open() override;
   bool getFrame(cv::Mat& frame) override;
   void close() override;
+  bool setAcquisitionSettings(const CameraAcquisitionConfig& acquisition);
 
 private:
   void applyAcquisitionSettings();

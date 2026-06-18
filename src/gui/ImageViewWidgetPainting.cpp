@@ -31,7 +31,10 @@ void drawArrowHead(QPainter& painter, const QPointF& tip, const QPointF& from, c
   painter.drawPolygon(arrow);
 }
 
-void drawMeasurementLabel(QPainter& painter, const QPointF& point, const QString& label)
+void drawMeasurementLabel(QPainter& painter,
+                          const QPointF& point,
+                          const QString& label,
+                          const QColor& color)
 {
   const QFont previousFont = painter.font();
   QFont labelFont = previousFont;
@@ -48,7 +51,7 @@ void drawMeasurementLabel(QPainter& painter, const QPointF& point, const QString
 
   painter.setPen(QPen(QColor("#101418"), 7));
   painter.drawText(point, label);
-  painter.setPen(QPen(QColor("#ff2f2f"), 2));
+  painter.setPen(QPen(color, 2));
   painter.drawText(point, label);
   painter.setFont(previousFont);
 }
@@ -59,7 +62,8 @@ void drawAngleOverlay(QPainter& painter,
                       const QPointF& armB,
                       const QString& label,
                       const QColor& color,
-                      int width)
+                      int width,
+                      const QColor& labelColor)
 {
   const QPointF vectorA = armA - center;
   const QPointF vectorB = armB - center;
@@ -101,7 +105,7 @@ void drawAngleOverlay(QPainter& painter,
 
   const double labelAngle = startAngle + delta * 0.5;
   const QPointF labelPoint = center + QPointF(std::cos(labelAngle), std::sin(labelAngle)) * (radius + 14.0);
-  drawMeasurementLabel(painter, labelPoint, label);
+  drawMeasurementLabel(painter, labelPoint, label, labelColor);
 }
 }
 
@@ -247,9 +251,46 @@ void ImageViewWidget::paintEvent(QPaintEvent* event)
 
   for (int i = 0; i < m_circles.size(); ++i)
   {
-    painter.setPen(i == 0 ? outerCirclePen : innerCirclePen);
+    const bool guideCircle = m_circleBandEditing &&
+      m_circles.size() == 3 &&
+      i == 1;
+    painter.setPen(guideCircle ? QPen(QColor("#00d2ff"), 2) : (i == 0 ? outerCirclePen : innerCirclePen));
     painter.setBrush(Qt::NoBrush);
     painter.drawEllipse(imageCircleToWidgetRect(m_circles[i]));
+  }
+
+  if (m_hasDetectedCircle)
+  {
+    QPen detectedCirclePen(QColor("#00d2ff"));
+    detectedCirclePen.setWidth(5);
+    painter.setPen(detectedCirclePen);
+    painter.setBrush(Qt::NoBrush);
+    painter.drawEllipse(imageCircleToWidgetRect(m_detectedCircle));
+  }
+
+  if (m_circleBandEditing && !m_circles.isEmpty())
+  {
+    painter.setPen(QPen(QColor("#ffffff"), 3));
+    painter.setBrush(QColor("#ff2bd6"));
+    const QPoint center = imagePointToWidget(m_circles.first().center);
+    painter.drawRect(QRect(center - QPoint(9, 9), QSize(18, 18)));
+    painter.drawLine(center - QPoint(14, 0), center + QPoint(14, 0));
+    painter.drawLine(center - QPoint(0, 14), center + QPoint(0, 14));
+
+    for (int i = 0; i < m_circles.size(); ++i)
+    {
+      if (m_circles.size() == 3 && i == 1)
+      {
+        continue;
+      }
+      const ImageCircle& circle = m_circles[i];
+      const int offset = qRound(circle.radius * 0.70710678118);
+      const bool innerCircle = i == m_circles.size() - 1;
+      const QPoint handle = imagePointToWidget(
+        circle.center + QPoint(offset, innerCircle ? offset : -offset));
+      painter.setBrush(QColor("#ff2bd6"));
+      painter.drawRect(QRect(handle - QPoint(8, 8), QSize(16, 16)));
+    }
   }
 
   QPen geometryAreaPen(QColor("#00d2ff"));
@@ -350,7 +391,7 @@ void ImageViewWidget::paintEvent(QPaintEvent* event)
       const QPointF labelPoint = dimension.hasLabelPoint
         ? imagePointToWidget(dimension.labelPoint)
         : (start + end) * 0.5 + QPointF(10, -10);
-      drawMeasurementLabel(painter, labelPoint, dimension.label);
+      drawMeasurementLabel(painter, labelPoint, dimension.label, dimension.labelColor);
     }
 
     for (const GeometryOverlayAngle& angle : m_geometryOverlay.angles)
@@ -361,7 +402,8 @@ void ImageViewWidget::paintEvent(QPaintEvent* event)
                        imagePointToWidget(angle.imageArmB),
                        angle.label,
                        angle.color,
-                       angle.width);
+                       angle.width,
+                       angle.labelColor);
     }
 
     for (const GeometryOverlayPoint& point : m_geometryOverlay.points)
@@ -414,7 +456,13 @@ void ImageViewWidget::paintEvent(QPaintEvent* event)
     }
   }
 
-  if (m_dragging && !m_movingRoi && !m_resizingRoi && !m_movingExclusion && !m_movingGeometryOverlayPoint)
+  if (m_dragging &&
+      !m_movingRoi &&
+      !m_resizingRoi &&
+      !m_movingExclusion &&
+      !m_movingGeometryOverlayPoint &&
+      !m_movingCircleBandCenter &&
+      m_selectedCircleBandRadius < 0)
   {
     if (m_drawingMode == DrawingMode::OuterCircle || m_drawingMode == DrawingMode::InnerCircle)
     {

@@ -47,8 +47,6 @@ void MainWindowSurfaceModule::showModelLocalizationPanel(const CameraConfig& cam
 
   auto* roiButton = createTouchIconButton("surfaceSearchRoi", tr("actions.surfaceSearchRoi"), buttons);
   auto* polygonButton = createTouchIconButton("polygon", tr("actions.polygon"), buttons);
-  auto* clearRoiButton = createTouchIconButton("clearRoi", tr("actions.clearRoi"), buttons);
-  auto* clearPolygonButton = createTouchIconButton("clearPolygon", tr("actions.clearPolygon"), buttons);
   auto* clearLocalizationButton = createTouchIconButton("clear", tr("actions.clearLocalization"), buttons);
   auto* previewButton = createTouchIconButton("previewModel", tr("actions.previewModel"), buttons);
   auto* acquireButton = createTouchIconButton("acquireModel", tr("actions.acquireModel"), buttons);
@@ -56,8 +54,6 @@ void MainWindowSurfaceModule::showModelLocalizationPanel(const CameraConfig& cam
   auto* templateButton = createTouchIconButton("testTemplateModel", tr("actions.testTemplateModel"), buttons);
   QObject::connect(roiButton, &QPushButton::clicked, window(), [this, camera]() { activateSurfaceDefectRoiDrawing(camera); });
   QObject::connect(polygonButton, &QPushButton::clicked, window(), [this, camera]() { activateSurfaceDefectPolygonDrawing(camera); });
-  QObject::connect(clearRoiButton, &QPushButton::clicked, window(), [this, camera]() { clearSurfaceDefectRoi(camera); });
-  QObject::connect(clearPolygonButton, &QPushButton::clicked, window(), [this, camera]() { clearSurfaceDefectPolygon(camera); });
   QObject::connect(clearLocalizationButton, &QPushButton::clicked, window(), [this, camera]() { clearSurfaceLocalization(camera); });
   QObject::connect(previewButton, &QPushButton::clicked, window(), [this, camera]() { previewSurfaceModel(camera); });
   QObject::connect(acquireButton, &QPushButton::clicked, window(), [this, camera]() { acquireSurfaceModel(camera); });
@@ -65,13 +61,11 @@ void MainWindowSurfaceModule::showModelLocalizationPanel(const CameraConfig& cam
   QObject::connect(templateButton, &QPushButton::clicked, window(), [this, camera]() { testSurfaceTemplateModel(camera); });
   buttonsLayout->addWidget(roiButton, 0, 0);
   buttonsLayout->addWidget(polygonButton, 0, 1);
-  buttonsLayout->addWidget(clearRoiButton, 1, 0);
-  buttonsLayout->addWidget(clearPolygonButton, 1, 1);
-  buttonsLayout->addWidget(clearLocalizationButton, 2, 0, 1, 2);
-  buttonsLayout->addWidget(previewButton, 3, 0);
-  buttonsLayout->addWidget(acquireButton, 3, 1);
-  buttonsLayout->addWidget(shapeButton, 4, 0);
-  buttonsLayout->addWidget(templateButton, 4, 1);
+  buttonsLayout->addWidget(previewButton, 0, 2);
+  buttonsLayout->addWidget(acquireButton, 0, 3);
+  buttonsLayout->addWidget(shapeButton, 1, 0);
+  buttonsLayout->addWidget(templateButton, 1, 1);
+  buttonsLayout->addWidget(clearLocalizationButton, 1, 2, 1, 2);
   layout->addWidget(buttons);
 
   SurfaceModelConfig model = recipes().loadSurfaceModel(camera.id);

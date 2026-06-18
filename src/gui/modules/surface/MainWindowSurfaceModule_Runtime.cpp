@@ -107,7 +107,8 @@ void MainWindowSurfaceModule::testSurfaceAnnulusLocalization(const CameraConfig&
 
     const bool suppressViewUpdate =
       camera.id == selectedCameraId() &&
-      (*context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry || *context().setupCameraId == camera.id);
+      (*context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::None ||
+       *context().setupCameraId == camera.id);
     if (!result.processed || result.diagnosticImage.empty())
     {
       log(tr("log.surfaceFailed") + ": " + camera.id);
@@ -143,6 +144,12 @@ void MainWindowSurfaceModule::testSurfaceAnnulusLocalization(const CameraConfig&
     {
       context().lastSurfaceLocalizationResults->insert(camera.id, result.localization);
       cameraRuntime()[camera.id].setCurrentPose(context().imaging->partPoseFromSurfaceReference(camera, result.localization));
+      largeImage()->setDetectedCircle({
+        QPoint(
+          qRound(result.localization.center.x),
+          qRound(result.localization.center.y)),
+        qRound(result.localization.radius)
+      });
       if (context().setup)
       {
         context().setup->refreshSetupGeometryResults(camera);
@@ -157,6 +164,7 @@ void MainWindowSurfaceModule::testSurfaceAnnulusLocalization(const CameraConfig&
     {
       context().lastSurfaceLocalizationResults->remove(camera.id);
       cameraRuntime()[camera.id].clearCurrentPose(camera.id);
+      largeImage()->clearDetectedCircle();
       if (!suppressViewUpdate)
       {
         largeImage()->clearGeometryOverlay();

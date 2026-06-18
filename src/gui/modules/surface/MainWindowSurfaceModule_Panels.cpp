@@ -251,11 +251,23 @@ void MainWindowSurfaceModule::clearSurfaceLocalization(const CameraConfig& camer
     return;
   }
 
+  context().deactivateImageDrawingTools();
+  context().imaging->restoreSampleWorkspace(camera);
   largeImage()->clearRoi();
   largeImage()->clearSearchPolygon();
   largeImage()->clearExclusionRects();
   largeImage()->clearCircles();
+  largeImage()->clearDetectedCircle();
   largeImage()->clearGeometryOverlay();
+  selectedPreview() = context().imaging->loadCameraSamplePreview(camera);
+  if (!selectedPreview().isNull())
+  {
+    largeImage()->setImage(selectedPreview());
+  }
+  else
+  {
+    context().imaging->ensureReferenceImageVisible(camera);
+  }
   context().lastSurfaceLocalizationResults->remove(camera.id);
   context().lastLocalizationResults->remove(camera.id);
   cameraRuntime()[camera.id].clearCurrentPose(camera.id);
@@ -575,8 +587,10 @@ void MainWindowSurfaceModule::showStoredSurfaceLocalizationGeometry(const Camera
     {
       largeImage()->setCircles({
         {annulus.edgeCenter, annulus.edgeRadius + annulus.edgeBandOuter},
+        {annulus.edgeCenter, annulus.edgeRadius},
         {annulus.edgeCenter, qMax(1, annulus.edgeRadius - annulus.edgeBandInner)}
       });
+      largeImage()->setCircleBandEditingEnabled(true);
       return;
     }
 
@@ -594,5 +608,6 @@ void MainWindowSurfaceModule::showStoredSurfaceLocalizationGeometry(const Camera
     circles.append({annulus.center, annulus.innerRadius});
   }
   largeImage()->setCircles(circles);
+  largeImage()->setCircleBandEditingEnabled(circles.size() >= 2);
 }
 

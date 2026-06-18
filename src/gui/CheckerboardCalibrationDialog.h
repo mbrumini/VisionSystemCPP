@@ -49,6 +49,7 @@ private:
   void updateLiveFrame();
   void restartLive();
   void freezeLiveFrame();
+  void detectPatternSize();
   void calibrateCurrentFrame();
 
   QVector<CameraConfig> m_cameras;

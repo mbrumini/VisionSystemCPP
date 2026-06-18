@@ -74,9 +74,9 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
 
   auto* form = new QWidget(panel);
   auto* formLayout = new QGridLayout(form);
-  formLayout->setContentsMargins(0, 0, 0, 0);
+  formLayout->setContentsMargins(8, 8, 8, 8);
   formLayout->setHorizontalSpacing(8);
-  formLayout->setVerticalSpacing(6);
+  formLayout->setVerticalSpacing(10);
 
   auto* edgeSensitivity = new QSlider(Qt::Horizontal, form);
   edgeSensitivity->setRange(1, 255);
@@ -89,11 +89,15 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
   subpixelEdge->setChecked(pointConfig.useSubpixel);
 
   auto* edgeTransition = new QComboBox(form);
+  edgeTransition->setObjectName("geometryChoice");
+  edgeTransition->setMinimumHeight(38);
   edgeTransition->addItem(tr("labels.transitionLightToDark"), "light_to_dark");
   edgeTransition->addItem(tr("labels.transitionDarkToLight"), "dark_to_light");
   edgeTransition->setCurrentIndex(pointConfig.transition == EdgeLineTransition::DarkToLight ? 1 : 0);
 
   auto* edgePickMode = new QComboBox(form);
+  edgePickMode->setObjectName("geometryChoice");
+  edgePickMode->setMinimumHeight(38);
   edgePickMode->addItem(tr("labels.edgePickFirst"), "first");
   edgePickMode->addItem(tr("labels.edgePickLast"), "last");
   edgePickMode->addItem(tr("labels.edgePickBest"), "best");
@@ -102,19 +106,20 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
   aliasEdit->setPlaceholderText(tr("labels.operatorAlias"));
 
   int row = 0;
-  formLayout->addWidget(new QLabel(tr("labels.edgeSensitivity"), form), row, 0);
-  formLayout->addWidget(edgeSensitivityValue, row, 1);
-  formLayout->addWidget(edgeSensitivity, row++, 2);
+  formLayout->addWidget(new QLabel(tr("labels.edgeSensitivity"), form), row, 0, 1, 2);
+  formLayout->addWidget(edgeSensitivityValue, row++, 2);
+  formLayout->addWidget(edgeSensitivity, row++, 0, 1, 3);
   if (MainWindowCameraProfile::isBwDimensional(camera, config()))
   {
     formLayout->addWidget(subpixelEdge, row++, 0, 1, 3);
   }
-  formLayout->addWidget(new QLabel(tr("labels.edgeTransition"), form), row, 0);
-  formLayout->addWidget(edgeTransition, row++, 1, 1, 2);
-  formLayout->addWidget(new QLabel(tr("labels.edgePickMode"), form), row, 0);
-  formLayout->addWidget(edgePickMode, row++, 1, 1, 2);
-  formLayout->addWidget(new QLabel(tr("labels.operatorAlias"), form), row, 0);
-  formLayout->addWidget(aliasEdit, row++, 1, 1, 2);
+  formLayout->addWidget(new QLabel(tr("labels.edgeTransition"), form), row++, 0, 1, 3);
+  formLayout->addWidget(edgeTransition, row++, 0, 1, 3);
+  formLayout->addWidget(new QLabel(tr("labels.edgePickMode"), form), row++, 0, 1, 3);
+  formLayout->addWidget(edgePickMode, row++, 0, 1, 3);
+  formLayout->addWidget(new QLabel(tr("labels.operatorAlias"), form), row++, 0, 1, 3);
+  aliasEdit->setMinimumHeight(36);
+  formLayout->addWidget(aliasEdit, row++, 0, 1, 3);
   layout->addWidget(form);
 
   QObject::connect(pointSelector, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {

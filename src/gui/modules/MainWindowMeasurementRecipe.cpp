@@ -186,6 +186,19 @@ QString measurementKey(const QString& type, const QString& sourceAId, const QStr
   return QString("%1|%2|%3").arg(type, sourceAId, sourceBId);
 }
 
+QColor measurementLabelColor(const MeasurementResult& measurement)
+{
+  if (measurement.judgement == "OK")
+  {
+    return QColor("#35c46a");
+  }
+  if (measurement.judgement == "NOK")
+  {
+    return QColor("#ff2f2f");
+  }
+  return QColor("#ff8a00");
+}
+
 GeometryOverlayDimension measurementDimension(const QPointF& start,
                                               const QPointF& end,
                                               const MeasurementResult& measurement)
@@ -195,6 +208,7 @@ GeometryOverlayDimension measurementDimension(const QPointF& start,
   dimension.imageEnd = end;
   dimension.label = measurementLabel(measurement, "px");
   dimension.color = QColor("#ff8a00");
+  dimension.labelColor = measurementLabelColor(measurement);
   dimension.width = 3;
   dimension.id = measurementKey(measurement.type, measurement.sourceAId, measurement.sourceBId);
   dimension.labelPoint = measurement.labelPoint;
@@ -262,6 +276,7 @@ void MainWindowMeasurementModule::saveMeasurementRealSettings(const CameraConfig
   {
     if (measurementKey(config) == measurementKey(updatedConfig))
     {
+      config.alias = updatedConfig.alias.trimmed();
       config.unit = updatedConfig.unit;
       config.samplePixels = updatedConfig.samplePixels;
       config.sampleValue = updatedConfig.sampleValue;
@@ -472,14 +487,16 @@ void MainWindowMeasurementModule::appendMeasurementOverlay(const CameraConfig& c
       }
 
       const double armLength = std::min(90.0, std::max(35.0, std::min(lineLength(*lineA), lineLength(*lineB)) * 0.35));
-      overlay.angles.append({
+      GeometryOverlayAngle angleOverlay{
         toPointF(center),
         toPointF(center + directionA * armLength),
         toPointF(center + directionB * armLength),
         measurementLabel(measurement, "deg"),
         QColor("#ff8a00"),
         3
-      });
+      };
+      angleOverlay.labelColor = measurementLabelColor(measurement);
+      overlay.angles.append(angleOverlay);
       overlay.points.append({toPointF(center), "V", QColor("#ff8a00")});
       continue;
     }

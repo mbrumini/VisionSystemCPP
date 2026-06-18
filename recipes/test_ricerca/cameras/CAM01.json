@@ -1,0 +1,76 @@
+{
+    "cameraId": "CAM01",
+    "tools": {
+        "geometries": {
+            "circles": [
+                {
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 8,
+                    "edgeSensitivity": 122,
+                    "edgeStatisticalFilter": 2,
+                    "enabled": true,
+                    "id": "circle_1",
+                    "innerBand": 20,
+                    "outerBand": 20,
+                    "partCenter": {
+                        "x": 10.219545727964942,
+                        "y": 1.243664342999864
+                    },
+                    "pickMode": "best",
+                    "radius": 188,
+                    "scanDirection": "normal_negative",
+                    "transition": "light_to_dark",
+                    "type": "edge_circle",
+                    "useSubpixel": true
+                }
+            ],
+            "enabled": true
+        },
+        "measurements": {
+            "enabled": true,
+            "items": [
+                {
+                    "alias": "Diametro esterno",
+                    "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_1",
+                    "label": {
+                        "custom": true,
+                        "x": 1247.4929577464789,
+                        "y": 989.4901960784314
+                    },
+                    "max": 25.5,
+                    "min": 25,
+                    "nominal": 25,
+                    "samplePixels": 373.4168814373158,
+                    "sampleValue": 0,
+                    "sourceAId": "circle_1",
+                    "type": "circle_diameter",
+                    "unit": "mm"
+                }
+            ]
+        },
+        "surfaceLocalization": {
+            "edge": {
+                "band": {
+                    "inner": 20,
+                    "outer": 20
+                },
+                "circle": {
+                    "centerX": 950,
+                    "centerY": 655,
+                    "radius": 186
+                },
+                "fitMaxError": 9,
+                "sensitivity": 96
+            },
+            "enabled": true,
+            "exclusionRects": [
+            ],
+            "method": "edge"
+        }
+    }
+}

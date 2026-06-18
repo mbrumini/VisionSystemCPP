@@ -198,15 +198,7 @@ void MainWindow::selectCamera(const CameraConfig& camera)
     m_cameraStrip->setSelectedCamera(camera.id);
   }
 
-  auto runtimeIt = m_cameraRuntime.find(camera.id);
-  if (runtimeIt != m_cameraRuntime.end() && !runtimeIt->second.currentFrame().empty())
-  {
-    m_selectedPreview = m_imaging.matToPixmap(runtimeIt->second.currentFrame());
-  }
-  else
-  {
-    m_selectedPreview = m_selectedImagePath.isEmpty() ? QPixmap() : QPixmap(m_selectedImagePath);
-  }
+  m_selectedPreview = m_imaging.loadCameraSamplePreview(camera);
   m_largeTitle->setText(camera.displayName + " | " + camera.id);
 
   if (m_selectedPreview.isNull())

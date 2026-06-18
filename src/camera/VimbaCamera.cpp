@@ -8,6 +8,7 @@
 #include <VmbCPP/Frame.h>
 #include <VmbCPP/IFrameObserver.h>
 
+#include <algorithm>
 #include <chrono>
 
 class VimbaCamera::FrameObserver : public VmbCPP::IFrameObserver
@@ -96,6 +97,86 @@ bool setFeatureDoubleValue(const VmbCPP::CameraPtr& camera, const char* name, do
     feature->SetValue(value) == VmbErrorSuccess;
 }
 
+bool setRequiredEnumFeature(
+  const VmbCPP::CameraPtr& camera,
+  const char* name,
+  const char* value,
+  QString& errorMessage)
+{
+  VmbCPP::FeaturePtr feature;
+  VmbErrorType error = camera ? camera->GetFeatureByName(name, feature) : VmbErrorBadHandle;
+  if (error != VmbErrorSuccess || !feature)
+  {
+    errorMessage = vimbaErrorText(QString("Feature %1 non disponibile").arg(name), error);
+    return false;
+  }
+
+  error = feature->SetValue(value);
+  if (error != VmbErrorSuccess)
+  {
+    errorMessage = vimbaErrorText(QString("Impostazione %1=%2 fallita").arg(name, value), error);
+    return false;
+  }
+  return true;
+}
+
+void setOptionalEnumFeature(const VmbCPP::CameraPtr& camera, const char* name, const char* value)
+{
+  VmbCPP::FeaturePtr feature;
+  if (camera &&
+      camera->GetFeatureByName(name, feature) == VmbErrorSuccess &&
+      feature)
+  {
+    feature->SetValue(value);
+  }
+}
+
+bool setRequiredDoubleFeature(
+  const VmbCPP::CameraPtr& camera,
+  const char* name,
+  double requestedValue,
+  QString& errorMessage)
+{
+  VmbCPP::FeaturePtr feature;
+  VmbErrorType error = camera ? camera->GetFeatureByName(name, feature) : VmbErrorBadHandle;
+  if (error != VmbErrorSuccess || !feature)
+  {
+    errorMessage = vimbaErrorText(QString("Feature %1 non disponibile").arg(name), error);
+    return false;
+  }
+
+  double minimum = requestedValue;
+  double maximum = requestedValue;
+  if (feature->GetRange(minimum, maximum) != VmbErrorSuccess)
+  {
+    errorMessage = QString("Lettura range Vimba %1 fallita").arg(name);
+    return false;
+  }
+
+  const double appliedValue = std::clamp(requestedValue, minimum, maximum);
+  error = feature->SetValue(appliedValue);
+  if (error != VmbErrorSuccess)
+  {
+    errorMessage = vimbaErrorText(
+      QString("Impostazione %1=%2 fallita (range %3..%4)")
+        .arg(name)
+        .arg(appliedValue, 0, 'f', 3)
+        .arg(minimum, 0, 'f', 3)
+        .arg(maximum, 0, 'f', 3),
+      error);
+    return false;
+  }
+
+  double readBack = 0.0;
+  error = feature->GetValue(readBack);
+  if (error != VmbErrorSuccess)
+  {
+    errorMessage = vimbaErrorText(QString("Verifica %1 fallita").arg(name), error);
+    return false;
+  }
+  return true;
+}
+
 bool isSoftwareTriggerMode(const CameraTriggerConfig& trigger)
 {
   const QString mode = trigger.mode.trimmed().toLower();
@@ -150,7 +231,11 @@ bool VimbaCamera::open()
   }
 
   setPreferredPixelFormat();
-  applyAcquisitionSettings();
+  if (!applyAcquisitionSettings())
+  {
+    close();
+    return false;
+  }
 
   VimbaTriggerController trigger(m_camera);
   QString triggerError;
@@ -254,6 +339,19 @@ QString VimbaCamera::lastError() const
   return m_lastError;
 }
 
+bool VimbaCamera::setAcquisitionSettings(const CameraAcquisitionConfig& acquisition)
+{
+#ifdef VISION_WITH_VIMBAX
+  m_config.acquisition = acquisition;
+  m_lastError.clear();
+  return applyAcquisitionSettings();
+#else
+  Q_UNUSED(acquisition);
+  m_lastError = "SDK VimbaX non disponibile";
+  return false;
+#endif
+}
+
 void VimbaCamera::close()
 {
 #ifdef VISION_WITH_VIMBAX
@@ -345,28 +443,52 @@ bool VimbaCamera::prepareCapture()
   return true;
 }
 
-void VimbaCamera::applyAcquisitionSettings()
+bool VimbaCamera::applyAcquisitionSettings()
 {
   if (!m_camera)
   {
-    return;
+    m_lastError = "Camera Vimba non disponibile per configurare l'acquisizione";
+    return false;
   }
 
   const CameraAcquisitionConfig& acquisition = m_config.acquisition;
 
-  setFeatureEnumValue(m_camera, "ExposureAuto", acquisition.autoExposure ? "Continuous" : "Off");
+  setOptionalEnumFeature(m_camera, "ExposureMode", "Timed");
+  if (!setRequiredEnumFeature(
+        m_camera,
+        "ExposureAuto",
+        acquisition.autoExposure ? "Continuous" : "Off",
+        m_lastError))
+  {
+    return false;
+  }
   if (!acquisition.autoExposure && acquisition.hasExposure)
   {
-    setFeatureDoubleValue(m_camera, "ExposureTime", acquisition.exposure);
+    if (!setRequiredDoubleFeature(m_camera, "ExposureTime", acquisition.exposure, m_lastError))
+    {
+      return false;
+    }
   }
 
-  setFeatureEnumValue(m_camera, "GainAuto", acquisition.autoGain ? "Continuous" : "Off");
+  setOptionalEnumFeature(m_camera, "GainSelector", "All");
+  if (!setRequiredEnumFeature(
+        m_camera,
+        "GainAuto",
+        acquisition.autoGain ? "Continuous" : "Off",
+        m_lastError))
+  {
+    return false;
+  }
   if (!acquisition.autoGain && acquisition.hasGain)
   {
-    setFeatureDoubleValue(m_camera, "Gain", acquisition.gain);
+    if (!setRequiredDoubleFeature(m_camera, "Gain", acquisition.gain, m_lastError))
+    {
+      return false;
+    }
   }
 
   setFeatureEnumValue(m_camera, "BalanceWhiteAuto", acquisition.autoWhiteBalance ? "Continuous" : "Off");
+  return true;
 }
 
 bool VimbaCamera::copyFrameToMat(const VmbCPP::FramePtr& vimbaFrame, cv::Mat& frame)

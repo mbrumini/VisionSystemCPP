@@ -63,7 +63,6 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
   int intervalMs,
   std::function<void(int)> intervalChanged,
   std::function<void()> acquireSample,
-  std::function<void()> acquireAiSample,
   std::function<void()> importSample,
   std::function<void()> showSample,
   std::function<void()> importTests,
@@ -105,52 +104,38 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
   });
   layout->addWidget(intervalSpin);
 
-  if (!texts.toolLabels.isEmpty())
-  {
-    auto* toolsBox = new QGroupBox(texts.toolsTitle, this);
-    auto* toolsLayout = new QGridLayout(toolsBox);
-    toolsLayout->setContentsMargins(8, 10, 8, 8);
-    toolsLayout->setSpacing(6);
-    for (int i = 0; i < texts.toolLabels.size(); ++i)
-    {
-      auto* button = createTouchButton(toolIconId(texts.toolLabels[i]), texts.toolLabels[i], toolsBox);
-      toolsLayout->addWidget(button, i / 4, i % 4);
-      if (i < toolHandlers.size())
-      {
-        connectButton(button, toolHandlers[i]);
-      }
-    }
-    layout->addWidget(toolsBox);
-  }
+  Q_UNUSED(toolHandlers);
 
-  auto* buttons = new QWidget(this);
-  auto* buttonsLayout = new QGridLayout(buttons);
-  buttonsLayout->setContentsMargins(0, 0, 0, 0);
-  buttonsLayout->setSpacing(6);
+  auto* recipeImagesBox = new QGroupBox(texts.recipeImagesTitle, this);
+  auto* recipeImagesLayout = new QGridLayout(recipeImagesBox);
+  recipeImagesLayout->setContentsMargins(8, 10, 8, 8);
+  recipeImagesLayout->setSpacing(6);
+  auto* acquireSampleButton = createTouchButton("acquireSample", texts.acquireSample, recipeImagesBox);
+  auto* sampleButton = createTouchButton("assignSampleImage", texts.importSample, recipeImagesBox);
+  auto* showSampleButton = createTouchButton("sampleImage", texts.showSample, recipeImagesBox);
+  auto* testImagesButton = createTouchButton("assignTestImages", texts.importTests, recipeImagesBox);
+  recipeImagesLayout->addWidget(acquireSampleButton, 0, 0);
+  recipeImagesLayout->addWidget(sampleButton, 0, 1);
+  recipeImagesLayout->addWidget(showSampleButton, 0, 2);
+  recipeImagesLayout->addWidget(testImagesButton, 0, 3);
+  layout->addWidget(recipeImagesBox);
 
-  auto* acquireSampleButton = createTouchButton("acquireSample", texts.acquireSample, buttons);
-  auto* acquireAiSampleButton = createTouchButton("aiSample", texts.acquireAiSample, buttons);
-  auto* sampleButton = createTouchButton("assignSampleImage", texts.importSample, buttons);
-  auto* showSampleButton = createTouchButton("sampleImage", texts.showSample, buttons);
-  auto* testImagesButton = createTouchButton("assignTestImages", texts.importTests, buttons);
-  auto* acquisitionButton = createTouchButton("lighting", texts.acquisitionSettings, buttons);
-  auto* stepButton = createTouchButton("nextFrame", texts.nextFrame, buttons);
-  auto* resultsButton = createTouchButton("measurements", texts.results, buttons);
-  auto* backButton = createTouchButton("back", texts.back, buttons);
+  auto* cameraSetupBox = new QGroupBox(texts.cameraSetupTitle, this);
+  auto* cameraSetupLayout = new QGridLayout(cameraSetupBox);
+  cameraSetupLayout->setContentsMargins(8, 10, 8, 8);
+  cameraSetupLayout->setSpacing(6);
+  auto* acquisitionButton = createTouchButton("lighting", texts.acquisitionSettings, cameraSetupBox);
+  auto* stepButton = createTouchButton("nextFrame", texts.nextFrame, cameraSetupBox);
+  auto* resultsButton = createTouchButton("measurements", texts.results, cameraSetupBox);
+  cameraSetupLayout->addWidget(acquisitionButton, 0, 0);
+  cameraSetupLayout->addWidget(stepButton, 0, 1);
+  cameraSetupLayout->addWidget(resultsButton, 0, 2);
+  layout->addWidget(cameraSetupBox);
 
-  buttonsLayout->addWidget(acquireSampleButton, 0, 0);
-  buttonsLayout->addWidget(acquireAiSampleButton, 0, 1);
-  buttonsLayout->addWidget(sampleButton, 0, 2);
-  buttonsLayout->addWidget(showSampleButton, 0, 3);
-  buttonsLayout->addWidget(testImagesButton, 1, 0);
-  buttonsLayout->addWidget(acquisitionButton, 1, 1);
-  buttonsLayout->addWidget(stepButton, 1, 2);
-  buttonsLayout->addWidget(resultsButton, 2, 0);
-  buttonsLayout->addWidget(backButton, 2, 1);
-  layout->addWidget(buttons);
+  auto* backButton = createTouchButton("back", texts.back, this);
+  layout->addWidget(backButton, 0, Qt::AlignLeft);
 
   connectButton(acquireSampleButton, acquireSample);
-  connectButton(acquireAiSampleButton, acquireAiSample);
   connectButton(sampleButton, importSample);
   connectButton(showSampleButton, showSample);
   connectButton(testImagesButton, importTests);

@@ -22,6 +22,8 @@ struct CameraSetupPanelTexts
   QString nextFrame;
   QString results;
   QString back;
+  QString recipeImagesTitle;
+  QString cameraSetupTitle;
   QString toolsTitle;
   QStringList toolLabels;
 };
@@ -36,7 +38,6 @@ public:
     int intervalMs,
     std::function<void(int)> intervalChanged,
     std::function<void()> acquireSample,
-    std::function<void()> acquireAiSample,
     std::function<void()> importSample,
     std::function<void()> showSample,
     std::function<void()> importTests,

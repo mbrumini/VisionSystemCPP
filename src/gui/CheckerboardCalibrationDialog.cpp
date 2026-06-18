@@ -5,7 +5,9 @@
 
 #include <QComboBox>
 #include <QDialogButtonBox>
+#include <QDir>
 #include <QDoubleSpinBox>
+#include <QFileInfo>
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -16,6 +18,8 @@
 #include <QVBoxLayout>
 
 #include <opencv2/calib3d.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
 
 CheckerboardCalibrationDialog::CheckerboardCalibrationDialog(const QVector<CameraConfig>& cameras,
                                                              const QString& selectedCameraId,
@@ -90,9 +94,11 @@ CheckerboardCalibrationDialog::CheckerboardCalibrationDialog(const QVector<Camer
 
   m_freezeButton = new QPushButton("Ferma acquisizione", controlColumn);
   m_resumeButton = new QPushButton("Riprendi live", controlColumn);
+  auto* detectSizeButton = new QPushButton("Rileva righe e colonne", controlColumn);
   m_resumeButton->setEnabled(false);
   controlLayout->addWidget(m_freezeButton);
   controlLayout->addWidget(m_resumeButton);
+  controlLayout->addWidget(detectSizeButton);
   controlLayout->addStretch(1);
   topLayout->addWidget(controlColumn);
   layout->addWidget(topRow);
@@ -123,6 +129,7 @@ CheckerboardCalibrationDialog::CheckerboardCalibrationDialog(const QVector<Camer
   connect(m_cameraCombo, &QComboBox::currentIndexChanged, this, [this](int) { restartLive(); });
   connect(m_freezeButton, &QPushButton::clicked, this, [this]() { freezeLiveFrame(); });
   connect(m_resumeButton, &QPushButton::clicked, this, [this]() { restartLive(); });
+  connect(detectSizeButton, &QPushButton::clicked, this, [this]() { detectPatternSize(); });
   connect(calibrateButton, &QPushButton::clicked, this, [this]() { calibrateCurrentFrame(); });
   connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
@@ -237,6 +244,56 @@ void CheckerboardCalibrationDialog::freezeLiveFrame()
   m_status->setText(QString("Frame bloccato: %1 | %2 x %3 px").arg(camera.id).arg(m_frozenFrame.cols).arg(m_frozenFrame.rows));
 }
 
+void CheckerboardCalibrationDialog::detectPatternSize()
+{
+  cv::Mat input = m_frozen && !m_frozenFrame.empty() ? m_frozenFrame.clone() : m_liveFrame.clone();
+  if (input.empty())
+  {
+    updateLiveFrame();
+    input = m_liveFrame.clone();
+  }
+  if (input.empty())
+  {
+    QMessageBox::warning(this, "Calibrazione checkerboard", "Nessuna immagine valida da analizzare.");
+    return;
+  }
+
+  cv::Mat gray;
+  if (input.channels() == 1)
+  {
+    gray = input;
+  }
+  else
+  {
+    cv::cvtColor(input, gray, cv::COLOR_BGR2GRAY);
+  }
+
+  std::vector<cv::Point2f> corners;
+  cv::Mat meta;
+  const bool found = cv::findChessboardCornersSB(
+    gray,
+    cv::Size(3, 3),
+    corners,
+    cv::CALIB_CB_NORMALIZE_IMAGE | cv::CALIB_CB_EXHAUSTIVE | cv::CALIB_CB_LARGER,
+    meta);
+  if (!found || meta.cols < 2 || meta.rows < 2)
+  {
+    const QString message = "Dimensioni checkerboard non rilevate automaticamente.";
+    m_status->setText(message);
+    QMessageBox::warning(this, "Calibrazione checkerboard", message);
+    return;
+  }
+
+  m_columns->setValue(meta.cols);
+  m_rows->setValue(meta.rows);
+  const QString message = QString("Rilevati %1 x %2 angoli interni (%3 punti).")
+    .arg(meta.cols)
+    .arg(meta.rows)
+    .arg(meta.cols * meta.rows);
+  m_status->setText(message);
+  QMessageBox::information(this, "Calibrazione checkerboard", message);
+}
+
 void CheckerboardCalibrationDialog::calibrateCurrentFrame()
 {
   const int cameraIndex = selectedCameraIndex();
@@ -267,9 +324,18 @@ void CheckerboardCalibrationDialog::calibrateCurrentFrame()
   const QVector<QPointF> corners = detector.detect(input, pattern);
   if (corners.size() != pattern.gridSize.width() * pattern.gridSize.height())
   {
-    const QString message = QString("Checkerboard non trovata: attesi %1 punti, trovati %2.")
+    const QString diagnosticsDir = QDir::temp().filePath("VisionSystemCPP");
+    QDir().mkpath(diagnosticsDir);
+    const QString diagnosticsPath = QDir(diagnosticsDir).filePath(
+      QString("%1_checkerboard_failed.png").arg(camera.id));
+    cv::imwrite(diagnosticsPath.toStdString(), input);
+
+    const QString message = QString(
+      "Checkerboard non trovata: attesi %1 punti, trovati %2.\n"
+      "Frame diagnostico salvato in:\n%3")
       .arg(pattern.gridSize.width() * pattern.gridSize.height())
-      .arg(corners.size());
+      .arg(corners.size())
+      .arg(QDir::toNativeSeparators(diagnosticsPath));
     m_status->setText(message);
     QMessageBox::warning(this, "Calibrazione checkerboard", message);
     return;

@@ -17,6 +17,8 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QSlider>
+#include <QToolButton>
+#include <QVBoxLayout>
 
 #include <opencv2/imgproc.hpp>
 
@@ -87,14 +89,20 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
   auto* subpixelEdge = new QCheckBox(tr("labels.subpixelEdge"), panel);
   subpixelEdge->setChecked(lineConfig.useSubpixel);
   auto* scanDirection = new QComboBox(panel);
+  scanDirection->setObjectName("geometryChoice");
+  scanDirection->setMinimumHeight(38);
   scanDirection->addItem(tr("labels.scanNormalPositive"), "normal_positive");
   scanDirection->addItem(tr("labels.scanNormalNegative"), "normal_negative");
   scanDirection->setCurrentIndex(lineConfig.scanDirection == EdgeLineScanDirection::NormalNegative ? 1 : 0);
   auto* edgeTransition = new QComboBox(panel);
+  edgeTransition->setObjectName("geometryChoice");
+  edgeTransition->setMinimumHeight(38);
   edgeTransition->addItem(tr("labels.transitionLightToDark"), "light_to_dark");
   edgeTransition->addItem(tr("labels.transitionDarkToLight"), "dark_to_light");
   edgeTransition->setCurrentIndex(lineConfig.transition == EdgeLineTransition::DarkToLight ? 1 : 0);
   auto* edgePickMode = new QComboBox(panel);
+  edgePickMode->setObjectName("geometryChoice");
+  edgePickMode->setMinimumHeight(38);
   edgePickMode->addItem(tr("labels.edgePickFirst"), "first");
   edgePickMode->addItem(tr("labels.edgePickLast"), "last");
   edgePickMode->addItem(tr("labels.edgePickBest"), "best");
@@ -106,7 +114,7 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
   auto* lineControlsLayout = new QGridLayout(lineControls);
   lineControlsLayout->setContentsMargins(0, 0, 0, 0);
   lineControlsLayout->setHorizontalSpacing(6);
-  lineControlsLayout->setVerticalSpacing(4);
+  lineControlsLayout->setVerticalSpacing(6);
   lineControlsLayout->addWidget(new QLabel(tr("labels.geometryLine"), lineControls), 0, 0);
   lineControlsLayout->addWidget(lineSelector, 0, 1);
   lineControlsLayout->addWidget(newLineButton, 0, 2);
@@ -119,41 +127,61 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
   lineControlsLayout->addWidget(edgeSensitivity, 2, 2, 1, 2);
   lineControlsLayout->setColumnStretch(1, 1);
   layout->addWidget(lineControls);
-  layout->addWidget(aliasEdit);
 
   auto* filterControls = new QWidget(panel);
   auto* filterControlsLayout = new QGridLayout(filterControls);
   filterControlsLayout->setContentsMargins(0, 0, 0, 0);
   filterControlsLayout->setHorizontalSpacing(6);
-  filterControlsLayout->setVerticalSpacing(4);
-  filterControlsLayout->addWidget(new QLabel(tr("labels.edgeCleanupDerivative"), filterControls), 0, 0);
-  filterControlsLayout->addWidget(edgeCleanupDerivativeValue, 0, 1);
-  filterControlsLayout->addWidget(new QLabel(tr("labels.edgeStatisticalFilter"), filterControls), 0, 2);
-  filterControlsLayout->addWidget(edgeStatisticalFilterValue, 0, 3);
-  filterControlsLayout->addWidget(edgeCleanupDerivative, 1, 0, 1, 2);
-  filterControlsLayout->addWidget(edgeStatisticalFilter, 1, 2, 1, 2);
+  filterControlsLayout->setVerticalSpacing(10);
+  filterControlsLayout->addWidget(new QLabel(tr("labels.edgeCleanupDerivative"), filterControls), 0, 0, 1, 3);
+  filterControlsLayout->addWidget(edgeCleanupDerivativeValue, 0, 3);
+  filterControlsLayout->addWidget(edgeCleanupDerivative, 1, 0, 1, 4);
+  filterControlsLayout->addWidget(new QLabel(tr("labels.edgeStatisticalFilter"), filterControls), 2, 0, 1, 3);
+  filterControlsLayout->addWidget(edgeStatisticalFilterValue, 2, 3);
+  filterControlsLayout->addWidget(edgeStatisticalFilter, 3, 0, 1, 4);
   filterControlsLayout->setColumnStretch(3, 1);
-  layout->addWidget(filterControls);
-
-  if (MainWindowCameraProfile::isBwDimensional(camera, config()))
-  {
-    layout->addWidget(subpixelEdge);
-  }
-
   auto* scanControls = new QWidget(panel);
   auto* scanControlsLayout = new QGridLayout(scanControls);
   scanControlsLayout->setContentsMargins(0, 0, 0, 0);
   scanControlsLayout->setHorizontalSpacing(6);
-  scanControlsLayout->setVerticalSpacing(4);
-  scanControlsLayout->addWidget(new QLabel(tr("labels.scanDirection"), scanControls), 0, 0);
-  scanControlsLayout->addWidget(scanDirection, 0, 1);
-  scanControlsLayout->addWidget(new QLabel(tr("labels.edgeTransition"), scanControls), 0, 2);
-  scanControlsLayout->addWidget(edgeTransition, 0, 3);
-  scanControlsLayout->addWidget(new QLabel(tr("labels.edgePickMode"), scanControls), 1, 0);
-  scanControlsLayout->addWidget(edgePickMode, 1, 1, 1, 3);
-  scanControlsLayout->setColumnStretch(1, 1);
-  scanControlsLayout->setColumnStretch(3, 1);
+  scanControlsLayout->setVerticalSpacing(6);
+  int scanRow = 0;
+  scanControlsLayout->addWidget(new QLabel(tr("labels.scanDirection"), scanControls), scanRow++, 0, 1, 3);
+  scanControlsLayout->addWidget(scanDirection, scanRow++, 0, 1, 3);
+  scanControlsLayout->addWidget(new QLabel(tr("labels.edgeTransition"), scanControls), scanRow++, 0, 1, 3);
+  scanControlsLayout->addWidget(edgeTransition, scanRow++, 0, 1, 3);
+  scanControlsLayout->addWidget(new QLabel(tr("labels.edgePickMode"), scanControls), scanRow++, 0, 1, 3);
+  scanControlsLayout->addWidget(edgePickMode, scanRow++, 0, 1, 3);
   layout->addWidget(scanControls);
+
+  auto* advancedButton = new QToolButton(panel);
+  advancedButton->setText(tr("groups.strategyControls"));
+  advancedButton->setCheckable(true);
+  advancedButton->setChecked(false);
+  advancedButton->setArrowType(Qt::RightArrow);
+  advancedButton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+
+  auto* advancedPanel = new QWidget(panel);
+  auto* advancedLayout = new QVBoxLayout(advancedPanel);
+  advancedLayout->setContentsMargins(0, 0, 0, 0);
+  advancedLayout->setSpacing(8);
+  advancedLayout->addWidget(filterControls);
+  if (MainWindowCameraProfile::isBwDimensional(camera, config()))
+  {
+    advancedLayout->addWidget(subpixelEdge);
+  }
+  auto* aliasLabel = new QLabel(tr("labels.operatorAlias"), advancedPanel);
+  aliasEdit->setMinimumHeight(34);
+  advancedLayout->addWidget(aliasLabel);
+  advancedLayout->addWidget(aliasEdit);
+  advancedPanel->setVisible(false);
+
+  QObject::connect(advancedButton, &QToolButton::toggled, window(), [advancedButton, advancedPanel](bool checked) {
+    advancedButton->setArrowType(checked ? Qt::DownArrow : Qt::RightArrow);
+    advancedPanel->setVisible(checked);
+  });
+  layout->addWidget(advancedButton);
+  layout->addWidget(advancedPanel);
 
   QObject::connect(lineSelector, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
     if (index < 0)
