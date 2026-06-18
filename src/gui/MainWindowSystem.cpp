@@ -12,13 +12,16 @@
 #include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QHeaderView>
+#include <QHBoxLayout>
 #include <QInputDialog>
+#include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QDoubleSpinBox>
 #include <QPushButton>
 #include <QTableWidget>
 #include <QTableWidgetItem>
+#include <QTabWidget>
 #include <QSettings>
 #include <QVBoxLayout>
 
@@ -83,6 +86,168 @@ void MainWindow::showAccessLogin()
 
   appendLog(trText("access.loginDenied"));
   QMessageBox::warning(this, trText("access.loginTitle"), trText("access.loginDenied"));
+}
+
+void MainWindow::showAccessManagement()
+{
+  QDialog dialog(this);
+  dialog.setWindowTitle(trText("access.manageAccess"));
+  dialog.resize(1040, 620);
+
+  auto* layout = new QVBoxLayout(&dialog);
+  auto* note = new QLabel(trText("access.managementPlaceholder"), &dialog);
+  note->setWordWrap(true);
+  layout->addWidget(note);
+
+  auto* tabs = new QTabWidget(&dialog);
+
+  auto* usersPage = new QWidget(tabs);
+  auto* usersLayout = new QVBoxLayout(usersPage);
+  auto* usersTable = new QTableWidget(usersPage);
+  usersTable->setColumnCount(6);
+  usersTable->setHorizontalHeaderLabels({
+    trText("access.alias"),
+    trText("access.level"),
+    trText("access.enabled"),
+    trText("access.password"),
+    trText("access.permissions"),
+    trText("access.notes")
+  });
+  usersTable->verticalHeader()->setVisible(false);
+  usersTable->setAlternatingRowColors(true);
+  usersTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+  usersTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+  usersTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+  usersTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+  usersTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
+  usersTable->horizontalHeader()->setSectionResizeMode(4, QHeaderView::ResizeToContents);
+  usersTable->horizontalHeader()->setSectionResizeMode(5, QHeaderView::Stretch);
+  usersLayout->addWidget(usersTable);
+
+  auto addUserRow = [this, usersTable]() {
+    const int row = usersTable->rowCount();
+    usersTable->insertRow(row);
+    usersTable->setItem(row, 0, new QTableWidgetItem(trText("access.newAlias")));
+
+    auto* role = new QComboBox(usersTable);
+    role->addItems({
+      trText("access.roleGuru"),
+      trText("access.roleSupervisor"),
+      trText("access.roleAdministrator"),
+      trText("access.roleOperator"),
+      trText("access.roleViewer")
+    });
+    role->setCurrentIndex(3);
+    usersTable->setCellWidget(row, 1, role);
+
+    auto* enabled = new QCheckBox(usersTable);
+    enabled->setChecked(true);
+    enabled->setText(trText("access.enabled"));
+    usersTable->setCellWidget(row, 2, enabled);
+
+    auto* password = new QPushButton(trText("access.setPassword"), usersTable);
+    connect(password, &QPushButton::clicked, this, [this]() {
+      QMessageBox::information(this, trText("access.manageAccess"), trText("access.logicNotConnected"));
+    });
+    usersTable->setCellWidget(row, 3, password);
+
+    auto* permissions = new QPushButton(trText("access.customize"), usersTable);
+    connect(permissions, &QPushButton::clicked, this, [this]() {
+      QMessageBox::information(this, trText("access.manageAccess"), trText("access.logicNotConnected"));
+    });
+    usersTable->setCellWidget(row, 4, permissions);
+    usersTable->setItem(row, 5, new QTableWidgetItem());
+    usersTable->setCurrentCell(row, 0);
+  };
+
+  auto* userActions = new QWidget(usersPage);
+  auto* userActionsLayout = new QHBoxLayout(userActions);
+  userActionsLayout->setContentsMargins(0, 0, 0, 0);
+  auto* addUser = new QPushButton(trText("access.addUser"), userActions);
+  auto* removeUser = new QPushButton(trText("access.removeUser"), userActions);
+  userActionsLayout->addWidget(addUser);
+  userActionsLayout->addWidget(removeUser);
+  userActionsLayout->addStretch(1);
+  usersLayout->addWidget(userActions);
+  connect(addUser, &QPushButton::clicked, &dialog, addUserRow);
+  connect(removeUser, &QPushButton::clicked, &dialog, [usersTable]() {
+    const int row = usersTable->currentRow();
+    if (row >= 0)
+    {
+      usersTable->removeRow(row);
+    }
+  });
+
+  auto* rolesPage = new QWidget(tabs);
+  auto* rolesLayout = new QVBoxLayout(rolesPage);
+  auto* rolesTable = new QTableWidget(rolesPage);
+  const QVector<AccessRole> roles = {
+    AccessRole::Guru,
+    AccessRole::Supervisor,
+    AccessRole::Administrator,
+    AccessRole::Operator,
+    AccessRole::Viewer
+  };
+  const QVector<QPair<AccessPermission, QString>> permissions = {
+    {AccessPermission::ViewOverview, trText("access.permissionViewOverview")},
+    {AccessPermission::ViewCamera, trText("access.permissionViewCamera")},
+    {AccessPermission::StartStopMachine, trText("access.permissionStartStop")},
+    {AccessPermission::EditSetup, trText("access.permissionEditSetup")},
+    {AccessPermission::EditGeometries, trText("access.permissionEditGeometries")},
+    {AccessPermission::EditMeasurements, trText("access.permissionEditMeasurements")},
+    {AccessPermission::EditCalibration, trText("access.permissionEditCalibration")},
+    {AccessPermission::EditRecipes, trText("access.permissionEditRecipes")},
+    {AccessPermission::EditCameraSources, trText("access.permissionEditCameraSources")},
+    {AccessPermission::EditSystemSettings, trText("access.permissionEditSystem")},
+    {AccessPermission::ManageUsers, trText("access.permissionManageUsers")}
+  };
+  rolesTable->setColumnCount(roles.size() + 1);
+  QStringList roleHeaders = {trText("access.permissions")};
+  roleHeaders.append({
+    trText("access.roleGuru"),
+    trText("access.roleSupervisor"),
+    trText("access.roleAdministrator"),
+    trText("access.roleOperator"),
+    trText("access.roleViewer")
+  });
+  rolesTable->setHorizontalHeaderLabels(roleHeaders);
+  rolesTable->setRowCount(permissions.size());
+  rolesTable->verticalHeader()->setVisible(false);
+  rolesTable->setAlternatingRowColors(true);
+  rolesTable->setSelectionMode(QAbstractItemView::NoSelection);
+  rolesTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+  for (int column = 1; column < rolesTable->columnCount(); ++column)
+  {
+    rolesTable->horizontalHeader()->setSectionResizeMode(column, QHeaderView::ResizeToContents);
+  }
+
+  AccessPolicy currentPolicy;
+  for (int row = 0; row < permissions.size(); ++row)
+  {
+    rolesTable->setItem(row, 0, readOnlyItem(permissions[row].second));
+    for (int roleIndex = 0; roleIndex < roles.size(); ++roleIndex)
+    {
+      auto* allowed = new QCheckBox(rolesTable);
+      allowed->setChecked(currentPolicy.allows(roles[roleIndex], permissions[row].first));
+      allowed->setToolTip(trText("access.notSavedYet"));
+      auto* cell = new QWidget(rolesTable);
+      auto* cellLayout = new QHBoxLayout(cell);
+      cellLayout->setContentsMargins(0, 0, 0, 0);
+      cellLayout->setAlignment(Qt::AlignCenter);
+      cellLayout->addWidget(allowed);
+      rolesTable->setCellWidget(row, roleIndex + 1, cell);
+    }
+  }
+  rolesLayout->addWidget(rolesTable);
+
+  tabs->addTab(usersPage, trText("access.users"));
+  tabs->addTab(rolesPage, trText("access.rolesAndPermissions"));
+  layout->addWidget(tabs);
+
+  auto* buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
+  connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+  layout->addWidget(buttons);
+  dialog.exec();
 }
 
 void MainWindow::showCameraSystemSettings()

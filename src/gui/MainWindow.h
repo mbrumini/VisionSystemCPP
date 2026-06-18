@@ -61,6 +61,7 @@ private:
   void startMachine();
   void stopMachine();
   void showAccessLogin();
+  void showAccessManagement();
   void showCameraSystemSettings();
   void showCheckerboardCalibrationDialog();
   void showHelp();
