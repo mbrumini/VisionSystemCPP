@@ -28,6 +28,16 @@
 - [ ] Test accessi e feature: tool opzionali nascosti agli utenti quando disabilitati, sempre visibili a Guru.
 - [ ] Garantire che i test non modifichino mai configurazioni, calibrazioni, immagini o ricette operative reali.
 - [ ] Eseguire automaticamente la suite prima di ogni push stabile.
+- [ ] Creare un programma esterno `VisionSystemTestRunner`, separato dall'HMI operativa, per test end-to-end con log e report.
+- [ ] Aggiungere a VisionSystemCPP una modalita' test non interattiva, per esempio `--test <scenario.json> --output <result.json>`, senza automazione fragile dei click.
+- [ ] Definire scenari JSON con ricetta di test, camera, immagine/frame, tool da eseguire, risultati attesi e tolleranze numeriche.
+- [ ] Fare usare al runner esclusivamente workspace temporanei, ricette dedicate e copie delle immagini di test.
+- [ ] Permettere al runner di avviare VisionSystemCPP, inviare lo scenario, imporre un timeout, acquisire exit code, stdout/stderr e log dettagliato.
+- [ ] Restituire risultati strutturati JSON: posa, geometrie, misure, giudizi OK/NOK, tempi, warning ed errori.
+- [ ] Confrontare automaticamente risultati reali e attesi, inclusi test negativi e ripetizioni dello stesso frame.
+- [ ] Generare report leggibili HTML e JSON con riepilogo OK/NOK, differenze numeriche, immagini diagnostiche e riferimenti ai log.
+- [ ] Aggiungere una suite di regressione stabile da eseguire prima dei push e delle release.
+- [ ] Valutare successivamente named pipe o socket locale per comandare e osservare anche un'istanza HMI aperta; partire dalla modalita' CLI, piu' semplice e affidabile.
 
 ## PRIORITA ALTA - Misure reali e calibrazione
 
