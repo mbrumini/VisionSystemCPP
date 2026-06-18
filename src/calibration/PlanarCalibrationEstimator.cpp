@@ -72,6 +72,8 @@ CameraCalibrationModel PlanarCalibrationEstimator::estimateScaleOnly(const QStri
 
   model.pixelSizeXMm = pattern.pitchMm / avgHorizontalPixels;
   model.pixelSizeYMm = pattern.pitchMm / avgVerticalPixels;
+  model.averageHorizontalPitchPixels = avgHorizontalPixels;
+  model.averageVerticalPitchPixels = avgVerticalPixels;
   model.originImagePoint = imagePoints.first();
   model.originWorldMm = QPointF(0.0, 0.0);
   model.rotationDegrees = angleDegrees(imagePoints.first(), imagePoints[1]);

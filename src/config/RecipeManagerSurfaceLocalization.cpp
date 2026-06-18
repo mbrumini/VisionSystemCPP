@@ -119,17 +119,26 @@ SurfaceAnnulusLocalizationConfig RecipeManager::loadSurfaceAnnulusLocalization(c
   {
     config.hasOuterCircle = true;
     config.center = QPoint(outer.value("centerX").toInt(), outer.value("centerY").toInt());
-    config.outerRadius = outer.value("radius").toInt();
+    config.outerRadius = qMax(1, outer.value("radius").toInt());
   }
 
   if (!inner.isEmpty())
   {
-    config.hasInnerCircle = true;
     config.innerRadius = inner.value("radius").toInt();
 
     if (!config.hasOuterCircle)
     {
       config.center = QPoint(inner.value("centerX").toInt(), inner.value("centerY").toInt());
+    }
+
+    if (config.innerRadius > 0)
+    {
+      config.hasInnerCircle = true;
+      if (config.hasOuterCircle && config.innerRadius >= config.outerRadius)
+      {
+        config.innerRadius = qMax(1, config.outerRadius - 1);
+        config.hasInnerCircle = config.outerRadius > 1;
+      }
     }
   }
 
@@ -147,12 +156,14 @@ SurfaceAnnulusLocalizationConfig RecipeManager::loadSurfaceAnnulusLocalization(c
   {
     config.hasEdgeCircle = true;
     config.edgeCenter = QPoint(edgeCircle.value("centerX").toInt(), edgeCircle.value("centerY").toInt());
-    config.edgeRadius = edgeCircle.value("radius").toInt();
+    config.edgeRadius = qMax(1, edgeCircle.value("radius").toInt());
   }
 
   const QJsonObject band = edge.value("band").toObject();
   config.edgeBandInner = band.value("inner").toInt(config.edgeBandInner);
   config.edgeBandOuter = band.value("outer").toInt(config.edgeBandOuter);
+  config.edgeBandInner = qBound(1, config.edgeBandInner, config.hasEdgeCircle ? qMax(1, config.edgeRadius - 1) : 200);
+  config.edgeBandOuter = qBound(1, config.edgeBandOuter, 200);
   return config;
 }
 
@@ -169,8 +180,19 @@ bool RecipeManager::saveSurfaceAnnulusCircle(const QString& cameraId, bool outer
   surfaceLocalization["enabled"] = true;
   pruneSurfaceLocalizationForMethod(surfaceLocalization, "threshold");
 
+  const SurfaceAnnulusLocalizationConfig current = loadSurfaceAnnulusLocalization(cameraId);
+  int safeRadius = qMax(1, radius);
+  if (outerCircle && current.hasInnerCircle)
+  {
+    safeRadius = qMax(safeRadius, current.innerRadius + 1);
+  }
+  else if (!outerCircle && current.hasOuterCircle)
+  {
+    safeRadius = qMax(1, qMin(safeRadius, current.outerRadius - 1));
+  }
+
   QJsonObject annulus = surfaceLocalization.value("annulus").toObject();
-  annulus[outerCircle ? "outerCircle" : "innerCircle"] = circleToJson(center, radius);
+  annulus[outerCircle ? "outerCircle" : "innerCircle"] = circleToJson(center, safeRadius);
   surfaceLocalization["annulus"] = annulus;
 
   QJsonObject threshold = surfaceLocalization.value("threshold").toObject();
@@ -314,7 +336,9 @@ bool RecipeManager::saveSurfaceEdgeBand(const QString& cameraId, int innerWidth,
 
   QJsonObject edge = surfaceLocalization.value("edge").toObject();
   QJsonObject band;
-  band["inner"] = qBound(1, innerWidth, 200);
+  const SurfaceAnnulusLocalizationConfig current = loadSurfaceAnnulusLocalization(cameraId);
+  const int maxInnerWidth = current.hasEdgeCircle ? qMax(1, current.edgeRadius - 1) : 200;
+  band["inner"] = qBound(1, innerWidth, maxInnerWidth);
   band["outer"] = qBound(1, outerWidth, 200);
   edge["band"] = band;
   surfaceLocalization["edge"] = edge;

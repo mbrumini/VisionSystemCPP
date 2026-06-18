@@ -46,7 +46,8 @@ cv::Point2d interpolatedCandidate(
 std::vector<cv::Point2d> scanCircleEdges(const cv::Mat& gray, const EdgeCircleDetectorConfig& config, int gradientThreshold)
 {
   std::vector<cv::Point2d> points;
-  if (config.guideRadius <= 1.0 || config.innerBand <= 0 || config.outerBand <= 0)
+  if (config.guideRadius <= 1.0 || config.innerBand <= 0 || config.outerBand <= 0 ||
+      config.guideRadius <= static_cast<double>(config.innerBand))
   {
     return points;
   }
@@ -251,6 +252,12 @@ EdgeCircleDetectorResult EdgeCircleDetector::detect(const cv::Mat& input, const 
   result.edgePoints = filterByRadialMedianDeviation(result.edgePoints, config);
 
   result.processed = true;
+  if (config.guideRadius <= static_cast<double>(config.innerBand))
+  {
+    result.message = "Banda interna cerchio edge non valida";
+    return result;
+  }
+
   const double startDegrees = config.startAngleRadians * 180.0 / CV_PI;
   double endDegrees = config.endAngleRadians * 180.0 / CV_PI;
   if (config.useArc && endDegrees < startDegrees)

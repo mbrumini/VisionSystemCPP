@@ -194,6 +194,7 @@ add_executable(VisionSystemCPP
     src/gui/modules/setup/MainWindowSetupModule_AiTraining.cpp
     src/gui/modules/setup/MainWindowSetupModule_AiInference.cpp
     src/gui/modules/setup/MainWindowSetupModule_AiCapture.cpp
+    src/gui/modules/setup/MainWindowSetupModule_Acquisition.cpp
     src/gui/modules/setup/MainWindowSetupModule_Runtime.cpp
     src/gui/modules/setup/MainWindowSetupModule_Details.cpp
     src/gui/modules/MainWindowSetupModule.cpp

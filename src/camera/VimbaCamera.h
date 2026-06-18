@@ -28,6 +28,7 @@ private:
 
   bool copyFrameToMat(const VmbCPP::FramePtr& vimbaFrame, cv::Mat& frame);
   bool setPreferredPixelFormat();
+  void applyAcquisitionSettings();
   bool prepareCapture();
 
   CameraConfig m_config;

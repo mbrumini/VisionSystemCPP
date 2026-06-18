@@ -125,6 +125,16 @@ bool AppConfig::load(const QString& filePath, QString* errorMessage)
     camera.calibration.pixelSizeXMm = calibrationObject.value("pixelSizeXMm").toDouble(0.0);
     camera.calibration.pixelSizeYMm = calibrationObject.value("pixelSizeYMm").toDouble(camera.calibration.pixelSizeXMm);
     camera.calibration.updatedAt = calibrationObject.value("updatedAt").toString();
+    const QJsonObject acquisitionObject = cameraObject.value("acquisition").toObject();
+    camera.acquisition.autoExposure = acquisitionObject.value("autoExposure").toBool(camera.acquisition.autoExposure);
+    camera.acquisition.hasExposure = acquisitionObject.contains("exposure");
+    camera.acquisition.exposure = acquisitionObject.value("exposure").toDouble(camera.acquisition.exposure);
+    camera.acquisition.autoGain = acquisitionObject.value("autoGain").toBool(camera.acquisition.autoGain);
+    camera.acquisition.hasGain = acquisitionObject.contains("gain");
+    camera.acquisition.gain = acquisitionObject.value("gain").toDouble(camera.acquisition.gain);
+    camera.acquisition.autoWhiteBalance = acquisitionObject.value("autoWhiteBalance").toBool(camera.acquisition.autoWhiteBalance);
+    camera.acquisition.hasWhiteBalance = acquisitionObject.contains("whiteBalance");
+    camera.acquisition.whiteBalance = acquisitionObject.value("whiteBalance").toDouble(camera.acquisition.whiteBalance);
     camera.processingProfileId = cameraObject.value("processingProfile").toString("default");
     camera.profile = profiles.value(camera.processingProfileId, profiles.value("default"));
 
@@ -357,6 +367,64 @@ bool AppConfig::saveUsbCameraAssignment(
   return writeJsonObject(filePath, root, errorMessage);
 }
 
+bool AppConfig::saveCameraAcquisitionSettings(
+  const QString& filePath,
+  const QString& cameraId,
+  const CameraAcquisitionConfig& acquisition,
+  QString* errorMessage)
+{
+  QJsonObject root = loadJsonObject(filePath, errorMessage);
+  if (root.isEmpty())
+  {
+    return false;
+  }
+
+  QJsonArray cameras = root.value("cameras").toArray();
+  bool found = false;
+
+  for (int i = 0; i < cameras.size(); ++i)
+  {
+    QJsonObject cameraObject = cameras[i].toObject();
+    if (cameraObject.value("id").toString() != cameraId)
+    {
+      continue;
+    }
+
+    QJsonObject acquisitionObject;
+    acquisitionObject["autoExposure"] = acquisition.autoExposure;
+    if (acquisition.hasExposure)
+    {
+      acquisitionObject["exposure"] = acquisition.exposure;
+    }
+    acquisitionObject["autoGain"] = acquisition.autoGain;
+    if (acquisition.hasGain)
+    {
+      acquisitionObject["gain"] = acquisition.gain;
+    }
+    acquisitionObject["autoWhiteBalance"] = acquisition.autoWhiteBalance;
+    if (acquisition.hasWhiteBalance)
+    {
+      acquisitionObject["whiteBalance"] = acquisition.whiteBalance;
+    }
+    cameraObject["acquisition"] = acquisitionObject;
+    cameras[i] = cameraObject;
+    found = true;
+    break;
+  }
+
+  if (!found)
+  {
+    if (errorMessage)
+    {
+      *errorMessage = "Camera non trovata in configurazione: " + cameraId;
+    }
+    return false;
+  }
+
+  root["cameras"] = cameras;
+  return writeJsonObject(filePath, root, errorMessage);
+}
+
 bool AppConfig::saveCameraSystemSettings(
   const QString& filePath,
   const QVector<CameraConfig>& updatedCameras,
@@ -408,6 +476,23 @@ bool AppConfig::saveCameraSystemSettings(
     calibrationObject["pixelSizeYMm"] = camera.calibration.pixelSizeYMm;
     calibrationObject["updatedAt"] = camera.calibration.updatedAt;
     cameraObject["calibration"] = calibrationObject;
+    QJsonObject acquisitionObject;
+    acquisitionObject["autoExposure"] = camera.acquisition.autoExposure;
+    if (camera.acquisition.hasExposure)
+    {
+      acquisitionObject["exposure"] = camera.acquisition.exposure;
+    }
+    acquisitionObject["autoGain"] = camera.acquisition.autoGain;
+    if (camera.acquisition.hasGain)
+    {
+      acquisitionObject["gain"] = camera.acquisition.gain;
+    }
+    acquisitionObject["autoWhiteBalance"] = camera.acquisition.autoWhiteBalance;
+    if (camera.acquisition.hasWhiteBalance)
+    {
+      acquisitionObject["whiteBalance"] = camera.acquisition.whiteBalance;
+    }
+    cameraObject["acquisition"] = acquisitionObject;
     if (!camera.modelName.isEmpty())
     {
       cameraObject["modelName"] = camera.modelName;

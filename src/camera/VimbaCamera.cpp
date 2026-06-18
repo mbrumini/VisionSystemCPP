@@ -78,6 +78,24 @@ bool featureIntValue(const VmbCPP::CameraPtr& camera, const char* name, VmbInt64
     feature->GetValue(value) == VmbErrorSuccess;
 }
 
+bool setFeatureEnumValue(const VmbCPP::CameraPtr& camera, const char* name, const char* value)
+{
+  VmbCPP::FeaturePtr feature;
+  return camera &&
+    camera->GetFeatureByName(name, feature) == VmbErrorSuccess &&
+    feature &&
+    feature->SetValue(value) == VmbErrorSuccess;
+}
+
+bool setFeatureDoubleValue(const VmbCPP::CameraPtr& camera, const char* name, double value)
+{
+  VmbCPP::FeaturePtr feature;
+  return camera &&
+    camera->GetFeatureByName(name, feature) == VmbErrorSuccess &&
+    feature &&
+    feature->SetValue(value) == VmbErrorSuccess;
+}
+
 bool isSoftwareTriggerMode(const CameraTriggerConfig& trigger)
 {
   const QString mode = trigger.mode.trimmed().toLower();
@@ -132,6 +150,7 @@ bool VimbaCamera::open()
   }
 
   setPreferredPixelFormat();
+  applyAcquisitionSettings();
 
   VimbaTriggerController trigger(m_camera);
   QString triggerError;
@@ -324,6 +343,30 @@ bool VimbaCamera::prepareCapture()
 
   m_captureStarted = true;
   return true;
+}
+
+void VimbaCamera::applyAcquisitionSettings()
+{
+  if (!m_camera)
+  {
+    return;
+  }
+
+  const CameraAcquisitionConfig& acquisition = m_config.acquisition;
+
+  setFeatureEnumValue(m_camera, "ExposureAuto", acquisition.autoExposure ? "Continuous" : "Off");
+  if (!acquisition.autoExposure && acquisition.hasExposure)
+  {
+    setFeatureDoubleValue(m_camera, "ExposureTime", acquisition.exposure);
+  }
+
+  setFeatureEnumValue(m_camera, "GainAuto", acquisition.autoGain ? "Continuous" : "Off");
+  if (!acquisition.autoGain && acquisition.hasGain)
+  {
+    setFeatureDoubleValue(m_camera, "Gain", acquisition.gain);
+  }
+
+  setFeatureEnumValue(m_camera, "BalanceWhiteAuto", acquisition.autoWhiteBalance ? "Continuous" : "Off");
 }
 
 bool VimbaCamera::copyFrameToMat(const VmbCPP::FramePtr& vimbaFrame, cv::Mat& frame)

@@ -202,7 +202,7 @@ bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& reso
       return false;
     }
 
-    m_source = std::make_unique<UsbCamera>(camera.usbIndex);
+    m_source = std::make_unique<UsbCamera>(camera);
   }
   else if (camera.type == "vimba")
   {

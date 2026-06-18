@@ -1,25 +1,47 @@
 {
     "cameras": [
         {
-            "deviceId": "DEV_000A4706197B",
-            "displayName": "Allied Vision Alvium G1-234m (DEV_000A4706197B)",
+            "acquisition": {
+                "autoExposure": false,
+                "autoGain": false,
+                "autoWhiteBalance": false,
+                "exposure": -6,
+                "gain": 0,
+                "whiteBalance": 4497
+            },
+            "calibration": {
+                "enabled": true,
+                "file": "calibrations/CAM01_checkerboard.json",
+                "pixelSizeXMm": 0.12631321368404366,
+                "pixelSizeYMm": 0.12573587254870924,
+                "type": "checkerboard",
+                "updatedAt": "2026-06-17T22:34:06"
+            },
+            "deviceId": "usb:0",
+            "displayName": "USB Camera 0",
             "enabled": true,
             "exists": true,
             "id": "CAM01",
-            "interfaceId": "Ethernet 2",
-            "modelName": "Alvium G1-234m",
             "processingProfile": "profile_cam01",
-            "serial": "0G9W6",
             "slot": 1,
             "trigger": {
                 "cameraLine": "",
                 "ioOutput": "",
                 "mode": "software",
-                "source": "camera"
+                "source": "usbCamera"
             },
-            "type": "vimba"
+            "type": "usb",
+            "usbIndex": 0
         },
         {
+            "calibration": {
+                "enabled": false,
+                "file": "",
+                "pixelSizeXMm": 0,
+                "pixelSizeYMm": 0,
+                "type": "none",
+                "updatedAt": ""
+            },
             "displayName": "Camera 2",
             "enabled": false,
             "exists": false,
@@ -30,6 +52,14 @@
             "type": "file"
         },
         {
+            "calibration": {
+                "enabled": false,
+                "file": "",
+                "pixelSizeXMm": 0,
+                "pixelSizeYMm": 0,
+                "type": "none",
+                "updatedAt": ""
+            },
             "displayName": "Camera 3",
             "enabled": false,
             "exists": false,
@@ -40,6 +70,14 @@
             "type": "file"
         },
         {
+            "calibration": {
+                "enabled": false,
+                "file": "",
+                "pixelSizeXMm": 0,
+                "pixelSizeYMm": 0,
+                "type": "none",
+                "updatedAt": ""
+            },
             "displayName": "Camera 4",
             "enabled": false,
             "exists": false,
@@ -50,6 +88,14 @@
             "type": "file"
         },
         {
+            "calibration": {
+                "enabled": false,
+                "file": "",
+                "pixelSizeXMm": 0,
+                "pixelSizeYMm": 0,
+                "type": "none",
+                "updatedAt": ""
+            },
             "displayName": "Camera 5",
             "enabled": false,
             "exists": false,
@@ -60,6 +106,14 @@
             "type": "file"
         },
         {
+            "calibration": {
+                "enabled": false,
+                "file": "",
+                "pixelSizeXMm": 0,
+                "pixelSizeYMm": 0,
+                "type": "none",
+                "updatedAt": ""
+            },
             "displayName": "Camera 6",
             "enabled": false,
             "exists": false,
@@ -70,6 +124,14 @@
             "type": "file"
         },
         {
+            "calibration": {
+                "enabled": false,
+                "file": "",
+                "pixelSizeXMm": 0,
+                "pixelSizeYMm": 0,
+                "type": "none",
+                "updatedAt": ""
+            },
             "displayName": "Camera 7",
             "enabled": false,
             "exists": false,
@@ -80,6 +142,14 @@
             "type": "file"
         },
         {
+            "calibration": {
+                "enabled": false,
+                "file": "",
+                "pixelSizeXMm": 0,
+                "pixelSizeYMm": 0,
+                "type": "none",
+                "updatedAt": ""
+            },
             "displayName": "Camera 8",
             "enabled": false,
             "exists": false,
@@ -90,6 +160,14 @@
             "type": "file"
         },
         {
+            "calibration": {
+                "enabled": false,
+                "file": "",
+                "pixelSizeXMm": 0,
+                "pixelSizeYMm": 0,
+                "type": "none",
+                "updatedAt": ""
+            },
             "displayName": "Camera 9",
             "enabled": false,
             "exists": false,
@@ -100,6 +178,14 @@
             "type": "file"
         },
         {
+            "calibration": {
+                "enabled": false,
+                "file": "",
+                "pixelSizeXMm": 0,
+                "pixelSizeYMm": 0,
+                "type": "none",
+                "updatedAt": ""
+            },
             "displayName": "Camera 10",
             "enabled": false,
             "exists": false,
@@ -110,6 +196,14 @@
             "type": "file"
         },
         {
+            "calibration": {
+                "enabled": false,
+                "file": "",
+                "pixelSizeXMm": 0,
+                "pixelSizeYMm": 0,
+                "type": "none",
+                "updatedAt": ""
+            },
             "displayName": "Camera 11",
             "enabled": false,
             "exists": false,
@@ -120,6 +214,14 @@
             "type": "file"
         },
         {
+            "calibration": {
+                "enabled": false,
+                "file": "",
+                "pixelSizeXMm": 0,
+                "pixelSizeYMm": 0,
+                "type": "none",
+                "updatedAt": ""
+            },
             "displayName": "Camera 12",
             "enabled": false,
             "exists": false,
@@ -130,6 +232,14 @@
             "type": "file"
         },
         {
+            "calibration": {
+                "enabled": false,
+                "file": "",
+                "pixelSizeXMm": 0,
+                "pixelSizeYMm": 0,
+                "type": "none",
+                "updatedAt": ""
+            },
             "displayName": "Camera 13",
             "enabled": false,
             "exists": false,
@@ -140,6 +250,14 @@
             "type": "file"
         },
         {
+            "calibration": {
+                "enabled": false,
+                "file": "",
+                "pixelSizeXMm": 0,
+                "pixelSizeYMm": 0,
+                "type": "none",
+                "updatedAt": ""
+            },
             "displayName": "Camera 14",
             "enabled": false,
             "exists": false,
@@ -150,6 +268,14 @@
             "type": "file"
         },
         {
+            "calibration": {
+                "enabled": false,
+                "file": "",
+                "pixelSizeXMm": 0,
+                "pixelSizeYMm": 0,
+                "type": "none",
+                "updatedAt": ""
+            },
             "displayName": "Camera 15",
             "enabled": false,
             "exists": false,
@@ -160,6 +286,14 @@
             "type": "file"
         },
         {
+            "calibration": {
+                "enabled": false,
+                "file": "",
+                "pixelSizeXMm": 0,
+                "pixelSizeYMm": 0,
+                "type": "none",
+                "updatedAt": ""
+            },
             "displayName": "Camera 16",
             "enabled": false,
             "exists": false,

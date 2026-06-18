@@ -285,6 +285,35 @@ void CheckerboardCalibrationDialog::calibrateCurrentFrame()
     return;
   }
 
+  const double averagePitchPixels = (model.averageHorizontalPitchPixels + model.averageVerticalPitchPixels) * 0.5;
+  if (averagePitchPixels < 3.0)
+  {
+    const QString message = QString(
+      "Calibrazione scartata: la distanza media tra angoli e' solo %1 px.\n"
+      "Probabile rilevamento falso della checkerboard o numero di colonne/righe non corretto.")
+      .arg(averagePitchPixels, 0, 'f', 2);
+    m_status->setText(message);
+    QMessageBox::warning(this, "Calibrazione checkerboard", message);
+    return;
+  }
+
+  const double averagePixelSizeMm = (model.pixelSizeXMm + model.pixelSizeYMm) * 0.5;
+  if (averagePixelSizeMm > 0.5)
+  {
+    const QString message = QString(
+      "Scala molto grande: %1 mm/px con lato quadretto=%2 mm e passo medio=%3 px.\n"
+      "Se ti aspettavi circa %4 mm/px, controlla di non aver inserito 1.0 invece di 0.1.")
+      .arg(averagePixelSizeMm, 0, 'f', 6)
+      .arg(pattern.pitchMm, 0, 'f', 4)
+      .arg(averagePitchPixels, 0, 'f', 2)
+      .arg(averagePixelSizeMm * 0.1, 0, 'f', 6);
+    if (QMessageBox::question(this, "Calibrazione checkerboard", message + "\n\nSalvare comunque?") != QMessageBox::Yes)
+    {
+      m_status->setText(message);
+      return;
+    }
+  }
+
   cv::Mat diagnostic = input.clone();
   std::vector<cv::Point2f> cvCorners;
   cvCorners.reserve(static_cast<size_t>(corners.size()));

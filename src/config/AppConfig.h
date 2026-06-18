@@ -22,6 +22,19 @@ struct CameraCalibrationConfig
   QString updatedAt;
 };
 
+struct CameraAcquisitionConfig
+{
+  bool autoExposure = true;
+  bool hasExposure = false;
+  double exposure = 0.0;
+  bool autoGain = true;
+  bool hasGain = false;
+  double gain = 0.0;
+  bool autoWhiteBalance = true;
+  bool hasWhiteBalance = false;
+  double whiteBalance = 0.0;
+};
+
 struct ProcessingProfile
 {
   QString id;
@@ -46,6 +59,7 @@ struct CameraConfig
   QString interfaceId;
   CameraTriggerConfig trigger;
   CameraCalibrationConfig calibration;
+  CameraAcquisitionConfig acquisition;
   QString processingProfileId;
   ProcessingProfile profile;
 };
@@ -76,6 +90,11 @@ public:
     int usbIndex,
     const QString& displayName,
     bool enabled,
+    QString* errorMessage = nullptr);
+  bool saveCameraAcquisitionSettings(
+    const QString& filePath,
+    const QString& cameraId,
+    const CameraAcquisitionConfig& acquisition,
     QString* errorMessage = nullptr);
   bool saveCameraSystemSettings(
     const QString& filePath,

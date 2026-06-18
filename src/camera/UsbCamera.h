@@ -1,19 +1,22 @@
 #pragma once
 
 #include "camera/ICamera.h"
+#include "config/AppConfig.h"
 
 #include <opencv2/videoio.hpp>
 
 class UsbCamera : public ICamera
 {
 public:
-  explicit UsbCamera(int index);
+  explicit UsbCamera(CameraConfig config);
 
   bool open() override;
   bool getFrame(cv::Mat& frame) override;
   void close() override;
 
 private:
-  int m_index = 0;
+  void applyAcquisitionSettings();
+
+  CameraConfig m_config;
   cv::VideoCapture m_capture;
 };

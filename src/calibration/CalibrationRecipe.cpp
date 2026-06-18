@@ -29,6 +29,8 @@ CameraCalibrationModel CalibrationRecipe::load(const QString& cameraRecipePath) 
   model.pixelSizeYMm = root.value("pixelSizeYMm").toDouble(model.pixelSizeXMm);
   model.rotationDegrees = root.value("rotationDegrees").toDouble();
   model.rmsErrorPixels = root.value("rmsErrorPixels").toDouble();
+  model.averageHorizontalPitchPixels = root.value("averageHorizontalPitchPixels").toDouble();
+  model.averageVerticalPitchPixels = root.value("averageVerticalPitchPixels").toDouble();
   model.valid = root.value("valid").toBool(false);
   const QJsonObject originImage = root.value("originImagePoint").toObject();
   model.originImagePoint = QPointF(originImage.value("x").toDouble(), originImage.value("y").toDouble());
@@ -58,6 +60,8 @@ bool CalibrationRecipe::save(const QString& cameraRecipePath, const CameraCalibr
   root["pixelSizeYMm"] = model.pixelSizeYMm;
   root["rotationDegrees"] = model.rotationDegrees;
   root["rmsErrorPixels"] = model.rmsErrorPixels;
+  root["averageHorizontalPitchPixels"] = model.averageHorizontalPitchPixels;
+  root["averageVerticalPitchPixels"] = model.averageVerticalPitchPixels;
   root["valid"] = model.valid;
   QJsonObject originImage;
   originImage["x"] = model.originImagePoint.x();

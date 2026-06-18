@@ -39,6 +39,8 @@ struct CameraCalibrationModel
   double pixelSizeYMm = 0.0;
   double rotationDegrees = 0.0;
   double rmsErrorPixels = 0.0;
+  double averageHorizontalPitchPixels = 0.0;
+  double averageVerticalPitchPixels = 0.0;
   QPointF originImagePoint;
   QPointF originWorldMm;
   bool valid = false;
