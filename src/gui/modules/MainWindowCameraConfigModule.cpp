@@ -488,6 +488,36 @@ void MainWindowCameraConfigModule::acquireCameraAiClassificationRawImage(const C
   log(QString("%1: %2 -> %3").arg(tr("log.cameraAiRawAcquired"), camera.id, imagePath));
 }
 
+void MainWindowCameraConfigModule::acquireCameraAiLocalizationRawImage(const CameraConfig& camera)
+{
+  QString imageError;
+  const cv::Mat sample = currentCameraFrameForSave(context(), camera, &imageError);
+  if (sample.empty())
+  {
+    log(imageError);
+    return;
+  }
+
+  QString error;
+  if (!recipes().ensureCameraImageFolders(camera.id, &error))
+  {
+    QMessageBox::warning(window(), tr("actions.acquireAiRawImage"), error);
+    return;
+  }
+
+  const QString folder = recipes().cameraAiLocalizationRawImagesPath(camera.id);
+  QDir().mkpath(folder);
+  const QString stamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss_zzz");
+  const QString imagePath = QDir(folder).filePath(QString("%1_localization_raw_%2.png").arg(camera.id, stamp));
+  if (!cv::imwrite(imagePath.toStdString(), sample))
+  {
+    QMessageBox::warning(window(), tr("actions.acquireAiRawImage"), tr("log.cameraAiSampleAcquireFailed") + ": " + imagePath);
+    return;
+  }
+
+  log(QString("%1: %2 -> %3").arg(tr("log.cameraAiLocalizationRawAcquired"), camera.id, imagePath));
+}
+
 void MainWindowCameraConfigModule::acquireCameraAiClassificationClassImage(
   const CameraConfig& camera,
   const AiClassificationClassConfig& classConfig)

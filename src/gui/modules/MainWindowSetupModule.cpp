@@ -149,8 +149,24 @@ void MainWindowSetupModule::showToolPanel(const CameraConfig& camera, const QStr
     return;
   }
 
+  if (toolId == "aiLocalization")
+  {
+    if (context().optionalToolVisible && !context().optionalToolVisible(toolId))
+    {
+      context().showCameraToolList(camera);
+      return;
+    }
+    showAiLocalizationPanel(camera);
+    return;
+  }
+
   if (toolId == "aiClassification")
   {
+    if (context().optionalToolVisible && !context().optionalToolVisible(toolId))
+    {
+      context().showCameraToolList(camera);
+      return;
+    }
     showAiClassificationPanel(camera);
     return;
   }

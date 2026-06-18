@@ -22,6 +22,7 @@ public:
   void showCameraSetupPanel(const CameraConfig& camera);
   void showToolPanel(const CameraConfig& camera, const QString& toolId);
   void showAiPanel(const CameraConfig& camera);
+  void showAiLocalizationPanel(const CameraConfig& camera);
   void showAiClassificationPanel(const CameraConfig& camera);
   void showAiClassificationTrainingPanel(const CameraConfig& camera);
   void showAiSegmentationPanel(const CameraConfig& camera);

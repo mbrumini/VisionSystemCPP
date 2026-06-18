@@ -41,6 +41,7 @@ bool RecipeManager::ensureCameraImageFolders(const QString& cameraId, QString* e
          cameraTestImagesPath(cameraId),
          cameraAiRawImagesPath(cameraId),
          cameraAiClassificationRawImagesPath(cameraId),
+         cameraAiLocalizationRawImagesPath(cameraId),
          cameraAiSegmentationRawImagesPath(cameraId)})
   {
     if (!directory.mkpath(path))

@@ -261,6 +261,7 @@ public:
   QString cameraTestImagesPath(const QString& cameraId) const;
   QString cameraAiRawImagesPath(const QString& cameraId) const;
   QString cameraAiClassificationRawImagesPath(const QString& cameraId) const;
+  QString cameraAiLocalizationRawImagesPath(const QString& cameraId) const;
   QString cameraAiClassificationClassImagesPath(const QString& cameraId, const AiClassificationClassConfig& classConfig) const;
   QString cameraAiSegmentationRawImagesPath(const QString& cameraId) const;
   QString cameraAiSegmentationFeatureImagesPath(const QString& cameraId, const AiSegmentationFeatureConfig& featureConfig) const;

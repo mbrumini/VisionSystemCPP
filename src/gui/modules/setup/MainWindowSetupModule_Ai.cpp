@@ -66,23 +66,32 @@ void MainWindowSetupModule::showAiPanel(const CameraConfig& camera)
   gridLayout->setContentsMargins(0, 0, 0, 0);
   gridLayout->setSpacing(6);
 
-  auto* classificationButton = createAiButton("aiClassification", tr("tools.aiClassification"), grid);
-  QObject::connect(classificationButton, &QPushButton::clicked, window(), [this, camera]() {
+  int visibleToolIndex = 0;
+  auto addAiTool = [this, camera, grid, gridLayout, &visibleToolIndex](
+                     const QString& toolId,
+                     const QString& label,
+                     const std::function<void()>& action) {
+    if (context().optionalToolVisible && !context().optionalToolVisible(toolId))
+    {
+      return;
+    }
+    auto* button = createAiButton(toolId, label, grid);
+    QObject::connect(button, &QPushButton::clicked, window(), action);
+    gridLayout->addWidget(button, visibleToolIndex / 2, visibleToolIndex % 2);
+    ++visibleToolIndex;
+  };
+  addAiTool("aiLocalization", tr("tools.aiLocalization"), [this, camera]() {
+    showAiLocalizationPanel(camera);
+  });
+  addAiTool("aiClassification", tr("tools.aiClassification"), [this, camera]() {
     showAiClassificationPanel(camera);
   });
-  gridLayout->addWidget(classificationButton, 0, 0);
-
-  auto* anomalyButton = createAiButton("aiAnomaly", tr("tools.aiAnomaly"), grid);
-  QObject::connect(anomalyButton, &QPushButton::clicked, window(), [this, camera]() {
+  addAiTool("aiAnomaly", tr("tools.aiAnomaly"), [this, camera]() {
     showAiPlaceholderPanel(camera, "aiAnomaly");
   });
-  gridLayout->addWidget(anomalyButton, 0, 1);
-
-  auto* segmentationButton = createAiButton("aiSegmentation", tr("tools.aiSegmentation"), grid);
-  QObject::connect(segmentationButton, &QPushButton::clicked, window(), [this, camera]() {
+  addAiTool("aiSegmentation", tr("tools.aiSegmentation"), [this, camera]() {
     showAiSegmentationPanel(camera);
   });
-  gridLayout->addWidget(segmentationButton, 1, 0);
 
   layout->addWidget(grid);
 

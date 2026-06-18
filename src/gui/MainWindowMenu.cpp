@@ -4,6 +4,7 @@
 #include <QApplication>
 #include <QMenu>
 #include <QMenuBar>
+#include <QSettings>
 
 void MainWindow::buildMenu()
 {
@@ -20,6 +21,19 @@ void MainWindow::buildMenu()
   QMenu* accessMenu = menuBar()->addMenu(trText("menu.access"));
   accessMenu->addAction(trText("access.loginWithPassword"), this, [this]() { showAccessLogin(); });
   accessMenu->addAction(trText("access.manageAccess"), this, [this]() { showAccessManagement(); });
+  if (m_accessSession.role() == AccessRole::Guru)
+  {
+    accessMenu->addSeparator();
+    QSettings settings;
+    QAction* startAsGuruAction = accessMenu->addAction(trText("access.startAsGuru"));
+    startAsGuruAction->setCheckable(true);
+    startAsGuruAction->setChecked(settings.value("access/startAsGuru", false).toBool());
+    connect(startAsGuruAction, &QAction::toggled, this, [this](bool enabled) {
+      QSettings settings;
+      settings.setValue("access/startAsGuru", enabled);
+      appendLog(enabled ? trText("access.startAsGuruEnabled") : trText("access.startAsGuruDisabled"));
+    });
+  }
 
   QMenu* configMenu = menuBar()->addMenu(trText("menu.configurations"));
   configMenu->addAction(trText("menu.paths"), this, [this]() {

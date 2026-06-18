@@ -80,6 +80,7 @@ void MainWindow::showAccessLogin()
     }
     appendLog(QString("%1: %2").arg(trText("access.loginOk"), roleLabel));
     updateMeasurementResults();
+    buildMenu();
     QMessageBox::information(this, trText("access.loginTitle"), QString("%1: %2").arg(trText("access.loginOk"), roleLabel));
     return;
   }
@@ -131,13 +132,12 @@ void MainWindow::showAccessManagement()
 
     auto* role = new QComboBox(usersTable);
     role->addItems({
-      trText("access.roleGuru"),
       trText("access.roleSupervisor"),
       trText("access.roleAdministrator"),
       trText("access.roleOperator"),
       trText("access.roleViewer")
     });
-    role->setCurrentIndex(3);
+    role->setCurrentIndex(2);
     usersTable->setCellWidget(row, 1, role);
 
     auto* enabled = new QCheckBox(usersTable);
@@ -182,7 +182,6 @@ void MainWindow::showAccessManagement()
   auto* rolesLayout = new QVBoxLayout(rolesPage);
   auto* rolesTable = new QTableWidget(rolesPage);
   const QVector<AccessRole> roles = {
-    AccessRole::Guru,
     AccessRole::Supervisor,
     AccessRole::Administrator,
     AccessRole::Operator,
@@ -204,7 +203,6 @@ void MainWindow::showAccessManagement()
   rolesTable->setColumnCount(roles.size() + 1);
   QStringList roleHeaders = {trText("access.permissions")};
   roleHeaders.append({
-    trText("access.roleGuru"),
     trText("access.roleSupervisor"),
     trText("access.roleAdministrator"),
     trText("access.roleOperator"),
@@ -240,14 +238,75 @@ void MainWindow::showAccessManagement()
   }
   rolesLayout->addWidget(rolesTable);
 
+  auto* toolsPage = new QWidget(tabs);
+  auto* toolsLayout = new QVBoxLayout(toolsPage);
+  auto* toolsNote = new QLabel(trText("access.optionalToolsNote"), toolsPage);
+  toolsNote->setWordWrap(true);
+  toolsLayout->addWidget(toolsNote);
+
+  auto* toolsTable = new QTableWidget(toolsPage);
+  toolsTable->setColumnCount(3);
+  toolsTable->setHorizontalHeaderLabels({
+    trText("access.optionalTool"),
+    trText("access.enabledForUsers"),
+    trText("access.description")
+  });
+  toolsTable->verticalHeader()->setVisible(false);
+  toolsTable->setAlternatingRowColors(true);
+  toolsTable->setSelectionMode(QAbstractItemView::NoSelection);
+  toolsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+  toolsTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+  toolsTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+  toolsTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+
+  struct OptionalToolRow
+  {
+    QString id;
+    QString label;
+    QString description;
+  };
+  const QVector<OptionalToolRow> optionalTools = {
+    {"aiLocalization", trText("tools.aiLocalization"), trText("access.aiLocalizationDescription")},
+    {"aiClassification", trText("tools.aiClassification"), trText("access.aiClassificationDescription")},
+    {"aiAnomaly", trText("tools.aiAnomaly"), trText("access.aiAnomalyDescription")},
+    {"aiSegmentation", trText("tools.aiSegmentation"), trText("access.aiSegmentationDescription")}
+  };
+  toolsTable->setRowCount(optionalTools.size());
+  QSettings accessSettings;
+  for (int row = 0; row < optionalTools.size(); ++row)
+  {
+    const OptionalToolRow& tool = optionalTools[row];
+    toolsTable->setItem(row, 0, readOnlyItem(tool.label));
+
+    auto* enabled = new QCheckBox(trText("access.enabled"), toolsTable);
+    enabled->setChecked(accessSettings.value(QString("access/tools/%1").arg(tool.id), true).toBool());
+    connect(enabled, &QCheckBox::toggled, &dialog, [tool](bool checked) {
+      QSettings settings;
+      settings.setValue(QString("access/tools/%1").arg(tool.id), checked);
+    });
+    auto* enabledCell = new QWidget(toolsTable);
+    auto* enabledLayout = new QHBoxLayout(enabledCell);
+    enabledLayout->setContentsMargins(8, 0, 8, 0);
+    enabledLayout->setAlignment(Qt::AlignCenter);
+    enabledLayout->addWidget(enabled);
+    toolsTable->setCellWidget(row, 1, enabledCell);
+    toolsTable->setItem(row, 2, readOnlyItem(tool.description));
+  }
+  toolsLayout->addWidget(toolsTable);
+
   tabs->addTab(usersPage, trText("access.users"));
   tabs->addTab(rolesPage, trText("access.rolesAndPermissions"));
+  tabs->addTab(toolsPage, trText("access.optionalTools"));
   layout->addWidget(tabs);
 
   auto* buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
   connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
   layout->addWidget(buttons);
   dialog.exec();
+  if (!m_selectedCameraId.isEmpty())
+  {
+    showCameraToolList(m_selectedCamera);
+  }
 }
 
 void MainWindow::showCameraSystemSettings()
