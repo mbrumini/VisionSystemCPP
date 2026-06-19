@@ -184,11 +184,14 @@ add_executable(VisionSystemCPP
     src/gui/modules/setup/AiPythonRuntime.cpp
     src/gui/modules/setup/AiClassificationPaths.h
     src/gui/modules/setup/AiClassificationPaths.cpp
+    src/gui/modules/setup/AiLocalizationPaths.h
+    src/gui/modules/setup/AiLocalizationPaths.cpp
     src/gui/modules/setup/AiModelComparison.h
     src/gui/modules/setup/AiModelComparison.cpp
     src/gui/modules/setup/AiTrainingGraph.h
     src/gui/modules/setup/AiTrainingGraph.cpp
     src/gui/modules/setup/MainWindowSetupModule_AiPanels.cpp
+    src/gui/modules/setup/MainWindowSetupModule_AiLocalizationPanel.cpp
     src/gui/modules/setup/MainWindowSetupModule_AiSegmentationPanels.cpp
     src/gui/modules/setup/MainWindowSetupModule_Ai.cpp
     src/gui/modules/setup/MainWindowSetupModule_AiTraining.cpp

@@ -31,6 +31,19 @@ MainWindow::MainWindow(QWidget* parent)
     m_translations.loadLanguage("en");
   }
 
+  {
+    QSettings settings;
+    if (settings.value("access/startAsGuru", false).toBool())
+    {
+      AccessUser startupUser;
+      startupUser.id = "guru-startup";
+      startupUser.displayName = accessRoleLabel(AccessRole::Guru);
+      startupUser.role = AccessRole::Guru;
+      startupUser.enabled = true;
+      m_accessSession.setUser(startupUser);
+    }
+  }
+
   buildUi();
   bindModules();
 
@@ -200,6 +213,14 @@ void MainWindow::bindModules()
   m_ctx.showGridView = [this]() { showGridView(); };
   m_ctx.refreshSelectedCameraRecipeData = [this]() { m_recipes.refreshSelectedCameraRecipeData(); };
   m_ctx.ensureRecipeCameraFolders = [this]() { m_recipes.ensureRecipeCameraFolders(); };
+  m_ctx.optionalToolVisible = [this](const QString& toolId) {
+    if (m_accessSession.role() == AccessRole::Guru)
+    {
+      return true;
+    }
+    QSettings settings;
+    return settings.value(QString("access/tools/%1").arg(toolId), true).toBool();
+  };
   m_ctx.showLocalizationStrategyList = [this](const CameraConfig& camera) { showLocalizationStrategyList(camera); };
   m_ctx.loadConfiguration = [this]() { loadConfiguration(); };
   m_ctx.incPendingJobs = [this](const QString& cameraId) { incPendingJobs(cameraId); };

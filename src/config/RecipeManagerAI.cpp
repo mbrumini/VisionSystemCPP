@@ -34,6 +34,11 @@ QString RecipeManager::cameraAiClassificationRawImagesPath(const QString& camera
   return cameraImagesPath(cameraId, "ai/classification/raw");
 }
 
+QString RecipeManager::cameraAiLocalizationRawImagesPath(const QString& cameraId) const
+{
+  return cameraImagesPath(cameraId, "ai/localization_segmentation/raw");
+}
+
 QString RecipeManager::cameraAiClassificationClassImagesPath(
   const QString& cameraId,
   const AiClassificationClassConfig& classConfig) const

@@ -1,5 +1,44 @@
 # TODO - VisionSystemCPP
 
+## PRIORITA CORRENTE - Localizzazione AI tramite segmentazione
+
+- [x] Definire il flusso: una sola classe `Pezzo`, maschera AI e calcolo OpenCV di centroide, contorno, area e orientamento.
+- [x] Separare completamente percorsi e dati da classificazione e segmentazione difetti.
+- [x] Creare cartelle dedicate per camera/ricetta: `raw`, `masks`, `labels`, `datasets/<camera>/localization_segmentation` e `models/<camera>/localization_segmentation`.
+- [x] Aggiungere `Localizzazione AI` ai tool opzionali configurabili, sempre visibile a Guru.
+- [x] Creare pannello dedicato con fasi Acquisizione, Labeling, Training e Inferenza.
+- [x] Collegare acquisizione raw singola nella cartella dedicata.
+- [ ] PROSSIMO PASSO: implementare editor labeling maschera `Pezzo`, salvando maschera e label associati senza modificare le immagini raw.
+- [ ] Aggiungere acquisizione raw continua con start/stop e intervallo configurabile, riutilizzando il componente della classificazione.
+- [ ] Preparare dataset YOLO segmentation con split train/validation/test e immagini negative senza pezzo.
+- [ ] Implementare training dedicato, grafico live, confronto modello precedente/nuovo e promozione esplicita.
+- [ ] Esportare e usare il modello ONNX per inferenza veloce.
+- [ ] Post-processing OpenCV: selezione maschera, centroide, area, contorno, bounding box, orientamento e controlli di validita'.
+- [ ] Collegare il risultato alla posa pezzo esistente e aggiungere fallback alla localizzazione tradizionale.
+
+## PRIORITA SUBITO DOPO - Test automatici e stabilita'
+
+- [ ] Integrare un target test C++ eseguibile con un solo comando prima di avviare o pubblicare il software.
+- [ ] Test matematici: intersezioni, centri, distanze, angoli, diametri, conversione pixel/mm e tolleranze OK/NOK.
+- [ ] Test localizzazione AI: centroide, area e orientamento calcolati da maschere note.
+- [ ] Test detector su immagini fisse con risultati attesi e tolleranze numeriche: punto, linea, cerchio, arco e localizzazione pezzo.
+- [ ] Test negativi: contorno/modello/pezzo assente deve produrre uno stato coerente senza risultati intermittenti.
+- [ ] Test di stabilita': elaborare piu' volte lo stesso frame e verificare che geometrie, posa, overlay e misure non appaiano e scompaiano.
+- [ ] Test ricette: caricamento, salvataggio e ricostruzione geometrie/misure usando esclusivamente ricette temporanee di test.
+- [ ] Test accessi e feature: tool opzionali nascosti agli utenti quando disabilitati, sempre visibili a Guru.
+- [ ] Garantire che i test non modifichino mai configurazioni, calibrazioni, immagini o ricette operative reali.
+- [ ] Eseguire automaticamente la suite prima di ogni push stabile.
+- [ ] Creare un programma esterno `VisionSystemTestRunner`, separato dall'HMI operativa, per test end-to-end con log e report.
+- [ ] Aggiungere a VisionSystemCPP una modalita' test non interattiva, per esempio `--test <scenario.json> --output <result.json>`, senza automazione fragile dei click.
+- [ ] Definire scenari JSON con ricetta di test, camera, immagine/frame, tool da eseguire, risultati attesi e tolleranze numeriche.
+- [ ] Fare usare al runner esclusivamente workspace temporanei, ricette dedicate e copie delle immagini di test.
+- [ ] Permettere al runner di avviare VisionSystemCPP, inviare lo scenario, imporre un timeout, acquisire exit code, stdout/stderr e log dettagliato.
+- [ ] Restituire risultati strutturati JSON: posa, geometrie, misure, giudizi OK/NOK, tempi, warning ed errori.
+- [ ] Confrontare automaticamente risultati reali e attesi, inclusi test negativi e ripetizioni dello stesso frame.
+- [ ] Generare report leggibili HTML e JSON con riepilogo OK/NOK, differenze numeriche, immagini diagnostiche e riferimenti ai log.
+- [ ] Aggiungere una suite di regressione stabile da eseguire prima dei push e delle release.
+- [ ] Valutare successivamente named pipe o socket locale per comandare e osservare anche un'istanza HMI aperta; partire dalla modalita' CLI, piu' semplice e affidabile.
+
 ## PRIORITA ALTA - Misure reali e calibrazione
 
 - [x] Modalita' 1, pezzo campione: per ogni misura salvare valore reale del master, unita' e fattore scala base.
@@ -74,6 +113,11 @@
 
 ## Livelli di accesso
 
+- [x] Predisporre menu Accesso con login tramite password e configuratore accessi.
+- [x] Predisporre utenti con alias, ruolo, stato, password personale, diritti personalizzati e note.
+- [x] Predisporre matrice ruoli/diritti per Viewer, Operatore, Supervisore e Amministratore; Guru resta nascosto e riservato.
+- [x] Aggiungere opzione riservata Guru `Avvia sempre come Guru`, persistente sul PC.
+- [x] Aggiungere configuratore tool opzionali AI; i tool fondamentali restano sempre disponibili e Guru vede sempre tutto.
 - [ ] Definire matrice permessi definitiva per Viewer/Operatore/Supervisore/Admin/Guru.
 - [ ] Aggiungere logout o selezione livello con PIN/password configurabili.
 - [ ] Persistenza utenti/livelli configurabili da exe: Operatore, Supervisore, Admin.

@@ -111,4 +111,5 @@ struct MainWindowContext
   std::function<void()> showGridView;
   std::function<void()> refreshSelectedCameraRecipeData;
   std::function<void()> ensureRecipeCameraFolders;
+  std::function<bool(const QString&)> optionalToolVisible;
 };

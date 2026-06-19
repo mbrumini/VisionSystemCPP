@@ -2,9 +2,9 @@
 
 #include <QAction>
 #include <QApplication>
-#include <QCursor>
 #include <QMenu>
 #include <QMenuBar>
+#include <QSettings>
 
 void MainWindow::buildMenu()
 {
@@ -18,36 +18,24 @@ void MainWindow::buildMenu()
   recipesMenu->addAction(trText("menu.importRecipe"), this, [this]() { m_recipes.importRecipe(); });
   recipesMenu->addAction(trText("menu.exportRecipe"), this, [this]() { m_recipes.exportRecipe(); });
 
-  QMenu* camerasMenu = menuBar()->addMenu(trText("menu.cameras"));
-  auto defaultCameraSlot = [this]() {
-    return m_selectedCameraId.isEmpty() ? 1 : qMax(1, m_selectedCamera.slot);
-  };
-  camerasMenu->addAction(trText("actions.assignVimbaCamera"), this, [this, defaultCameraSlot]() {
-    m_cameraConfig.configureVimbaCameraSlot(defaultCameraSlot(), m_selectedCameraId);
-  });
-  camerasMenu->addAction(trText("actions.assignUsbCamera"), this, [this, defaultCameraSlot]() {
-    m_cameraConfig.configureUsbCameraSlot(defaultCameraSlot(), m_selectedCameraId);
-  });
-  camerasMenu->addSeparator();
-  for (const CameraConfig& camera : m_config.activeCameras())
+  QMenu* accessMenu = menuBar()->addMenu(trText("menu.access"));
+  accessMenu->addAction(trText("access.loginWithPassword"), this, [this]() { showAccessLogin(); });
+  accessMenu->addAction(trText("access.manageAccess"), this, [this]() { showAccessManagement(); });
+  if (m_accessSession.role() == AccessRole::Guru)
   {
-    camerasMenu->addAction(QString("%1 | %2").arg(camera.id, camera.displayName), this, [this, camera]() {
-      m_cameraConfig.configureCameraSource(camera);
+    accessMenu->addSeparator();
+    QSettings settings;
+    QAction* startAsGuruAction = accessMenu->addAction(trText("access.startAsGuru"));
+    startAsGuruAction->setCheckable(true);
+    startAsGuruAction->setChecked(settings.value("access/startAsGuru", false).toBool());
+    connect(startAsGuruAction, &QAction::toggled, this, [this](bool enabled) {
+      QSettings settings;
+      settings.setValue("access/startAsGuru", enabled);
+      appendLog(enabled ? trText("access.startAsGuruEnabled") : trText("access.startAsGuruDisabled"));
     });
   }
 
   QMenu* configMenu = menuBar()->addMenu(trText("menu.configurations"));
-  configMenu->addAction(trText("menu.cameras"), this, [this]() {
-    QMenu menu(this);
-    menu.setTitle(trText("menu.cameras"));
-    menu.addAction(trText("actions.assignVimbaCamera"), this, [this]() {
-      m_cameraConfig.configureVimbaCameraSlot(m_selectedCameraId.isEmpty() ? 1 : qMax(1, m_selectedCamera.slot), m_selectedCameraId);
-    });
-    menu.addAction(trText("actions.assignUsbCamera"), this, [this]() {
-      m_cameraConfig.configureUsbCameraSlot(m_selectedCameraId.isEmpty() ? 1 : qMax(1, m_selectedCamera.slot), m_selectedCameraId);
-    });
-    menu.exec(QCursor::pos());
-  });
   configMenu->addAction(trText("menu.paths"), this, [this]() {
     appendLog(trText("log.placeholder") + ": " + trText("menu.paths"));
   });
@@ -70,12 +58,30 @@ void MainWindow::buildMenu()
     stopMachine();
   });
   systemMenu->addAction(trText("commands.gridView"), this, [this]() { showGridView(); });
-  systemMenu->addAction("Configura telecamere", this, [this]() { showCameraSystemSettings(); });
-  systemMenu->addAction("Calibra checkerboard", this, [this]() { showCheckerboardCalibrationDialog(); });
+
+  QMenu* systemCamerasMenu = systemMenu->addMenu(trText("menu.cameras"));
+  auto defaultCameraSlot = [this]() {
+    return m_selectedCameraId.isEmpty() ? 1 : qMax(1, m_selectedCamera.slot);
+  };
+  systemCamerasMenu->addAction(trText("menu.configureCameras"), this, [this]() { showCameraSystemSettings(); });
+  systemCamerasMenu->addAction(trText("menu.calibrateCheckerboard"), this, [this]() { showCheckerboardCalibrationDialog(); });
+  systemCamerasMenu->addSeparator();
+  systemCamerasMenu->addAction(trText("actions.assignVimbaCamera"), this, [this, defaultCameraSlot]() {
+    m_cameraConfig.configureVimbaCameraSlot(defaultCameraSlot(), m_selectedCameraId);
+  });
+  systemCamerasMenu->addAction(trText("actions.assignUsbCamera"), this, [this, defaultCameraSlot]() {
+    m_cameraConfig.configureUsbCameraSlot(defaultCameraSlot(), m_selectedCameraId);
+  });
+  systemCamerasMenu->addSeparator();
+  for (const CameraConfig& camera : m_config.activeCameras())
+  {
+    systemCamerasMenu->addAction(QString("%1 | %2").arg(camera.id, camera.displayName), this, [this, camera]() {
+      m_cameraConfig.configureCameraSource(camera);
+    });
+  }
   systemMenu->addAction(trText("commands.reloadConfig"), this, [this]() { loadConfiguration(); });
   systemMenu->addAction(trText("commands.toggleFullScreen"), this, [this]() { toggleFullScreen(); });
   systemMenu->addAction(trText("commands.setMaxThreads"), this, [this]() { setThreadLimitPrompt(); });
-  systemMenu->addAction(trText("commands.login"), this, [this]() { showAccessLogin(); });
   QAction* setupDetailsAction = systemMenu->addAction(trText("commands.showSetupDetails"));
   setupDetailsAction->setCheckable(true);
   setupDetailsAction->setChecked(m_setupDetailsVisible);

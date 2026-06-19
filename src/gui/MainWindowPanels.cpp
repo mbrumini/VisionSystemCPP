@@ -9,6 +9,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLayout>
+#include <QSettings>
 #include <QPushButton>
 #include <QSet>
 #include <QVBoxLayout>
@@ -208,10 +209,25 @@ void MainWindow::showCameraToolList(const CameraConfig& camera)
   addTool("geometries");
   addTool("constructedGeometries");
   addTool("measurements");
-  addTool("ai");
+  const bool hasVisibleAiTool =
+    m_accessSession.role() == AccessRole::Guru ||
+    QSettings().value("access/tools/aiLocalization", true).toBool() ||
+    QSettings().value("access/tools/aiClassification", true).toBool() ||
+    QSettings().value("access/tools/aiAnomaly", true).toBool() ||
+    QSettings().value("access/tools/aiSegmentation", true).toBool();
+  if (hasVisibleAiTool)
+  {
+    addTool("ai");
+  }
 
   for (const QString& tool : camera.profile.guiTools)
   {
+    if ((tool == "aiClassification" || tool == "aiAnomaly" || tool == "aiSegmentation") &&
+        m_accessSession.role() != AccessRole::Guru &&
+        !QSettings().value(QString("access/tools/%1").arg(tool), true).toBool())
+    {
+      continue;
+    }
     if (tool == "localization" ||
         tool == "surfaceLocalization" ||
         tool == "geometries" ||
