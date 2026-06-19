@@ -57,6 +57,7 @@ struct CameraConfig
   QString deviceId;
   QString modelName;
   QString interfaceId;
+  QString simulatorChannel;
   CameraTriggerConfig trigger;
   CameraCalibrationConfig calibration;
   CameraAcquisitionConfig acquisition;

@@ -1,0 +1,22 @@
+{
+    "cameraId": "CAM02",
+    "tools": {
+        "surfaceLocalization": {
+            "edge": {
+                "band": {
+                    "inner": 20,
+                    "outer": 20
+                },
+                "circle": {
+                    "centerX": 959,
+                    "centerY": 652,
+                    "radius": 187
+                }
+            },
+            "enabled": true,
+            "exclusionRects": [
+            ],
+            "method": "edge"
+        }
+    }
+}

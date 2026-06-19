@@ -32,6 +32,7 @@ CMakeUserPresets.json
 
 # Logs
 *.log
+tests/reports/
 
 # Binaries and generated runtime files
 *.exe

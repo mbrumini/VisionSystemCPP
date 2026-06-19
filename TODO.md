@@ -18,6 +18,23 @@
 
 ## PRIORITA SUBITO DOPO - Test automatici e stabilita'
 
+- [x] PIPELINE TEST MULTICAMERA - Fase 1: aggiungere `Simulatore` tra le sorgenti configurabili da Sistema per ogni slot `CAM01...CAM16`, insieme a Cartella immagini, USB e Vimba.
+- [x] PIPELINE TEST MULTICAMERA - Fase 1: permettere configurazioni miste e indipendenti, per esempio `CAM01=Simulatore`, `CAM02=Simulatore`, `CAM03=Vimba`, mantenendo ricetta, stato e risultati separati per camera.
+- [x] PIPELINE TEST MULTICAMERA - Fase 2: definire il protocollo locale bidirezionale tra VisionSystemCPP e il programma esterno TestVision, inizialmente tramite named pipe Windows.
+- [x] PIPELINE TEST MULTICAMERA - Fase 2: ogni frame simulato deve contenere almeno versione protocollo, scenarioId, cameraId, slot, canale, frameId, timestamp, formato immagine e payload immagine.
+- [x] PIPELINE TEST MULTICAMERA - Fase 2: ogni risultato deve riportare gli stessi scenarioId, cameraId e frameId, oltre a posa, geometrie, misure, giudizi OK/NOK, tempi, warning ed errori.
+- [x] PIPELINE TEST MULTICAMERA - Fase 3: implementare `SimulatedCamera` compatibile con `ICamera`, collegabile a qualunque slot e alimentata dai frame ricevuti da TestVision.
+- [ ] PIPELINE TEST MULTICAMERA - Fase 3: gestire connessione assente, timeout, frame fuori ordine, duplicati, perdita frame, arresto e riavvio indipendente di una camera simulata.
+- [ ] PIPELINE TEST MULTICAMERA - Fase 4: estrarre una pipeline di elaborazione riusabile dalla GUI, chiamata sia dall'HMI sia dalla modalita' simulata, senza automazione dei click e senza duplicare gli algoritmi.
+- [ ] PIPELINE TEST MULTICAMERA - Fase 4: pubblicare il risultato strutturato al termine della pipeline associandolo sempre allo slot e al frame corretti.
+- [ ] PIPELINE TEST MULTICAMERA - Fase 5: creare il programma esterno TestVision con doppio ruolo di telecamera simulata e collettore/confrontatore dei risultati.
+- [ ] PIPELINE TEST MULTICAMERA - Fase 5: TestVision deve caricare una o piu' immagini master, applicare rotazioni, traslazioni, scala e ripetizioni note, calcolare il ground truth trasformato e inviare i frame a VisionSystemCPP.
+- [ ] PIPELINE TEST MULTICAMERA - Fase 5: usare immagini master asimmetriche quando si verifica l'orientamento, evitando ambiguita' geometriche di 90 o 180 gradi.
+- [ ] PIPELINE TEST MULTICAMERA - Fase 6: partire con un test verticale su `CAM01` usando una croce asimmetrica, confrontando centro, angolo e stabilita' su piu' ripetizioni.
+- [ ] PIPELINE TEST MULTICAMERA - Fase 6: estendere progressivamente a 2, 4 e fino a 16 slot simultanei, verificando isolamento dei risultati, tempi per camera e assenza di blocchi incrociati.
+- [ ] PIPELINE TEST MULTICAMERA - Fase 7: versionare su Git codice TestVision, scenari JSON, immagini master PNG, ground truth, ricette dedicate, configurazioni simulate e seed casuali per rendere i test replicabili su altri PC.
+- [ ] PIPELINE TEST MULTICAMERA - Fase 7: escludere da Git frame temporanei trasformati, workspace di esecuzione, report generati, log e altri artefatti runtime; valutare Git LFS solo per futuri dataset o modelli pesanti.
+- [ ] PIPELINE TEST MULTICAMERA - Fase 8: generare report JSON e HTML con riepilogo OK/NOK, errori numerici, stabilita', tempi medi/massimi e immagini diagnostiche dei fallimenti.
 - [ ] Integrare un target test C++ eseguibile con un solo comando prima di avviare o pubblicare il software.
 - [ ] Test matematici: intersezioni, centri, distanze, angoli, diametri, conversione pixel/mm e tolleranze OK/NOK.
 - [ ] Test localizzazione AI: centroide, area e orientamento calcolati da maschere note.

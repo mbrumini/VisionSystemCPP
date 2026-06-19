@@ -80,6 +80,10 @@ private:
   void setThreadLimitPrompt();
   void incPendingJobs(const QString& cameraId);
   void decPendingJobs(const QString& cameraId);
+  void publishSimulatorResult(const QString& cameraId);
+  void handleSimulatorFrameAvailable(const QString& channel);
+  void handleSimulatorSampleAvailable(const SimulatorFrame& frame);
+  void processNextSimulatorFrame(const CameraConfig& camera);
   QString trText(const QString& key) const;
 
   AppConfig m_config;

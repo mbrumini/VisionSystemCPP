@@ -30,9 +30,12 @@ ShapeCandidateMetrics measureShapeCandidate(const std::vector<cv::Point>& contou
   metrics.area = std::abs(cv::contourArea(contour));
   const double perimeter = cv::arcLength(contour, true);
   metrics.boundingRect = cv::boundingRect(contour);
-  const double boundingArea = static_cast<double>(metrics.boundingRect.area());
-  const int minSide = std::min(metrics.boundingRect.width, metrics.boundingRect.height);
-  const int maxSide = std::max(metrics.boundingRect.width, metrics.boundingRect.height);
+  const cv::RotatedRect orientedBounds = cv::minAreaRect(contour);
+  const double orientedWidth = std::abs(orientedBounds.size.width);
+  const double orientedHeight = std::abs(orientedBounds.size.height);
+  const double boundingArea = orientedWidth * orientedHeight;
+  const double minSide = std::min(orientedWidth, orientedHeight);
+  const double maxSide = std::max(orientedWidth, orientedHeight);
 
   if (metrics.area <= 0.0 || perimeter <= 0.0 || boundingArea <= 0.0 || minSide <= 0)
   {

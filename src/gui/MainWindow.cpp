@@ -4,9 +4,11 @@
 #include "gui/modules/MainWindowCameraProfile.h"
 #include "config/RecipeJsonUtils.h"
 #include "util/AsyncExecutor.h"
+#include "simulator/SimulatorBridge.h"
 
 #include <QDir>
 #include <QLayout>
+#include <QMetaObject>
 #include <QSettings>
 #include <QVariant>
 
@@ -46,6 +48,26 @@ MainWindow::MainWindow(QWidget* parent)
 
   buildUi();
   bindModules();
+
+  QString simulatorError;
+  if (!SimulatorBridge::instance().start(&simulatorError))
+  {
+    appendLog(simulatorError);
+  }
+  else
+  {
+    appendLog(QString("Server simulatore pronto: %1").arg(SimulatorBridge::instance().serverName()));
+    SimulatorBridge::instance().setFrameAvailableHandler([this](const QString& channel) {
+      QMetaObject::invokeMethod(this, [this, channel]() {
+        handleSimulatorFrameAvailable(channel);
+      });
+    });
+    SimulatorBridge::instance().setSampleAvailableHandler([this](const SimulatorFrame& frame) {
+      QMetaObject::invokeMethod(this, [this, frame]() {
+        handleSimulatorSampleAvailable(frame);
+      });
+    });
+  }
 
   AsyncExecutor::setDefaultMaxThreadsToHardware();
   {
@@ -225,4 +247,5 @@ void MainWindow::bindModules()
   m_ctx.loadConfiguration = [this]() { loadConfiguration(); };
   m_ctx.incPendingJobs = [this](const QString& cameraId) { incPendingJobs(cameraId); };
   m_ctx.decPendingJobs = [this](const QString& cameraId) { decPendingJobs(cameraId); };
+  m_ctx.publishSimulatorResult = [this](const QString& cameraId) { publishSimulatorResult(cameraId); };
 }

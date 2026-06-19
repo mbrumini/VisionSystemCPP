@@ -73,6 +73,8 @@ add_executable(VisionSystemCPP
     src/camera/CameraDeviceInfo.h
     src/camera/FileCamera.h
     src/camera/FileCamera.cpp
+    src/camera/SimulatedCamera.h
+    src/camera/SimulatedCamera.cpp
     src/camera/UsbCamera.h
     src/camera/UsbCamera.cpp
     src/camera/UsbCameraDiscovery.h
@@ -295,6 +297,9 @@ add_executable(VisionSystemCPP
     src/runtime/CameraRuntime.h
     src/runtime/CameraRuntime.cpp
     src/runtime/PartPose.h
+    src/simulator/SimulatorProtocol.h
+    src/simulator/SimulatorBridge.h
+    src/simulator/SimulatorBridge.cpp
     src/util/DetailedLogger.h
     src/util/DetailedLogger.cpp
     src/utils/Timer.h
@@ -305,6 +310,23 @@ target_link_libraries(VisionSystemCPP PRIVATE
     ${OpenCV_LIBS}
     Qt6::Widgets
     Qt6::Svg
+)
+
+add_executable(VisionSystemTestVision
+    tests/testvision/main.cpp
+)
+
+target_link_libraries(VisionSystemTestVision PRIVATE
+    ${OpenCV_LIBS}
+    Qt6::Widgets
+)
+
+target_include_directories(VisionSystemTestVision PRIVATE
+    src
+)
+
+target_compile_definitions(VisionSystemTestVision PRIVATE
+    PROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
 )
 
 target_include_directories(VisionSystemCPP PRIVATE

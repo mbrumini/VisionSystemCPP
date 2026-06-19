@@ -27,7 +27,8 @@ void MainWindowSetupModule::startCameraSimulation(const CameraConfig& camera, bo
     context().selectCamera(effectiveCamera);
   }
 
-  if (effectiveCamera.type != "file" && effectiveCamera.type != "usb" && effectiveCamera.type != "vimba")
+  if (effectiveCamera.type != "file" && effectiveCamera.type != "usb" &&
+      effectiveCamera.type != "vimba" && effectiveCamera.type != "simulator")
   {
     log(tr("log.cameraSourceUnsupported") + ": " + effectiveCamera.id);
     return;
@@ -39,6 +40,22 @@ void MainWindowSetupModule::startCameraSimulation(const CameraConfig& camera, bo
   if (!runtime.start(effectiveCamera, testFolder, &error))
   {
     log(error.isEmpty() ? tr("log.cameraStartFailed") + ": " + effectiveCamera.id : error);
+    if (refreshSetupPanel)
+    {
+      showCameraSetupPanel(effectiveCamera);
+    }
+    return;
+  }
+
+  if (effectiveCamera.type == "simulator")
+  {
+    context().simulationTimer->stop();
+    log(QString("Simulatore armato: %1 channel=%2")
+      .arg(
+        effectiveCamera.id,
+        effectiveCamera.simulatorChannel.isEmpty()
+          ? effectiveCamera.id
+          : effectiveCamera.simulatorChannel));
     if (refreshSetupPanel)
     {
       showCameraSetupPanel(effectiveCamera);
@@ -102,7 +119,8 @@ void MainWindowSetupModule::stepCameraSimulation(const CameraConfig& camera)
 {
   const CameraConfig effectiveCamera = currentConfiguredCamera(config(), camera);
 
-  if (effectiveCamera.type != "file" && effectiveCamera.type != "usb" && effectiveCamera.type != "vimba")
+  if (effectiveCamera.type != "file" && effectiveCamera.type != "usb" &&
+      effectiveCamera.type != "vimba" && effectiveCamera.type != "simulator")
   {
     log(tr("log.cameraSourceUnsupported") + ": " + effectiveCamera.id);
     return;
@@ -134,6 +152,11 @@ void MainWindowSetupModule::advanceCameraFrame(const CameraConfig& camera)
   const QString testFolder = context().imaging->cameraTestImagesFolder(effectiveCamera);
   if (!runtime.step(effectiveCamera, testFolder, &error))
   {
+    if (effectiveCamera.type == "simulator" && runtime.running())
+    {
+      updateCameraSetupDetails(effectiveCamera);
+      return;
+    }
     log(error.isEmpty() ? tr("log.cameraNoMoreFrames") + ": " + effectiveCamera.id : error);
     if (effectiveCamera.type == "vimba" && runtime.running())
     {
@@ -163,6 +186,15 @@ void MainWindowSetupModule::advanceCameraFrame(const CameraConfig& camera)
   scanTimer.start();
   processCurrentCameraFrame(effectiveCamera);
   (*context().lastSetupScanElapsedMs)[effectiveCamera.id] = scanTimer.elapsed();
+  if (context().publishSimulatorResult)
+  {
+    QTimer::singleShot(0, window(), [this, cameraId = effectiveCamera.id]() {
+      if (context().cameraPendingJobs->value(cameraId, 0) == 0)
+      {
+        context().publishSimulatorResult(cameraId);
+      }
+    });
+  }
   if (context().updateMeasurementResults)
   {
     context().updateMeasurementResults();

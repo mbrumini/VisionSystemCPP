@@ -4,15 +4,25 @@
 #include "gui/SurfaceLocalizationStrategies.h"
 #include "gui/ToolCatalog.h"
 #include "gui/TouchIconButton.h"
+#include "simulator/SimulatorBridge.h"
+#include "gui/SurfaceLocalizationAdapters.h"
+#include "processing/SurfaceDefectProcessor.h"
+#include "util/AsyncExecutor.h"
 
 #include <QApplication>
 #include <QDateTime>
+#include <QDir>
 #include <QGridLayout>
 #include <QLabel>
 #include <QLayout>
+#include <QPolygon>
 #include <QPushButton>
+#include <QJsonArray>
+#include <QJsonObject>
 #include <QSet>
 #include <QVBoxLayout>
+
+#include <opencv2/imgcodecs.hpp>
 
 void MainWindow::incPendingJobs(const QString& cameraId)
 {
@@ -36,6 +46,481 @@ void MainWindow::decPendingJobs(const QString& cameraId)
   {
     updateMeasurementResults();
   }
+}
+
+void MainWindow::publishSimulatorResult(const QString& cameraId)
+{
+  const auto runtimeIt = m_cameraRuntime.find(cameraId);
+  if (runtimeIt == m_cameraRuntime.end())
+  {
+    return;
+  }
+
+  const CameraRuntime& runtime = runtimeIt->second;
+  const SimulatorFrameMetadata& metadata = runtime.currentSimulatorFrame();
+  if (!metadata.valid())
+  {
+    return;
+  }
+
+  const PartPose& pose = runtime.currentPose();
+  QJsonObject poseObject;
+  poseObject["valid"] = pose.valid;
+  poseObject["x"] = pose.origin.x;
+  poseObject["y"] = pose.origin.y;
+  poseObject["angleDeg"] = pose.angleRadians * 180.0 / CV_PI;
+  poseObject["score"] = pose.score;
+  poseObject["method"] = pose.method;
+
+  const GeometrySet& geometries = runtime.geometries();
+  QJsonArray measurements;
+  for (const MeasurementResult& measurement : geometries.measurements)
+  {
+    QJsonObject item;
+    item["id"] = measurement.id;
+    item["alias"] = measurement.alias;
+    item["type"] = measurement.type;
+    item["valid"] = measurement.valid;
+    item["valuePixels"] = measurement.valuePixels;
+    item["hasRealValue"] = measurement.hasRealValue;
+    item["valueReal"] = measurement.valueReal;
+    item["unit"] = measurement.unit;
+    item["judgement"] = measurement.judgement;
+    measurements.append(item);
+  }
+
+  QJsonObject geometryCounts;
+  geometryCounts["points"] = geometries.points.size();
+  geometryCounts["lines"] = geometries.lines.size();
+  geometryCounts["circles"] = geometries.circles.size();
+  geometryCounts["arcs"] = geometries.arcs.size();
+  geometryCounts["constructedPoints"] = geometries.constructedPoints.size();
+  geometryCounts["constructedLines"] = geometries.constructedLines.size();
+  geometryCounts["edges"] = geometries.edges.size();
+  geometryCounts["contours"] = geometries.contours.size();
+
+  QJsonObject result;
+  result["status"] = "processed";
+  result["visionFrameIndex"] = runtime.frameIndex();
+  result["processingMs"] = m_lastSetupScanElapsedMs.value(cameraId, -1);
+  result["pose"] = poseObject;
+  result["geometryCounts"] = geometryCounts;
+  result["measurements"] = measurements;
+  result["warnings"] = QJsonArray();
+  result["errors"] = QJsonArray();
+
+  SimulatorBridge::instance().publishResult(metadata, result);
+}
+
+void MainWindow::handleSimulatorFrameAvailable(const QString& channel)
+{
+  CameraConfig simulatorCamera;
+  for (const CameraConfig& camera : m_config.activeCameras())
+  {
+    const QString configuredChannel =
+      camera.simulatorChannel.isEmpty() ? camera.id : camera.simulatorChannel;
+    if (camera.type == "simulator" && configuredChannel == channel)
+    {
+      simulatorCamera = camera;
+      break;
+    }
+  }
+
+  if (simulatorCamera.id.isEmpty())
+  {
+    appendLog("Frame simulatore senza slot configurato: " + channel);
+    return;
+  }
+
+  if (!m_machineRunning)
+  {
+    appendLog(QString("Frame simulatore in attesa di START: %1 channel=%2")
+      .arg(simulatorCamera.id, channel));
+    SimulatorBridge::instance().publishChannelEvent(
+      channel,
+      "waitingStart",
+      "Vision e' in STOP: premere Start generale");
+    return;
+  }
+
+  SimulatorBridge::instance().publishChannelEvent(
+    channel,
+    "frameScheduled",
+    "Frame assegnato alla pipeline camera");
+  processNextSimulatorFrame(simulatorCamera);
+}
+
+void MainWindow::handleSimulatorSampleAvailable(const SimulatorFrame& frame)
+{
+  CameraConfig camera;
+  for (const CameraConfig& configured : m_config.activeCameras())
+  {
+    const QString channel =
+      configured.simulatorChannel.isEmpty() ? configured.id : configured.simulatorChannel;
+    if (configured.type == "simulator" && channel == frame.metadata.channel)
+    {
+      camera = configured;
+      break;
+    }
+  }
+  if (camera.id.isEmpty() || frame.image.empty())
+  {
+    appendLog("Campione simulatore senza camera configurata: " + frame.metadata.channel);
+    return;
+  }
+
+  const QString sampleDirectory = m_recipeManager.cameraSampleImagesPath(camera.id);
+  if (!QDir().mkpath(sampleDirectory))
+  {
+    appendLog("Impossibile creare cartella campione simulatore: " + sampleDirectory);
+    return;
+  }
+  const QString samplePath = QDir(sampleDirectory).filePath("sample.png");
+  if (!cv::imwrite(samplePath.toStdString(), frame.image))
+  {
+    appendLog("Impossibile salvare campione simulatore: " + samplePath);
+    return;
+  }
+
+  if (m_selectedCameraId != camera.id)
+  {
+    selectCamera(camera);
+  }
+  m_cameraRuntime[camera.id].stop();
+  m_cameraRuntime[camera.id].setCurrentFrame(frame.image);
+  m_selectedPreview = m_imaging.matToPixmap(frame.image);
+  m_selectedImagePath = samplePath;
+  m_largeImage->setImage(m_selectedPreview);
+  m_largeImage->clearGeometryOverlay();
+  m_largeImage->clearRoi();
+  updateLargePreview();
+  appendLog(QString("Campione simulatore ricevuto: %1 channel=%2")
+    .arg(camera.id, frame.metadata.channel));
+  appendLog("Campione simulatore salvato: " + samplePath);
+}
+
+void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
+{
+  if (!m_machineRunning || camera.type != "simulator" ||
+      m_cameraPendingJobs.value(camera.id, 0) > 0)
+  {
+    return;
+  }
+
+  appendLog(QString("Pipeline simulatore attende frame: %1").arg(camera.id));
+  CameraRuntime& runtime = m_cameraRuntime[camera.id];
+  QString error;
+  if (!runtime.running() && !runtime.start(camera, {}, &error))
+  {
+    appendLog(error);
+    return;
+  }
+  if (!runtime.step(camera, {}, &error))
+  {
+    return;
+  }
+  appendLog(QString("Pipeline simulatore acquisito: %1 frame=%2")
+    .arg(camera.id)
+    .arg(runtime.currentSimulatorFrame().frameId));
+  if (camera.id == m_selectedCameraId && !runtime.currentFrame().empty())
+  {
+    m_selectedPreview = m_imaging.matToPixmap(runtime.currentFrame());
+    m_largeImage->setImage(m_selectedPreview);
+    updateLargePreview();
+  }
+  SimulatorBridge::instance().publishFrameEvent(
+    runtime.currentSimulatorFrame(),
+    "processingStarted",
+    "Elaborazione asincrona avviata");
+
+  const SurfaceAnnulusLocalizationConfig localization =
+    m_recipeManager.loadSurfaceAnnulusLocalization(camera.id);
+  const QString requestedStrategy =
+    runtime.currentSimulatorFrame().strategyId.isEmpty()
+      ? localization.method
+      : runtime.currentSimulatorFrame().strategyId;
+  const QString requestedRecipe = runtime.currentSimulatorFrame().recipeId;
+  if (!requestedRecipe.isEmpty() && requestedRecipe != m_recipeManager.recipeId())
+  {
+    const QString message = QString("Ricetta attiva '%1', richiesta '%2'")
+      .arg(m_recipeManager.recipeId(), requestedRecipe);
+    appendLog("Pipeline simulatore ricetta errata: " + message);
+    SimulatorBridge::instance().publishFrameEvent(
+      runtime.currentSimulatorFrame(), "processingError", message);
+    runtime.clearCurrentPose(camera.id);
+    publishSimulatorResult(camera.id);
+    return;
+  }
+  QRect roi;
+  const QVector<QPoint> polygon = m_recipeManager.loadSurfaceDefectPolygon(camera.id);
+  const bool hasArea =
+    m_recipeManager.loadSurfaceDefectRoi(camera.id, roi) || polygon.size() >= 3;
+  const SurfaceModelConfig model = m_recipeManager.loadSurfaceModel(camera.id);
+  QString setupError;
+  if ((requestedStrategy == "massPca" || requestedStrategy == "edgePca") && !hasArea)
+  {
+    setupError = "ROI o poligono di ricerca mancante";
+  }
+  else if (requestedStrategy == "threshold" &&
+           (!localization.hasOuterCircle || !localization.hasInnerCircle))
+  {
+    setupError = "Cerchi interno/esterno della corona non configurati";
+  }
+  else if (requestedStrategy == "edge" &&
+           (!localization.hasEdgeCircle || localization.edgeRadius <= localization.edgeBandInner))
+  {
+    setupError = "Cerchio e fascia edge non configurati";
+  }
+  else if ((requestedStrategy == "shapeModel" || requestedStrategy == "templateModel") &&
+           !model.hasModel)
+  {
+    setupError = "Modello non acquisito nella ricetta";
+  }
+  else if (requestedStrategy != "massPca" && requestedStrategy != "edgePca" &&
+           requestedStrategy != "threshold" && requestedStrategy != "edge" &&
+           requestedStrategy != "shapeModel" && requestedStrategy != "templateModel")
+  {
+    setupError = "Strategia non supportata: " + requestedStrategy;
+  }
+
+  if (!setupError.isEmpty())
+  {
+    runtime.clearCurrentPose(camera.id);
+    appendLog(QString("Pipeline simulatore setup mancante: %1 strategy=%2 error=%3")
+      .arg(camera.id, requestedStrategy, setupError));
+    SimulatorBridge::instance().publishFrameEvent(
+      runtime.currentSimulatorFrame(),
+      "processingError",
+      setupError);
+    publishSimulatorResult(camera.id);
+    return;
+  }
+
+  if (!roi.isValid() && polygon.size() >= 3)
+  {
+    roi = QPolygon(polygon).boundingRect().normalized();
+  }
+
+  const cv::Mat input = runtime.currentFrame().clone();
+  const QVector<QRect> exclusions = m_recipeManager.loadSurfaceDefectExclusionRects(camera.id);
+  const SurfaceDefectSettings thresholdSettings =
+    m_recipeManager.loadSurfaceDefectSettings(camera.id);
+  cv::Mat templateImage;
+  if (requestedStrategy == "templateModel")
+  {
+    templateImage = cv::imread(model.templateImagePath.toStdString(), cv::IMREAD_COLOR);
+    if (templateImage.empty())
+    {
+      const QString message = "Immagine template non disponibile: " + model.templateImagePath;
+      SimulatorBridge::instance().publishFrameEvent(
+        runtime.currentSimulatorFrame(), "processingError", message);
+      publishSimulatorResult(camera.id);
+      return;
+    }
+  }
+  const qint64 startedAt = QDateTime::currentMSecsSinceEpoch();
+  auto job = [
+      input, roi, polygon, exclusions, localization, thresholdSettings,
+      requestedStrategy, model, templateImage]() {
+    try
+    {
+      SurfaceDefectProcessor processor;
+      if (requestedStrategy == "massPca")
+      {
+        SurfaceThresholdSettings settings;
+        settings.minValue = thresholdSettings.thresholdMin;
+        settings.maxValue = thresholdSettings.thresholdMax;
+        if (polygon.size() >= 3)
+        {
+          std::vector<cv::Point> points;
+          points.reserve(polygon.size());
+          for (const QPoint& point : polygon)
+          {
+            points.emplace_back(point.x(), point.y());
+          }
+          return processor.detectByGrayscaleThreshold(
+            input,
+            points,
+            SurfaceLocalizationAdapters::toCvRects(exclusions),
+            settings);
+        }
+        return processor.detectByGrayscaleThreshold(
+          input,
+          cv::Rect(roi.x(), roi.y(), roi.width(), roi.height()),
+          SurfaceLocalizationAdapters::toCvRects(exclusions),
+          settings);
+      }
+
+      if (requestedStrategy == "edgePca")
+      {
+        if (polygon.size() >= 3)
+        {
+          std::vector<cv::Point> points;
+          points.reserve(polygon.size());
+          for (const QPoint& point : polygon)
+          {
+            points.emplace_back(point.x(), point.y());
+          }
+          return processor.locateByEdgePca(
+            input,
+            points,
+            SurfaceLocalizationAdapters::toCvRects(exclusions),
+            localization.edgeSensitivity);
+        }
+        return processor.locateByEdgePca(
+          input,
+          cv::Rect(roi.x(), roi.y(), roi.width(), roi.height()),
+          SurfaceLocalizationAdapters::toCvRects(exclusions),
+          localization.edgeSensitivity);
+      }
+
+      if (requestedStrategy == "threshold" || requestedStrategy == "edge")
+      {
+        SurfaceAnnulusThresholdConfig config;
+        if (requestedStrategy == "threshold")
+        {
+          config.center = cv::Point(localization.center.x(), localization.center.y());
+          config.outerRadius = localization.outerRadius;
+          config.innerRadius = localization.innerRadius;
+          config.threshold.minValue = localization.thresholdMin;
+          config.threshold.maxValue = localization.thresholdMax;
+          return processor.locateAnnulusByGrayscaleThreshold(
+            input, config, SurfaceLocalizationAdapters::toCvRects(exclusions));
+        }
+        config.center = cv::Point(localization.edgeCenter.x(), localization.edgeCenter.y());
+        config.outerRadius = localization.edgeRadius + localization.edgeBandOuter;
+        config.innerRadius = std::max(0, localization.edgeRadius - localization.edgeBandInner);
+        config.edgeSensitivity = localization.edgeSensitivity;
+        config.edgeFitMaxError = localization.edgeFitMaxError;
+        return processor.locateAnnulusByEdge(
+          input, config, SurfaceLocalizationAdapters::toCvRects(exclusions));
+      }
+
+      if (requestedStrategy == "shapeModel")
+      {
+        SurfaceShapeMatchConfig config;
+        config.searchRoi = cv::Rect(0, 0, input.cols, input.rows);
+        config.edgeSensitivity = model.edgeSensitivity;
+        config.maxShapeDistance = model.maxShapeDistance;
+        for (const QPoint& point : model.contour)
+        {
+          config.modelContour.emplace_back(point.x(), point.y());
+        }
+        return processor.locateByShapeMatching(
+          input, config, SurfaceLocalizationAdapters::toCvRects(exclusions));
+      }
+
+      SurfaceTemplateMatchConfig config;
+      config.searchRoi = cv::Rect(0, 0, input.cols, input.rows);
+      config.modelImage = templateImage;
+      config.edgeSensitivity = model.edgeSensitivity;
+      config.minScore = model.minTemplateScore;
+      config.angleStartDegrees = model.angleStartDegrees;
+      config.angleEndDegrees = model.angleEndDegrees;
+      config.angleStepDegrees = model.angleStepDegrees;
+      return processor.locateByTemplateMatching(
+        input, config, SurfaceLocalizationAdapters::toCvRects(exclusions));
+    }
+    catch (const cv::Exception&)
+    {
+      return SurfaceDefectResult{};
+    }
+  };
+
+  incPendingJobs(camera.id);
+  appendLog(QString("Pipeline simulatore job avviato: %1 method=%2 recipe=%3")
+    .arg(camera.id, requestedStrategy, m_recipeManager.recipeId()));
+  AsyncExecutor::runAsyncTask(
+    std::move(job),
+    this,
+    [this, camera, startedAt](const SurfaceDefectResult& result) {
+      appendLog(QString("Pipeline simulatore job completato: %1 found=%2")
+        .arg(camera.id)
+        .arg(result.localization.found ? "true" : "false"));
+      CameraRuntime& completedRuntime = m_cameraRuntime[camera.id];
+      SimulatorBridge::instance().publishFrameEvent(
+        completedRuntime.currentSimulatorFrame(),
+        "processingCompleted",
+        result.localization.found
+          ? "Localizzazione completata"
+          : "Elaborazione completata senza posa valida");
+      m_lastSetupScanElapsedMs[camera.id] =
+        QDateTime::currentMSecsSinceEpoch() - startedAt;
+      if (result.localization.found)
+      {
+        m_lastSurfaceLocalizationResults.insert(camera.id, result.localization);
+        completedRuntime.setCurrentPose(
+          m_imaging.partPoseFromSurfaceReference(camera, result.localization));
+        appendLog(
+          QString("Pipeline simulatore coordinate: %1 frame=%2 X=%3 Y=%4 A=%5 method=%6 score=%7")
+            .arg(camera.id)
+            .arg(completedRuntime.currentSimulatorFrame().frameId)
+            .arg(result.localization.center.x, 0, 'f', 3)
+            .arg(result.localization.center.y, 0, 'f', 3)
+            .arg(result.localization.angleRadians * 180.0 / CV_PI, 0, 'f', 3)
+            .arg(QString::fromStdString(result.localization.method))
+            .arg(result.localization.score, 0, 'f', 4));
+      }
+      else
+      {
+        m_lastSurfaceLocalizationResults.remove(camera.id);
+        completedRuntime.clearCurrentPose(camera.id);
+        appendLog(QString(
+          "Pipeline simulatore coordinate: %1 frame=%2 found=false method=%3 "
+          "candidates=%4 accepted=%5 bestDistance=%6")
+            .arg(camera.id)
+            .arg(completedRuntime.currentSimulatorFrame().frameId)
+            .arg(QString::fromStdString(result.localization.method))
+            .arg(result.localization.inputPoints)
+            .arg(result.localization.usedPoints)
+            .arg(result.localization.meanError, 0, 'f', 4));
+      }
+
+      if (camera.id == m_selectedCameraId)
+      {
+        const cv::Mat& displayImage =
+          result.diagnosticImage.empty()
+            ? completedRuntime.currentFrame()
+            : result.diagnosticImage;
+        if (!displayImage.empty())
+        {
+          m_selectedPreview = m_imaging.matToPixmap(displayImage);
+          m_largeImage->setImage(m_selectedPreview);
+        }
+
+        QRect displayRoi;
+        if (m_recipeManager.loadSurfaceDefectRoi(camera.id, displayRoi))
+        {
+          m_largeImage->setRoi(displayRoi);
+        }
+        if (completedRuntime.currentSimulatorFrame().strategyId == "shapeModel" ||
+            completedRuntime.currentSimulatorFrame().strategyId == "templateModel")
+        {
+          // The recipe polygon is a fixed search area, not the model pose.
+          // Hiding it in runtime avoids confusing it with the dynamic match.
+          m_largeImage->setSearchPolygon({});
+        }
+        else
+        {
+          m_largeImage->setSearchPolygon(
+            m_recipeManager.loadSurfaceDefectPolygon(camera.id));
+        }
+        m_largeImage->setExclusionRects(
+          m_recipeManager.loadSurfaceDefectExclusionRects(camera.id));
+        updateLargePreview();
+      }
+
+      appendLog(QString("Pipeline simulatore invio risultato: %1 frame=%2")
+        .arg(camera.id)
+        .arg(completedRuntime.currentSimulatorFrame().frameId));
+      publishSimulatorResult(camera.id);
+      decPendingJobs(camera.id);
+      updateMeasurementResults();
+      QTimer::singleShot(0, this, [this, camera]() {
+        processNextSimulatorFrame(camera);
+      });
+    },
+    QString("simulator.%1.%2").arg(camera.id, requestedStrategy));
 }
 
 void MainWindow::rebuildUi()
@@ -126,10 +611,25 @@ void MainWindow::startMachine()
   {
     deactivateImageDrawingTools();
   }
-  if (!m_selectedCameraId.isEmpty() &&
-      (m_selectedCamera.type == "file" || m_selectedCamera.type == "usb" || m_selectedCamera.type == "vimba"))
+  for (const CameraConfig& camera : m_config.activeCameras())
   {
-    m_setup.startCameraSimulation(m_selectedCamera, false);
+    if (camera.type == "simulator")
+    {
+      CameraRuntime& runtime = m_cameraRuntime[camera.id];
+      QString error;
+      if (!runtime.start(camera, {}, &error))
+      {
+        appendLog(error);
+        continue;
+      }
+      appendLog(QString("START arma simulatore: %1 channel=%2")
+        .arg(camera.id, camera.simulatorChannel.isEmpty() ? camera.id : camera.simulatorChannel));
+      processNextSimulatorFrame(camera);
+    }
+    else if (camera.id == m_selectedCameraId)
+    {
+      m_setup.startCameraSimulation(camera, false);
+    }
   }
   if (m_systemStatus)
   {
@@ -153,10 +653,13 @@ void MainWindow::stopMachine()
   const bool keepCurrentTool =
     !m_selectedCameraId.isEmpty() &&
     m_activeDrawingRecipe != MainWindowActiveDrawingRecipe::None;
-  if (!m_selectedCameraId.isEmpty() &&
-      (m_selectedCamera.type == "file" || m_selectedCamera.type == "usb"))
+  for (const CameraConfig& camera : m_config.activeCameras())
   {
-    m_setup.stopCameraSimulation(m_selectedCamera, false);
+    auto runtimeIt = m_cameraRuntime.find(camera.id);
+    if (runtimeIt != m_cameraRuntime.end())
+    {
+      runtimeIt->second.stop();
+    }
   }
   m_machineRunning = false;
   if (m_systemStatus)

@@ -362,7 +362,7 @@ void MainWindow::showCameraSystemSettings()
     table->setItem(row, 4, new QTableWidgetItem(camera.displayName));
 
     auto* typeCombo = new QComboBox(table);
-    typeCombo->addItems({"file", "usb", "vimba"});
+    typeCombo->addItems({"file", "usb", "vimba", "simulator"});
     const int typeIndex = typeCombo->findText(camera.type);
     typeCombo->setCurrentIndex(typeIndex >= 0 ? typeIndex : 0);
     table->setCellWidget(row, 5, typeCombo);
@@ -387,11 +387,61 @@ void MainWindow::showCameraSystemSettings()
     {
       source = QString("usb:%1").arg(camera.usbIndex);
     }
+    else if (camera.type == "simulator")
+    {
+      source = camera.simulatorChannel.isEmpty() ? camera.id : camera.simulatorChannel;
+    }
     else
     {
       source = camera.deviceId;
     }
-    table->setItem(row, 7, readOnlyItem(source));
+    auto* sourceItem = new QTableWidgetItem(source);
+    if (camera.type != "simulator")
+    {
+      sourceItem->setFlags(sourceItem->flags() & ~Qt::ItemIsEditable);
+    }
+    sourceItem->setToolTip(
+      camera.type == "simulator"
+        ? "Canale esposto da TestVision; se vuoto viene usato l'ID camera"
+        : "La sorgente si configura con il comando dedicato");
+    table->setItem(row, 7, sourceItem);
+    connect(typeCombo, &QComboBox::currentTextChanged, &dialog, [table, row, camera](const QString& type) {
+      QTableWidgetItem* item = table->item(row, 7);
+      if (!item)
+      {
+        return;
+      }
+
+      if (type == "simulator")
+      {
+        item->setFlags(item->flags() | Qt::ItemIsEditable);
+        if (item->text().trimmed().isEmpty() ||
+            item->text() == camera.folder ||
+            item->text() == camera.deviceId ||
+            item->text().startsWith("usb:"))
+        {
+          item->setText(camera.simulatorChannel.isEmpty() ? camera.id : camera.simulatorChannel);
+        }
+        item->setToolTip("Canale esposto da TestVision; se vuoto viene usato l'ID camera");
+      }
+      else
+      {
+        item->setFlags(item->flags() & ~Qt::ItemIsEditable);
+        item->setToolTip("La sorgente si configura con il comando dedicato");
+        if (type == "file")
+        {
+          item->setText(camera.folder);
+        }
+        else if (type == "usb")
+        {
+          item->setText(camera.usbIndex >= 0 ? QString("usb:%1").arg(camera.usbIndex) : QString());
+        }
+        else if (type == "vimba")
+        {
+          item->setText(camera.deviceId);
+        }
+      }
+    });
 
     auto* calibrationEnabled = new QCheckBox(table);
     calibrationEnabled->setChecked(camera.calibration.enabled);
@@ -457,6 +507,13 @@ void MainWindow::showCameraSystemSettings()
     if (auto* typeCombo = qobject_cast<QComboBox*>(table->cellWidget(row, 5)))
     {
       camera.type = typeCombo->currentText();
+    }
+    if (camera.type == "simulator")
+    {
+      const QString channel = table->item(row, 7)
+        ? table->item(row, 7)->text().trimmed()
+        : QString();
+      camera.simulatorChannel = channel.isEmpty() ? camera.id : channel;
     }
     if (auto* profileCombo = qobject_cast<QComboBox*>(table->cellWidget(row, 6)))
     {

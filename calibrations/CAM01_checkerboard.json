@@ -1,21 +1,21 @@
 {
-    "averageHorizontalPitchPixels": 73.60165556670164,
-    "averageVerticalPitchPixels": 74.08271235895984,
+    "averageHorizontalPitchPixels": 74.51721165804243,
+    "averageVerticalPitchPixels": 74.22996539577002,
     "calibrationType": "checkerboard_scale",
     "cameraId": "CAM01",
     "modelId": "CAM01_planar_scale",
     "originImagePoint": {
-        "x": 1867.2821044921875,
-        "y": 1151.7825927734375
+        "x": 1852.7371826171875,
+        "y": 113.91603088378906
     },
     "originWorldMm": {
         "x": 0,
         "y": 0
     },
-    "pixelSizeXMm": 0.06793325451040623,
-    "pixelSizeYMm": 0.0674921292807563,
-    "rmsErrorPixels": 1.2979621729002089,
-    "rotationDegrees": 179.06916910224655,
+    "pixelSizeXMm": 0.06527351053231528,
+    "pixelSizeYMm": 0.06552609817432535,
+    "rmsErrorPixels": 1.324765227403398,
+    "rotationDegrees": 91.61580381227282,
     "sourceFile": "live-frame",
     "valid": true
 }

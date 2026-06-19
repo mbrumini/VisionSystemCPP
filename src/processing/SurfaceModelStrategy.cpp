@@ -77,9 +77,46 @@ bool contourPose(const std::vector<cv::Point>& points, cv::Point2d& center, doub
   return std::isfinite(center.x) && std::isfinite(center.y) && std::isfinite(angleRadians);
 }
 
+std::vector<cv::Point> transformedContour(
+  const std::vector<cv::Point>& contour,
+  const cv::Point2d& sourceCenter,
+  double sourceAngle,
+  const cv::Point2d& targetCenter,
+  double targetAngle)
+{
+  std::vector<cv::Point> transformed;
+  transformed.reserve(contour.size());
+  const double angle = targetAngle - sourceAngle;
+  const double cosine = std::cos(angle);
+  const double sine = std::sin(angle);
+  for (const cv::Point& point : contour)
+  {
+    const double x = point.x - sourceCenter.x;
+    const double y = point.y - sourceCenter.y;
+    transformed.emplace_back(
+      cvRound(targetCenter.x + cosine * x - sine * y),
+      cvRound(targetCenter.y + sine * x + cosine * y));
+  }
+  return transformed;
+}
+
 void fillReferenceAxes(SurfaceLocalizationReference& reference, const cv::Rect& bounds)
 {
   const cv::Point2d xDirection(std::cos(reference.angleRadians), std::sin(reference.angleRadians));
+  const cv::Point2d yDirection(-xDirection.y, xDirection.x);
+  const double axisLength = std::max(20.0, 0.55 * std::max(bounds.width, bounds.height));
+  reference.xAxisStart = reference.center - xDirection * axisLength;
+  reference.xAxisEnd = reference.center + xDirection * axisLength;
+  reference.yAxisStart = reference.center - yDirection * axisLength;
+  reference.yAxisEnd = reference.center + yDirection * axisLength;
+}
+
+void fillReferenceAxesAtAngle(
+  SurfaceLocalizationReference& reference,
+  const cv::Rect& bounds,
+  double drawingAngleRadians)
+{
+  const cv::Point2d xDirection(std::cos(drawingAngleRadians), std::sin(drawingAngleRadians));
   const cv::Point2d yDirection(-xDirection.y, xDirection.x);
   const double axisLength = std::max(20.0, 0.55 * std::max(bounds.width, bounds.height));
   reference.xAxisStart = reference.center - xDirection * axisLength;
@@ -95,7 +132,13 @@ void drawReference(cv::Mat& image, const SurfaceLocalizationReference& reference
   cv::line(image, surfacePoint(reference.yAxisStart), surfacePoint(reference.yAxisEnd), cv::Scalar(255, 255, 0), 2, cv::LINE_AA);
 }
 
-cv::Mat rotateTemplate(const cv::Mat& image, double angleDegrees)
+struct RotatedTemplate
+{
+  cv::Mat image;
+  cv::Point2d sourceCenter;
+};
+
+RotatedTemplate rotateTemplate(const cv::Mat& image, double angleDegrees)
 {
   const cv::Point2f center((image.cols - 1) * 0.5F, (image.rows - 1) * 0.5F);
   cv::Mat rotation = cv::getRotationMatrix2D(center, angleDegrees, 1.0);
@@ -105,7 +148,27 @@ cv::Mat rotateTemplate(const cv::Mat& image, double angleDegrees)
 
   cv::Mat rotated;
   cv::warpAffine(image, rotated, rotation, bounds.size(), cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0));
-  return rotated;
+
+  std::vector<cv::Point> nonZero;
+  cv::findNonZero(rotated, nonZero);
+  if (nonZero.empty())
+  {
+    return {};
+  }
+
+  const cv::Rect contentBounds = cv::boundingRect(nonZero);
+  RotatedTemplate result;
+  result.image = rotated(contentBounds).clone();
+  result.sourceCenter = cv::Point2d(
+    rotation.at<double>(0, 0) * center.x +
+      rotation.at<double>(0, 1) * center.y +
+      rotation.at<double>(0, 2) -
+      contentBounds.x,
+    rotation.at<double>(1, 0) * center.x +
+      rotation.at<double>(1, 1) * center.y +
+      rotation.at<double>(1, 2) -
+      contentBounds.y);
+  return result;
 }
 }
 
@@ -136,6 +199,8 @@ SurfaceDefectResult SurfaceModelStrategy::locateByShapeMatching(
 
   std::vector<std::vector<cv::Point>> contours;
   cv::findContours(edges, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+  result.localization.method = "shape_matching";
+  result.localization.inputPoints = static_cast<int>(contours.size());
 
   if (input.channels() == 1)
   {
@@ -150,6 +215,7 @@ SurfaceDefectResult SurfaceModelStrategy::locateByShapeMatching(
 
   double bestDistance = std::numeric_limits<double>::max();
   int bestIndex = -1;
+  int acceptedCandidates = 0;
   const ShapeCandidateMetrics modelMetrics = measureShapeCandidate(config.modelContour);
   const double modelArea = modelMetrics.valid ? modelMetrics.area : std::abs(cv::contourArea(config.modelContour));
   const double minCandidateArea = std::max(config.minContourArea, modelArea * config.minAreaRatio);
@@ -170,6 +236,7 @@ SurfaceDefectResult SurfaceModelStrategy::locateByShapeMatching(
       continue;
     }
 
+    ++acceptedCandidates;
     const double distance = cv::matchShapes(config.modelContour, contours[i], cv::CONTOURS_MATCH_I1, 0.0);
     if (distance < bestDistance)
     {
@@ -179,6 +246,11 @@ SurfaceDefectResult SurfaceModelStrategy::locateByShapeMatching(
   }
 
   result.processed = true;
+  result.localization.usedPoints = acceptedCandidates;
+  result.localization.meanError =
+    std::isfinite(bestDistance) ? bestDistance : -1.0;
+  result.localization.score =
+    std::isfinite(bestDistance) ? 1.0 / (1.0 + bestDistance) : 0.0;
   if (bestIndex < 0 || bestDistance > config.maxShapeDistance)
   {
     return result;
@@ -196,15 +268,42 @@ SurfaceDefectResult SurfaceModelStrategy::locateByShapeMatching(
   result.totalArea = blob.area;
   result.blobs.push_back(blob);
   result.localization.found = true;
-  result.localization.method = "shape_matching";
   result.localization.center = blob.center;
-  result.localization.score = 1.0 / (1.0 + bestDistance);
-  result.localization.meanError = bestDistance;
-  result.localization.inputPoints = static_cast<int>(contours.size());
-  result.localization.usedPoints = static_cast<int>(blob.contour.size());
   fillReferenceAxes(result.localization, blob.boundingRect);
 
-  cv::drawContours(result.diagnosticImage, std::vector<std::vector<cv::Point>>{blob.contour}, 0, cv::Scalar(0, 255, 0), 2);
+  cv::Mat detectedArea = result.diagnosticImage.clone();
+  cv::drawContours(
+    detectedArea,
+    std::vector<std::vector<cv::Point>>{blob.contour},
+    0,
+    cv::Scalar(0, 210, 0),
+    cv::FILLED);
+  cv::addWeighted(detectedArea, 0.22, result.diagnosticImage, 0.78, 0.0, result.diagnosticImage);
+  cv::drawContours(
+    result.diagnosticImage,
+    std::vector<std::vector<cv::Point>>{blob.contour},
+    0,
+    cv::Scalar(0, 255, 0),
+    2);
+
+  cv::Point2d modelCenter;
+  double modelAngle = 0.0;
+  if (contourPose(config.modelContour, modelCenter, modelAngle))
+  {
+    const std::vector<cv::Point> posedModel = transformedContour(
+      config.modelContour,
+      modelCenter,
+      modelAngle,
+      blob.center,
+      result.localization.angleRadians);
+    cv::drawContours(
+      result.diagnosticImage,
+      std::vector<std::vector<cv::Point>>{posedModel},
+      0,
+      cv::Scalar(0, 255, 255),
+      2,
+      cv::LINE_AA);
+  }
   cv::rectangle(result.diagnosticImage, blob.boundingRect, cv::Scalar(255, 0, 0), 2);
   drawReference(result.diagnosticImage, result.localization);
   return result;
@@ -249,19 +348,19 @@ SurfaceDefectResult SurfaceModelStrategy::locateByTemplateMatching(
   double bestAngle = 0.0;
   cv::Point bestLocation;
   cv::Size bestSize;
+  cv::Point2d bestSourceCenter;
   const double step = std::max(1.0, std::abs(config.angleStepDegrees));
 
-  for (double angle = config.angleStartDegrees; angle <= config.angleEndDegrees; angle += step)
-  {
-    const cv::Mat rotatedTemplate = rotateTemplate(modelEdges, angle);
-    if (rotatedTemplate.cols < 4 || rotatedTemplate.rows < 4 ||
-        rotatedTemplate.cols > search.cols || rotatedTemplate.rows > search.rows)
+  auto evaluateAngle = [&](double angle) {
+    const RotatedTemplate rotatedTemplate = rotateTemplate(modelEdges, angle);
+    if (rotatedTemplate.image.cols < 4 || rotatedTemplate.image.rows < 4 ||
+        rotatedTemplate.image.cols > search.cols || rotatedTemplate.image.rows > search.rows)
     {
-      continue;
+      return;
     }
 
     cv::Mat response;
-    cv::matchTemplate(search, rotatedTemplate, response, cv::TM_CCOEFF_NORMED);
+    cv::matchTemplate(search, rotatedTemplate.image, response, cv::TM_CCOEFF_NORMED);
 
     double minValue = 0.0;
     double maxValue = 0.0;
@@ -274,7 +373,26 @@ SurfaceDefectResult SurfaceModelStrategy::locateByTemplateMatching(
       bestScore = maxValue;
       bestAngle = angle;
       bestLocation = maxLocation;
-      bestSize = rotatedTemplate.size();
+      bestSize = rotatedTemplate.image.size();
+      bestSourceCenter = rotatedTemplate.sourceCenter;
+    }
+  };
+
+  for (double angle = config.angleStartDegrees; angle <= config.angleEndDegrees; angle += step)
+  {
+    evaluateAngle(angle);
+  }
+
+  // The configured step is the coarse search interval. Refine around the
+  // strongest coarse result so poses between two configured angles are found.
+  if (bestScore >= 0.0 && step > 1.0)
+  {
+    const double coarseBestAngle = bestAngle;
+    const double refineStart = std::max(config.angleStartDegrees, coarseBestAngle - step);
+    const double refineEnd = std::min(config.angleEndDegrees, coarseBestAngle + step);
+    for (double angle = refineStart; angle <= refineEnd; angle += 1.0)
+    {
+      evaluateAngle(angle);
     }
   }
 
@@ -285,7 +403,9 @@ SurfaceDefectResult SurfaceModelStrategy::locateByTemplateMatching(
   }
 
   const cv::Rect matchRect(roi.x + bestLocation.x, roi.y + bestLocation.y, bestSize.width, bestSize.height);
-  const cv::Point2d center(matchRect.x + matchRect.width * 0.5, matchRect.y + matchRect.height * 0.5);
+  const cv::Point2d center(
+    roi.x + bestLocation.x + bestSourceCenter.x,
+    roi.y + bestLocation.y + bestSourceCenter.y);
 
   SurfaceBlob blob;
   blob.area = static_cast<double>(matchRect.area());
@@ -301,7 +421,13 @@ SurfaceDefectResult SurfaceModelStrategy::locateByTemplateMatching(
   result.localization.score = bestScore;
   result.localization.usedPoints = 1;
   result.localization.inputPoints = static_cast<int>((config.angleEndDegrees - config.angleStartDegrees) / step) + 1;
-  fillReferenceAxes(result.localization, matchRect);
+  // getRotationMatrix2D uses mathematical positive angles while image Y grows
+  // downwards. Keep the reported test angle positive, but draw the image axes
+  // with the corresponding visual rotation.
+  fillReferenceAxesAtAngle(
+    result.localization,
+    matchRect,
+    -result.localization.angleRadians);
 
   cv::rectangle(result.diagnosticImage, matchRect, cv::Scalar(0, 255, 0), 2);
   drawReference(result.diagnosticImage, result.localization);

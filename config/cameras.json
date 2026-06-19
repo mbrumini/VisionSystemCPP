@@ -5,41 +5,37 @@
                 "autoExposure": false,
                 "autoGain": false,
                 "autoWhiteBalance": false,
-                "exposure": 200,
+                "exposure": 150,
                 "gain": 0,
                 "whiteBalance": 4497
             },
             "calibration": {
                 "enabled": true,
                 "file": "calibrations/CAM01_checkerboard.json",
-                "pixelSizeXMm": 0.06793325451040623,
-                "pixelSizeYMm": 0.0674921292807563,
+                "pixelSizeXMm": 0.06527351,
+                "pixelSizeYMm": 0.06527351,
                 "type": "checkerboard",
-                "updatedAt": "2026-06-18T10:00:52"
+                "updatedAt": "2026-06-18T16:04:31"
             },
-            "deviceId": "DEV_000A4706197B",
-            "displayName": "Allied Vision Alvium G1-234m (DEV_000A4706197B)",
+            "displayName": "Simulatore",
             "enabled": true,
             "exists": true,
             "id": "CAM01",
             "interfaceId": "Ethernet 2",
             "modelName": "Alvium G1-234m",
             "processingProfile": "profile_cam01",
-            "serial": "0G9W6",
+            "simulatorChannel": "CAM01",
             "slot": 1,
-            "trigger": {
-                "cameraLine": "",
-                "ioOutput": "",
-                "mode": "software",
-                "source": "camera"
-            },
-            "type": "vimba"
+            "type": "simulator"
         },
         {
             "acquisition": {
-                "autoExposure": true,
-                "autoGain": true,
-                "autoWhiteBalance": true
+                "autoExposure": false,
+                "autoGain": false,
+                "autoWhiteBalance": false,
+                "exposure": 200,
+                "gain": 0,
+                "whiteBalance": 4500
             },
             "calibration": {
                 "enabled": false,
@@ -49,14 +45,23 @@
                 "type": "none",
                 "updatedAt": ""
             },
-            "displayName": "Camera 2",
+            "deviceId": "DEV_000A4706197B",
+            "displayName": "Allied Vision Alvium G1-234m (DEV_000A4706197B)",
             "enabled": false,
             "exists": false,
-            "folder": "data/images/cam02",
             "id": "CAM02",
-            "processingProfile": "profile_cam02",
+            "interfaceId": "Ethernet 2",
+            "modelName": "Alvium G1-234m",
+            "processingProfile": "bw_dimensional",
+            "serial": "0G9W6",
             "slot": 2,
-            "type": "file"
+            "trigger": {
+                "cameraLine": "",
+                "ioOutput": "",
+                "mode": "software",
+                "source": "camera"
+            },
+            "type": "vimba"
         },
         {
             "acquisition": {
