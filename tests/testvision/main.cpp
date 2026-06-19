@@ -845,6 +845,10 @@ private:
 
   void stopTest(const QString& reason)
   {
+    if (!m_results.isEmpty())
+    {
+      saveReport();
+    }
     appendLog(reason);
     m_stateLabel->setText(reason);
     m_pollTimer.stop();
@@ -1179,7 +1183,6 @@ private:
 
   void finishTest()
   {
-    saveReport();
     stopTest(QString("Test completato: %1 frame").arg(m_results.size()));
   }
 
