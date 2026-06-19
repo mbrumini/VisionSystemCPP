@@ -14,6 +14,7 @@ public:
 
   const CameraConfig& camera() const;
   void setPreview(const QPixmap& preview);
+  void setResultText(const QString& text);
   void setSelected(bool selected);
   void setClickHandler(std::function<void(const CameraConfig&)> handler);
 

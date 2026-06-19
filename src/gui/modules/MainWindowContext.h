@@ -99,6 +99,7 @@ struct MainWindowContext
   std::function<void()> loadConfiguration;
   std::function<void(const QString&)> incPendingJobs;
   std::function<void(const QString&)> decPendingJobs;
+  std::function<void(const QString&)> publishSimulatorResult;
   std::function<void(const QString&)> appendLog;
   std::function<void()> updateLargePreview;
   std::function<void()> updateMeasurementResults;
@@ -109,6 +110,7 @@ struct MainWindowContext
   std::function<void(const CameraConfig&)> showCameraToolList;
   std::function<void(const CameraConfig&)> selectCamera;
   std::function<void()> showGridView;
+  std::function<void(const QString&)> updateRecipeText;
   std::function<void()> refreshSelectedCameraRecipeData;
   std::function<void()> ensureRecipeCameraFolders;
   std::function<bool(const QString&)> optionalToolVisible;

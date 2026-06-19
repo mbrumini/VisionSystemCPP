@@ -1,6 +1,7 @@
 #include "CameraRuntime.h"
 
 #include "camera/FileCamera.h"
+#include "camera/SimulatedCamera.h"
 #include "camera/UsbCamera.h"
 #include "camera/VimbaCamera.h"
 
@@ -33,6 +34,7 @@ void CameraRuntime::stop()
   m_sourceFolder.clear();
   m_sourceDeviceId.clear();
   m_sourceUsbIndex = -1;
+  m_currentSimulatorFrame = {};
 
   m_status = Status::Stopped;
 }
@@ -86,7 +88,8 @@ bool CameraRuntime::step(const CameraConfig& camera, const QString& resolvedFold
   cv::Mat frame;
   if (!m_source->getFrame(frame))
   {
-    const bool transientLiveGrabFailure = camera.type == "vimba" && m_running;
+    const bool transientLiveGrabFailure =
+      (camera.type == "vimba" || camera.type == "simulator") && m_running;
     if (!transientLiveGrabFailure)
     {
       m_running = false;
@@ -108,6 +111,14 @@ bool CameraRuntime::step(const CameraConfig& camera, const QString& resolvedFold
   }
 
   m_currentFrame = frame;
+  if (const auto* simulatedCamera = dynamic_cast<const SimulatedCamera*>(m_source.get()))
+  {
+    m_currentSimulatorFrame = simulatedCamera->lastFrameMetadata();
+  }
+  else
+  {
+    m_currentSimulatorFrame = {};
+  }
   m_frameIndex += 1;
   m_status = m_running ? Status::Running : Status::Ready;
   return true;
@@ -153,10 +164,22 @@ const cv::Mat& CameraRuntime::currentFrame() const
   return m_currentFrame;
 }
 
+void CameraRuntime::setCurrentFrame(const cv::Mat& frame)
+{
+  m_currentFrame = frame.clone();
+  m_currentSimulatorFrame = {};
+}
+
+const SimulatorFrameMetadata& CameraRuntime::currentSimulatorFrame() const
+{
+  return m_currentSimulatorFrame;
+}
+
 void CameraRuntime::clearCurrentFrame()
 {
   m_currentFrame.release();
   m_frameIndex = 0;
+  m_currentSimulatorFrame = {};
 }
 
 const PartPose& CameraRuntime::currentPose() const
@@ -191,7 +214,8 @@ void CameraRuntime::clearGeometries()
 
 bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& resolvedFolder, QString* errorMessage)
 {
-  if (camera.type != "file" && camera.type != "usb" && camera.type != "vimba")
+  if (camera.type != "file" && camera.type != "usb" &&
+      camera.type != "vimba" && camera.type != "simulator")
   {
     if (errorMessage)
     {
@@ -212,8 +236,12 @@ bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& reso
     camera.type == "vimba" &&
     m_sourceType == camera.type &&
     m_sourceDeviceId == camera.deviceId;
+  const bool sameSimulatorSource =
+    camera.type == "simulator" &&
+    m_sourceType == camera.type &&
+    m_sourceDeviceId == (camera.simulatorChannel.isEmpty() ? camera.id : camera.simulatorChannel);
 
-  if (m_source && (sameUsbSource || sameFileSource || sameVimbaSource))
+  if (m_source && (sameUsbSource || sameFileSource || sameVimbaSource || sameSimulatorSource))
   {
     return true;
   }
@@ -245,6 +273,11 @@ bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& reso
   {
     m_source = std::make_unique<VimbaCamera>(camera);
   }
+  else if (camera.type == "simulator")
+  {
+    m_source = std::make_unique<SimulatedCamera>(
+      camera.simulatorChannel.isEmpty() ? camera.id : camera.simulatorChannel);
+  }
   else
   {
     m_source = std::make_unique<FileCamera>(resolvedFolder.toStdString(), m_loop);
@@ -272,7 +305,12 @@ bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& reso
 
   m_sourceType = camera.type;
   m_sourceFolder = camera.type == "file" ? resolvedFolder : QString();
-  m_sourceDeviceId = camera.type == "vimba" ? camera.deviceId : QString();
+  m_sourceDeviceId =
+    camera.type == "vimba"
+      ? camera.deviceId
+      : (camera.type == "simulator"
+          ? (camera.simulatorChannel.isEmpty() ? camera.id : camera.simulatorChannel)
+          : QString());
   m_sourceUsbIndex = camera.type == "usb" ? camera.usbIndex : -1;
   return true;
 }

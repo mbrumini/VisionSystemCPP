@@ -48,6 +48,12 @@ QString MainWindowSetupModule::cameraSetupDetailsText(const CameraConfig& camera
       .arg(camera.trigger.mode.isEmpty() ? tr("status.invalid") : camera.trigger.mode)
       .arg(camera.trigger.source.isEmpty() ? tr("status.invalid") : camera.trigger.source);
   }
+  else if (camera.type == "simulator")
+  {
+    sourceLabel = "Simulatore";
+    sourceDetails = QString("channel=%1")
+      .arg(camera.simulatorChannel.isEmpty() ? camera.id : camera.simulatorChannel);
+  }
 
   const QString calibrationDetails = camera.calibration.enabled
     ? QString("%1 %2 mm/px file=%3")

@@ -83,12 +83,25 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
 
   cv::rectangle(result.diagnosticImage, roi, cv::Scalar(255, 0, 0), 2);
 
-  std::vector<cv::Point> edgePixels;
-  cv::findNonZero(edgeMask, edgePixels);
-
-  for (const std::vector<cv::Point>& contour : contours)
+  int bestContourIndex = -1;
+  double bestContourArea = 0.0;
+  size_t bestContourPoints = 0;
+  for (int i = 0; i < static_cast<int>(contours.size()); ++i)
   {
-    cv::drawContours(result.diagnosticImage, std::vector<std::vector<cv::Point>>{contour}, 0, cv::Scalar(0, 255, 0), 2);
+    const double area = std::abs(cv::contourArea(contours[i]));
+    if (area > bestContourArea || (area == bestContourArea && contours[i].size() > bestContourPoints))
+    {
+      bestContourIndex = i;
+      bestContourArea = area;
+      bestContourPoints = contours[i].size();
+    }
+  }
+
+  std::vector<cv::Point> edgePixels;
+  if (bestContourIndex >= 0)
+  {
+    edgePixels = contours[bestContourIndex];
+    cv::drawContours(result.diagnosticImage, contours, bestContourIndex, cv::Scalar(0, 255, 0), 2);
   }
 
   if (edgePixels.size() < 8)
@@ -212,12 +225,25 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
 
   cv::polylines(result.diagnosticImage, std::vector<std::vector<cv::Point>>{searchPolygon}, true, cv::Scalar(255, 0, 0), 2);
 
-  std::vector<cv::Point> edgePixels;
-  cv::findNonZero(edgeMask, edgePixels);
-
-  for (const std::vector<cv::Point>& contour : contours)
+  int bestContourIndex = -1;
+  double bestContourArea = 0.0;
+  size_t bestContourPoints = 0;
+  for (int i = 0; i < static_cast<int>(contours.size()); ++i)
   {
-    cv::drawContours(result.diagnosticImage, std::vector<std::vector<cv::Point>>{contour}, 0, cv::Scalar(0, 255, 0), 2);
+    const double area = std::abs(cv::contourArea(contours[i]));
+    if (area > bestContourArea || (area == bestContourArea && contours[i].size() > bestContourPoints))
+    {
+      bestContourIndex = i;
+      bestContourArea = area;
+      bestContourPoints = contours[i].size();
+    }
+  }
+
+  std::vector<cv::Point> edgePixels;
+  if (bestContourIndex >= 0)
+  {
+    edgePixels = contours[bestContourIndex];
+    cv::drawContours(result.diagnosticImage, contours, bestContourIndex, cv::Scalar(0, 255, 0), 2);
   }
 
   if (edgePixels.size() < 8)

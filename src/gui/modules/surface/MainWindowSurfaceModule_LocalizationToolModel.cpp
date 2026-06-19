@@ -75,7 +75,15 @@ void MainWindowSurfaceModule::showModelLocalizationPanel(const CameraConfig& cam
   modelLayout->setHorizontalSpacing(8);
   modelLayout->setVerticalSpacing(4);
 
-  auto addSlider = [this, camera, modelLayout](const QString& labelText, int row, int minValue, int maxValue, int value, std::function<void(int)> handler, double displayScale = 1.0) {
+  auto addSlider = [this, camera, modelLayout](
+                     const QString& labelText,
+                     int row,
+                     int minValue,
+                     int maxValue,
+                     int value,
+                     std::function<void(int)> handler,
+                     double displayScale = 1.0,
+                     bool handleOnRelease = false) {
     auto* label = new QLabel(labelText, modelLayout->parentWidget());
     auto* valueLabel = new QLabel(QString::number(value * displayScale, 'f', displayScale == 1.0 ? 0 : 2), modelLayout->parentWidget());
     valueLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
@@ -85,10 +93,19 @@ void MainWindowSurfaceModule::showModelLocalizationPanel(const CameraConfig& cam
     modelLayout->addWidget(label, row, 0);
     modelLayout->addWidget(valueLabel, row, 1);
     modelLayout->addWidget(slider, row + 1, 0, 1, 2);
-    QObject::connect(slider, &QSlider::valueChanged, window(), [valueLabel, handler, displayScale](int sliderValue) {
+    QObject::connect(slider, &QSlider::valueChanged, window(), [valueLabel, handler, displayScale, handleOnRelease](int sliderValue) {
       valueLabel->setText(QString::number(sliderValue * displayScale, 'f', displayScale == 1.0 ? 0 : 2));
-      handler(sliderValue);
+      if (!handleOnRelease)
+      {
+        handler(sliderValue);
+      }
     });
+    if (handleOnRelease)
+    {
+      QObject::connect(slider, &QSlider::sliderReleased, window(), [slider, handler]() {
+        handler(slider->value());
+      });
+    }
   };
 
   addSlider(tr("labels.edgeSensitivity"), 0, 1, 255, model.edgeSensitivity, [this, camera](int value) {
@@ -99,7 +116,7 @@ void MainWindowSurfaceModule::showModelLocalizationPanel(const CameraConfig& cam
       return;
     }
     acquireSurfaceModel(camera);
-  });
+  }, 1.0, true);
   addSlider(tr("labels.modelMaxShapeDistance"), 2, 1, 500, static_cast<int>(model.maxShapeDistance * 100.0), [this, camera](int value) {
     QString error;
     if (!recipes().saveSurfaceModelMaxShapeDistance(camera.id, value / 100.0, &error))

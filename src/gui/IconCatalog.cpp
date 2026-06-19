@@ -43,6 +43,7 @@ QColor iconColor(const QString& id)
       id == "edgeGeometry" || id == "contourGeometry" ||
       id == "geometries" || id == "surfaceLocalization" ||
       id == "surfaceThreshold" || id == "surfaceEdge" ||
+      id == "surfaceCircleThreshold" || id == "surfaceCircleEdge" ||
       id == "surfacePca" || id == "surfaceSearchRoi" ||
       id == "surfaceOuterCircle" || id == "surfaceInnerCircle" ||
       id == "surfaceEdgeCircle")
@@ -152,6 +153,8 @@ QIcon IconCatalog::icon(const QString& id)
     {"surfaceDefects", ":/icons/sparkles.svg"},
     {"surfaceThreshold", ":/icons/surface-threshold.svg"},
     {"surfaceEdge", ":/icons/surface-edge.svg"},
+    {"surfaceCircleThreshold", ":/icons/surface-circle-threshold.svg"},
+    {"surfaceCircleEdge", ":/icons/surface-circle-edge.svg"},
     {"surfacePca", ":/icons/surface-pca.svg"},
     {"surfaceModel", ":/icons/surface-model.svg"},
     {"surfaceSearchRoi", ":/icons/surface-roi.svg"},

@@ -41,6 +41,8 @@
     <file alias="tool-ai.svg">icons/tool-ai.svg</file>
     <file alias="surface-threshold.svg">icons/surface-threshold.svg</file>
     <file alias="surface-edge.svg">icons/surface-edge.svg</file>
+    <file alias="surface-circle-threshold.svg">icons/surface-circle-threshold.svg</file>
+    <file alias="surface-circle-edge.svg">icons/surface-circle-edge.svg</file>
     <file alias="surface-pca.svg">icons/surface-pca.svg</file>
     <file alias="surface-model.svg">icons/surface-model.svg</file>
     <file alias="surface-roi.svg">icons/surface-roi.svg</file>

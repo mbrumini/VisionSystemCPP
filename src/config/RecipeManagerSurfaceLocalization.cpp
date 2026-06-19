@@ -391,7 +391,28 @@ SurfaceModelConfig RecipeManager::loadSurfaceModel(const QString& cameraId) cons
   }
 
   config.searchRoi = rectFromJson(model.value("searchRoi").toObject()).normalized();
-  config.templateImagePath = model.value("templateImagePath").toString();
+  const QString storedTemplatePath = model.value("templateImagePath").toString();
+  if (!storedTemplatePath.isEmpty())
+  {
+    const QFileInfo storedTemplateInfo(storedTemplatePath);
+    if (storedTemplateInfo.isAbsolute())
+    {
+      config.templateImagePath = storedTemplatePath;
+      if (!storedTemplateInfo.exists())
+      {
+        const QString portableFallback = surfaceModelTemplateImagePath(cameraId);
+        if (QFileInfo::exists(portableFallback))
+        {
+          config.templateImagePath = portableFallback;
+        }
+      }
+    }
+    else
+    {
+      const QString recipeDirectory = QDir(recipesRoot()).filePath(m_recipeId);
+      config.templateImagePath = QDir(recipeDirectory).filePath(storedTemplatePath);
+    }
+  }
   config.edgeSensitivity = model.value("edgeSensitivity").toInt(config.edgeSensitivity);
   config.maxShapeDistance = model.value("maxShapeDistance").toDouble(config.maxShapeDistance);
   config.minTemplateScore = model.value("minTemplateScore").toDouble(config.minTemplateScore);
@@ -426,7 +447,13 @@ bool RecipeManager::saveSurfaceModel(const QString& cameraId, const QRect& searc
 
   QJsonObject model = surfaceLocalization.value("model").toObject();
   model["searchRoi"] = rectToJson(searchRoi.normalized());
-  model["templateImagePath"] = templateImagePath;
+  const QDir recipeDirectory(QDir(recipesRoot()).filePath(m_recipeId));
+  QString portableTemplatePath = recipeDirectory.relativeFilePath(QFileInfo(templateImagePath).absoluteFilePath());
+  if (portableTemplatePath.startsWith("../"))
+  {
+    portableTemplatePath = templateImagePath;
+  }
+  model["templateImagePath"] = QDir::fromNativeSeparators(portableTemplatePath);
   model["edgeSensitivity"] = model.value("edgeSensitivity").toInt(SurfaceModelConfig().edgeSensitivity);
   model["maxShapeDistance"] = model.value("maxShapeDistance").toDouble(SurfaceModelConfig().maxShapeDistance);
   model["minTemplateScore"] = model.value("minTemplateScore").toDouble(SurfaceModelConfig().minTemplateScore);

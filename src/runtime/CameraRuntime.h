@@ -4,6 +4,7 @@
 #include "config/AppConfig.h"
 #include "geometry/GeometrySet.h"
 #include "runtime/PartPose.h"
+#include "simulator/SimulatorProtocol.h"
 
 #include <QString>
 
@@ -37,6 +38,8 @@ public:
   int frameIndex() const;
   Status status() const;
   const cv::Mat& currentFrame() const;
+  void setCurrentFrame(const cv::Mat& frame);
+  const SimulatorFrameMetadata& currentSimulatorFrame() const;
   void clearCurrentFrame();
   const PartPose& currentPose() const;
   void setCurrentPose(const PartPose& pose);
@@ -54,6 +57,7 @@ private:
   int m_frameIndex = 0;
   Status m_status = Status::Stopped;
   cv::Mat m_currentFrame;
+  SimulatorFrameMetadata m_currentSimulatorFrame;
   PartPose m_currentPose;
   GeometrySet m_geometries;
   std::unique_ptr<ICamera> m_source;

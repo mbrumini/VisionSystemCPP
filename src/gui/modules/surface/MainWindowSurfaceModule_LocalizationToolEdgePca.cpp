@@ -71,8 +71,11 @@ void MainWindowSurfaceModule::showEdgePcaLocalizationPanel(const CameraConfig& c
   sensitivitySlider->setValue(annulus.edgeSensitivity);
   sensitivityLayout->addWidget(sensitivityValue, 0, 1);
   sensitivityLayout->addWidget(sensitivitySlider, 1, 0, 1, 2);
-  QObject::connect(sensitivitySlider, &QSlider::valueChanged, window(), [this, camera, sensitivityValue](int value) {
+  QObject::connect(sensitivitySlider, &QSlider::valueChanged, window(), [sensitivityValue](int value) {
     sensitivityValue->setText(QString::number(value));
+  });
+  QObject::connect(sensitivitySlider, &QSlider::sliderReleased, window(), [this, camera, sensitivitySlider]() {
+    const int value = sensitivitySlider->value();
     QString error;
     if (!recipes().saveSurfaceEdgeSensitivity(camera.id, value, &error))
     {

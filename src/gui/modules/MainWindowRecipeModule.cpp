@@ -166,6 +166,10 @@ void MainWindowRecipeModule::setActiveRecipe(const QString& recipeId)
     log(error);
   }
 
+  if (context().updateRecipeText)
+  {
+    context().updateRecipeText(recipes().recipeId());
+  }
   log(tr("log.activeRecipe") + ": " + recipes().recipeId());
   ensureRecipeCameraFolders();
   refreshSelectedCameraRecipeData();

@@ -113,6 +113,7 @@ bool AppConfig::load(const QString& filePath, QString* errorMessage)
     camera.deviceId = cameraObject.value("deviceId").toString(camera.serial);
     camera.modelName = cameraObject.value("modelName").toString();
     camera.interfaceId = cameraObject.value("interfaceId").toString();
+    camera.simulatorChannel = cameraObject.value("simulatorChannel").toString(camera.id);
     const QJsonObject triggerObject = cameraObject.value("trigger").toObject();
     camera.trigger.mode = triggerObject.value("mode").toString();
     camera.trigger.source = triggerObject.value("source").toString();
@@ -484,6 +485,23 @@ bool AppConfig::saveCameraSystemSettings(
     if (!camera.type.isEmpty())
     {
       cameraObject["type"] = camera.type;
+    }
+    if (camera.type == "simulator")
+    {
+      cameraObject["simulatorChannel"] = camera.simulatorChannel.isEmpty()
+        ? camera.id
+        : camera.simulatorChannel;
+      cameraObject.remove("folder");
+      cameraObject.remove("usbIndex");
+      cameraObject.remove("serial");
+      cameraObject.remove("deviceId");
+      cameraObject.remove("modelName");
+      cameraObject.remove("interfaceId");
+      cameraObject.remove("trigger");
+    }
+    else
+    {
+      cameraObject.remove("simulatorChannel");
     }
     cameraObject["processingProfile"] = camera.processingProfileId.isEmpty()
       ? QString("default")

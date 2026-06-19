@@ -130,6 +130,21 @@ void MainWindow::updateMeasurementResults()
       }
 
       const QVector<MeasurementResult>& measurements = runtimeIt->second.geometries().measurements;
+      const PartPose& pose = runtimeIt->second.currentPose();
+      for (CameraTileWidget* tile : m_tiles)
+      {
+        if (tile->camera().id == camera.id)
+        {
+          tile->setResultText(
+            pose.valid
+              ? QString("X %1  Y %2  A %3°")
+                  .arg(pose.origin.x, 0, 'f', 2)
+                  .arg(pose.origin.y, 0, 'f', 2)
+                  .arg(pose.angleRadians * 180.0 / CV_PI, 0, 'f', 2)
+              : QString("In attesa"));
+          break;
+        }
+      }
       for (const MeasurementResult& measurement : measurements)
       {
         rows.append({
@@ -280,8 +295,8 @@ void MainWindow::showLocalizationStrategyList(const CameraConfig& camera)
   int strategyIndex = 0;
   for (const SurfaceLocalizationStrategyDefinition& strategy : SurfaceLocalizationStrategies::all(m_translations))
   {
-    const QString iconId = strategy.id == "threshold" ? "surfaceThreshold" :
-      (strategy.id == "edge" ? "surfaceEdge" :
+    const QString iconId = strategy.id == "threshold" ? "surfaceCircleThreshold" :
+      (strategy.id == "edge" ? "surfaceCircleEdge" :
        (strategy.id == "edgePca" ? "surfacePca" :
         (strategy.id == "massPca" ? "surfaceSearchRoi" :
         (strategy.id == "model" ? "surfaceModel" : "aiModel"))));

@@ -4,9 +4,11 @@
 #include "gui/modules/MainWindowCameraProfile.h"
 #include "config/RecipeJsonUtils.h"
 #include "util/AsyncExecutor.h"
+#include "simulator/SimulatorBridge.h"
 
 #include <QDir>
 #include <QLayout>
+#include <QMetaObject>
 #include <QSettings>
 #include <QVariant>
 
@@ -46,6 +48,26 @@ MainWindow::MainWindow(QWidget* parent)
 
   buildUi();
   bindModules();
+
+  QString simulatorError;
+  if (!SimulatorBridge::instance().start(&simulatorError))
+  {
+    appendLog(simulatorError);
+  }
+  else
+  {
+    appendLog(QString("Server simulatore pronto: %1").arg(SimulatorBridge::instance().serverName()));
+    SimulatorBridge::instance().setFrameAvailableHandler([this](const QString& channel) {
+      QMetaObject::invokeMethod(this, [this, channel]() {
+        handleSimulatorFrameAvailable(channel);
+      });
+    });
+    SimulatorBridge::instance().setSampleAvailableHandler([this](const SimulatorFrame& frame) {
+      QMetaObject::invokeMethod(this, [this, frame]() {
+        handleSimulatorSampleAvailable(frame);
+      });
+    });
+  }
 
   AsyncExecutor::setDefaultMaxThreadsToHardware();
   {
@@ -211,6 +233,12 @@ void MainWindow::bindModules()
   m_ctx.showCameraToolList = [this](const CameraConfig& camera) { showCameraToolList(camera); };
   m_ctx.selectCamera = [this](const CameraConfig& camera) { selectCamera(camera); };
   m_ctx.showGridView = [this]() { showGridView(); };
+  m_ctx.updateRecipeText = [this](const QString& recipeId) {
+    if (m_commandToolbar)
+    {
+      m_commandToolbar->setRecipeText(QString("%1: %2").arg(trText("labels.recipe"), recipeId));
+    }
+  };
   m_ctx.refreshSelectedCameraRecipeData = [this]() { m_recipes.refreshSelectedCameraRecipeData(); };
   m_ctx.ensureRecipeCameraFolders = [this]() { m_recipes.ensureRecipeCameraFolders(); };
   m_ctx.optionalToolVisible = [this](const QString& toolId) {
@@ -225,4 +253,5 @@ void MainWindow::bindModules()
   m_ctx.loadConfiguration = [this]() { loadConfiguration(); };
   m_ctx.incPendingJobs = [this](const QString& cameraId) { incPendingJobs(cameraId); };
   m_ctx.decPendingJobs = [this](const QString& cameraId) { decPendingJobs(cameraId); };
+  m_ctx.publishSimulatorResult = [this](const QString& cameraId) { publishSimulatorResult(cameraId); };
 }

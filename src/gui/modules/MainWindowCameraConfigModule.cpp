@@ -9,6 +9,7 @@
 #include <QDir>
 #include <QFileDialog>
 #include <QDateTime>
+#include <QFileInfo>
 #include <QMessageBox>
 
 #include <opencv2/imgcodecs.hpp>
@@ -404,6 +405,18 @@ void MainWindowCameraConfigModule::acquireCameraSampleImage(const CameraConfig& 
   }
 
   const QString samplePath = QDir(recipes().cameraSampleImagesPath(camera.id)).filePath("sample.png");
+  QDir sampleDirectory(recipes().cameraSampleImagesPath(camera.id));
+  const QStringList imageFilters = {
+    "*.bmp", "*.jpg", "*.jpeg", "*.png", "*.tif", "*.tiff",
+    "*.BMP", "*.JPG", "*.JPEG", "*.PNG", "*.TIF", "*.TIFF"
+  };
+  for (const QFileInfo& existingSample : sampleDirectory.entryInfoList(imageFilters, QDir::Files))
+  {
+    if (existingSample.absoluteFilePath() != QFileInfo(samplePath).absoluteFilePath())
+    {
+      sampleDirectory.remove(existingSample.fileName());
+    }
+  }
   if (!cv::imwrite(samplePath.toStdString(), sample))
   {
     QMessageBox::warning(

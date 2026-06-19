@@ -1,0 +1,32 @@
+{
+    "cameraId": "CAM01",
+    "tools": {
+        "surfaceLocalization": {
+            "aoes": {
+                "edgePca": {
+                    "id": "edgePca",
+                    "label": "edgePca",
+                    "searchRoi": {
+                        "height": 348,
+                        "width": 416,
+                        "x": 141,
+                        "y": 79
+                    }
+                }
+            },
+            "edge": {
+                "sensitivity": 134
+            },
+            "enabled": true,
+            "exclusionRects": [
+            ],
+            "method": "edgePca",
+            "searchRoi": {
+                "height": 348,
+                "width": 416,
+                "x": 141,
+                "y": 79
+            }
+        }
+    }
+}

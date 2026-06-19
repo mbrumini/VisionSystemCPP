@@ -53,6 +53,7 @@ CameraTileWidget::CameraTileWidget(const CameraConfig& camera, QWidget* parent)
   m_imageLabel->setMinimumHeight(72);
   m_imageLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
   m_imageLabel->setStyleSheet("background:#101418;color:#9aa4ad;");
+  m_imageLabel->hide();
 
   m_titleLabel = new QLabel(QString("Cam %1").arg(camera.slot), this);
   m_titleLabel->setObjectName("tileTitle");
@@ -63,7 +64,6 @@ CameraTileWidget::CameraTileWidget(const CameraConfig& camera, QWidget* parent)
   auto* layout = new QVBoxLayout(this);
   layout->setContentsMargins(8, 8, 8, 8);
   layout->setSpacing(6);
-  layout->addWidget(m_imageLabel, 1);
   layout->addWidget(m_titleLabel);
   layout->addWidget(m_statusLabel);
 
@@ -79,6 +79,11 @@ void CameraTileWidget::setPreview(const QPixmap& preview)
 {
   m_preview = preview;
   updatePreview();
+}
+
+void CameraTileWidget::setResultText(const QString& text)
+{
+  m_statusLabel->setText(text);
 }
 
 void CameraTileWidget::setSelected(bool selected)

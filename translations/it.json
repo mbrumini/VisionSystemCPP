@@ -206,19 +206,19 @@
     "missing": "Modello superficie mancante"
   },
   "strategies": {
-    "threshold": "Soglia",
-    "edge": "Bordo",
+    "threshold": "Soglia circolare",
+    "edge": "Bordo circolare",
     "edgePca": "Bordo + PCA",
     "massPca": "Massa + PCA",
-    "model": "Modello",
+    "model": "Modello sagoma",
     "aiYolo": "AI YOLO"
   },
   "strategyNotes": {
-    "threshold": "Localizza il contorno con soglia grayscale dentro una corona definita dall'operatore.",
-    "edge": "Usa una guida e una fascia di ricerca per trovare il bordo reale con OpenCV.",
-    "edgePca": "Raccogliera' punti bordo e calcolera' centro/orientamento con PCA robusta.",
-    "massPca": "Usa un AOE rettangolare: il blob sogliato definisce centro di massa e assi XY con PCA.",
-    "model": "Usera' un modello geometrico o template per stimare posizione e orientamento.",
+    "threshold": "Solo pezzi tondi: localizza il centro con soglia grayscale dentro una corona circolare.",
+    "edge": "Solo pezzi tondi: cerca il bordo reale dentro una fascia circolare.",
+    "edgePca": "Sagome irregolari: raccoglie i punti bordo e calcola centro e orientamento con PCA.",
+    "massPca": "Sagome irregolari: il blob sogliato definisce centro di massa e assi XY con PCA.",
+    "model": "Sagome irregolari ripetibili: usa un contorno geometrico o template per posizione e orientamento.",
     "aiYolo": "Usera' un modello YOLO, preferibilmente segmentation, per ottenere maschera e riferimento pezzo."
   },
   "log": {

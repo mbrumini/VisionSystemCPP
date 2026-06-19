@@ -206,19 +206,19 @@
     "missing": "Surface model missing"
   },
   "strategies": {
-    "threshold": "Threshold",
-    "edge": "Edge",
+    "threshold": "Circular threshold",
+    "edge": "Circular edge",
     "edgePca": "Edge + PCA",
     "massPca": "Mass + PCA",
-    "model": "Model",
+    "model": "Shape model",
     "aiYolo": "AI YOLO"
   },
   "strategyNotes": {
-    "threshold": "Localizes the contour with a grayscale threshold inside an operator-defined ring.",
-    "edge": "Uses a guide and search band to find the real edge with OpenCV.",
-    "edgePca": "Will collect edge points and compute center/orientation with robust PCA.",
-    "massPca": "Uses a rectangular AOE: the thresholded blob defines center of mass and XY axes with PCA.",
-    "model": "Will use a geometric model or template to estimate position and orientation.",
+    "threshold": "Round parts only: localizes the center by grayscale threshold inside a circular annulus.",
+    "edge": "Round parts only: searches for the real edge inside a circular band.",
+    "edgePca": "Irregular shapes: collects edge points and computes center and orientation using PCA.",
+    "massPca": "Irregular shapes: the thresholded blob defines center of mass and XY axes using PCA.",
+    "model": "Repeatable irregular shapes: uses a geometric contour or template for position and orientation.",
     "aiYolo": "Will use a YOLO model, preferably segmentation, to obtain the part mask and reference."
   },
   "log": {

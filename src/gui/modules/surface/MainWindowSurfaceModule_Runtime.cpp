@@ -456,7 +456,7 @@ void MainWindowSurfaceModule::testSurfaceEdgePcaLocalization(const CameraConfig&
 
     const bool suppressViewUpdate =
       camera.id == selectedCameraId() &&
-      (*context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry || *context().setupCameraId == camera.id);
+      *context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry;
     if (!result.processed || result.diagnosticImage.empty())
     {
       context().lastSurfaceLocalizationResults->remove(camera.id);
@@ -496,7 +496,6 @@ void MainWindowSurfaceModule::testSurfaceEdgePcaLocalization(const CameraConfig&
     if (context().setup)
     {
       context().setup->refreshSetupGeometryResults(camera);
-      return;
     }
 
     GeometryOverlay overlay;
