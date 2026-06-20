@@ -53,6 +53,22 @@ cv::Mat diagnosticImage(const QString& imagePath, const MaskPoseResult& pose)
     2);
   return diagnostic;
 }
+
+bool maskCentroid(const QString& maskPath, cv::Point2d* center)
+{
+  const cv::Mat mask = cv::imread(maskPath.toStdString(), cv::IMREAD_GRAYSCALE);
+  if (mask.empty())
+  {
+    return false;
+  }
+  const cv::Moments moments = cv::moments(mask, true);
+  if (std::abs(moments.m00) <= 0.000001)
+  {
+    return false;
+  }
+  *center = {moments.m10 / moments.m00, moments.m01 / moments.m00};
+  return true;
+}
 }
 
 void MainWindowSetupModule::runAiLocalizationInference(const CameraConfig& camera)
@@ -121,6 +137,8 @@ void MainWindowSetupModule::runAiLocalizationInferenceFrame(
     QString("%1_input_%2.png").arg(camera.id, stamp));
   const QString maskPath = QDir(folder).filePath(
     QString("%1_mask_%2.png").arg(camera.id, stamp));
+  const QString referenceMaskPath = QDir(folder).filePath(
+    QString("%1_reference_%2.png").arg(camera.id, stamp));
   if (!cv::imwrite(imagePath.toStdString(), frame))
   {
     immediate.error = "Salvataggio frame inferenza fallito";
@@ -133,6 +151,7 @@ void MainWindowSetupModule::runAiLocalizationInferenceFrame(
   request["request_id"] = requestId;
   request["image"] = imagePath;
   request["mask"] = maskPath;
+  request["reference_mask"] = referenceMaskPath;
   request["camera_id"] = camera.id;
   m_aiLocalizationInferenceProcess->write(
     QJsonDocument(request).toJson(QJsonDocument::Compact) + "\n");
@@ -263,7 +282,9 @@ void MainWindowSetupModule::handleAiLocalizationInferenceOutput()
     result.found = object.value("found").toBool();
     result.imagePath = object.value("image").toString();
     result.maskPath = object.value("mask").toString();
+    result.referenceMaskPath = object.value("reference_mask").toString();
     result.confidence = object.value("confidence").toDouble();
+    result.referenceConfidence = object.value("reference_confidence").toDouble();
     result.elapsedMs = object.value("elapsed_ms").toDouble();
     if (result.found)
     {
@@ -276,6 +297,33 @@ void MainWindowSetupModule::handleAiLocalizationInferenceOutput()
         result.error = "Maschera AI non valida";
       }
       result.diagnosticImage = diagnosticImage(result.imagePath, result.pose);
+      if (object.value("reference_found").toBool())
+      {
+        result.hasOrientationReference = maskCentroid(
+          result.referenceMaskPath,
+          &result.orientationReferenceCenter);
+      }
+      if (result.hasOrientationReference && !result.diagnosticImage.empty())
+      {
+        const cv::Point pieceCenter(
+          qRound(result.pose.center.x), qRound(result.pose.center.y));
+        const cv::Point referenceCenter(
+          qRound(result.orientationReferenceCenter.x),
+          qRound(result.orientationReferenceCenter.y));
+        cv::drawMarker(
+          result.diagnosticImage,
+          referenceCenter,
+          cv::Scalar(0, 165, 255),
+          cv::MARKER_DIAMOND,
+          20,
+          2);
+        cv::line(
+          result.diagnosticImage,
+          pieceCenter,
+          referenceCenter,
+          cv::Scalar(0, 165, 255),
+          2);
+      }
     }
     callback(result);
   }
@@ -304,7 +352,11 @@ void MainWindowSetupModule::applyAiLocalizationInferenceResult(
   pose.cameraId = camera.id;
   pose.method = "ai_segmentation";
   pose.origin = result.pose.center;
-  pose.angleRadians = result.pose.angleRadians;
+  pose.angleRadians = result.hasOrientationReference
+    ? std::atan2(
+        result.orientationReferenceCenter.y - result.pose.center.y,
+        result.orientationReferenceCenter.x - result.pose.center.x)
+    : result.pose.angleRadians;
   pose.score = result.confidence;
   pose.xAxis = {std::cos(pose.angleRadians), std::sin(pose.angleRadians)};
   pose.yAxis = {-pose.xAxis.y, pose.xAxis.x};
@@ -328,18 +380,19 @@ void MainWindowSetupModule::applyAiLocalizationInferenceResult(
               "Confidenza: %5\nTempo: %6 ms")
         .arg(result.pose.center.x, 0, 'f', 1)
         .arg(result.pose.center.y, 0, 'f', 1)
-        .arg(result.pose.angleRadians * 180.0 / CV_PI, 0, 'f', 1)
+        .arg(pose.angleRadians * 180.0 / CV_PI, 0, 'f', 1)
         .arg(result.pose.area, 0, 'f', 0)
         .arg(result.confidence, 0, 'f', 4)
         .arg(result.elapsedMs, 0, 'f', 1));
   }
   log(QString("Localizzazione AI trovata: camera=%1 cx=%2 cy=%3 angle=%4 "
-              "area=%5 confidence=%6 elapsedMs=%7")
+              "area=%5 confidence=%6 elapsedMs=%7 orientation=%8")
     .arg(camera.id)
     .arg(result.pose.center.x, 0, 'f', 2)
     .arg(result.pose.center.y, 0, 'f', 2)
-    .arg(result.pose.angleRadians * 180.0 / CV_PI, 0, 'f', 2)
+    .arg(pose.angleRadians * 180.0 / CV_PI, 0, 'f', 2)
     .arg(result.pose.area, 0, 'f', 0)
     .arg(result.confidence, 0, 'f', 4)
-    .arg(result.elapsedMs, 0, 'f', 1));
+    .arg(result.elapsedMs, 0, 'f', 1)
+    .arg(result.hasOrientationReference ? "reference" : "pca"));
 }

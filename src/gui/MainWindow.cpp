@@ -7,6 +7,7 @@
 #include "simulator/SimulatorBridge.h"
 
 #include <QDir>
+#include <QFileInfo>
 #include <QLayout>
 #include <QMetaObject>
 #include <QSettings>
@@ -76,6 +77,34 @@ MainWindow::MainWindow(QWidget* parent)
         handleSimulatorSampleAvailable(frame);
       });
     });
+    SimulatorBridge::instance().setRecipeRequestHandler(
+      [this](const QString& recipeId, QString* errorMessage) {
+        bool accepted = false;
+        QString error;
+        QMetaObject::invokeMethod(
+          this,
+          [this, recipeId, &accepted, &error]() {
+            const QString recipePath = QDir(RecipeManager::recipesRootPath())
+              .filePath(recipeId + "/recipe.json");
+            if (!QFileInfo::exists(recipePath))
+            {
+              error = "Ricetta non trovata: " + recipeId;
+              return;
+            }
+            m_recipes.setActiveRecipe(recipeId);
+            accepted = m_recipeManager.recipeId() == recipeId;
+            if (!accepted)
+            {
+              error = "Caricamento ricetta fallito: " + recipeId;
+            }
+          },
+          Qt::BlockingQueuedConnection);
+        if (errorMessage)
+        {
+          *errorMessage = error;
+        }
+        return accepted;
+      });
   }
 
   AsyncExecutor::setDefaultMaxThreadsToHardware();

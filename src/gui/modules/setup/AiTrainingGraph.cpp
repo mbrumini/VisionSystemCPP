@@ -58,14 +58,31 @@ QVector<double> normalizedSeries(const QVector<double>& values)
   return result;
 }
 
-void drawSeries(QPainter& painter, const QRect& chart, const QVector<double>& values, const QColor& color)
+void drawSeries(
+  QPainter& painter,
+  const QRect& chart,
+  const QVector<double>& values,
+  const QColor& color,
+  bool fixedZeroToOne = false)
 {
   if (values.size() < 2)
   {
     return;
   }
 
-  const QVector<double> normalized = normalizedSeries(values);
+  QVector<double> normalized;
+  if (fixedZeroToOne)
+  {
+    normalized.reserve(values.size());
+    for (double value : values)
+    {
+      normalized.append(qBound(0.0, value, 1.0));
+    }
+  }
+  else
+  {
+    normalized = normalizedSeries(values);
+  }
   QPolygonF polyline;
   polyline.reserve(normalized.size());
   for (int i = 0; i < normalized.size(); ++i)
@@ -190,7 +207,7 @@ QPixmap renderTrainingGraph(
     const QVector<double> visibleTrainLoss = lastValues(trainLoss, maxVisibleEpochs);
     const QVector<double> visibleValLoss = lastValues(valLoss, maxVisibleEpochs);
 
-    drawSeries(painter, chart, visibleTop1, QColor("#3fb950"));
+    drawSeries(painter, chart, visibleTop1, QColor("#3fb950"), true);
     drawSeries(painter, chart, visibleTrainLoss, QColor("#f778ba"));
     drawSeries(painter, chart, visibleValLoss, QColor("#f2cc60"));
 

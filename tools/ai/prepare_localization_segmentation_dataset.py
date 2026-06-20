@@ -54,6 +54,7 @@ def main() -> None:
         "val: images/val\n"
         "names:\n"
         "  0: Pezzo\n"
+        "  1: RiferimentoOrientamento\n"
     )
     (args.output / "data.yaml").write_text(yaml, encoding="utf-8")
     print(f"Dataset localizzazione preparato: {args.output}")

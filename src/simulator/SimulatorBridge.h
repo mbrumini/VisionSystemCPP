@@ -34,6 +34,8 @@ public:
     const QString& message = {});
   void setFrameAvailableHandler(std::function<void(const QString&)> handler);
   void setSampleAvailableHandler(std::function<void(const SimulatorFrame&)> handler);
+  void setRecipeRequestHandler(
+    std::function<bool(const QString&, QString*)> handler);
 
 private:
   struct ClientConnection;
@@ -52,4 +54,5 @@ private:
   QHash<QString, std::shared_ptr<ClientConnection>> m_frameClients;
   std::function<void(const QString&)> m_frameAvailableHandler;
   std::function<void(const SimulatorFrame&)> m_sampleAvailableHandler;
+  std::function<bool(const QString&, QString*)> m_recipeRequestHandler;
 };

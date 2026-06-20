@@ -4,6 +4,7 @@
 #include <QDir>
 #include <QDoubleSpinBox>
 #include <QFile>
+#include <QFileDialog>
 #include <QFileInfo>
 #include <QFormLayout>
 #include <QHBoxLayout>
@@ -41,6 +42,7 @@
 #include <vector>
 
 #include "TestVisionArtifacts.h"
+#include "CampaignEditorDialog.h"
 
 namespace
 {
@@ -303,6 +305,15 @@ protected:
       minY = std::min(minY, y);
       maxY = std::max(maxY, y);
     }
+    if (m_mode == Mode::Angle)
+    {
+      const double commonMinimum = std::min(minX, minY);
+      const double commonMaximum = std::max(maxX, maxY);
+      minX = commonMinimum;
+      minY = commonMinimum;
+      maxX = commonMaximum;
+      maxY = commonMaximum;
+    }
     if (std::abs(maxX - minX) < 0.001) maxX = minX + 1.0;
     if (std::abs(maxY - minY) < 0.001) maxY = minY + 1.0;
 
@@ -316,6 +327,15 @@ protected:
       QColor("#4da3ff"), QColor("#40c980"), QColor("#ffad42"),
       QColor("#d576ff"), QColor("#ff667a")
     };
+    if (m_mode == Mode::Angle)
+    {
+      painter.setPen(QPen(QColor("#8b949e"), 2, Qt::DashLine));
+      painter.drawLine(mapPoint(minX, minX), mapPoint(maxX, maxX));
+      painter.drawText(
+        QRectF(area.left() + 8, area.top() + 6, 190, 20),
+        Qt::AlignLeft,
+        "Ideale: atteso = rilevato");
+    }
     QMap<int, QVector<TestResult>> byPass;
     for (const TestResult& result : m_results)
     {
@@ -334,8 +354,16 @@ protected:
           : result.centerError;
         const QPointF point = mapPoint(result.expectedAngle, y);
         if (hasPrevious) painter.drawLine(previous, point);
-        painter.setBrush(colors[colorIndex % colors.size()]);
-        painter.drawEllipse(point, 4, 4);
+        const bool outsideTolerance =
+          m_mode == Mode::Angle && result.angleError > 5.0;
+        painter.setPen(QPen(
+          outsideTolerance ? QColor("#ff4d5a") : colors[colorIndex % colors.size()],
+          outsideTolerance ? 3 : 2));
+        painter.setBrush(outsideTolerance
+          ? QColor("#ff4d5a")
+          : colors[colorIndex % colors.size()]);
+        painter.drawEllipse(point, outsideTolerance ? 5 : 4, outsideTolerance ? 5 : 4);
+        painter.setPen(QPen(colors[colorIndex % colors.size()], 2));
         previous = point;
         hasPrevious = true;
       }
@@ -462,7 +490,7 @@ public:
   }
 
 private:
-  enum class State { Idle, WaitingHello, WaitingAccepted, WaitingResult };
+  enum class State { Idle, WaitingHello, WaitingRecipe, WaitingAccepted, WaitingResult };
 
   QDoubleSpinBox* doubleSpin(double value, double minimum, double maximum, double step, int decimals = 3)
   {
@@ -564,9 +592,16 @@ private:
     m_stopButton = new QPushButton("Stop", configPanel);
     m_sendSampleButton = new QPushButton("Invia campione a Vision", configPanel);
     m_generateDatasetButton = new QPushButton("Genera dataset AI", configPanel);
+    m_loadCampaignButton = new QPushButton("Carica campagna", configPanel);
+    m_editCampaignButton = new QPushButton("Crea / modifica campagna", configPanel);
+    m_startCampaignButton = new QPushButton("Avvia campagna", configPanel);
+    m_startCampaignButton->setEnabled(false);
     m_stopButton->setEnabled(false);
     buttons->addWidget(m_sendSampleButton);
     buttons->addWidget(m_generateDatasetButton);
+    buttons->addWidget(m_loadCampaignButton);
+    buttons->addWidget(m_editCampaignButton);
+    buttons->addWidget(m_startCampaignButton);
     buttons->addWidget(m_startButton);
     buttons->addWidget(m_stopButton);
     configLayout->addLayout(buttons);
@@ -614,6 +649,9 @@ private:
     connect(m_stopButton, &QPushButton::clicked, this, [this]() { stopTest("Arrestato dall'utente"); });
     connect(m_sendSampleButton, &QPushButton::clicked, this, [this]() { sendSample(); });
     connect(m_generateDatasetButton, &QPushButton::clicked, this, [this]() { generateAiDataset(); });
+    connect(m_loadCampaignButton, &QPushButton::clicked, this, [this]() { loadCampaign(); });
+    connect(m_editCampaignButton, &QPushButton::clicked, this, [this]() { editCampaign(); });
+    connect(m_startCampaignButton, &QPushButton::clicked, this, [this]() { startCampaign(); });
     connect(m_shapeCombo, &QComboBox::currentIndexChanged, this, [this]() { updateMasterShape(); });
     connect(m_recipeCombo, &QComboBox::currentTextChanged, this, [this](const QString& text) {
       m_expectedRecipeId = text.trimmed();
@@ -884,6 +922,314 @@ private:
     m_stateLabel->setText(QString("Dataset AI creato: %1 immagini").arg(images.size()));
   }
 
+  void loadCampaign()
+  {
+    const QString path = QFileDialog::getOpenFileName(
+      this,
+      "Carica campagna TestVision",
+      QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath("tests/campaigns"),
+      "Campagne JSON (*.json)");
+    if (path.isEmpty())
+    {
+      return;
+    }
+    QString error;
+    const QJsonObject campaign = loadJson(path, &error);
+    const QJsonArray items = campaign.value("items").toArray();
+    if (campaign.isEmpty() || items.isEmpty())
+    {
+      QMessageBox::warning(
+        this, "Campagna TestVision",
+        error.isEmpty() ? "La campagna non contiene prove." : error);
+      return;
+    }
+    m_campaignPath = path;
+    m_campaign = campaign;
+    m_campaignItems = items;
+    m_campaignCycles = qMax(1, campaign.value("cycles").toInt(1));
+    m_startCampaignButton->setEnabled(true);
+    appendLog(QString("Campagna caricata: %1 | prove=%2 | cicli=%3")
+      .arg(campaign.value("name").toString(QFileInfo(path).completeBaseName()))
+      .arg(items.size())
+      .arg(m_campaignCycles));
+  }
+
+  void editCampaign()
+  {
+    QStringList recipes;
+    for (int index = 0; index < m_recipeCombo->count(); ++index)
+    {
+      recipes.append(m_recipeCombo->itemText(index));
+    }
+    CampaignEditorDialog dialog(m_campaign, recipes, this);
+    if (dialog.exec() != QDialog::Accepted)
+    {
+      return;
+    }
+    const QJsonObject campaign = dialog.campaign();
+    if (campaign.value("items").toArray().isEmpty())
+    {
+      QMessageBox::warning(this, "Campagna TestVision", "Aggiungi almeno una prova.");
+      return;
+    }
+    QString suggestedPath = m_campaignPath;
+    if (suggestedPath.isEmpty())
+    {
+      suggestedPath = QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath(
+        QString("tests/campaigns/%1.json")
+          .arg(campaign.value("name").toString("nuova_campagna")));
+    }
+    const QString path = QFileDialog::getSaveFileName(
+      this,
+      "Salva campagna TestVision",
+      suggestedPath,
+      "Campagne JSON (*.json)");
+    if (path.isEmpty())
+    {
+      return;
+    }
+    QDir().mkpath(QFileInfo(path).dir().absolutePath());
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate))
+    {
+      QMessageBox::warning(this, "Campagna TestVision", "Impossibile salvare " + path);
+      return;
+    }
+    file.write(QJsonDocument(campaign).toJson(QJsonDocument::Indented));
+    m_campaignPath = path;
+    m_campaign = campaign;
+    m_campaignItems = campaign.value("items").toArray();
+    m_campaignCycles = qMax(1, campaign.value("cycles").toInt(1));
+    m_startCampaignButton->setEnabled(true);
+    appendLog(QString("Campagna salvata: %1 | prove=%2 | cicli=%3")
+      .arg(QDir::toNativeSeparators(path))
+      .arg(m_campaignItems.size())
+      .arg(m_campaignCycles));
+  }
+
+  void applyCampaignItem(const QJsonObject& item)
+  {
+    const QString recipeId = item.value("recipeId").toString();
+    const int recipeIndex = m_recipeCombo->findText(recipeId);
+    if (recipeIndex >= 0)
+    {
+      m_recipeCombo->setCurrentIndex(recipeIndex);
+    }
+    const int strategyIndex = m_strategyCombo->findData(
+      item.value("strategyId").toString());
+    if (strategyIndex >= 0)
+    {
+      m_strategyCombo->setCurrentIndex(strategyIndex);
+    }
+    const int shapeIndex = m_shapeCombo->findData(item.value("shapeId").toString());
+    if (shapeIndex >= 0)
+    {
+      m_shapeCombo->setCurrentIndex(shapeIndex);
+    }
+    m_xMin->setValue(item.value("xMinMm").toDouble(m_xMin->value()));
+    m_xMax->setValue(item.value("xMaxMm").toDouble(m_xMax->value()));
+    m_xStep->setValue(item.value("xStepMm").toDouble(m_xStep->value()));
+    m_yMin->setValue(item.value("yMinMm").toDouble(m_yMin->value()));
+    m_yMax->setValue(item.value("yMaxMm").toDouble(m_yMax->value()));
+    m_yStep->setValue(item.value("yStepMm").toDouble(m_yStep->value()));
+    m_angleMin->setValue(item.value("angleMinDeg").toDouble(m_angleMin->value()));
+    m_angleMax->setValue(item.value("angleMaxDeg").toDouble(m_angleMax->value()));
+    m_angleStep->setValue(item.value("angleStepDeg").toDouble(m_angleStep->value()));
+    m_passes->setValue(qMax(1, item.value("passes").toInt(m_passes->value())));
+    m_intervalMs->setValue(qMax(0, item.value("intervalMs").toInt(m_intervalMs->value())));
+    updateMasterShape();
+  }
+
+  void startCampaign()
+  {
+    if (m_campaignItems.isEmpty())
+    {
+      return;
+    }
+    m_campaignRunning = true;
+    m_campaignCycle = 0;
+    m_campaignItemIndex = -1;
+    m_campaignSummaries = {};
+    m_startCampaignButton->setEnabled(false);
+    runNextCampaignItem();
+  }
+
+  void runNextCampaignItem()
+  {
+    ++m_campaignItemIndex;
+    if (m_campaignItemIndex >= m_campaignItems.size())
+    {
+      m_campaignItemIndex = 0;
+      ++m_campaignCycle;
+    }
+    if (m_campaignCycle >= m_campaignCycles)
+    {
+      finishCampaign();
+      return;
+    }
+    const QJsonObject item = m_campaignItems.at(m_campaignItemIndex).toObject();
+    m_campaignItemFailure.clear();
+    applyCampaignItem(item);
+    appendLog(QString("Campagna ciclo %1/%2 prova %3/%4: ricetta=%5 strategia=%6")
+      .arg(m_campaignCycle + 1)
+      .arg(m_campaignCycles)
+      .arg(m_campaignItemIndex + 1)
+      .arg(m_campaignItems.size())
+      .arg(m_recipeCombo->currentText())
+      .arg(m_strategyCombo->currentData().toString()));
+    startTest();
+  }
+
+  void recordCampaignSummary()
+  {
+    if (!m_campaignRunning)
+    {
+      return;
+    }
+    const QJsonObject item = m_campaignItems.at(m_campaignItemIndex).toObject();
+    double centerSum = 0.0;
+    double angleSum = 0.0;
+    double centerMax = 0.0;
+    double angleMax = 0.0;
+    double timeSum = 0.0;
+    double steadyTimeSum = 0.0;
+    double timeMax = 0.0;
+    int validCount = 0;
+    for (int resultIndex = 0; resultIndex < m_results.size(); ++resultIndex)
+    {
+      const TestResult& result = m_results[resultIndex];
+      centerSum += result.centerError;
+      angleSum += result.angleError;
+      centerMax = std::max(centerMax, result.centerError);
+      angleMax = std::max(angleMax, result.angleError);
+      timeSum += result.processingMs;
+      if (resultIndex > 0) steadyTimeSum += result.processingMs;
+      timeMax = std::max(timeMax, result.processingMs);
+      if (result.valid) ++validCount;
+    }
+    const int count = m_results.size();
+    const double centerMean = count > 0 ? centerSum / count : 0.0;
+    const double angleMean = count > 0 ? angleSum / count : 0.0;
+    const double timeMean = count > 0 ? timeSum / count : 0.0;
+    const double steadyTimeMean = count > 1
+      ? steadyTimeSum / (count - 1)
+      : timeMean;
+    const double coldStartMs = count > 0 ? m_results.first().processingMs : 0.0;
+    const QJsonObject limits = item.value("limits").toObject();
+    QJsonArray problems;
+    if (!m_campaignItemFailure.isEmpty())
+      problems.append("Errore pipeline: " + m_campaignItemFailure);
+    if (validCount != count)
+      problems.append(QString("Pose non valide: %1/%2").arg(count - validCount).arg(count));
+    if (centerMean > limits.value("centerMeanMaxPx").toDouble(5.0))
+      problems.append(QString("Errore centro medio alto: %1 px").arg(centerMean, 0, 'f', 2));
+    if (centerMax > limits.value("centerMaxPx").toDouble(10.0))
+      problems.append(QString("Errore centro massimo alto: %1 px").arg(centerMax, 0, 'f', 2));
+    if (angleMean > limits.value("angleMeanMaxDeg").toDouble(5.0))
+      problems.append(QString("Errore angolo medio alto: %1°").arg(angleMean, 0, 'f', 2));
+    if (angleMax > limits.value("angleMaxDeg").toDouble(15.0))
+      problems.append(QString("Errore angolo massimo alto: %1°").arg(angleMax, 0, 'f', 2));
+    if (steadyTimeMean > limits.value("processingMeanMaxMs").toDouble(250.0))
+      problems.append(QString("Tempo medio a caldo alto: %1 ms").arg(steadyTimeMean, 0, 'f', 1));
+    if (timeMax > limits.value("processingMaxMs").toDouble(1000.0))
+      problems.append(QString("Picco tempo alto: %1 ms").arg(timeMax, 0, 'f', 1));
+
+    QJsonObject summary;
+    summary["cycle"] = m_campaignCycle + 1;
+    summary["recipeId"] = m_recipeCombo->currentText();
+    summary["strategyId"] = m_strategyCombo->currentData().toString();
+    summary["frames"] = count;
+    summary["validFrames"] = validCount;
+    summary["centerMeanPx"] = centerMean;
+    summary["centerMaxPx"] = centerMax;
+    summary["angleMeanDeg"] = angleMean;
+    summary["angleMaxDeg"] = angleMax;
+    summary["processingMeanMs"] = timeMean;
+    summary["processingSteadyMeanMs"] = steadyTimeMean;
+    summary["coldStartMs"] = coldStartMs;
+    summary["processingMaxMs"] = timeMax;
+    summary["status"] = problems.isEmpty() ? "OK" : "PROBLEM";
+    summary["problems"] = problems;
+    m_campaignSummaries.append(summary);
+  }
+
+  void finishCampaign()
+  {
+    m_campaignRunning = false;
+    m_startCampaignButton->setEnabled(true);
+    QJsonObject report;
+    report["name"] = m_campaign.value("name").toString(
+      QFileInfo(m_campaignPath).completeBaseName());
+    report["generatedAt"] = QDateTime::currentDateTime().toString(Qt::ISODateWithMs);
+    report["cycles"] = m_campaignCycles;
+    report["runs"] = m_campaignSummaries;
+    const QString outputRoot = QDir(QString::fromUtf8(PROJECT_SOURCE_DIR))
+      .filePath("tests/reports/campaigns");
+    QDir().mkpath(outputRoot);
+    const QString outputPath = QDir(outputRoot).filePath(
+      QString("%1_%2.json")
+        .arg(report.value("name").toString())
+        .arg(testVisionTimestamp()));
+    QFile file(outputPath);
+    if (file.open(QIODevice::WriteOnly | QIODevice::Truncate))
+    {
+      file.write(QJsonDocument(report).toJson(QJsonDocument::Indented));
+    }
+    QStringList textLines;
+    textLines.append(QString("Campagna: %1").arg(report.value("name").toString()));
+    textLines.append(QString("Generata: %1").arg(report.value("generatedAt").toString()));
+    textLines.append(QString());
+    for (const QJsonValue& value : m_campaignSummaries)
+    {
+      const QJsonObject run = value.toObject();
+      const QString header = QString(
+        "Ciclo %1 | %2 | %3 | %4")
+        .arg(run.value("cycle").toInt())
+        .arg(run.value("recipeId").toString())
+        .arg(run.value("strategyId").toString())
+        .arg(run.value("status").toString());
+      textLines.append(header);
+      const QJsonArray problems = run.value("problems").toArray();
+      if (problems.isEmpty())
+      {
+        textLines.append("  Nessun problema rilevato.");
+      }
+      else
+      {
+        for (const QJsonValue& problem : problems)
+          textLines.append("  - " + problem.toString());
+      }
+      textLines.append(QString(
+        "  Centro medio/max: %1 / %2 px | Angolo medio/max: %3 / %4° | "
+        "Cold start: %5 ms | Media a caldo: %6 ms")
+        .arg(run.value("centerMeanPx").toDouble(), 0, 'f', 2)
+        .arg(run.value("centerMaxPx").toDouble(), 0, 'f', 2)
+        .arg(run.value("angleMeanDeg").toDouble(), 0, 'f', 2)
+        .arg(run.value("angleMaxDeg").toDouble(), 0, 'f', 2)
+        .arg(run.value("coldStartMs").toDouble(), 0, 'f', 1)
+        .arg(run.value("processingSteadyMeanMs").toDouble(), 0, 'f', 1));
+      textLines.append(QString());
+    }
+    const QString textPath = QFileInfo(outputPath).dir().filePath(
+      QFileInfo(outputPath).completeBaseName() + ".txt");
+    QFile textFile(textPath);
+    if (textFile.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate))
+    {
+      textFile.write(textLines.join('\n').toUtf8());
+    }
+    int problemRuns = 0;
+    for (const QJsonValue& value : m_campaignSummaries)
+      if (value.toObject().value("status").toString() != "OK") ++problemRuns;
+    const QString message = QString(
+      "Campagna terminata: %1 prove, %2 OK, %3 con problemi\n%4")
+      .arg(m_campaignSummaries.size())
+      .arg(m_campaignSummaries.size() - problemRuns)
+      .arg(problemRuns)
+      .arg(QDir::toNativeSeparators(textPath));
+    appendLog(message);
+    m_stateLabel->setText(message);
+  }
+
   void startTest()
   {
     QString error;
@@ -968,14 +1314,19 @@ private:
     if (type == "hello" && m_state == State::WaitingHello)
     {
       appendLog("Vision collegato");
-      if (m_pendingSample)
-      {
-        writeSample();
-      }
-      else
-      {
-        sendNextFrame();
-      }
+      requestRecipe();
+      return;
+    }
+    if (type == "recipeAccepted" && m_state == State::WaitingRecipe)
+    {
+      appendLog("Ricetta confermata da Vision: " + message.value("recipeId").toString());
+      if (m_pendingSample) writeSample();
+      else sendNextFrame();
+      return;
+    }
+    if (type == "recipeRejected" && m_state == State::WaitingRecipe)
+    {
+      stopTest("Ricetta rifiutata da Vision: " + message.value("message").toString());
       return;
     }
     if (type == "sampleAccepted")
@@ -999,6 +1350,11 @@ private:
       if (type == "processingError")
       {
         m_lastProcessingError = text;
+        if (m_campaignRunning)
+        {
+          m_abortCurrentCampaignItem = true;
+          m_campaignItemFailure = text;
+        }
       }
       m_stateLabel->setText(text);
       appendLog(QString("%1: %2").arg(type, text));
@@ -1007,7 +1363,14 @@ private:
     if (type == "result" && message.value("frameId").toInt() == m_currentFrameId)
     {
       handleResult(message);
-      QTimer::singleShot(m_intervalMs->value(), this, [this]() { sendNextFrame(); });
+      if (m_abortCurrentCampaignItem)
+      {
+        QTimer::singleShot(0, this, [this]() { finishTest(); });
+      }
+      else
+      {
+        QTimer::singleShot(m_intervalMs->value(), this, [this]() { sendNextFrame(); });
+      }
       return;
     }
     if (type == "error")
@@ -1089,6 +1452,7 @@ private:
     frame["imageFormat"] = "png";
     frame["imageBase64"] = QString::fromLatin1(pngBase64(m_currentImage));
     m_lastProcessingError.clear();
+    m_abortCurrentCampaignItem = false;
     QByteArray payload = QJsonDocument(frame).toJson(QJsonDocument::Compact);
     payload.append('\n');
     DWORD written = 0;
@@ -1099,6 +1463,24 @@ private:
     }
     m_state = State::WaitingAccepted;
     m_stateLabel->setText(QString("Frame %1 inviato").arg(m_currentFrameId));
+  }
+
+  void requestRecipe()
+  {
+    QJsonObject request;
+    request["type"] = "setRecipe";
+    request["protocolVersion"] = m_scenario.value("protocolVersion").toInt(1);
+    request["recipeId"] = m_expectedRecipeId;
+    QByteArray payload = QJsonDocument(request).toJson(QJsonDocument::Compact);
+    payload.append('\n');
+    DWORD written = 0;
+    if (!WriteFile(m_pipe, payload.constData(), static_cast<DWORD>(payload.size()), &written, nullptr))
+    {
+      stopTest(QString("Cambio ricetta fallito, errore Windows %1").arg(GetLastError()));
+      return;
+    }
+    m_state = State::WaitingRecipe;
+    m_stateLabel->setText("Caricamento ricetta " + m_expectedRecipeId);
   }
 
   void handleResult(const QJsonObject& message)
@@ -1248,6 +1630,11 @@ private:
   void finishTest()
   {
     stopTest(QString("Test completato: %1 frame").arg(m_results.size()));
+    if (m_campaignRunning)
+    {
+      recordCampaignSummary();
+      QTimer::singleShot(500, this, [this]() { runNextCampaignItem(); });
+    }
   }
 
   void saveReport()
@@ -1346,12 +1733,25 @@ private:
   QComboBox* m_recipeCombo = nullptr;
   QPushButton* m_sendSampleButton = nullptr;
   QPushButton* m_generateDatasetButton = nullptr;
+  QPushButton* m_loadCampaignButton = nullptr;
+  QPushButton* m_editCampaignButton = nullptr;
+  QPushButton* m_startCampaignButton = nullptr;
   int m_canvasWidth = 640;
   int m_canvasHeight = 480;
   int m_canvasBackground = 240;
   bool m_pendingSample = false;
   QString m_expectedRecipeId;
   QString m_lastProcessingError;
+  QString m_campaignPath;
+  QJsonObject m_campaign;
+  QJsonArray m_campaignItems;
+  QJsonArray m_campaignSummaries;
+  int m_campaignCycles = 1;
+  int m_campaignCycle = 0;
+  int m_campaignItemIndex = -1;
+  bool m_campaignRunning = false;
+  bool m_abortCurrentCampaignItem = false;
+  QString m_campaignItemFailure;
 
   QTimer m_pollTimer;
   HANDLE m_pipe = INVALID_HANDLE_VALUE;

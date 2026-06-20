@@ -92,5 +92,29 @@ int main()
         "Coordinate label ricaricate fuori tolleranza");
     }
   }
+
+  const QVector<AiSegmentationPolygon> multiplePolygons = {
+    {0, labelPolygon},
+    {1, {{120, 35}, {145, 35}, {145, 60}, {120, 60}}},
+    {1, {{45, 35}, {65, 35}, {65, 55}, {45, 55}}}
+  };
+  ok &= check(
+    AiMaskLabelStorage::savePolygons(
+      rawPath,
+      maskDirectory,
+      labelDirectory,
+      multiplePolygons,
+      &savedPaths,
+      &storageError),
+    "Salvataggio label multi-poligono fallito");
+  const QVector<AiSegmentationPolygon> loadedPolygons =
+    AiMaskLabelStorage::loadPolygons(rawPath, labelDirectory, &storageError);
+  ok &= check(loadedPolygons.size() == 3, "Numero poligoni ricaricati errato");
+  if (loadedPolygons.size() == 3)
+  {
+    ok &= check(loadedPolygons[0].classId == 0, "Classe Pezzo non conservata");
+    ok &= check(loadedPolygons[1].classId == 1 && loadedPolygons[2].classId == 1,
+                "Classi riferimento non conservate");
+  }
   return ok ? 0 : 1;
 }

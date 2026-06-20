@@ -4,6 +4,7 @@
 #include "ai/AiMaskLabelStorage.h"
 #include "gui/modules/MainWindowCameraConfigModule.h"
 #include "gui/modules/MainWindowContext.h"
+#include "gui/geometry/GeometryOverlay.h"
 #include "gui/modules/setup/AiLocalizationPaths.h"
 #include "gui/modules/setup/AiPythonRuntime.h"
 #include "gui/modules/setup/AiTrainingGraph.h"
@@ -22,6 +23,8 @@
 #include <QTimer>
 #include <QUrl>
 #include <QVBoxLayout>
+
+#include <algorithm>
 
 void MainWindowSetupModule::showAiLocalizationPanel(const CameraConfig& camera)
 {
@@ -153,6 +156,30 @@ void MainWindowSetupModule::showAiLocalizationPanel(const CameraConfig& camera)
   m_aiLocalizationLabelingStatus->setObjectName("toolPanelNote");
   navigationLayout->addWidget(m_aiLocalizationLabelingStatus, 1, 0, 1, 2);
   layout->addWidget(navigation);
+
+  auto* polygonControls = new QWidget(panel);
+  auto* polygonLayout = new QGridLayout(polygonControls);
+  polygonLayout->setContentsMargins(0, 0, 0, 0);
+  polygonLayout->setSpacing(6);
+  m_aiLocalizationPieceButton = makeButton("Disegna / modifica Pezzo");
+  m_aiLocalizationReferenceButton = makeButton("Aggiungi riferimento orientamento");
+  m_aiLocalizationFinishButton = makeButton("Termina immagine e continua");
+  m_aiLocalizationPieceButton->setEnabled(false);
+  m_aiLocalizationReferenceButton->setEnabled(false);
+  m_aiLocalizationFinishButton->setEnabled(false);
+  QObject::connect(m_aiLocalizationPieceButton, &QPushButton::clicked, window(), [this]() {
+    beginAiLocalizationPolygon(0);
+  });
+  QObject::connect(m_aiLocalizationReferenceButton, &QPushButton::clicked, window(), [this]() {
+    beginAiLocalizationPolygon(1);
+  });
+  QObject::connect(m_aiLocalizationFinishButton, &QPushButton::clicked, window(), [this]() {
+    finishAiLocalizationLabelingImage();
+  });
+  polygonLayout->addWidget(m_aiLocalizationPieceButton, 0, 0);
+  polygonLayout->addWidget(m_aiLocalizationReferenceButton, 0, 1);
+  polygonLayout->addWidget(m_aiLocalizationFinishButton, 1, 0, 1, 2);
+  layout->addWidget(polygonControls);
 
   auto* paths = new QLabel(
     QString("raw: %1\nmasks: %2\ndataset: %3\nmodels: %4")
@@ -441,7 +468,7 @@ void MainWindowSetupModule::loadAiLocalizationLabelingImage(int index)
   largeImage()->clearCircles();
   largeImage()->clearGeometryOverlay();
   QString labelError;
-  const QVector<QPoint> storedPolygon = AiMaskLabelStorage::loadPolygon(
+  m_aiLocalizationPolygons = AiMaskLabelStorage::loadPolygons(
     rawPath,
     aiLocalizationLabelsPath(recipes(), m_aiLocalizationLabelingCamera.id),
     &labelError);
@@ -449,15 +476,162 @@ void MainWindowSetupModule::loadAiLocalizationLabelingImage(int index)
   {
     log(labelError);
   }
-  largeImage()->setSearchPolygon(storedPolygon);
-  largeImage()->setPolygonDrawingEnabled(storedPolygon.size() < 3);
+  largeImage()->clearSearchPolygon();
+  largeImage()->setPolygonDrawingEnabled(false);
   *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::AiLocalization;
   if (context().largeTitle)
   {
     context().largeTitle->setText(QString("%1 | %2")
       .arg(tr("actions.labelPieceMasks"), QFileInfo(rawPath).fileName()));
   }
+  updateAiLocalizationPolygonOverlay();
+  if (m_aiLocalizationPieceButton)
+  {
+    m_aiLocalizationPieceButton->setEnabled(true);
+  }
+  if (m_aiLocalizationReferenceButton)
+  {
+    m_aiLocalizationReferenceButton->setEnabled(true);
+  }
+  if (m_aiLocalizationFinishButton)
+  {
+    m_aiLocalizationFinishButton->setEnabled(
+      std::any_of(
+        m_aiLocalizationPolygons.cbegin(),
+        m_aiLocalizationPolygons.cend(),
+        [](const AiSegmentationPolygon& polygon) {
+          return polygon.classId == 0 && polygon.points.size() >= 3;
+        }));
+  }
   updateAiLocalizationLabelingStatus();
+}
+
+void MainWindowSetupModule::beginAiLocalizationPolygon(int classId)
+{
+  if (m_aiLocalizationLabelingIndex < 0)
+  {
+    return;
+  }
+  m_aiLocalizationActiveClassId = classId;
+  QVector<QPoint> editablePolygon;
+  if (classId == 0)
+  {
+    for (const AiSegmentationPolygon& polygon : m_aiLocalizationPolygons)
+    {
+      if (polygon.classId == 0)
+      {
+        editablePolygon = polygon.points;
+        break;
+      }
+    }
+  }
+  largeImage()->setSearchPolygon(editablePolygon);
+  largeImage()->setPolygonDrawingEnabled(editablePolygon.size() < 3);
+  log(classId == 0
+    ? "Labeling AI: disegna la sagoma Pezzo."
+    : "Labeling AI: aggiungi un riferimento orientamento.");
+}
+
+void MainWindowSetupModule::handleAiLocalizationPolygon(const QVector<QPoint>& polygon)
+{
+  if (polygon.size() < 3 || selectedImagePath().isEmpty())
+  {
+    return;
+  }
+  if (m_aiLocalizationActiveClassId == 0)
+  {
+    bool replaced = false;
+    for (AiSegmentationPolygon& stored : m_aiLocalizationPolygons)
+    {
+      if (stored.classId == 0)
+      {
+        stored.points = polygon;
+        replaced = true;
+        break;
+      }
+    }
+    if (!replaced)
+    {
+      m_aiLocalizationPolygons.append({0, polygon});
+    }
+  }
+  else
+  {
+    m_aiLocalizationPolygons.append({1, polygon});
+  }
+
+  AiMaskLabelPaths savedPaths;
+  QString error;
+  if (!AiMaskLabelStorage::savePolygons(
+        selectedImagePath(),
+        aiLocalizationMasksPath(recipes(), m_aiLocalizationLabelingCamera.id),
+        aiLocalizationLabelsPath(recipes(), m_aiLocalizationLabelingCamera.id),
+        m_aiLocalizationPolygons,
+        &savedPaths,
+        &error))
+  {
+    log(error);
+    return;
+  }
+  largeImage()->clearSearchPolygon();
+  largeImage()->setPolygonDrawingEnabled(false);
+  updateAiLocalizationPolygonOverlay();
+  updateAiLocalizationLabelingStatus();
+  if (m_aiLocalizationFinishButton)
+  {
+    m_aiLocalizationFinishButton->setEnabled(true);
+  }
+  log(QString("Label AI salvata: classe=%1 poligoni=%2 file=%3")
+    .arg(m_aiLocalizationActiveClassId == 0 ? "Pezzo" : "Riferimento")
+    .arg(m_aiLocalizationPolygons.size())
+    .arg(savedPaths.labelPath));
+}
+
+void MainWindowSetupModule::finishAiLocalizationLabelingImage()
+{
+  const bool hasPiece = std::any_of(
+    m_aiLocalizationPolygons.cbegin(),
+    m_aiLocalizationPolygons.cend(),
+    [](const AiSegmentationPolygon& polygon) {
+      return polygon.classId == 0 && polygon.points.size() >= 3;
+    });
+  if (!hasPiece)
+  {
+    QMessageBox::warning(window(), "Labeling AI", "Disegna prima il poligono Pezzo.");
+    return;
+  }
+  advanceAiLocalizationLabeling();
+}
+
+void MainWindowSetupModule::updateAiLocalizationPolygonOverlay()
+{
+  GeometryOverlay overlay;
+  int pieceIndex = 0;
+  int referenceIndex = 0;
+  for (const AiSegmentationPolygon& polygon : m_aiLocalizationPolygons)
+  {
+    if (polygon.points.size() < 3)
+    {
+      continue;
+    }
+    const QColor color = polygon.classId == 0
+      ? QColor("#32d26f")
+      : QColor("#ff9f1c");
+    for (int i = 0; i < polygon.points.size(); ++i)
+    {
+      overlay.lines.append({
+        polygon.points[i],
+        polygon.points[(i + 1) % polygon.points.size()],
+        color,
+        3
+      });
+    }
+    const QString label = polygon.classId == 0
+      ? QString("Pezzo %1").arg(++pieceIndex)
+      : QString("Rif. %1").arg(++referenceIndex);
+    overlay.points.append({polygon.points.first(), label, color});
+  }
+  largeImage()->setGeometryOverlay(overlay);
 }
 
 void MainWindowSetupModule::advanceAiLocalizationLabeling()
@@ -486,12 +660,21 @@ void MainWindowSetupModule::updateAiLocalizationLabelingStatus()
   }
   if (m_aiLocalizationLabelingStatus)
   {
+    int piecePolygons = 0;
+    int referencePolygons = 0;
+    for (const AiSegmentationPolygon& polygon : m_aiLocalizationPolygons)
+    {
+      polygon.classId == 0 ? ++piecePolygons : ++referencePolygons;
+    }
     m_aiLocalizationLabelingStatus->setText(
-      QString("Immagine %1/%2 | Etichettate %3 | Rimanenti %4")
+      QString("Immagine %1/%2 | Etichettate %3 | Rimanenti %4\n"
+              "Pezzo: %5 | Riferimenti orientamento: %6")
         .arg(m_aiLocalizationLabelingIndex + 1)
         .arg(m_aiLocalizationLabelingImages.size())
         .arg(labeledCount)
-        .arg(m_aiLocalizationLabelingImages.size() - labeledCount));
+        .arg(m_aiLocalizationLabelingImages.size() - labeledCount)
+        .arg(piecePolygons)
+        .arg(referencePolygons));
   }
   if (m_aiLocalizationPreviousButton)
   {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ai/AiMaskLabelStorage.h"
 #include "gui/modules/MainWindowModuleBase.h"
 #include "processing/MaskPoseEstimator.h"
 #include "runtime/CameraRuntime.h"
@@ -25,9 +26,13 @@ struct AiLocalizationFrameResult
   QString error;
   QString imagePath;
   QString maskPath;
+  QString referenceMaskPath;
   double confidence = 0.0;
+  double referenceConfidence = 0.0;
   double elapsedMs = 0.0;
   MaskPoseResult pose;
+  bool hasOrientationReference = false;
+  cv::Point2d orientationReferenceCenter;
   cv::Mat diagnosticImage;
 };
 
@@ -44,6 +49,7 @@ public:
   void showAiLocalizationPanel(const CameraConfig& camera);
   void showAiLocalizationTrainingPanel(const CameraConfig& camera);
   void advanceAiLocalizationLabeling();
+  void handleAiLocalizationPolygon(const QVector<QPoint>& polygon);
   void showAiClassificationPanel(const CameraConfig& camera);
   void showAiClassificationTrainingPanel(const CameraConfig& camera);
   void showAiSegmentationPanel(const CameraConfig& camera);
@@ -71,6 +77,9 @@ private:
   void startAiLocalizationLabeling(const CameraConfig& camera);
   void loadAiLocalizationLabelingImage(int index);
   void updateAiLocalizationLabelingStatus();
+  void beginAiLocalizationPolygon(int classId);
+  void finishAiLocalizationLabelingImage();
+  void updateAiLocalizationPolygonOverlay();
   void startAiLocalizationTraining(
     const CameraConfig& camera,
     int epochs,
@@ -135,6 +144,11 @@ private:
   QPointer<QLabel> m_aiLocalizationLabelingStatus;
   QPointer<QPushButton> m_aiLocalizationPreviousButton;
   QPointer<QPushButton> m_aiLocalizationNextButton;
+  QPointer<QPushButton> m_aiLocalizationPieceButton;
+  QPointer<QPushButton> m_aiLocalizationReferenceButton;
+  QPointer<QPushButton> m_aiLocalizationFinishButton;
+  QVector<AiSegmentationPolygon> m_aiLocalizationPolygons;
+  int m_aiLocalizationActiveClassId = 0;
   CameraConfig m_aiClassificationCaptureCamera;
   bool m_aiClassificationCaptureToClass = false;
   AiClassificationClassConfig m_aiClassificationCaptureClass;

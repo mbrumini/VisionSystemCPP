@@ -1,0 +1,54 @@
+{
+  "name": "endurance_localizzazioni",
+  "cycles": 10,
+  "items": [
+    {
+      "recipeId": "test_ai_localizzazione",
+      "strategyId": "aiYolo",
+      "shapeId": "plate",
+      "passes": 2,
+      "intervalMs": 100,
+      "xMinMm": 0.0,
+      "xMaxMm": 0.0,
+      "xStepMm": 1.0,
+      "yMinMm": 0.0,
+      "yMaxMm": 0.0,
+      "yStepMm": 1.0,
+      "angleMinDeg": 0.0,
+      "angleMaxDeg": 359.0,
+      "angleStepDeg": 5.0,
+      "limits": {
+        "centerMeanMaxPx": 6.0,
+        "centerMaxPx": 12.0,
+        "angleMeanMaxDeg": 6.0,
+        "angleMaxDeg": 20.0,
+        "processingMeanMaxMs": 250.0,
+        "processingMaxMs": 2000.0
+      }
+    },
+    {
+      "recipeId": "test_cross_modello",
+      "strategyId": "templateModel",
+      "shapeId": "cross",
+      "passes": 2,
+      "intervalMs": 100,
+      "xMinMm": 0.0,
+      "xMaxMm": 0.0,
+      "xStepMm": 1.0,
+      "yMinMm": 0.0,
+      "yMaxMm": 0.0,
+      "yStepMm": 1.0,
+      "angleMinDeg": 0.0,
+      "angleMaxDeg": 355.0,
+      "angleStepDeg": 5.0,
+      "limits": {
+        "centerMeanMaxPx": 3.0,
+        "centerMaxPx": 8.0,
+        "angleMeanMaxDeg": 3.0,
+        "angleMaxDeg": 10.0,
+        "processingMeanMaxMs": 500.0,
+        "processingMaxMs": 2500.0
+      }
+    }
+  ]
+}

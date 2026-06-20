@@ -24,7 +24,9 @@
 - [x] Collegare il risultato alla posa pezzo esistente e mostrare contorno, centro e asse sulla diagnostica.
 - [ ] Usare direttamente il modello ONNX per l'inferenza di produzione e misurare il vantaggio rispetto al worker `.pt`.
 - [ ] Aggiungere fallback configurabile alla localizzazione tradizionale quando la maschera AI non viene trovata o ha confidenza insufficiente.
-- [ ] Dopo la posa primaria, supportare dettagli interni asimmetrici (fori, tacche, asole) per determinare l'orientamento quando il contorno esterno e' circolare, quadrato o simmetrico.
+- [x] Supportare label YOLO multi-poligono con classe `Pezzo` e più poligoni `Riferimento orientamento`, compatibili con le vecchie label.
+- [x] Usare il baricentro complessivo dei riferimenti interni asimmetrici per determinare l'orientamento quando il contorno esterno e' circolare, quadrato o simmetrico.
+- [ ] Aggiungere gomma/rimozione selettiva e modifica dei singoli riferimenti già disegnati.
 
 ## PRIORITA SUBITO DOPO - Test automatici e stabilita'
 
@@ -51,10 +53,10 @@
 - [ ] TestVision: aggiungere confronto automatico tra due report storici con regressioni/miglioramenti su precisione, stabilita' e tempi.
 - [x] TestVision: aggiungere `Localizzazione AI YOLO` tra le strategie selezionabili.
 - [x] Collegare `aiYolo` alla pipeline simulata end-to-end, mantenendo associazione richiesta/frame e restituendo posa, confidenza e tempi a TestVision.
-- [ ] TestVision endurance: eseguire campagne automatiche della durata di ore senza intervento manuale.
-- [ ] TestVision endurance: definire una sequenza di ricette/scenari e cambiarli automaticamente durante la campagna.
-- [ ] TestVision endurance: conservare report, log, errori, tempi e immagini diagnostiche separati per ricetta, ciclo e versione software.
-- [ ] TestVision endurance: produrre al termine un riepilogo comparativo con regressioni, crash, timeout, memoria, precisione e stabilita'.
+- [x] TestVision endurance base: caricare una campagna JSON, cambiare automaticamente ricetta e strategia, ed eseguire cicli consecutivi senza intervento manuale.
+- [x] TestVision endurance base: produrre un report finale per ricetta/ciclo con problemi di validita', precisione angolare/centro e tempi oltre soglia.
+- [ ] TestVision endurance: conservare anche log completi e immagini diagnostiche dei fallimenti separati per ricetta, ciclo e versione software.
+- [ ] TestVision endurance: aggiungere regressioni rispetto a una baseline, crash, timeout, uso memoria e stabilita' di lungo periodo.
 - [ ] TestVision endurance: supportare ripresa dopo arresto anomalo e non cancellare mai i risultati delle campagne precedenti.
 - [ ] Integrare un target test C++ eseguibile con un solo comando prima di avviare o pubblicare il software.
 - [ ] Test matematici: intersezioni, centri, distanze, angoli, diametri, conversione pixel/mm e tolleranze OK/NOK.

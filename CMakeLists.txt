@@ -319,6 +319,8 @@ target_link_libraries(VisionSystemCPP PRIVATE
 
 add_executable(VisionSystemTestVision
     tests/testvision/main.cpp
+    tests/testvision/CampaignEditorDialog.h
+    tests/testvision/CampaignEditorDialog.cpp
     tests/testvision/TestVisionArtifacts.h
     tests/testvision/TestVisionArtifacts.cpp
 )

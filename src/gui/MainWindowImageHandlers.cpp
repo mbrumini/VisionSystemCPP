@@ -1,10 +1,8 @@
 #include "gui/MainWindow.h"
 
-#include "ai/AiMaskLabelStorage.h"
 #include "gui/modules/MainWindowCameraProfile.h"
 #include "gui/geometry/GeometryDiagnosticDrawing.h"
 #include "gui/geometry/GeometryMath.h"
-#include "gui/modules/setup/AiLocalizationPaths.h"
 
 #include <opencv2/imgproc.hpp>
 
@@ -67,23 +65,7 @@ void MainWindow::setupLargeImageHandlers()
 
     if (m_activeDrawingRecipe == MainWindowActiveDrawingRecipe::AiLocalization)
     {
-      AiMaskLabelPaths savedPaths;
-      QString error;
-      if (!AiMaskLabelStorage::savePolygon(
-            m_selectedImagePath,
-            aiLocalizationMasksPath(m_recipeManager, m_selectedCameraId),
-            aiLocalizationLabelsPath(m_recipeManager, m_selectedCameraId),
-            polygon,
-            &savedPaths,
-            &error))
-      {
-        appendLog(error);
-        return;
-      }
-      m_largeImage->setSearchPolygon(polygon);
-      appendLog(QString("AI localization mask saved: %1 label=%2")
-                  .arg(savedPaths.maskPath, savedPaths.labelPath));
-      m_setup.advanceAiLocalizationLabeling();
+      m_setup.handleAiLocalizationPolygon(polygon);
       return;
     }
 

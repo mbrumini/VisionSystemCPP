@@ -303,11 +303,15 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
             pose.cameraId = camera.id;
             pose.method = "ai_segmentation";
             pose.origin = result.pose.center;
-            pose.angleRadians = result.pose.angleRadians;
+            pose.angleRadians = result.hasOrientationReference
+              ? std::atan2(
+                  result.orientationReferenceCenter.y - result.pose.center.y,
+                  result.orientationReferenceCenter.x - result.pose.center.x)
+              : result.pose.angleRadians;
             pose.score = result.confidence;
             pose.xAxis = {
-              std::cos(result.pose.angleRadians),
-              std::sin(result.pose.angleRadians)
+              std::cos(pose.angleRadians),
+              std::sin(pose.angleRadians)
             };
             pose.yAxis = {-pose.xAxis.y, pose.xAxis.x};
             completedRuntime.setCurrentPose(pose);
@@ -316,7 +320,7 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
             reference.found = true;
             reference.method = "ai_segmentation";
             reference.center = result.pose.center;
-            reference.angleRadians = result.pose.angleRadians;
+            reference.angleRadians = pose.angleRadians;
             reference.score = result.confidence;
             reference.inputPoints = static_cast<int>(result.pose.contour.size());
             reference.usedPoints = reference.inputPoints;
@@ -332,7 +336,7 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
               .arg(completedRuntime.currentSimulatorFrame().frameId)
               .arg(result.pose.center.x, 0, 'f', 3)
               .arg(result.pose.center.y, 0, 'f', 3)
-              .arg(result.pose.angleRadians * 180.0 / CV_PI, 0, 'f', 3)
+              .arg(pose.angleRadians * 180.0 / CV_PI, 0, 'f', 3)
               .arg(result.confidence, 0, 'f', 4)
               .arg(result.elapsedMs, 0, 'f', 1));
           }

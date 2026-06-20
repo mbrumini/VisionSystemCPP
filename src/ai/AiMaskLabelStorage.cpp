@@ -41,6 +41,23 @@ bool AiMaskLabelStorage::savePolygon(
   AiMaskLabelPaths* savedPaths,
   QString* errorMessage)
 {
+  return savePolygons(
+    sourceImagePath,
+    masksDirectory,
+    labelsDirectory,
+    {{0, polygon}},
+    savedPaths,
+    errorMessage);
+}
+
+bool AiMaskLabelStorage::savePolygons(
+  const QString& sourceImagePath,
+  const QString& masksDirectory,
+  const QString& labelsDirectory,
+  const QVector<AiSegmentationPolygon>& polygons,
+  AiMaskLabelPaths* savedPaths,
+  QString* errorMessage)
+{
   const QImage source(sourceImagePath);
   if (source.isNull())
   {
@@ -50,7 +67,16 @@ bool AiMaskLabelStorage::savePolygon(
     }
     return false;
   }
-  if (polygon.size() < 3)
+  bool hasPiece = false;
+  for (const AiSegmentationPolygon& polygon : polygons)
+  {
+    if (polygon.classId == 0 && polygon.points.size() >= 3)
+    {
+      hasPiece = true;
+      break;
+    }
+  }
+  if (!hasPiece)
   {
     if (errorMessage)
     {
@@ -72,15 +98,23 @@ bool AiMaskLabelStorage::savePolygon(
   const QString labelPath = QDir(labelsDirectory).filePath(stem + ".txt");
 
   cv::Mat mask = cv::Mat::zeros(source.height(), source.width(), CV_8UC1);
-  std::vector<cv::Point> cvPolygon;
-  cvPolygon.reserve(static_cast<size_t>(polygon.size()));
-  for (const QPoint& point : polygon)
+  for (const AiSegmentationPolygon& polygon : polygons)
   {
-    cvPolygon.emplace_back(
-      qBound(0, point.x(), source.width() - 1),
-      qBound(0, point.y(), source.height() - 1));
+    if (polygon.points.size() < 3)
+    {
+      continue;
+    }
+    std::vector<cv::Point> cvPolygon;
+    cvPolygon.reserve(static_cast<size_t>(polygon.points.size()));
+    for (const QPoint& point : polygon.points)
+    {
+      cvPolygon.emplace_back(
+        qBound(0, point.x(), source.width() - 1),
+        qBound(0, point.y(), source.height() - 1));
+    }
+    const int value = polygon.classId == 0 ? 255 : 128;
+    cv::fillPoly(mask, std::vector<std::vector<cv::Point>>{cvPolygon}, cv::Scalar(value));
   }
-  cv::fillPoly(mask, std::vector<std::vector<cv::Point>>{cvPolygon}, cv::Scalar(255));
   if (!cv::imwrite(maskPath.toStdString(), mask))
   {
     if (errorMessage)
@@ -100,7 +134,15 @@ bool AiMaskLabelStorage::savePolygon(
     return false;
   }
   QTextStream stream(&labelFile);
-  stream << yoloSegmentationLine(polygon, source.size(), 0) << '\n';
+  for (const AiSegmentationPolygon& polygon : polygons)
+  {
+    const QString line = yoloSegmentationLine(
+      polygon.points, source.size(), polygon.classId);
+    if (!line.isEmpty())
+    {
+      stream << line << '\n';
+    }
+  }
 
   if (savedPaths)
   {
@@ -111,6 +153,23 @@ bool AiMaskLabelStorage::savePolygon(
 }
 
 QVector<QPoint> AiMaskLabelStorage::loadPolygon(
+  const QString& sourceImagePath,
+  const QString& labelsDirectory,
+  QString* errorMessage)
+{
+  const QVector<AiSegmentationPolygon> polygons =
+    loadPolygons(sourceImagePath, labelsDirectory, errorMessage);
+  for (const AiSegmentationPolygon& polygon : polygons)
+  {
+    if (polygon.classId == 0)
+    {
+      return polygon.points;
+    }
+  }
+  return {};
+}
+
+QVector<AiSegmentationPolygon> AiMaskLabelStorage::loadPolygons(
   const QString& sourceImagePath,
   const QString& labelsDirectory,
   QString* errorMessage)
@@ -137,36 +196,47 @@ QVector<QPoint> AiMaskLabelStorage::loadPolygon(
     return {};
   }
 
-  const QStringList values = QString::fromUtf8(labelFile.readLine()).simplified().split(' ');
-  if (values.size() < 7 || (values.size() - 1) % 2 != 0)
+  QVector<AiSegmentationPolygon> polygons;
+  while (!labelFile.atEnd())
   {
-    if (errorMessage)
+    const QString text = QString::fromUtf8(labelFile.readLine()).simplified();
+    if (text.isEmpty())
     {
-      *errorMessage = "Label YOLO segmentation non valida: " + labelPath;
+      continue;
     }
-    return {};
-  }
-
-  QVector<QPoint> polygon;
-  polygon.reserve((values.size() - 1) / 2);
-  for (int i = 1; i + 1 < values.size(); i += 2)
-  {
-    bool xOk = false;
-    bool yOk = false;
-    const double x = values[i].toDouble(&xOk);
-    const double y = values[i + 1].toDouble(&yOk);
-    if (!xOk || !yOk)
+    const QStringList values = text.split(' ');
+    bool classOk = false;
+    const int classId = values.value(0).toInt(&classOk);
+    if (!classOk || values.size() < 7 || (values.size() - 1) % 2 != 0)
     {
       if (errorMessage)
       {
-        *errorMessage = "Coordinate label non valide: " + labelPath;
+        *errorMessage = "Label YOLO segmentation non valida: " + labelPath;
       }
       return {};
     }
-    polygon.append({
-      qBound(0, qRound(x * source.width()), source.width() - 1),
-      qBound(0, qRound(y * source.height()), source.height() - 1)
-    });
+    AiSegmentationPolygon polygon;
+    polygon.classId = qMax(0, classId);
+    for (int i = 1; i + 1 < values.size(); i += 2)
+    {
+      bool xOk = false;
+      bool yOk = false;
+      const double x = values[i].toDouble(&xOk);
+      const double y = values[i + 1].toDouble(&yOk);
+      if (!xOk || !yOk)
+      {
+        if (errorMessage)
+        {
+          *errorMessage = "Coordinate label non valide: " + labelPath;
+        }
+        return {};
+      }
+      polygon.points.append({
+        qBound(0, qRound(x * source.width()), source.width() - 1),
+        qBound(0, qRound(y * source.height()), source.height() - 1)
+      });
+    }
+    polygons.append(polygon);
   }
-  return polygon;
+  return polygons;
 }

@@ -105,6 +105,13 @@ void SimulatorBridge::setSampleAvailableHandler(
   m_sampleAvailableHandler = std::move(handler);
 }
 
+void SimulatorBridge::setRecipeRequestHandler(
+  std::function<bool(const QString&, QString*)> handler)
+{
+  std::lock_guard lock(m_mutex);
+  m_recipeRequestHandler = std::move(handler);
+}
+
 void SimulatorBridge::publishResult(const SimulatorFrameMetadata& metadata, const QJsonObject& result)
 {
   if (!metadata.valid())
@@ -317,6 +324,26 @@ void SimulatorBridge::processMessage(
     sendMessage(client, {
       {"type", "pong"},
       {"protocolVersion", kProtocolVersion}
+    });
+    return;
+  }
+
+  if (type == "setRecipe")
+  {
+    const QString recipeId = message.value("recipeId").toString().trimmed();
+    std::function<bool(const QString&, QString*)> handler;
+    {
+      std::lock_guard lock(m_mutex);
+      handler = m_recipeRequestHandler;
+    }
+    QString error;
+    const bool accepted =
+      !recipeId.isEmpty() && handler && handler(recipeId, &error);
+    sendMessage(client, {
+      {"type", accepted ? "recipeAccepted" : "recipeRejected"},
+      {"protocolVersion", kProtocolVersion},
+      {"recipeId", recipeId},
+      {"message", accepted ? "Ricetta caricata" : error}
     });
     return;
   }

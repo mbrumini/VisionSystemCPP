@@ -51,6 +51,7 @@ def main() -> None:
             request_id = str(request.get("request_id", ""))
             image_path = Path(request["image"])
             mask_path = Path(request["mask"])
+            reference_mask_path = Path(request["reference_mask"])
             camera_id = str(request.get("camera_id", ""))
             if not image_path.is_file():
                 raise FileNotFoundError(f"Image not found: {image_path}")
@@ -69,7 +70,19 @@ def main() -> None:
                 continue
 
             confidences = result.boxes.conf.detach().cpu().numpy()
-            best_index = int(np.argmax(confidences))
+            classes = result.boxes.cls.detach().cpu().numpy().astype(int)
+            piece_indices = np.where(classes == 0)[0]
+            if len(piece_indices) == 0:
+                emit({
+                    "type": "result",
+                    "request_id": request_id,
+                    "found": False,
+                    "camera_id": camera_id,
+                    "image": str(image_path),
+                    "elapsed_ms": round((time.perf_counter() - infer_started) * 1000.0, 1),
+                })
+                continue
+            best_index = int(piece_indices[np.argmax(confidences[piece_indices])])
             confidence = float(confidences[best_index])
             mask = result.masks.data[best_index].detach().cpu().numpy()
             original_height, original_width = result.orig_shape
@@ -79,6 +92,27 @@ def main() -> None:
             if not cv2.imwrite(str(mask_path), binary):
                 raise RuntimeError(f"Cannot save mask: {mask_path}")
 
+            reference_indices = np.where(classes == 1)[0]
+            reference_found = len(reference_indices) > 0
+            reference_confidence = 0.0
+            if reference_found:
+                combined_reference = np.zeros((original_height, original_width), dtype=np.uint8)
+                for reference_index in reference_indices:
+                    reference_mask = result.masks.data[int(reference_index)].detach().cpu().numpy()
+                    reference_mask = cv2.resize(
+                        reference_mask,
+                        (original_width, original_height),
+                        interpolation=cv2.INTER_NEAREST,
+                    )
+                    combined_reference = np.maximum(
+                        combined_reference,
+                        (reference_mask >= 0.5).astype(np.uint8) * 255,
+                    )
+                reference_mask_path.parent.mkdir(parents=True, exist_ok=True)
+                if not cv2.imwrite(str(reference_mask_path), combined_reference):
+                    raise RuntimeError(f"Cannot save reference mask: {reference_mask_path}")
+                reference_confidence = float(np.max(confidences[reference_indices]))
+
             emit({
                 "type": "result",
                 "request_id": request_id,
@@ -86,7 +120,10 @@ def main() -> None:
                 "camera_id": camera_id,
                 "image": str(image_path),
                 "mask": str(mask_path),
+                "reference_found": reference_found,
+                "reference_mask": str(reference_mask_path) if reference_found else "",
                 "confidence": round(confidence, 6),
+                "reference_confidence": round(reference_confidence, 6),
                 "elapsed_ms": round((time.perf_counter() - infer_started) * 1000.0, 1),
             })
         except Exception as exc:
