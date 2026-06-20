@@ -12,6 +12,11 @@
 #include <QSettings>
 #include <QVariant>
 
+namespace
+{
+constexpr bool kForceGuruStartup = true;
+}
+
 MainWindow::MainWindow(QWidget* parent)
   : QMainWindow(parent)
   , m_ctx{}
@@ -35,7 +40,11 @@ MainWindow::MainWindow(QWidget* parent)
 
   {
     QSettings settings;
-    if (settings.value("access/startAsGuru", false).toBool())
+    if (kForceGuruStartup)
+    {
+      settings.setValue("access/startAsGuru", true);
+    }
+    if (settings.value("access/startAsGuru", true).toBool())
     {
       AccessUser startupUser;
       startupUser.id = "guru-startup";

@@ -10,3 +10,4 @@ QString aiLocalizationMasksPath(const RecipeManager& recipes, const QString& cam
 QString aiLocalizationLabelsPath(const RecipeManager& recipes, const QString& cameraId);
 QString aiLocalizationDatasetPath(const RecipeManager& recipes, const QString& cameraId);
 QString aiLocalizationModelsPath(const RecipeManager& recipes, const QString& cameraId);
+QString aiNewestLocalizationModelPath(const RecipeManager& recipes, const QString& cameraId);

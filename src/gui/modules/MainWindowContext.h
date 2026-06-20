@@ -40,6 +40,7 @@ enum class MainWindowActiveDrawingRecipe
   None,
   Localization,
   SurfaceDefects,
+  AiLocalization,
   Geometry
 };
 

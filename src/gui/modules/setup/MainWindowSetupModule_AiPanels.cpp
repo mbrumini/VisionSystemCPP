@@ -287,6 +287,7 @@ void MainWindowSetupModule::showAiClassificationTrainingPanel(const CameraConfig
   startButton->setObjectName("touchButton");
   QObject::connect(startButton, &QPushButton::clicked, window(), [this, camera, epochsSpin, imageSizeSpin, batchSpin, deviceEdit, valSplitSpin, modelEdit]() {
     m_aiTrainingGraphCameraId = camera.id;
+    m_aiTrainingGraphIsLocalization = false;
     if (!m_aiTrainingGraphTimer)
     {
       m_aiTrainingGraphTimer = new QTimer(window());

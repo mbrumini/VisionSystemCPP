@@ -1,16 +1,35 @@
 #pragma once
 
 #include "gui/modules/MainWindowModuleBase.h"
+#include "processing/MaskPoseEstimator.h"
 #include "runtime/CameraRuntime.h"
 
 #include <QPointer>
+#include <QHash>
 #include <QString>
+#include <QStringList>
+
+#include <functional>
 
 class CameraConfig;
 class QLabel;
 class QProcess;
+class QPushButton;
 class QTimer;
 class SetupResultsDialog;
+
+struct AiLocalizationFrameResult
+{
+  bool processed = false;
+  bool found = false;
+  QString error;
+  QString imagePath;
+  QString maskPath;
+  double confidence = 0.0;
+  double elapsedMs = 0.0;
+  MaskPoseResult pose;
+  cv::Mat diagnosticImage;
+};
 
 class MainWindowSetupModule : public MainWindowModuleBase
 {
@@ -23,6 +42,8 @@ public:
   void showToolPanel(const CameraConfig& camera, const QString& toolId);
   void showAiPanel(const CameraConfig& camera);
   void showAiLocalizationPanel(const CameraConfig& camera);
+  void showAiLocalizationTrainingPanel(const CameraConfig& camera);
+  void advanceAiLocalizationLabeling();
   void showAiClassificationPanel(const CameraConfig& camera);
   void showAiClassificationTrainingPanel(const CameraConfig& camera);
   void showAiSegmentationPanel(const CameraConfig& camera);
@@ -41,8 +62,30 @@ public:
   QString cameraSetupDetailsText(const CameraConfig& camera) const;
   void showSetupResultsPopup(const CameraConfig& camera);
   void updateSetupResultsPopup(const CameraConfig& camera);
+  void runAiLocalizationInferenceFrame(
+    const CameraConfig& camera,
+    const cv::Mat& frame,
+    std::function<void(const AiLocalizationFrameResult&)> callback);
 
 private:
+  void startAiLocalizationLabeling(const CameraConfig& camera);
+  void loadAiLocalizationLabelingImage(int index);
+  void updateAiLocalizationLabelingStatus();
+  void startAiLocalizationTraining(
+    const CameraConfig& camera,
+    int epochs,
+    int imageSize,
+    int batchSize,
+    const QString& device,
+    double valRatio,
+    const QString& baseModel);
+  void runAiLocalizationInference(const CameraConfig& camera);
+  bool ensureAiLocalizationInferenceWorker(const QString& modelPath);
+  void stopAiLocalizationInferenceWorker();
+  void handleAiLocalizationInferenceOutput();
+  void applyAiLocalizationInferenceResult(
+    const CameraConfig& camera,
+    const AiLocalizationFrameResult& result);
   void startAiClassificationCapture(const CameraConfig& camera, bool toClass, const AiClassificationClassConfig& classConfig = {});
   void captureAiClassificationFrame();
   void prepareAiClassificationDataset(const CameraConfig& camera);
@@ -59,6 +102,7 @@ private:
   void chooseAiClassificationModel(const CameraConfig& camera);
   void handleAiTrainingFinished(int code);
   void updateAiTrainingGraph(const QString& cameraId);
+  void updateAiLocalizationTrainingGraph(const QString& cameraId);
   void stopAiTrainingGraphUpdates();
   bool ensureAiInferenceWorker(const QString& modelPath);
   void stopAiInferenceWorker();
@@ -70,12 +114,27 @@ private:
   QTimer* m_aiTrainingGraphTimer = nullptr;
   QProcess* m_aiProcess = nullptr;
   QProcess* m_aiInferenceProcess = nullptr;
+  QProcess* m_aiLocalizationInferenceProcess = nullptr;
   QPointer<QLabel> m_aiInferenceResultLabel;
+  QPointer<QLabel> m_aiLocalizationInferenceResultLabel;
   QString m_aiInferenceModelPath;
+  QString m_aiLocalizationInferenceModelPath;
+  QString m_aiLocalizationInferenceImagePath;
+  CameraConfig m_aiLocalizationInferenceCamera;
+  QHash<QString, std::function<void(const AiLocalizationFrameResult&)>>
+    m_aiLocalizationInferenceCallbacks;
   QString m_aiTrainingCameraId;
+  QString m_aiLocalizationTrainingCameraId;
   QString m_aiTrainingPreviousModelPath;
   QString m_aiTrainingGraphCameraId;
+  bool m_aiTrainingGraphIsLocalization = false;
   QString m_aiClassificationCaptureCameraId;
+  CameraConfig m_aiLocalizationLabelingCamera;
+  QStringList m_aiLocalizationLabelingImages;
+  int m_aiLocalizationLabelingIndex = -1;
+  QPointer<QLabel> m_aiLocalizationLabelingStatus;
+  QPointer<QPushButton> m_aiLocalizationPreviousButton;
+  QPointer<QPushButton> m_aiLocalizationNextButton;
   CameraConfig m_aiClassificationCaptureCamera;
   bool m_aiClassificationCaptureToClass = false;
   AiClassificationClassConfig m_aiClassificationCaptureClass;

@@ -27,7 +27,7 @@ void MainWindow::buildMenu()
     QSettings settings;
     QAction* startAsGuruAction = accessMenu->addAction(trText("access.startAsGuru"));
     startAsGuruAction->setCheckable(true);
-    startAsGuruAction->setChecked(settings.value("access/startAsGuru", false).toBool());
+    startAsGuruAction->setChecked(settings.value("access/startAsGuru", true).toBool());
     connect(startAsGuruAction, &QAction::toggled, this, [this](bool enabled) {
       QSettings settings;
       settings.setValue("access/startAsGuru", enabled);

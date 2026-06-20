@@ -66,8 +66,8 @@ Il disco C non deve essere usato per pacchetti, cache o dipendenze del progetto.
 
 Percorsi principali:
 
-- Qt: `D:\Qt\6.10.3\msvc2022_64`
-- vcpkg: `D:\dev\vcpkg`
+- Qt: percorso indicato dalla variabile ambiente `QT_DIR`
+- vcpkg: percorso indicato dalla variabile ambiente `VCPKG_ROOT`
 - progetto: `D:\dev\VisionSystemCPP`
 - cache: `D:\dev\.cache`
 - temporanei: `D:\temp`
@@ -77,6 +77,10 @@ Prima di lavorare:
 ```powershell
 .\usa_disco_d.ps1
 ```
+
+`usa_disco_d.ps1` e' una configurazione locale per il PC con disco `C:` pieno.
+Sugli altri PC e' sufficiente impostare `QT_DIR` e `VCPKG_ROOT` sui percorsi
+scelti per le dipendenze.
 
 Build:
 

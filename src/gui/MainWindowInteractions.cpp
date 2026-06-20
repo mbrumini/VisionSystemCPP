@@ -24,6 +24,8 @@
 
 #include <opencv2/imgcodecs.hpp>
 
+#include <cmath>
+
 void MainWindow::incPendingJobs(const QString& cameraId)
 {
   const int v = m_cameraPendingJobs.value(cameraId, 0) + 1;
@@ -254,6 +256,115 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
       updateLargePreview();
     }
     publishSimulatorResult(camera.id);
+    return;
+  }
+  if (requestedStrategy == "aiYolo")
+  {
+    const cv::Mat input = runtime.currentFrame().clone();
+    const qint64 startedAt = QDateTime::currentMSecsSinceEpoch();
+    incPendingJobs(camera.id);
+    appendLog(QString("Pipeline simulatore AI avviata: %1 frame=%2 recipe=%3")
+      .arg(camera.id)
+      .arg(runtime.currentSimulatorFrame().frameId)
+      .arg(m_recipeManager.recipeId()));
+    m_setup.runAiLocalizationInferenceFrame(
+      camera,
+      input,
+      [this, camera, startedAt](const AiLocalizationFrameResult& result) {
+        CameraRuntime& completedRuntime = m_cameraRuntime[camera.id];
+        m_lastSetupScanElapsedMs[camera.id] =
+          QDateTime::currentMSecsSinceEpoch() - startedAt;
+
+        if (!result.error.isEmpty())
+        {
+          completedRuntime.clearCurrentPose(camera.id);
+          m_lastSurfaceLocalizationResults.remove(camera.id);
+          SimulatorBridge::instance().publishFrameEvent(
+            completedRuntime.currentSimulatorFrame(),
+            "processingError",
+            result.error);
+          appendLog(QString("Pipeline simulatore AI errore: %1 frame=%2 error=%3")
+            .arg(camera.id)
+            .arg(completedRuntime.currentSimulatorFrame().frameId)
+            .arg(result.error));
+        }
+        else
+        {
+          SimulatorBridge::instance().publishFrameEvent(
+            completedRuntime.currentSimulatorFrame(),
+            "processingCompleted",
+            result.found
+              ? "Localizzazione AI completata"
+              : "Localizzazione AI completata senza posa valida");
+          if (result.found)
+          {
+            PartPose pose;
+            pose.valid = true;
+            pose.cameraId = camera.id;
+            pose.method = "ai_segmentation";
+            pose.origin = result.pose.center;
+            pose.angleRadians = result.pose.angleRadians;
+            pose.score = result.confidence;
+            pose.xAxis = {
+              std::cos(result.pose.angleRadians),
+              std::sin(result.pose.angleRadians)
+            };
+            pose.yAxis = {-pose.xAxis.y, pose.xAxis.x};
+            completedRuntime.setCurrentPose(pose);
+
+            SurfaceLocalizationReference reference;
+            reference.found = true;
+            reference.method = "ai_segmentation";
+            reference.center = result.pose.center;
+            reference.angleRadians = result.pose.angleRadians;
+            reference.score = result.confidence;
+            reference.inputPoints = static_cast<int>(result.pose.contour.size());
+            reference.usedPoints = reference.inputPoints;
+            reference.xAxisStart = result.pose.center;
+            reference.xAxisEnd = result.pose.center + pose.xAxis * 60.0;
+            reference.yAxisStart = result.pose.center;
+            reference.yAxisEnd = result.pose.center + pose.yAxis * 60.0;
+            m_lastSurfaceLocalizationResults.insert(camera.id, reference);
+            appendLog(QString(
+              "Pipeline simulatore AI coordinate: %1 frame=%2 X=%3 Y=%4 A=%5 "
+              "confidence=%6 inferenceMs=%7")
+              .arg(camera.id)
+              .arg(completedRuntime.currentSimulatorFrame().frameId)
+              .arg(result.pose.center.x, 0, 'f', 3)
+              .arg(result.pose.center.y, 0, 'f', 3)
+              .arg(result.pose.angleRadians * 180.0 / CV_PI, 0, 'f', 3)
+              .arg(result.confidence, 0, 'f', 4)
+              .arg(result.elapsedMs, 0, 'f', 1));
+          }
+          else
+          {
+            completedRuntime.clearCurrentPose(camera.id);
+            m_lastSurfaceLocalizationResults.remove(camera.id);
+            appendLog(QString("Pipeline simulatore AI: %1 frame=%2 found=false")
+              .arg(camera.id)
+              .arg(completedRuntime.currentSimulatorFrame().frameId));
+          }
+        }
+
+        if (camera.id == m_selectedCameraId)
+        {
+          if (!result.diagnosticImage.empty())
+          {
+            m_selectedPreview = m_imaging.matToPixmap(result.diagnosticImage);
+            m_largeImage->setImage(m_selectedPreview);
+          }
+          GeometryOverlay overlay;
+          m_geometry.appendCurrentPartPoseOverlay(camera, overlay);
+          m_largeImage->setGeometryOverlay(overlay);
+          updateLargePreview();
+        }
+        publishSimulatorResult(camera.id);
+        decPendingJobs(camera.id);
+        updateMeasurementResults();
+        QTimer::singleShot(0, this, [this, camera]() {
+          processNextSimulatorFrame(camera);
+        });
+      });
     return;
   }
   QRect roi;

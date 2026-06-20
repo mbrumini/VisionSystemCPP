@@ -6,3 +6,4 @@
 class RecipeManager;
 
 QPixmap renderAiClassificationTrainingGraph(const RecipeManager& recipes, const QString& cameraId);
+QPixmap renderAiLocalizationTrainingGraph(const RecipeManager& recipes, const QString& cameraId);

@@ -2,8 +2,11 @@
 
 #include "config/RecipeManager.h"
 #include "gui/modules/setup/AiClassificationPaths.h"
+#include "gui/modules/setup/AiLocalizationPaths.h"
 
+#include <QDirIterator>
 #include <QFile>
+#include <QFileInfo>
 #include <QPainter>
 #include <QTextStream>
 
@@ -85,7 +88,7 @@ QVector<double> lastValues(const QVector<double>& values, int count)
   return values.mid(values.size() - count);
 }
 
-void drawTrainingLegend(QPainter& painter, const QRect& chart)
+void drawTrainingLegend(QPainter& painter, const QRect& chart, const QString& metricLabel)
 {
   QFont legendFont = painter.font();
   legendFont.setPointSize(18);
@@ -95,7 +98,7 @@ void drawTrainingLegend(QPainter& painter, const QRect& chart)
   painter.setPen(QPen(QColor("#3fb950"), 4));
   painter.drawLine(chart.left(), legendY, chart.left() + 40, legendY);
   painter.setPen(QColor("#e6edf3"));
-  painter.drawText(chart.left() + 50, legendY + 7, "Accuracy");
+  painter.drawText(chart.left() + 50, legendY + 7, metricLabel);
   painter.setPen(QPen(QColor("#f778ba"), 4));
   painter.drawLine(chart.left() + 210, legendY, chart.left() + 250, legendY);
   painter.setPen(QColor("#e6edf3"));
@@ -107,9 +110,15 @@ void drawTrainingLegend(QPainter& painter, const QRect& chart)
 }
 }
 
-QPixmap renderAiClassificationTrainingGraph(const RecipeManager& recipes, const QString& cameraId)
+QPixmap renderTrainingGraph(
+  const QString& resultsPath,
+  const QString& cameraId,
+  const QString& title,
+  const QString& trainLossColumn,
+  const QString& valLossColumn,
+  const QString& metricColumn,
+  const QString& metricLabel)
 {
-  const QString resultsPath = aiNewestClassificationResultsPath(recipes, cameraId);
   QPixmap pixmap(1280, 720);
   pixmap.fill(QColor("#101418"));
 
@@ -130,7 +139,8 @@ QPixmap renderAiClassificationTrainingGraph(const RecipeManager& recipes, const 
   titleFont.setPointSize(26);
   titleFont.setBold(true);
   painter.setFont(titleFont);
-  painter.drawText(QRect(90, 25, 1000, 40), Qt::AlignLeft | Qt::AlignVCenter, QString("Training AI - %1").arg(cameraId));
+  painter.drawText(QRect(90, 25, 1100, 40), Qt::AlignLeft | Qt::AlignVCenter,
+                   QString("%1 - %2").arg(title, cameraId));
 
   QVector<double> epochs;
   QVector<double> trainLoss;
@@ -143,9 +153,9 @@ QPixmap renderAiClassificationTrainingGraph(const RecipeManager& recipes, const 
     QTextStream stream(&file);
     const QStringList header = stream.readLine().split(',');
     const int epochIndex = csvIndex(header, "epoch");
-    const int trainLossIndex = csvIndex(header, "train/loss");
-    const int valLossIndex = csvIndex(header, "val/loss");
-    const int top1Index = csvIndex(header, "metrics/accuracy_top1");
+    const int trainLossIndex = csvIndex(header, trainLossColumn);
+    const int valLossIndex = csvIndex(header, valLossColumn);
+    const int top1Index = csvIndex(header, metricColumn);
 
     while (!stream.atEnd())
     {
@@ -204,6 +214,44 @@ QPixmap renderAiClassificationTrainingGraph(const RecipeManager& recipes, const 
     }
   }
 
-  drawTrainingLegend(painter, chart);
+  drawTrainingLegend(painter, chart, metricLabel);
   return pixmap;
+}
+
+QPixmap renderAiClassificationTrainingGraph(const RecipeManager& recipes, const QString& cameraId)
+{
+  return renderTrainingGraph(
+    aiNewestClassificationResultsPath(recipes, cameraId),
+    cameraId,
+    "Training classificazione",
+    "train/loss",
+    "val/loss",
+    "metrics/accuracy_top1",
+    "Accuracy");
+}
+
+QPixmap renderAiLocalizationTrainingGraph(const RecipeManager& recipes, const QString& cameraId)
+{
+  QFileInfo newestResults;
+  QDirIterator it(
+    aiLocalizationModelsPath(recipes, cameraId),
+    {"results.csv"},
+    QDir::Files,
+    QDirIterator::Subdirectories);
+  while (it.hasNext())
+  {
+    const QFileInfo candidate(it.next());
+    if (!newestResults.exists() || candidate.lastModified() > newestResults.lastModified())
+    {
+      newestResults = candidate;
+    }
+  }
+  return renderTrainingGraph(
+    newestResults.exists() ? newestResults.absoluteFilePath() : QString(),
+    cameraId,
+    "Training localizzazione AI",
+    "train/seg_loss",
+    "val/seg_loss",
+    "metrics/mAP50(M)",
+    "mAP50 mask");
 }

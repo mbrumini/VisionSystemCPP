@@ -81,7 +81,7 @@ QColor iconColor(const QString& id)
       id == "configureStrategy" || id == "previewModel" ||
       id == "acquireModel" || id == "testShapeModel" ||
       id == "testTemplateModel" || id == "surfaceModel" ||
-      id == "ai" || id == "aiModel" || id == "aiClassification" ||
+      id == "ai" || id == "aiModel" || id == "aiLocalization" || id == "aiClassification" ||
       id == "aiAnomaly" || id == "aiSegmentation" ||
       id == "confidence" ||
       id == "classes" || id == "datasetCapture" ||
@@ -169,6 +169,7 @@ QIcon IconCatalog::icon(const QString& id)
     {"aiModel", ":/icons/tool-ai.svg"},
     {"ai", ":/icons/tool-ai.svg"},
     {"aiClassification", ":/icons/tags.svg"},
+    {"aiLocalization", ":/icons/localization.svg"},
     {"aiAnomaly", ":/icons/sparkles.svg"},
     {"aiSegmentation", ":/icons/shapes.svg"},
     {"aiTrain", ":/icons/play.svg"},

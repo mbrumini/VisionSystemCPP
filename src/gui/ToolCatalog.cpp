@@ -135,6 +135,13 @@ const QHash<QString, ToolTemplate>& tools()
       {"aiAnomaly", "tools.aiAnomaly"},
       {"aiSegmentation", "tools.aiSegmentation"}
     })},
+    {"aiLocalization", makeTool("aiLocalization", "tools.aiLocalization", {
+      {"acquireAiRawImage", "actions.acquireAiRawImage"},
+      {"labelPieceMasks", "actions.labelPieceMasks"},
+      {"prepareAiDataset", "actions.prepareAiDataset"},
+      {"trainAiModel", "actions.trainAiModel"},
+      {"runInference", "actions.runInference"}
+    })},
     {"aiClassification", makeTool("aiClassification", "tools.aiClassification", {
       {"acquireAiRawImage", "actions.acquireAiRawImage"},
       {"addAiClass", "actions.addAiClass"},

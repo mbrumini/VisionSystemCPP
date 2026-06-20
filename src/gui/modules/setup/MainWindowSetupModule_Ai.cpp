@@ -80,9 +80,6 @@ void MainWindowSetupModule::showAiPanel(const CameraConfig& camera)
     gridLayout->addWidget(button, visibleToolIndex / 2, visibleToolIndex % 2);
     ++visibleToolIndex;
   };
-  addAiTool("aiLocalization", tr("tools.aiLocalization"), [this, camera]() {
-    showAiLocalizationPanel(camera);
-  });
   addAiTool("aiClassification", tr("tools.aiClassification"), [this, camera]() {
     showAiClassificationPanel(camera);
   });

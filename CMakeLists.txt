@@ -56,6 +56,8 @@ add_executable(VisionSystemCPP
     src/config/RecipeJsonUtils.cpp
     src/config/TranslationManager.h
     src/config/TranslationManager.cpp
+    src/ai/AiMaskLabelStorage.h
+    src/ai/AiMaskLabelStorage.cpp
     src/calibration/CalibrationTypes.h
     src/calibration/CalibrationPatternDetector.h
     src/calibration/CalibrationPatternDetector.cpp
@@ -194,6 +196,7 @@ add_executable(VisionSystemCPP
     src/gui/modules/setup/AiTrainingGraph.cpp
     src/gui/modules/setup/MainWindowSetupModule_AiPanels.cpp
     src/gui/modules/setup/MainWindowSetupModule_AiLocalizationPanel.cpp
+    src/gui/modules/setup/MainWindowSetupModule_AiLocalizationInference.cpp
     src/gui/modules/setup/MainWindowSetupModule_AiSegmentationPanels.cpp
     src/gui/modules/setup/MainWindowSetupModule_Ai.cpp
     src/gui/modules/setup/MainWindowSetupModule_AiTraining.cpp
@@ -262,6 +265,8 @@ add_executable(VisionSystemCPP
     src/processing/CircleFit.cpp
     src/processing/LocalizationProcessor.h
     src/processing/LocalizationProcessor.cpp
+    src/processing/MaskPoseEstimator.h
+    src/processing/MaskPoseEstimator.cpp
     src/processing/geometry/GeometryDetectorCommon.h
     src/processing/geometry/ThresholdMaskBuilder.h
     src/processing/geometry/ThresholdMaskBuilder.cpp
@@ -314,6 +319,8 @@ target_link_libraries(VisionSystemCPP PRIVATE
 
 add_executable(VisionSystemTestVision
     tests/testvision/main.cpp
+    tests/testvision/TestVisionArtifacts.h
+    tests/testvision/TestVisionArtifacts.cpp
 )
 
 target_link_libraries(VisionSystemTestVision PRIVATE
@@ -328,6 +335,27 @@ target_include_directories(VisionSystemTestVision PRIVATE
 target_compile_definitions(VisionSystemTestVision PRIVATE
     PROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
 )
+
+enable_testing()
+
+add_executable(VisionSystemProcessingTests
+    tests/processing/test_mask_pose.cpp
+    src/ai/AiMaskLabelStorage.h
+    src/ai/AiMaskLabelStorage.cpp
+    src/processing/MaskPoseEstimator.h
+    src/processing/MaskPoseEstimator.cpp
+)
+
+target_link_libraries(VisionSystemProcessingTests PRIVATE
+    ${OpenCV_LIBS}
+    Qt6::Widgets
+)
+
+target_include_directories(VisionSystemProcessingTests PRIVATE
+    src
+)
+
+add_test(NAME mask_pose_estimator COMMAND VisionSystemProcessingTests)
 
 target_include_directories(VisionSystemCPP PRIVATE
     src

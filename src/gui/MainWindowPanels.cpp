@@ -226,7 +226,6 @@ void MainWindow::showCameraToolList(const CameraConfig& camera)
   addTool("measurements");
   const bool hasVisibleAiTool =
     m_accessSession.role() == AccessRole::Guru ||
-    QSettings().value("access/tools/aiLocalization", true).toBool() ||
     QSettings().value("access/tools/aiClassification", true).toBool() ||
     QSettings().value("access/tools/aiAnomaly", true).toBool() ||
     QSettings().value("access/tools/aiSegmentation", true).toBool();
@@ -295,6 +294,12 @@ void MainWindow::showLocalizationStrategyList(const CameraConfig& camera)
   int strategyIndex = 0;
   for (const SurfaceLocalizationStrategyDefinition& strategy : SurfaceLocalizationStrategies::all(m_translations))
   {
+    if (strategy.id == "aiYolo" &&
+        m_accessSession.role() != AccessRole::Guru &&
+        !QSettings().value("access/tools/aiLocalization", true).toBool())
+    {
+      continue;
+    }
     const QString iconId = strategy.id == "threshold" ? "surfaceCircleThreshold" :
       (strategy.id == "edge" ? "surfaceCircleEdge" :
        (strategy.id == "edgePca" ? "surfacePca" :
@@ -302,6 +307,11 @@ void MainWindow::showLocalizationStrategyList(const CameraConfig& camera)
         (strategy.id == "model" ? "surfaceModel" : "aiModel"))));
     auto* button = createTouchIconButton(iconId, strategy.label, strategyGrid);
     connect(button, &QPushButton::clicked, this, [this, camera, strategy]() {
+      if (strategy.id == "aiYolo")
+      {
+        m_setup.showAiLocalizationPanel(camera);
+        return;
+      }
       m_surface.showSurfaceLocalizationStrategyPanel(camera, strategy.id);
     });
     strategyLayout->addWidget(button, strategyIndex / 4, strategyIndex % 4);

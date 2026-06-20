@@ -14,8 +14,11 @@ if (-not (Test-Path $buildExe)) {
 }
 
 function Find-WindeployQt {
-    $candidates = @(
-        "D:\Qt\6.10.3\msvc2022_64\bin\windeployqt.exe",
+    $candidates = @()
+    if ($env:QT_DIR) {
+        $candidates += Join-Path $env:QT_DIR "bin\windeployqt.exe"
+    }
+    $candidates += @(
         (Join-Path $projectRoot "build\vcpkg_installed\x64-windows\tools\Qt6\bin\windeployqt.exe"),
         (Join-Path $projectRoot "build\vcpkg_installed\x64-windows\bin\windeployqt.exe")
     )

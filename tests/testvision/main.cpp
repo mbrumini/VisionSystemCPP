@@ -40,6 +40,8 @@
 #include <numeric>
 #include <vector>
 
+#include "TestVisionArtifacts.h"
+
 namespace
 {
 const wchar_t* kPipePath = L"\\\\.\\pipe\\VisionSystemSimulator";
@@ -529,6 +531,7 @@ private:
     m_strategyCombo->addItem("Corona edge", "edge");
     m_strategyCombo->addItem("Shape model", "shapeModel");
     m_strategyCombo->addItem("Template model", "templateModel");
+    m_strategyCombo->addItem("Localizzazione AI YOLO", "aiYolo");
     m_recipeCombo = new QComboBox(configPanel);
     m_passes = new QSpinBox(configPanel);
     m_passes->setRange(1, 1000);
@@ -560,8 +563,10 @@ private:
     m_startButton = new QPushButton("Start", configPanel);
     m_stopButton = new QPushButton("Stop", configPanel);
     m_sendSampleButton = new QPushButton("Invia campione a Vision", configPanel);
+    m_generateDatasetButton = new QPushButton("Genera dataset AI", configPanel);
     m_stopButton->setEnabled(false);
     buttons->addWidget(m_sendSampleButton);
+    buttons->addWidget(m_generateDatasetButton);
     buttons->addWidget(m_startButton);
     buttons->addWidget(m_stopButton);
     configLayout->addLayout(buttons);
@@ -608,6 +613,7 @@ private:
     connect(m_startButton, &QPushButton::clicked, this, [this]() { startTest(); });
     connect(m_stopButton, &QPushButton::clicked, this, [this]() { stopTest("Arrestato dall'utente"); });
     connect(m_sendSampleButton, &QPushButton::clicked, this, [this]() { sendSample(); });
+    connect(m_generateDatasetButton, &QPushButton::clicked, this, [this]() { generateAiDataset(); });
     connect(m_shapeCombo, &QComboBox::currentIndexChanged, this, [this]() { updateMasterShape(); });
     connect(m_recipeCombo, &QComboBox::currentTextChanged, this, [this](const QString& text) {
       m_expectedRecipeId = text.trimmed();
@@ -818,6 +824,64 @@ private:
       }
     }
     return true;
+  }
+
+  void generateAiDataset()
+  {
+    QString error;
+    if (!buildPlan(&error))
+    {
+      QMessageBox::warning(this, "TestVision", error);
+      return;
+    }
+    if (m_master.empty())
+    {
+      QMessageBox::warning(this, "TestVision", "Immagine master non disponibile.");
+      return;
+    }
+
+    QVector<TestVisionDatasetImage> images;
+    for (const TestPose& pose : m_plan)
+    {
+      if (pose.pass != 1)
+      {
+        continue;
+      }
+      const double txPx = pose.xMm / m_pixelSize->value();
+      const double tyPx = pose.yMm / m_pixelSize->value();
+      TestVisionDatasetImage item;
+      item.fileName = QString("image_%1.png").arg(pose.poseIndex, 6, 10, QChar('0'));
+      item.image = transformImage(m_master, pose.angleDeg, txPx, tyPx);
+      item.metadata["poseIndex"] = pose.poseIndex;
+      item.metadata["xMm"] = pose.xMm;
+      item.metadata["yMm"] = pose.yMm;
+      item.metadata["angleDeg"] = pose.angleDeg;
+      item.metadata["expectedCenterX"] = (m_canvasWidth - 1) * 0.5 + txPx;
+      item.metadata["expectedCenterY"] = (m_canvasHeight - 1) * 0.5 + tyPx;
+      item.metadata["shape"] = m_shapeCombo->currentData().toString();
+      item.metadata["strategyId"] = m_strategyCombo->currentData().toString();
+      images.append(std::move(item));
+    }
+
+    const QString recipeId = m_recipeCombo->currentText().trimmed();
+    const QString cameraId = m_scenario.value("cameraId").toString("CAM01");
+    const QString rawImagesDirectory = QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath(
+      QString("recipes/%1/images/%2/ai/localization_segmentation/raw")
+        .arg(recipeId, cameraId));
+    const QString scenarioName = m_scenario.value("name").toString(
+      QFileInfo(m_scenarioPath).completeBaseName());
+    const QString manifestPath = saveTestVisionLabelingBatch(
+      rawImagesDirectory, scenarioName, images, &error);
+    if (manifestPath.isEmpty())
+    {
+      QMessageBox::warning(this, "TestVision", error);
+      return;
+    }
+    appendLog(QString("Immagini AI per labeling: %1 salvate in %2")
+      .arg(images.size())
+      .arg(QDir::toNativeSeparators(rawImagesDirectory)));
+    appendLog("Manifest lotto: " + QDir::toNativeSeparators(manifestPath));
+    m_stateLabel->setText(QString("Dataset AI creato: %1 immagini").arg(images.size()));
   }
 
   void startTest()
@@ -1213,15 +1277,19 @@ private:
     report["generatedAt"] = QDateTime::currentDateTime().toString(Qt::ISODateWithMs);
     report["pixelSizeMm"] = m_pixelSize->value();
     report["passes"] = m_passes->value();
+    report["strategyId"] = m_strategyCombo->currentData().toString();
+    report["recipeId"] = m_recipeCombo->currentText().trimmed();
     report["frames"] = frames;
     const QDir scenarioDir = QFileInfo(m_scenarioPath).dir();
     const QString path = scenarioDir.absoluteFilePath(m_scenario.value("output").toString());
-    QDir().mkpath(QFileInfo(path).dir().absolutePath());
-    QFile file(path);
-    if (file.open(QIODevice::WriteOnly | QIODevice::Truncate))
+    QString error;
+    const QString versionedPath = saveVersionedTestReport(path, report, &error);
+    if (versionedPath.isEmpty())
     {
-      file.write(QJsonDocument(report).toJson(QJsonDocument::Indented));
+      appendLog(error);
+      return;
     }
+    appendLog("Report salvato: " + QDir::toNativeSeparators(versionedPath));
   }
 
   void appendLog(const QString& message)
@@ -1277,6 +1345,7 @@ private:
   QComboBox* m_strategyCombo = nullptr;
   QComboBox* m_recipeCombo = nullptr;
   QPushButton* m_sendSampleButton = nullptr;
+  QPushButton* m_generateDatasetButton = nullptr;
   int m_canvasWidth = 640;
   int m_canvasHeight = 480;
   int m_canvasBackground = 240;

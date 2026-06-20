@@ -2,20 +2,28 @@
 
 ## PRIORITA CORRENTE - Localizzazione AI tramite segmentazione
 
-- [ ] PROSSIMA ATTIVITA OPERATIVA: riprendere da `Localizzazione AI > Labeling` e completare il primo flusso end-to-end su una ricetta di test, senza mischiare classificazione o segmentazione difetti.
+- [ ] Rimuovere il forcing temporaneo `kForceGuruStartup` quando non servira' piu' avviare sempre il software come Guru.
+- [ ] PROSSIMA ATTIVITA OPERATIVA: completare `Localizzazione AI > Labeling` e il primo flusso end-to-end su una ricetta di test, senza mischiare classificazione o segmentazione difetti.
 - [x] Definire il flusso: una sola classe `Pezzo`, maschera AI e calcolo OpenCV di centroide, contorno, area e orientamento.
 - [x] Separare completamente percorsi e dati da classificazione e segmentazione difetti.
 - [x] Creare cartelle dedicate per camera/ricetta: `raw`, `masks`, `labels`, `datasets/<camera>/localization_segmentation` e `models/<camera>/localization_segmentation`.
 - [x] Aggiungere `Localizzazione AI` ai tool opzionali configurabili, sempre visibile a Guru.
 - [x] Creare pannello dedicato con fasi Acquisizione, Labeling, Training e Inferenza.
 - [x] Collegare acquisizione raw singola nella cartella dedicata.
-- [ ] Implementare editor labeling maschera `Pezzo`, salvando maschera e label associati senza modificare le immagini raw. Questo e' il primo sviluppo da eseguire.
+- [x] Implementare primo editor labeling poligonale `Pezzo`, salvando maschera PNG e label YOLO associate senza modificare le immagini raw; ricaricare le label esistenti per modificarle.
+- [x] Aggiungere labeling sequenziale del lotto: apertura automatica della prima raw non etichettata, salvataggio e avanzamento automatico, precedente/successiva e conteggio completate/rimanenti.
+- [ ] Estendere l'editor labeling con pennello, gomma e annulla/ripristina, riusando lo stesso storage mask/label.
 - [ ] Aggiungere acquisizione raw continua con start/stop e intervallo configurabile, riutilizzando il componente della classificazione.
 - [ ] Preparare dataset YOLO segmentation con split train/validation/test e immagini negative senza pezzo.
-- [ ] Implementare training dedicato, grafico live, confronto modello precedente/nuovo e promozione esplicita.
-- [ ] Esportare e usare il modello ONNX per inferenza veloce.
-- [ ] Post-processing OpenCV: selezione maschera, centroide, area, contorno, bounding box, orientamento e controlli di validita'.
-- [ ] Collegare il risultato alla posa pezzo esistente e aggiungere fallback alla localizzazione tradizionale.
+- [x] Implementare il primo training dedicato YOLO segmentation su GPU, con preparazione automatica train/validation ed export ONNX.
+- [x] Aggiungere grafico live del training localizzazione con loss segmentazione e mAP50 maschera.
+- [x] Aggiungere schermata parametri prima del training localizzazione, coerente con la classificazione: epoch, image size, batch, validation, device e modello base.
+- [ ] Aggiungere confronto modello precedente/nuovo e promozione esplicita al training di localizzazione.
+- [x] Implementare la prima inferenza GPU dal modello YOLO segmentation addestrato, con worker persistente e selezione automatica dell'ultimo `best.pt`.
+- [x] Post-processing OpenCV: selezione maschera, centroide, area, contorno, bounding box, orientamento e controlli di validita'.
+- [x] Collegare il risultato alla posa pezzo esistente e mostrare contorno, centro e asse sulla diagnostica.
+- [ ] Usare direttamente il modello ONNX per l'inferenza di produzione e misurare il vantaggio rispetto al worker `.pt`.
+- [ ] Aggiungere fallback configurabile alla localizzazione tradizionale quando la maschera AI non viene trovata o ha confidenza insufficiente.
 - [ ] Dopo la posa primaria, supportare dettagli interni asimmetrici (fori, tacche, asole) per determinare l'orientamento quando il contorno esterno e' circolare, quadrato o simmetrico.
 
 ## PRIORITA SUBITO DOPO - Test automatici e stabilita'
@@ -38,9 +46,20 @@
 - [ ] PIPELINE TEST MULTICAMERA - Fase 7: escludere da Git frame temporanei trasformati, workspace di esecuzione, report generati, log e altri artefatti runtime; valutare Git LFS solo per futuri dataset o modelli pesanti.
 - [ ] PIPELINE TEST MULTICAMERA - Fase 8: generare report JSON e HTML con riepilogo OK/NOK, errori numerici, stabilita', tempi medi/massimi e immagini diagnostiche dei fallimenti.
 - [x] TestVision: salvare il report parziale anche quando il test viene fermato manualmente.
+- [x] TestVision: conservare uno storico timestampato dei report mantenendo anche il file `latest` configurato dallo scenario, per confrontare prima/dopo una modifica.
+- [x] TestVision: generare immagini AI persistenti direttamente nella cartella raw di localizzazione della ricetta/camera selezionata, con ground truth e manifest JSON versionato, senza cancellare le sessioni precedenti.
+- [ ] TestVision: aggiungere confronto automatico tra due report storici con regressioni/miglioramenti su precisione, stabilita' e tempi.
+- [x] TestVision: aggiungere `Localizzazione AI YOLO` tra le strategie selezionabili.
+- [x] Collegare `aiYolo` alla pipeline simulata end-to-end, mantenendo associazione richiesta/frame e restituendo posa, confidenza e tempi a TestVision.
+- [ ] TestVision endurance: eseguire campagne automatiche della durata di ore senza intervento manuale.
+- [ ] TestVision endurance: definire una sequenza di ricette/scenari e cambiarli automaticamente durante la campagna.
+- [ ] TestVision endurance: conservare report, log, errori, tempi e immagini diagnostiche separati per ricetta, ciclo e versione software.
+- [ ] TestVision endurance: produrre al termine un riepilogo comparativo con regressioni, crash, timeout, memoria, precisione e stabilita'.
+- [ ] TestVision endurance: supportare ripresa dopo arresto anomalo e non cancellare mai i risultati delle campagne precedenti.
 - [ ] Integrare un target test C++ eseguibile con un solo comando prima di avviare o pubblicare il software.
 - [ ] Test matematici: intersezioni, centri, distanze, angoli, diametri, conversione pixel/mm e tolleranze OK/NOK.
-- [ ] Test localizzazione AI: centroide, area e orientamento calcolati da maschere note.
+- [x] Test localizzazione AI base: centroide, area e orientamento calcolati da una maschera nota; salvataggio e ricaricamento mask/label YOLO.
+- [ ] Integrare in TestVision scenari end-to-end di localizzazione AI dopo l'attivazione dell'inferenza ONNX.
 - [ ] Test detector su immagini fisse con risultati attesi e tolleranze numeriche: punto, linea, cerchio, arco e localizzazione pezzo.
 - [ ] Test negativi: contorno/modello/pezzo assente deve produrre uno stato coerente senza risultati intermittenti.
 - [ ] Test di stabilita': elaborare piu' volte lo stesso frame e verificare che geometrie, posa, overlay e misure non appaiano e scompaiano.
@@ -99,7 +118,7 @@
 
 ## Runtime camera e origine pezzo
 
-- [ ] Verificare deploy icone su altri PC: quando spariscono, controllare copia plugin Qt SVG `imageformats/qsvg.dll` e `iconengines/qsvgicon.dll` accanto all'exe; validare anche CMakePresets/CMAKE_PREFIX_PATH se Qt non e' in `D:/Qt/6.10.3/msvc2022_64`.
+- [ ] Verificare deploy icone su altri PC: quando spariscono, controllare copia plugin Qt SVG `imageformats/qsvg.dll` e `iconengines/qsvgicon.dll` accanto all'exe; validare anche `QT_DIR` e il rilevamento Qt tramite CMakePresets.
 - [ ] IMPORTANTE: implementare runtime reale multicamera con pipeline/thread separato per ogni camera attiva, fino a 16 camere, e aggiornamento GUI tramite risultati asincroni.
 - [ ] Collegare misure future, controlli superficie e AI alla posa corrente invece che alle sole coordinate pixel assolute.
 - [ ] Gestire il caso posa non valida: blocco tool dipendenti, risultato NOK o stato di allarme configurabile.

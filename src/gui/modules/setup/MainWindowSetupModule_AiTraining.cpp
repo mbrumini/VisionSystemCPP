@@ -5,6 +5,7 @@
 #include "gui/modules/setup/AiModelComparison.h"
 #include "gui/modules/setup/AiPythonRuntime.h"
 #include "gui/modules/setup/AiTrainingGraph.h"
+#include "gui/modules/setup/AiLocalizationPaths.h"
 
 #include <QDir>
 #include <QFileDialog>
@@ -137,6 +138,18 @@ void MainWindowSetupModule::startAiProcess(
     });
     QObject::connect(m_aiProcess, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), window(), [this](int code, QProcess::ExitStatus status) {
       log(QString("AI process finished: code=%1 status=%2").arg(code).arg(status == QProcess::NormalExit ? "normal" : "crash"));
+      if (!m_aiLocalizationTrainingCameraId.isEmpty())
+      {
+        stopAiTrainingGraphUpdates();
+        if (code == 0)
+        {
+          log(QString("Training localizzazione AI completato: %1 -> %2")
+            .arg(m_aiLocalizationTrainingCameraId)
+            .arg(aiLocalizationModelsPath(recipes(), m_aiLocalizationTrainingCameraId)));
+        }
+        m_aiLocalizationTrainingCameraId.clear();
+        return;
+      }
       handleAiTrainingFinished(code);
     });
   }
@@ -255,6 +268,16 @@ void MainWindowSetupModule::updateAiTrainingGraph(const QString& cameraId)
   largeImage()->setImage(selectedPreview());
 }
 
+void MainWindowSetupModule::updateAiLocalizationTrainingGraph(const QString& cameraId)
+{
+  if (cameraId.isEmpty() || !largeImage())
+  {
+    return;
+  }
+  selectedPreview() = renderAiLocalizationTrainingGraph(recipes(), cameraId);
+  largeImage()->setImage(selectedPreview());
+}
+
 void MainWindowSetupModule::stopAiTrainingGraphUpdates()
 {
   if (m_aiTrainingGraphTimer)
@@ -262,5 +285,6 @@ void MainWindowSetupModule::stopAiTrainingGraphUpdates()
     m_aiTrainingGraphTimer->stop();
   }
   m_aiTrainingGraphCameraId.clear();
+  m_aiTrainingGraphIsLocalization = false;
 }
 

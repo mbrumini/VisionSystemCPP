@@ -30,6 +30,10 @@ Per applicare le variabili utente:
 
 Dopo l'esecuzione, aprire un nuovo terminale.
 
+Questi percorsi sono specifici di questo PC. Il progetto condiviso usa le
+variabili `QT_DIR` e `VCPKG_ROOT`, quindi sugli altri computer Qt e vcpkg
+possono trovarsi su qualunque disco.
+
 ## Esecuzione GUI Qt
 
 L'eseguibile in `build\Release` non va lanciato direttamente da doppio click se il `PATH` non contiene Qt, perche' Windows non trova DLL come `Qt6Widgets.dll`.

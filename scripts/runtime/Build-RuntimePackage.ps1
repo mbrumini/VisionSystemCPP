@@ -1,6 +1,6 @@
 param(
   [string]$Configuration = "Release",
-  [string]$QtBin = "D:\Qt\6.10.3\msvc2022_64\bin",
+  [string]$QtBin = "",
   [string]$OutputDir = "",
   [switch]$IncludeRecipes
 )
@@ -8,6 +8,12 @@ param(
 $ErrorActionPreference = "Stop"
 
 $projectRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
+if ([string]::IsNullOrWhiteSpace($QtBin) -and $env:QT_DIR) {
+  $QtBin = Join-Path $env:QT_DIR "bin"
+}
+if ([string]::IsNullOrWhiteSpace($QtBin)) {
+  throw "Qt non configurato. Imposta QT_DIR oppure passa -QtBin."
+}
 $versionPath = Join-Path $projectRoot "VERSION.txt"
 $version = if (Test-Path $versionPath) { (Get-Content $versionPath -Raw).Trim() } else { "0.0.0" }
 $buildDir = Join-Path $projectRoot "build\$Configuration"

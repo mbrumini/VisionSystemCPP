@@ -3,6 +3,8 @@
 #include "config/RecipeManager.h"
 
 #include <QDir>
+#include <QDirIterator>
+#include <QFileInfo>
 
 QString aiLocalizationRootPath(const RecipeManager& recipes, const QString& cameraId)
 {
@@ -34,4 +36,23 @@ QString aiLocalizationModelsPath(const RecipeManager& recipes, const QString& ca
 {
   return QDir(RecipeManager::recipesRootPath()).filePath(
     QString("%1/models/%2/localization_segmentation").arg(recipes.recipeId(), cameraId));
+}
+
+QString aiNewestLocalizationModelPath(const RecipeManager& recipes, const QString& cameraId)
+{
+  QFileInfo newestModel;
+  QDirIterator it(
+    aiLocalizationModelsPath(recipes, cameraId),
+    {"best.pt"},
+    QDir::Files,
+    QDirIterator::Subdirectories);
+  while (it.hasNext())
+  {
+    const QFileInfo candidate(it.next());
+    if (!newestModel.exists() || candidate.lastModified() > newestModel.lastModified())
+    {
+      newestModel = candidate;
+    }
+  }
+  return newestModel.exists() ? newestModel.absoluteFilePath() : QString();
 }

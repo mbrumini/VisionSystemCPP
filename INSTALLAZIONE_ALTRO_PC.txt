@@ -86,23 +86,16 @@ Installare:
    - Qt 6.10.3
    - msvc2022_64
 
-   Percorso atteso dal preset:
-   D:/Qt/6.10.3/msvc2022_64
-
-   Se Qt viene installato in un percorso diverso, modificare CMakePresets.json:
-   - PATH
-   - CMAKE_PREFIX_PATH
+   Impostare la variabile ambiente utente QT_DIR con la cartella Qt, per esempio:
+   setx QT_DIR "C:\Qt\6.10.3\msvc2022_64"
 
 5) vcpkg
-   Percorso atteso dal preset:
-   D:/dev/vcpkg
-
    Installazione tipica:
-   git clone https://github.com/microsoft/vcpkg.git D:/dev/vcpkg
-   D:/dev/vcpkg/bootstrap-vcpkg.bat
+   git clone https://github.com/microsoft/vcpkg.git C:/dev/vcpkg
+   C:/dev/vcpkg/bootstrap-vcpkg.bat
+   setx VCPKG_ROOT "C:\dev\vcpkg"
 
-   Se vcpkg viene installato altrove, modificare CMakePresets.json:
-   - CMAKE_TOOLCHAIN_FILE
+   Il percorso puo' essere qualunque: CMakePresets.json usa QT_DIR e VCPKG_ROOT.
 
 
 2. Clonare il progetto
@@ -113,13 +106,12 @@ cd /d D:\dev
 git clone https://github.com/mbrumini/VisionSystemCPP.git
 cd VisionSystemCPP
 
-Se si usa un percorso diverso da D:\dev\VisionSystemCPP va bene, ma controllare
-CMakePresets.json per i percorsi assoluti di Qt, vcpkg e cache.
+Il progetto puo' essere clonato in qualunque percorso.
 
 
 3. Cache e directory temporanee
 -------------------------------
-Il preset usa:
+Su questo PC lo script opzionale usa:
 
 D:/temp
 D:/dev/.cache/vcpkg/binary
@@ -249,11 +241,11 @@ Se VimbaX non e' installato, la build puo' comunque riuscire; l'app segnala SDK 
 10. Problemi comuni
 -------------------
 Errore: Qt non trovato
-- Controllare CMAKE_PREFIX_PATH in CMakePresets.json.
-- Controllare che esista D:/Qt/6.10.3/msvc2022_64 o aggiornare il percorso.
+- Controllare che QT_DIR punti alla cartella Qt per MSVC 2022 x64.
+- Aprire un nuovo terminale dopo avere modificato la variabile ambiente.
 
 Errore: vcpkg toolchain non trovato
-- Controllare CMAKE_TOOLCHAIN_FILE in CMakePresets.json.
+- Controllare che VCPKG_ROOT punti alla cartella principale di vcpkg.
 - Eseguire bootstrap-vcpkg.bat.
 
 Errore link su VisionSystemCPP.exe

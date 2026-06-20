@@ -12,6 +12,7 @@ dist/
 vcpkg_installed/
 .venv-ai/
 yolo*-cls.pt
+yolo*-seg.pt
 __pycache__/
 *.pyc
 
@@ -33,6 +34,7 @@ CMakeUserPresets.json
 # Logs
 *.log
 tests/reports/
+tests/datasets/
 
 # Binaries and generated runtime files
 *.exe
