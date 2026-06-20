@@ -107,6 +107,7 @@ struct SurfaceShapeMatchConfig
   double minContourArea = 50.0;
   double minAreaRatio = 0.20;
   double maxAreaRatio = 5.00;
+  bool useConvexHull = false;
 };
 
 struct SurfaceTemplateMatchConfig

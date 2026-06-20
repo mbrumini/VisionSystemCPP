@@ -26,11 +26,6 @@ void MainWindowLocalizationModule::testLocalization(const CameraConfig& camera)
     return;
   }
 
-  if (camera.id != selectedCameraId())
-  {
-    return;
-  }
-
   QRect roi;
   if (!recipes().loadLocalizationRoi(camera.id, roi))
   {
@@ -80,16 +75,16 @@ void MainWindowLocalizationModule::testLocalization(const CameraConfig& camera)
         return;
       }
 
-      const bool suppressViewUpdate =
+      const bool updateView =
         camera.id == selectedCameraId() &&
-        (*context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry ||
-         *context().setupCameraId == camera.id);
+        *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry &&
+        *context().setupCameraId != camera.id;
 
       if (result.diagnosticImage.empty())
       {
         context().lastLocalizationResults->remove(camera.id);
         cameraRuntime()[camera.id].clearCurrentPose(camera.id);
-        if (!suppressViewUpdate)
+        if (updateView)
         {
           largeImage()->clearGeometryOverlay();
         }
@@ -97,7 +92,7 @@ void MainWindowLocalizationModule::testLocalization(const CameraConfig& camera)
         return;
       }
 
-      if (!suppressViewUpdate)
+      if (updateView)
       {
         selectedPreview() = context().imaging->matToPixmap(result.diagnosticImage);
         largeImage()->setImage(selectedPreview());
@@ -108,7 +103,7 @@ void MainWindowLocalizationModule::testLocalization(const CameraConfig& camera)
       if (!result.found)
       {
         cameraRuntime()[camera.id].clearCurrentPose(camera.id);
-        if (!suppressViewUpdate)
+        if (updateView)
         {
           largeImage()->clearGeometryOverlay();
         }
@@ -128,7 +123,10 @@ void MainWindowLocalizationModule::testLocalization(const CameraConfig& camera)
       {
         context().geometry->appendCurrentPartPoseOverlay(camera, overlay);
       }
-      largeImage()->setGeometryOverlay(overlay);
+      if (updateView)
+      {
+        largeImage()->setGeometryOverlay(overlay);
+      }
       log(QString("%1: %2 cx=%3 cy=%4 angle=%5 area=%6 thr=%7 factor=%8 offset=%9")
             .arg(tr("log.localizationFound"))
             .arg(camera.id)

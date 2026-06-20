@@ -73,7 +73,20 @@ bool contourPose(const std::vector<cv::Point>& points, cv::Point2d& center, doub
   {
     center = cv::Point2d(pca.mean.at<double>(0, 0), pca.mean.at<double>(0, 1));
   }
-  angleRadians = std::atan2(pca.eigenvectors.at<double>(0, 1), pca.eigenvectors.at<double>(0, 0));
+
+  cv::Point2d e1(pca.eigenvectors.at<double>(0, 0), pca.eigenvectors.at<double>(0, 1));
+
+  // Resolve 180-degree ambiguity using shape asymmetry
+  const cv::Rect bounding = cv::boundingRect(points);
+  const cv::Point2d boxCenter(bounding.x + bounding.width / 2.0, bounding.y + bounding.height / 2.0);
+  const cv::Point2d asymmetryVec = center - boxCenter;
+  const double dotProduct = asymmetryVec.x * e1.x + asymmetryVec.y * e1.y;
+  if (dotProduct < 0.0)
+  {
+    e1 = -e1;
+  }
+
+  angleRadians = std::atan2(e1.y, e1.x);
   return std::isfinite(center.x) && std::isfinite(center.y) && std::isfinite(angleRadians);
 }
 
@@ -193,12 +206,21 @@ SurfaceDefectResult SurfaceModelStrategy::locateByShapeMatching(
 
   cv::Mat edges = edgeImage(gray, config.edgeSensitivity);
   applyRoiAndExclusions(edges, roi, exclusionRects);
+  cv::Mat roiEdges = edges(roi);
   cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5, 5));
-  cv::morphologyEx(edges, edges, cv::MORPH_CLOSE, kernel);
-  cv::dilate(edges, edges, kernel);
+  cv::morphologyEx(roiEdges, roiEdges, cv::MORPH_CLOSE, kernel);
+  cv::dilate(roiEdges, roiEdges, kernel);
 
   std::vector<std::vector<cv::Point>> contours;
-  cv::findContours(edges, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+  cv::findContours(roiEdges, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+  for (auto& contour : contours)
+  {
+    for (auto& pt : contour)
+    {
+      pt.x += roi.x;
+      pt.y += roi.y;
+    }
+  }
   result.localization.method = "shape_matching";
   result.localization.inputPoints = static_cast<int>(contours.size());
 
@@ -215,15 +237,85 @@ SurfaceDefectResult SurfaceModelStrategy::locateByShapeMatching(
 
   double bestDistance = std::numeric_limits<double>::max();
   int bestIndex = -1;
+  std::vector<cv::Point> bestCandidateContour;
   int acceptedCandidates = 0;
   const ShapeCandidateMetrics modelMetrics = measureShapeCandidate(config.modelContour);
   const double modelArea = modelMetrics.valid ? modelMetrics.area : std::abs(cv::contourArea(config.modelContour));
   const double minCandidateArea = std::max(config.minContourArea, modelArea * config.minAreaRatio);
   const double maxCandidateArea = std::max(minCandidateArea, modelArea * config.maxAreaRatio);
 
+  std::vector<std::pair<double, int>> contourAreas;
+  contourAreas.reserve(contours.size());
   for (int i = 0; i < static_cast<int>(contours.size()); ++i)
   {
-    const ShapeCandidateMetrics candidateMetrics = measureShapeCandidate(contours[i]);
+    contourAreas.emplace_back(std::abs(cv::contourArea(contours[i])), i);
+  }
+  std::sort(contourAreas.begin(), contourAreas.end(), [](const auto& a, const auto& b) {
+    return a.first > b.first;
+  });
+
+  const int maxCandidatesToTest = std::min(10, static_cast<int>(contourAreas.size()));
+  for (int idx = 0; idx < maxCandidatesToTest; ++idx)
+  {
+    int i = contourAreas[idx].second;
+    std::vector<cv::Point> candidateContour;
+    if (config.useConvexHull)
+    {
+      const double anchorArea = std::abs(cv::contourArea(contours[i]));
+      if (anchorArea < config.minContourArea)
+      {
+        continue;
+      }
+
+      cv::Moments m = cv::moments(contours[i]);
+      cv::Point2d center;
+      if (std::abs(m.m00) > std::numeric_limits<double>::epsilon())
+      {
+        center = cv::Point2d(m.m10 / m.m00, m.m01 / m.m00);
+      }
+      else
+      {
+        cv::Rect bounding = cv::boundingRect(contours[i]);
+        center = cv::Point2d(bounding.x + bounding.width / 2.0, bounding.y + bounding.height / 2.0);
+      }
+
+      cv::Rect modelBounds = cv::boundingRect(config.modelContour);
+      double diagonal = std::sqrt(modelBounds.width * modelBounds.width + modelBounds.height * modelBounds.height);
+      double windowSize = diagonal * 1.35;
+
+      cv::Rect localWindow(
+        static_cast<int>(center.x - windowSize / 2.0),
+        static_cast<int>(center.y - windowSize / 2.0),
+        static_cast<int>(windowSize),
+        static_cast<int>(windowSize));
+      localWindow = clampSurfaceRect(localWindow, edges.size());
+
+      if (localWindow.width < 4 || localWindow.height < 4)
+      {
+        continue;
+      }
+
+      std::vector<cv::Point> localEdgePixels;
+      cv::findNonZero(edges(localWindow), localEdgePixels);
+      if (localEdgePixels.size() < 3)
+      {
+        continue;
+      }
+
+      for (auto& pt : localEdgePixels)
+      {
+        pt.x += localWindow.x;
+        pt.y += localWindow.y;
+      }
+
+      cv::convexHull(localEdgePixels, candidateContour);
+    }
+    else
+    {
+      candidateContour = contours[i];
+    }
+
+    const ShapeCandidateMetrics candidateMetrics = measureShapeCandidate(candidateContour);
     if (!candidateMetrics.valid ||
         candidateMetrics.area < minCandidateArea ||
         candidateMetrics.area > maxCandidateArea)
@@ -237,11 +329,12 @@ SurfaceDefectResult SurfaceModelStrategy::locateByShapeMatching(
     }
 
     ++acceptedCandidates;
-    const double distance = cv::matchShapes(config.modelContour, contours[i], cv::CONTOURS_MATCH_I1, 0.0);
+    const double distance = cv::matchShapes(config.modelContour, candidateContour, cv::CONTOURS_MATCH_I1, 0.0);
     if (distance < bestDistance)
     {
       bestDistance = distance;
       bestIndex = i;
+      bestCandidateContour = candidateContour;
     }
   }
 
@@ -257,7 +350,7 @@ SurfaceDefectResult SurfaceModelStrategy::locateByShapeMatching(
   }
 
   SurfaceBlob blob;
-  blob.contour = contours[bestIndex];
+  blob.contour = bestCandidateContour;
   blob.area = std::abs(cv::contourArea(blob.contour));
   blob.boundingRect = cv::boundingRect(blob.contour);
   if (!contourPose(blob.contour, blob.center, result.localization.angleRadians))

@@ -4,6 +4,7 @@
 #include "runtime/PartPose.h"
 
 #include <QPixmap>
+#include <QSize>
 #include <QString>
 
 #include <opencv2/core/mat.hpp>
@@ -25,7 +26,7 @@ public:
   void reloadCameraReferenceImage(const CameraConfig& camera);
   bool ensureReferenceImageVisible(const CameraConfig& camera);
   void restoreSampleWorkspace(const CameraConfig& camera);
-  QPixmap matToPixmap(const cv::Mat& image) const;
+  QPixmap matToPixmap(const cv::Mat& image, const QSize& targetSize = QSize()) const;
   cv::Mat sampleInputImage(const CameraConfig& camera, QString* errorMessage = nullptr) const;
   cv::Mat validationInputImage(const CameraConfig& camera, QString* errorMessage = nullptr) const;
   cv::Mat currentInputImage(const CameraConfig& camera, QString* errorMessage = nullptr) const;

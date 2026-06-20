@@ -158,6 +158,7 @@
     "edgeBandOuter": "Fascia esterna",
     "edgeFitMaxError": "Errore fit",
     "modelMaxShapeDistance": "Distanza shape max",
+    "modelUseConvexHull": "Usa inviluppo convesso",
     "modelMinTemplateScore": "Score template min",
     "modelAngleStart": "Angolo min",
     "modelAngleEnd": "Angolo max",

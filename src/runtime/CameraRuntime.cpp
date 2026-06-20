@@ -25,11 +25,18 @@ void CameraRuntime::stop()
 {
   m_running = false;
 
-  if (m_source)
+  std::shared_ptr<ICamera> sourceToClose;
   {
-    m_source->close();
+    std::lock_guard<std::mutex> lock(m_sourceMutex);
+    sourceToClose = m_source;
     m_source.reset();
   }
+
+  if (sourceToClose)
+  {
+    sourceToClose->close();
+  }
+
   m_sourceType.clear();
   m_sourceFolder.clear();
   m_sourceDeviceId.clear();
@@ -43,7 +50,22 @@ bool CameraRuntime::applyAcquisitionSettings(
   const CameraAcquisitionConfig& acquisition,
   QString* errorMessage)
 {
-  if (auto* vimbaCamera = dynamic_cast<VimbaCamera*>(m_source.get()))
+  std::shared_ptr<ICamera> source;
+  {
+    std::lock_guard<std::mutex> lock(m_sourceMutex);
+    source = m_source;
+  }
+
+  if (!source)
+  {
+    if (errorMessage)
+    {
+      *errorMessage = "La sorgente camera non e' attiva o aperta";
+    }
+    return false;
+  }
+
+  if (auto* vimbaCamera = dynamic_cast<VimbaCamera*>(source.get()))
   {
     if (vimbaCamera->setAcquisitionSettings(acquisition))
     {
@@ -56,7 +78,7 @@ bool CameraRuntime::applyAcquisitionSettings(
     return false;
   }
 
-  if (auto* usbCamera = dynamic_cast<UsbCamera*>(m_source.get()))
+  if (auto* usbCamera = dynamic_cast<UsbCamera*>(source.get()))
   {
     if (usbCamera->setAcquisitionSettings(acquisition))
     {
@@ -127,6 +149,11 @@ bool CameraRuntime::step(const CameraConfig& camera, const QString& resolvedFold
 bool CameraRuntime::running() const
 {
   return m_running;
+}
+
+std::shared_ptr<ICamera> CameraRuntime::source() const
+{
+  return m_source;
 }
 
 bool CameraRuntime::loop() const
@@ -214,6 +241,7 @@ void CameraRuntime::clearGeometries()
 
 bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& resolvedFolder, QString* errorMessage)
 {
+  std::lock_guard<std::mutex> lock(m_sourceMutex);
   if (camera.type != "file" && camera.type != "usb" &&
       camera.type != "vimba" && camera.type != "simulator")
   {
@@ -267,20 +295,20 @@ bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& reso
       return false;
     }
 
-    m_source = std::make_unique<UsbCamera>(camera);
+    m_source = std::make_shared<UsbCamera>(camera);
   }
   else if (camera.type == "vimba")
   {
-    m_source = std::make_unique<VimbaCamera>(camera);
+    m_source = std::make_shared<VimbaCamera>(camera);
   }
   else if (camera.type == "simulator")
   {
-    m_source = std::make_unique<SimulatedCamera>(
+    m_source = std::make_shared<SimulatedCamera>(
       camera.simulatorChannel.isEmpty() ? camera.id : camera.simulatorChannel);
   }
   else
   {
-    m_source = std::make_unique<FileCamera>(resolvedFolder.toStdString(), m_loop);
+    m_source = std::make_shared<FileCamera>(resolvedFolder.toStdString(), m_loop);
   }
 
   if (!m_source->open())
@@ -313,4 +341,57 @@ bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& reso
           : QString());
   m_sourceUsbIndex = camera.type == "usb" ? camera.usbIndex : -1;
   return true;
+}
+
+bool CameraRuntime::grabFrame(const CameraConfig& camera, const QString& resolvedFolder, cv::Mat& frame, SimulatorFrameMetadata& metadata, QString& error)
+{
+  if (!ensureSource(camera, resolvedFolder, &error))
+  {
+    return false;
+  }
+
+  std::shared_ptr<ICamera> source;
+  {
+    std::lock_guard<std::mutex> lock(m_sourceMutex);
+    source = m_source;
+  }
+
+  if (!source)
+  {
+    error = "Sorgente camera non valida";
+    return false;
+  }
+
+  if (!source->getFrame(frame))
+  {
+    if (const auto* vimbaCamera = dynamic_cast<const VimbaCamera*>(source.get());
+        vimbaCamera && !vimbaCamera->lastError().isEmpty())
+    {
+      error = "Grab Vimba fallito: " + vimbaCamera->lastError();
+    }
+    else
+    {
+      error = "Nessun altro frame";
+    }
+    return false;
+  }
+
+  if (const auto* simulatedCamera = dynamic_cast<const SimulatedCamera*>(source.get()))
+  {
+    metadata = simulatedCamera->lastFrameMetadata();
+  }
+  else
+  {
+    metadata = {};
+  }
+
+  return true;
+}
+
+void CameraRuntime::updateStateAfterGrab(const cv::Mat& frame, const SimulatorFrameMetadata& metadata)
+{
+  m_currentFrame = frame;
+  m_currentSimulatorFrame = metadata;
+  m_frameIndex += 1;
+  m_status = m_running ? Status::Running : Status::Ready;
 }

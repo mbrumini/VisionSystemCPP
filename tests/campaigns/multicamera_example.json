@@ -1,0 +1,57 @@
+{
+  "name": "multicamera_cam01_cam02",
+  "cycles": 1,
+  "parallel": true,
+  "items": [
+    {
+      "cameraId": "CAM01",
+      "recipeId": "test_cross_template",
+      "strategyId": "edgePca",
+      "shapeId": "cross",
+      "passes": 1,
+      "intervalMs": 50,
+      "xMinMm": 0.0,
+      "xMaxMm": 0.0,
+      "xStepMm": 1.0,
+      "yMinMm": 0.0,
+      "yMaxMm": 0.0,
+      "yStepMm": 1.0,
+      "angleMinDeg": 0.0,
+      "angleMaxDeg": 30.0,
+      "angleStepDeg": 15.0,
+      "limits": {
+        "centerMeanMaxPx": 5.0,
+        "centerMaxPx": 10.0,
+        "angleMeanMaxDeg": 5.0,
+        "angleMaxDeg": 15.0,
+        "processingMeanMaxMs": 250.0,
+        "processingMaxMs": 2000.0
+      }
+    },
+    {
+      "cameraId": "CAM02",
+      "recipeId": "test_cross_template",
+      "strategyId": "edgePca",
+      "shapeId": "cross",
+      "passes": 1,
+      "intervalMs": 50,
+      "xMinMm": 0.0,
+      "xMaxMm": 0.0,
+      "xStepMm": 1.0,
+      "yMinMm": 0.0,
+      "yMaxMm": 0.0,
+      "yStepMm": 1.0,
+      "angleMinDeg": 0.0,
+      "angleMaxDeg": 30.0,
+      "angleStepDeg": 15.0,
+      "limits": {
+        "centerMeanMaxPx": 5.0,
+        "centerMaxPx": 10.0,
+        "angleMeanMaxDeg": 5.0,
+        "angleMaxDeg": 15.0,
+        "processingMeanMaxMs": 250.0,
+        "processingMaxMs": 2000.0
+      }
+    }
+  ]
+}

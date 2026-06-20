@@ -20,5 +20,6 @@ public:
     const cv::Mat& input,
     const cv::Rect& searchRoi,
     const std::vector<cv::Rect>& exclusionRects = {},
-    int edgeSensitivity = 60) const;
+    int edgeSensitivity = 60,
+    bool useConvexHull = false) const;
 };

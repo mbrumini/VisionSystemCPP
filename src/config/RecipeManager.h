@@ -70,6 +70,7 @@ struct SurfaceModelConfig
   double angleStartDegrees = -180.0;
   double angleEndDegrees = 180.0;
   double angleStepDegrees = 5.0;
+  bool useConvexHull = false;
 };
 
 struct GeometryLineRecipeConfig
@@ -238,6 +239,7 @@ public:
   bool saveSurfaceModelMaxShapeDistance(const QString& cameraId, double distance, QString* errorMessage = nullptr) const;
   bool saveSurfaceModelMinTemplateScore(const QString& cameraId, double score, QString* errorMessage = nullptr) const;
   bool saveSurfaceModelAngleRange(const QString& cameraId, double startDegrees, double endDegrees, double stepDegrees, QString* errorMessage = nullptr) const;
+  bool saveSurfaceModelUseConvexHull(const QString& cameraId, bool useConvexHull, QString* errorMessage = nullptr) const;
   QString surfaceModelTemplateImagePath(const QString& cameraId) const;
   QVector<GeometryLineRecipeConfig> loadGeometryLines(const QString& cameraId) const;
   bool saveGeometryLines(const QString& cameraId, const QVector<GeometryLineRecipeConfig>& configs, QString* errorMessage = nullptr) const;

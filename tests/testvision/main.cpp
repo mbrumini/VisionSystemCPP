@@ -21,6 +21,7 @@
 #include <QPainter>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QSet>
 #include <QSpinBox>
 #include <QSplitter>
 #include <QTabWidget>
@@ -39,6 +40,7 @@
 #include <cmath>
 #include <map>
 #include <numeric>
+#include <functional>
 #include <vector>
 
 #include "TestVisionArtifacts.h"
@@ -469,8 +471,9 @@ private:
 class TestVisionWindow : public QMainWindow
 {
 public:
-  explicit TestVisionWindow(const QString& scenarioPath)
-    : m_scenarioPath(scenarioPath)
+  explicit TestVisionWindow(const QString& scenarioPath, QWidget* parent = nullptr)
+    : QMainWindow(parent)
+    , m_scenarioPath(scenarioPath)
   {
     setWindowTitle("VisionSystem TestVision");
     resize(1200, 850);
@@ -487,6 +490,57 @@ public:
   ~TestVisionWindow() override
   {
     closePipe();
+  }
+
+  void startCampaignWorker(
+    const QJsonObject& item,
+    int cycle,
+    std::function<void(const QJsonObject&)> completion)
+  {
+    const QString cameraId = item.value("cameraId").toString("CAM01");
+    const QString baseScenarioName = m_scenario.value("name").toString(
+      QFileInfo(m_scenarioPath).completeBaseName());
+    m_scenario["name"] = baseScenarioName + "_" + cameraId;
+    m_scenario["output"] = QString("../reports/%1_%2.json")
+      .arg(QFileInfo(m_scenarioPath).completeBaseName(), cameraId);
+    m_workerItem = item;
+    m_workerCycle = cycle;
+    m_workerCompletion = std::move(completion);
+    m_isCampaignWorker = true;
+    applyCampaignItem(item);
+    QTimer::singleShot(0, this, [this]() { startTest(); });
+  }
+
+  bool loadCampaignFromFile(
+    const QString& path,
+    QString* error,
+    bool autoStart = false)
+  {
+    const QJsonObject campaign = loadJson(path, error);
+    const QJsonArray items = campaign.value("items").toArray();
+    if (campaign.isEmpty() || items.isEmpty())
+    {
+      if (error && error->isEmpty())
+      {
+        *error = "La campagna non contiene prove.";
+      }
+      return false;
+    }
+    m_campaignPath = path;
+    m_campaign = campaign;
+    m_campaignItems = items;
+    m_campaignCycles = qMax(1, campaign.value("cycles").toInt(1));
+    m_startCampaignButton->setEnabled(true);
+    appendLog(QString("Campagna caricata: %1 | prove=%2 | cicli=%3 | multicamera=%4")
+      .arg(campaign.value("name").toString(QFileInfo(path).completeBaseName()))
+      .arg(items.size())
+      .arg(m_campaignCycles)
+      .arg(campaign.value("parallel").toBool(true) ? "si" : "no"));
+    if (autoStart)
+    {
+      QTimer::singleShot(0, this, [this]() { startCampaign(); });
+    }
+    return true;
   }
 
 private:
@@ -561,12 +615,20 @@ private:
     m_strategyCombo->addItem("Template model", "templateModel");
     m_strategyCombo->addItem("Localizzazione AI YOLO", "aiYolo");
     m_recipeCombo = new QComboBox(configPanel);
+    m_cameraCombo = new QComboBox(configPanel);
+    m_cameraCombo->addItem("Selezionata in Vision", "SELECTED");
+    for (int i = 1; i <= 16; ++i)
+    {
+      const QString camId = QString("CAM%1").arg(i, 2, 10, QChar('0'));
+      m_cameraCombo->addItem(camId, camId);
+    }
     m_passes = new QSpinBox(configPanel);
     m_passes->setRange(1, 1000);
     m_passes->setValue(3);
     m_intervalMs = new QSpinBox(configPanel);
     m_intervalMs->setRange(0, 60000);
     m_intervalMs->setValue(200);
+    form->addRow("Target telecamera", m_cameraCombo);
     form->addRow("Shape campione", m_shapeCombo);
     form->addRow("Strategia da testare", m_strategyCombo);
     form->addRow("Ricetta Vision", m_recipeCombo);
@@ -699,6 +761,16 @@ private:
     {
       m_strategyCombo->setCurrentIndex(strategyIndex);
     }
+    const QString cameraId = m_scenario.value("cameraId").toString();
+    const int camIndex = m_cameraCombo->findData(cameraId);
+    if (camIndex >= 0)
+    {
+      m_cameraCombo->setCurrentIndex(camIndex);
+    }
+    else
+    {
+      m_cameraCombo->setCurrentIndex(0);
+    }
     updateMasterShape();
     const QDir scenarioDir = QFileInfo(m_scenarioPath).dir();
     const QString masterPath = scenarioDir.absoluteFilePath(
@@ -803,9 +875,15 @@ private:
     sample["type"] = "sample";
     sample["protocolVersion"] = m_scenario.value("protocolVersion").toInt(1);
     sample["scenarioId"] = m_scenario.value("name").toString();
-    sample["cameraId"] = m_scenario.value("cameraId").toString();
-    sample["slot"] = m_scenario.value("slot").toInt(1);
-    sample["channel"] = m_scenario.value("channel").toString();
+    const QString targetCam = m_cameraCombo->currentData().toString();
+    sample["cameraId"] = targetCam;
+    sample["channel"] = targetCam;
+    int targetSlot = 1;
+    if (targetCam != "SELECTED")
+    {
+      targetSlot = targetCam.mid(3).toInt();
+    }
+    sample["slot"] = targetSlot;
     sample["frameId"] = 0;
     sample["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODateWithMs);
     sample["shapeId"] = m_shapeCombo->currentData().toString();
@@ -934,24 +1012,13 @@ private:
       return;
     }
     QString error;
-    const QJsonObject campaign = loadJson(path, &error);
-    const QJsonArray items = campaign.value("items").toArray();
-    if (campaign.isEmpty() || items.isEmpty())
+    if (!loadCampaignFromFile(path, &error))
     {
       QMessageBox::warning(
         this, "Campagna TestVision",
         error.isEmpty() ? "La campagna non contiene prove." : error);
       return;
     }
-    m_campaignPath = path;
-    m_campaign = campaign;
-    m_campaignItems = items;
-    m_campaignCycles = qMax(1, campaign.value("cycles").toInt(1));
-    m_startCampaignButton->setEnabled(true);
-    appendLog(QString("Campagna caricata: %1 | prove=%2 | cicli=%3")
-      .arg(campaign.value("name").toString(QFileInfo(path).completeBaseName()))
-      .arg(items.size())
-      .arg(m_campaignCycles));
   }
 
   void editCampaign()
@@ -1009,6 +1076,13 @@ private:
 
   void applyCampaignItem(const QJsonObject& item)
   {
+    const QString cameraId = item.value("cameraId").toString(
+      m_scenario.value("cameraId").toString("CAM01"));
+    const int cameraIndex = m_cameraCombo->findData(cameraId);
+    if (cameraIndex >= 0)
+    {
+      m_cameraCombo->setCurrentIndex(cameraIndex);
+    }
     const QString recipeId = item.value("recipeId").toString();
     const int recipeIndex = m_recipeCombo->findText(recipeId);
     if (recipeIndex >= 0)
@@ -1046,12 +1120,101 @@ private:
     {
       return;
     }
+    if (m_campaign.value("parallel").toBool(true))
+    {
+      startParallelCampaign();
+      return;
+    }
     m_campaignRunning = true;
     m_campaignCycle = 0;
     m_campaignItemIndex = -1;
     m_campaignSummaries = {};
     m_startCampaignButton->setEnabled(false);
     runNextCampaignItem();
+  }
+
+  void startParallelCampaign()
+  {
+    m_campaignRunning = true;
+    m_campaignCycle = 0;
+    m_campaignSummaries = {};
+    m_parallelPendingItems = m_campaignItems;
+    m_activeCampaignWorkers = 0;
+    m_startCampaignButton->setEnabled(false);
+    appendLog(QString("Campagna multicamera avviata: prove=%1 cicli=%2")
+      .arg(m_campaignItems.size())
+      .arg(m_campaignCycles));
+    launchNextParallelBatch();
+  }
+
+  void launchNextParallelBatch()
+  {
+    if (!m_campaignRunning || m_activeCampaignWorkers > 0)
+    {
+      return;
+    }
+    if (m_parallelPendingItems.isEmpty())
+    {
+      ++m_campaignCycle;
+      if (m_campaignCycle >= m_campaignCycles)
+      {
+        finishCampaign();
+        return;
+      }
+      m_parallelPendingItems = m_campaignItems;
+    }
+
+    const QString recipeId =
+      m_parallelPendingItems.first().toObject().value("recipeId").toString();
+    QJsonArray batch;
+    QJsonArray remaining;
+    QSet<QString> usedCameras;
+    for (const QJsonValue& value : m_parallelPendingItems)
+    {
+      QJsonObject item = value.toObject();
+      const QString cameraId = item.value("cameraId").toString("CAM01");
+      item["cameraId"] = cameraId;
+      if (item.value("recipeId").toString() == recipeId &&
+          !usedCameras.contains(cameraId))
+      {
+        usedCameras.insert(cameraId);
+        batch.append(item);
+      }
+      else
+      {
+        remaining.append(item);
+      }
+    }
+    m_parallelPendingItems = remaining;
+    m_activeCampaignWorkers = batch.size();
+    appendLog(QString(
+      "Batch multicamera ciclo %1/%2: ricetta=%3 telecamere=%4")
+      .arg(m_campaignCycle + 1)
+      .arg(m_campaignCycles)
+      .arg(recipeId)
+      .arg(QStringList(usedCameras.values()).join(", ")));
+
+    for (const QJsonValue& value : batch)
+    {
+      const QJsonObject item = value.toObject();
+      const QString cameraId = item.value("cameraId").toString("CAM01");
+      auto* worker = new TestVisionWindow(m_scenarioPath, this);
+      worker->hide();
+      worker->startCampaignWorker(
+        item,
+        m_campaignCycle + 1,
+        [this, worker, cameraId](const QJsonObject& summary) {
+          m_campaignSummaries.append(summary);
+          appendLog(QString("Worker %1 terminato: %2")
+            .arg(cameraId, summary.value("status").toString()));
+          worker->deleteLater();
+          --m_activeCampaignWorkers;
+          if (m_activeCampaignWorkers == 0)
+          {
+            QTimer::singleShot(300, this, [this]() { launchNextParallelBatch(); });
+          }
+        });
+    }
   }
 
   void runNextCampaignItem()
@@ -1080,13 +1243,11 @@ private:
     startTest();
   }
 
-  void recordCampaignSummary()
+  QJsonObject buildCampaignSummary(
+    const QJsonObject& item,
+    int cycle,
+    const QString& pipelineFailure = {}) const
   {
-    if (!m_campaignRunning)
-    {
-      return;
-    }
-    const QJsonObject item = m_campaignItems.at(m_campaignItemIndex).toObject();
     double centerSum = 0.0;
     double angleSum = 0.0;
     double centerMax = 0.0;
@@ -1117,8 +1278,8 @@ private:
     const double coldStartMs = count > 0 ? m_results.first().processingMs : 0.0;
     const QJsonObject limits = item.value("limits").toObject();
     QJsonArray problems;
-    if (!m_campaignItemFailure.isEmpty())
-      problems.append("Errore pipeline: " + m_campaignItemFailure);
+    if (!pipelineFailure.isEmpty())
+      problems.append("Errore pipeline: " + pipelineFailure);
     if (validCount != count)
       problems.append(QString("Pose non valide: %1/%2").arg(count - validCount).arg(count));
     if (centerMean > limits.value("centerMeanMaxPx").toDouble(5.0))
@@ -1135,7 +1296,9 @@ private:
       problems.append(QString("Picco tempo alto: %1 ms").arg(timeMax, 0, 'f', 1));
 
     QJsonObject summary;
-    summary["cycle"] = m_campaignCycle + 1;
+    summary["cycle"] = cycle;
+    summary["cameraId"] = item.value("cameraId").toString(
+      m_cameraCombo->currentData().toString());
     summary["recipeId"] = m_recipeCombo->currentText();
     summary["strategyId"] = m_strategyCombo->currentData().toString();
     summary["frames"] = count;
@@ -1150,7 +1313,18 @@ private:
     summary["processingMaxMs"] = timeMax;
     summary["status"] = problems.isEmpty() ? "OK" : "PROBLEM";
     summary["problems"] = problems;
-    m_campaignSummaries.append(summary);
+    return summary;
+  }
+
+  void recordCampaignSummary()
+  {
+    if (!m_campaignRunning)
+    {
+      return;
+    }
+    const QJsonObject item = m_campaignItems.at(m_campaignItemIndex).toObject();
+    m_campaignSummaries.append(buildCampaignSummary(
+      item, m_campaignCycle + 1, m_campaignItemFailure));
   }
 
   void finishCampaign()
@@ -1183,8 +1357,9 @@ private:
     {
       const QJsonObject run = value.toObject();
       const QString header = QString(
-        "Ciclo %1 | %2 | %3 | %4")
+        "Ciclo %1 | %2 | %3 | %4 | %5")
         .arg(run.value("cycle").toInt())
+        .arg(run.value("cameraId").toString())
         .arg(run.value("recipeId").toString())
         .arg(run.value("strategyId").toString())
         .arg(run.value("status").toString());
@@ -1266,6 +1441,21 @@ private:
     m_state = State::Idle;
     m_startButton->setEnabled(true);
     m_stopButton->setEnabled(false);
+    if (m_isCampaignWorker && !m_workerCompleted)
+    {
+      m_workerCompleted = true;
+      QString failure = m_workerFailure;
+      if (!reason.startsWith("Test completato") && failure.isEmpty())
+      {
+        failure = reason;
+      }
+      const QJsonObject summary =
+        buildCampaignSummary(m_workerItem, m_workerCycle, failure);
+      if (m_workerCompletion)
+      {
+        m_workerCompletion(summary);
+      }
+    }
   }
 
   void closePipe()
@@ -1355,6 +1545,11 @@ private:
           m_abortCurrentCampaignItem = true;
           m_campaignItemFailure = text;
         }
+        if (m_isCampaignWorker)
+        {
+          m_abortCurrentCampaignItem = true;
+          m_workerFailure = text;
+        }
       }
       m_stateLabel->setText(text);
       appendLog(QString("%1: %2").arg(type, text));
@@ -1442,9 +1637,19 @@ private:
     frame["type"] = "frame";
     frame["protocolVersion"] = m_scenario.value("protocolVersion").toInt(1);
     frame["scenarioId"] = m_scenario.value("name").toString();
-    frame["cameraId"] = m_scenario.value("cameraId").toString();
-    frame["slot"] = m_scenario.value("slot").toInt(1);
-    frame["channel"] = m_scenario.value("channel").toString();
+    const QString targetCam = m_cameraCombo->currentData().toString();
+    frame["cameraId"] = targetCam;
+    frame["channel"] = targetCam;
+    int targetSlot = 1;
+    if (targetCam != "SELECTED")
+    {
+      targetSlot = targetCam.mid(3).toInt();
+    }
+    else
+    {
+      targetSlot = m_scenario.value("slot").toInt(1);
+    }
+    frame["slot"] = targetSlot;
     frame["frameId"] = m_currentFrameId;
     frame["strategyId"] = m_strategyCombo->currentData().toString();
     frame["recipeId"] = m_expectedRecipeId;
@@ -1666,6 +1871,7 @@ private:
     report["passes"] = m_passes->value();
     report["strategyId"] = m_strategyCombo->currentData().toString();
     report["recipeId"] = m_recipeCombo->currentText().trimmed();
+    report["cameraId"] = m_cameraCombo->currentData().toString();
     report["frames"] = frames;
     const QDir scenarioDir = QFileInfo(m_scenarioPath).dir();
     const QString path = scenarioDir.absoluteFilePath(m_scenario.value("output").toString());
@@ -1731,6 +1937,7 @@ private:
   QComboBox* m_shapeCombo = nullptr;
   QComboBox* m_strategyCombo = nullptr;
   QComboBox* m_recipeCombo = nullptr;
+  QComboBox* m_cameraCombo = nullptr;
   QPushButton* m_sendSampleButton = nullptr;
   QPushButton* m_generateDatasetButton = nullptr;
   QPushButton* m_loadCampaignButton = nullptr;
@@ -1752,6 +1959,15 @@ private:
   bool m_campaignRunning = false;
   bool m_abortCurrentCampaignItem = false;
   QString m_campaignItemFailure;
+  QJsonArray m_parallelPendingItems;
+  int m_activeCampaignWorkers = 0;
+
+  bool m_isCampaignWorker = false;
+  bool m_workerCompleted = false;
+  int m_workerCycle = 0;
+  QJsonObject m_workerItem;
+  QString m_workerFailure;
+  std::function<void(const QJsonObject&)> m_workerCompletion;
 
   QTimer m_pollTimer;
   HANDLE m_pipe = INVALID_HANDLE_VALUE;
@@ -1762,11 +1978,31 @@ private:
 int main(int argc, char* argv[])
 {
   QApplication app(argc, argv);
-  const QString scenarioPath = argc > 1
-    ? QFileInfo(QString::fromLocal8Bit(argv[1])).absoluteFilePath()
-    : QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath(
-        "tests/scenarios/cross_rotation_cam01.json");
+  QString scenarioPath = QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath(
+    "tests/scenarios/cross_rotation_cam01.json");
+  QString campaignPath;
+  for (int index = 1; index < argc; ++index)
+  {
+    const QString argument = QString::fromLocal8Bit(argv[index]);
+    if (argument == "--campaign" && index + 1 < argc)
+    {
+      campaignPath = QFileInfo(
+        QString::fromLocal8Bit(argv[++index])).absoluteFilePath();
+    }
+    else if (!argument.startsWith("--"))
+    {
+      scenarioPath = QFileInfo(argument).absoluteFilePath();
+    }
+  }
   TestVisionWindow window(scenarioPath);
   window.show();
+  if (!campaignPath.isEmpty())
+  {
+    QString error;
+    if (!window.loadCampaignFromFile(campaignPath, &error, true))
+    {
+      QMessageBox::critical(&window, "Campagna TestVision", error);
+    }
+  }
   return app.exec();
 }

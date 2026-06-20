@@ -38,11 +38,6 @@ void MainWindowSurfaceModule::testSurfaceAnnulusLocalization(const CameraConfig&
     return;
   }
 
-  if (camera.id != selectedCameraId())
-  {
-    return;
-  }
-
   const SurfaceAnnulusLocalizationConfig annulus = recipes().loadSurfaceAnnulusLocalization(camera.id);
 
   if (annulus.method == "edge")
@@ -105,17 +100,17 @@ void MainWindowSurfaceModule::testSurfaceAnnulusLocalization(const CameraConfig&
       return;
     }
 
-    const bool suppressViewUpdate =
+    const bool updateView =
       camera.id == selectedCameraId() &&
-      (*context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::None ||
-       *context().setupCameraId == camera.id);
+      *context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::None &&
+      *context().setupCameraId != camera.id;
     if (!result.processed || result.diagnosticImage.empty())
     {
       log(tr("log.surfaceFailed") + ": " + camera.id);
       return;
     }
 
-    if (!suppressViewUpdate)
+    if (updateView)
     {
       selectedPreview() = context().imaging->matToPixmap(result.diagnosticImage);
       largeImage()->setImage(selectedPreview());
@@ -127,7 +122,7 @@ void MainWindowSurfaceModule::testSurfaceAnnulusLocalization(const CameraConfig&
     {
       context().lastSurfaceLocalizationResults->remove(camera.id);
       cameraRuntime()[camera.id].clearCurrentPose(camera.id);
-      if (!suppressViewUpdate)
+      if (updateView)
       {
         largeImage()->clearGeometryOverlay();
       }
@@ -144,29 +139,35 @@ void MainWindowSurfaceModule::testSurfaceAnnulusLocalization(const CameraConfig&
     {
       context().lastSurfaceLocalizationResults->insert(camera.id, result.localization);
       cameraRuntime()[camera.id].setCurrentPose(context().imaging->partPoseFromSurfaceReference(camera, result.localization));
-      largeImage()->setDetectedCircle({
-        QPoint(
-          qRound(result.localization.center.x),
-          qRound(result.localization.center.y)),
-        qRound(result.localization.radius)
-      });
+      if (updateView)
+      {
+        largeImage()->setDetectedCircle({
+          QPoint(
+            qRound(result.localization.center.x),
+            qRound(result.localization.center.y)),
+          qRound(result.localization.radius)
+        });
+      }
       if (context().setup)
       {
         context().setup->refreshSetupGeometryResults(camera);
         return;
       }
 
-      GeometryOverlay overlay;
-      context().geometry->appendCurrentPartPoseOverlay(camera, overlay);
-      largeImage()->setGeometryOverlay(overlay);
+      if (updateView)
+      {
+        GeometryOverlay overlay;
+        context().geometry->appendCurrentPartPoseOverlay(camera, overlay);
+        largeImage()->setGeometryOverlay(overlay);
+      }
     }
     else
     {
       context().lastSurfaceLocalizationResults->remove(camera.id);
       cameraRuntime()[camera.id].clearCurrentPose(camera.id);
-      largeImage()->clearDetectedCircle();
-      if (!suppressViewUpdate)
+      if (updateView)
       {
+        largeImage()->clearDetectedCircle();
         largeImage()->clearGeometryOverlay();
       }
     }
@@ -190,11 +191,6 @@ void MainWindowSurfaceModule::testSurfaceLocalization(const CameraConfig& camera
   if (!MainWindowCameraProfile::isGrayscaleLocalization(camera, config()))
   {
     log(tr("log.surfaceNotAvailable") + ": " + camera.id);
-    return;
-  }
-
-  if (camera.id != selectedCameraId())
-  {
     return;
   }
 
@@ -247,16 +243,17 @@ void MainWindowSurfaceModule::testSurfaceLocalization(const CameraConfig& camera
   context().incPendingJobs(__pendingCameraId_testSurfaceLocalization);
   runAsyncTask(decltype(job)(job), window(), [this, camera, roi, searchPolygon, exclusionRects, thresholdSettings, __pendingCameraId_testSurfaceLocalization](const SurfaceDefectResult& result) {
     auto __dec_guard = std::shared_ptr<void>(nullptr, [this, __pendingCameraId_testSurfaceLocalization](void*) { context().decPendingJobs(__pendingCameraId_testSurfaceLocalization); });
-    const bool suppressViewUpdate =
+    const bool updateView =
       camera.id == selectedCameraId() &&
-      (*context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry || *context().setupCameraId == camera.id);
+      *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry &&
+      *context().setupCameraId != camera.id;
     if (!result.processed || result.diagnosticImage.empty())
     {
       log(tr("log.surfaceFailed") + ": " + camera.id);
       return;
     }
 
-    if (!suppressViewUpdate)
+    if (updateView)
     {
       selectedPreview() = context().imaging->matToPixmap(result.diagnosticImage);
       largeImage()->setImage(selectedPreview());
@@ -269,7 +266,7 @@ void MainWindowSurfaceModule::testSurfaceLocalization(const CameraConfig& camera
     {
       context().lastSurfaceLocalizationResults->remove(camera.id);
       cameraRuntime()[camera.id].clearCurrentPose(camera.id);
-      if (!suppressViewUpdate)
+      if (updateView)
       {
         largeImage()->clearGeometryOverlay();
       }
@@ -300,7 +297,7 @@ void MainWindowSurfaceModule::testSurfaceLocalization(const CameraConfig& camera
     {
       context().lastSurfaceLocalizationResults->remove(camera.id);
       cameraRuntime()[camera.id].clearCurrentPose(camera.id);
-      if (!suppressViewUpdate)
+      if (updateView)
       {
         largeImage()->clearGeometryOverlay();
       }
@@ -323,11 +320,6 @@ void MainWindowSurfaceModule::testSurfaceLocalizationStrategy(const CameraConfig
   if (!MainWindowCameraProfile::isGrayscaleLocalization(camera, config()))
   {
     log(tr("log.surfaceNotAvailable") + ": " + camera.id);
-    return;
-  }
-
-  if (camera.id != selectedCameraId())
-  {
     return;
   }
 
@@ -359,16 +351,17 @@ void MainWindowSurfaceModule::testSurfaceLocalizationStrategy(const CameraConfig
   context().incPendingJobs(__pendingCameraId_testSurfaceLocalizationStrategy);
   runAsyncTask(decltype(job)(job), window(), [this, camera, exclusionRects, __pendingCameraId_testSurfaceLocalizationStrategy](const SurfaceStrategyResult& result) {
     auto __dec_guard = std::shared_ptr<void>(nullptr, [this, __pendingCameraId_testSurfaceLocalizationStrategy](void*) { context().decPendingJobs(__pendingCameraId_testSurfaceLocalizationStrategy); });
-    const bool suppressViewUpdate =
+    const bool updateView =
       camera.id == selectedCameraId() &&
-      (*context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry || *context().setupCameraId == camera.id);
+      *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry &&
+      *context().setupCameraId != camera.id;
     if (result.diagnosticImage.empty())
     {
       log(tr("log.surfaceFailed") + ": " + camera.id);
       return;
     }
 
-    if (!suppressViewUpdate)
+    if (updateView)
     {
       selectedPreview() = context().imaging->matToPixmap(result.diagnosticImage);
       largeImage()->setImage(selectedPreview());
@@ -395,11 +388,6 @@ void MainWindowSurfaceModule::testSurfaceEdgePcaLocalization(const CameraConfig&
   if (!MainWindowCameraProfile::isGrayscaleLocalization(camera, config()))
   {
     log(tr("log.surfaceNotAvailable") + ": " + camera.id);
-    return;
-  }
-
-  if (camera.id != selectedCameraId())
-  {
     return;
   }
 
@@ -454,14 +442,14 @@ void MainWindowSurfaceModule::testSurfaceEdgePcaLocalization(const CameraConfig&
       return;
     }
 
-    const bool suppressViewUpdate =
+    const bool updateView =
       camera.id == selectedCameraId() &&
-      *context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry;
+      *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry;
     if (!result.processed || result.diagnosticImage.empty())
     {
       context().lastSurfaceLocalizationResults->remove(camera.id);
       cameraRuntime()[camera.id].clearCurrentPose(camera.id);
-      if (!suppressViewUpdate)
+      if (updateView)
       {
         largeImage()->clearGeometryOverlay();
       }
@@ -469,7 +457,7 @@ void MainWindowSurfaceModule::testSurfaceEdgePcaLocalization(const CameraConfig&
       return;
     }
 
-    if (!suppressViewUpdate)
+    if (updateView)
     {
       selectedPreview() = context().imaging->matToPixmap(result.diagnosticImage);
       largeImage()->setImage(selectedPreview());
@@ -483,7 +471,7 @@ void MainWindowSurfaceModule::testSurfaceEdgePcaLocalization(const CameraConfig&
     {
       context().lastSurfaceLocalizationResults->remove(camera.id);
       cameraRuntime()[camera.id].clearCurrentPose(camera.id);
-      if (!suppressViewUpdate)
+      if (updateView)
       {
         largeImage()->clearGeometryOverlay();
       }
@@ -500,7 +488,13 @@ void MainWindowSurfaceModule::testSurfaceEdgePcaLocalization(const CameraConfig&
 
     GeometryOverlay overlay;
     context().geometry->appendCurrentPartPoseOverlay(camera, overlay);
-    largeImage()->setGeometryOverlay(overlay);
+    if (updateView)
+    {
+    if (updateView)
+    {
+      largeImage()->setGeometryOverlay(overlay);
+    }
+    }
     log(QString("%1: %2 cx=%3 cy=%4 angle=%5 score=%6")
                 .arg(tr("log.surfaceStrategyFound"))
                 .arg(camera.id)

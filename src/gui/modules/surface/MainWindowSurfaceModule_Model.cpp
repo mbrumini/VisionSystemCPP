@@ -42,6 +42,7 @@ SurfaceShapeMatchConfig shapeMatchConfigFromModel(const SurfaceModelConfig& mode
   }
   config.edgeSensitivity = model.edgeSensitivity;
   config.maxShapeDistance = model.maxShapeDistance;
+  config.useConvexHull = model.useConvexHull;
   return config;
 }
 }
@@ -75,7 +76,8 @@ void MainWindowSurfaceModule::acquireSurfaceModel(const CameraConfig& camera)
     input,
     cv::Rect(roi.x(), roi.y(), roi.width(), roi.height()),
     toCvRects(exclusionRects),
-    current.edgeSensitivity);
+    current.edgeSensitivity,
+    current.useConvexHull);
 
   if (!training.trained || training.templateImage.empty() || training.contour.empty())
   {
@@ -179,7 +181,8 @@ void MainWindowSurfaceModule::previewSurfaceModel(const CameraConfig& camera)
     input,
     cv::Rect(roi.x(), roi.y(), roi.width(), roi.height()),
     toCvRects(exclusionRects),
-    current.edgeSensitivity);
+    current.edgeSensitivity,
+    current.useConvexHull);
 
   if (training.diagnosticImage.empty())
   {
@@ -199,7 +202,7 @@ void MainWindowSurfaceModule::previewSurfaceModel(const CameraConfig& camera)
 
 void MainWindowSurfaceModule::testSurfaceShapeModel(const CameraConfig& camera)
 {
-  if (!MainWindowCameraProfile::isGrayscaleLocalization(camera, config()) || camera.id != selectedCameraId())
+  if (!MainWindowCameraProfile::isGrayscaleLocalization(camera, config()))
   {
     return;
   }
@@ -233,14 +236,15 @@ void MainWindowSurfaceModule::testSurfaceShapeModel(const CameraConfig& camera)
   context().incPendingJobs(__pendingCameraId_testSurfaceShapeModel);
   runAsyncTask(decltype(job)(job), window(), [this, camera, searchRoi, exclusionRects, __pendingCameraId_testSurfaceShapeModel](const SurfaceDefectResult& result) {
     auto __dec_guard = std::shared_ptr<void>(nullptr, [this, __pendingCameraId_testSurfaceShapeModel](void*) { context().decPendingJobs(__pendingCameraId_testSurfaceShapeModel); });
-    const bool suppressViewUpdate =
+    const bool updateView =
       camera.id == selectedCameraId() &&
-      (*context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry || *context().setupCameraId == camera.id);
+      *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry &&
+      *context().setupCameraId != camera.id;
     if (!result.processed || result.diagnosticImage.empty() || !result.localization.found)
     {
       context().lastSurfaceLocalizationResults->remove(camera.id);
       cameraRuntime()[camera.id].clearCurrentPose(camera.id);
-      if (!suppressViewUpdate)
+      if (updateView)
       {
         largeImage()->clearGeometryOverlay();
       }
@@ -256,7 +260,7 @@ void MainWindowSurfaceModule::testSurfaceShapeModel(const CameraConfig& camera)
       return;
     }
 
-    if (!suppressViewUpdate)
+    if (updateView)
     {
       selectedPreview() = context().imaging->matToPixmap(result.diagnosticImage);
       largeImage()->setImage(selectedPreview());
@@ -266,7 +270,10 @@ void MainWindowSurfaceModule::testSurfaceShapeModel(const CameraConfig& camera)
     }
     GeometryOverlay overlay;
     context().geometry->appendCurrentPartPoseOverlay(camera, overlay);
-    largeImage()->setGeometryOverlay(overlay);
+    if (updateView)
+    {
+      largeImage()->setGeometryOverlay(overlay);
+    }
     log(QString("%1: %2 shape cx=%3 cy=%4 angle=%5 score=%6")
                 .arg(tr("log.surfaceStrategyFound"))
                 .arg(camera.id)
@@ -279,7 +286,7 @@ void MainWindowSurfaceModule::testSurfaceShapeModel(const CameraConfig& camera)
 
 void MainWindowSurfaceModule::testSurfaceTemplateModel(const CameraConfig& camera)
 {
-  if (!MainWindowCameraProfile::isGrayscaleLocalization(camera, config()) || camera.id != selectedCameraId())
+  if (!MainWindowCameraProfile::isGrayscaleLocalization(camera, config()))
   {
     return;
   }
@@ -321,14 +328,15 @@ void MainWindowSurfaceModule::testSurfaceTemplateModel(const CameraConfig& camer
   context().incPendingJobs(__pendingCameraId_testSurfaceTemplateModel);
   runAsyncTask(decltype(job)(job), window(), [this, camera, searchRoi, exclusionRects, __pendingCameraId_testSurfaceTemplateModel](const SurfaceDefectResult& result) {
     auto __dec_guard = std::shared_ptr<void>(nullptr, [this, __pendingCameraId_testSurfaceTemplateModel](void*) { context().decPendingJobs(__pendingCameraId_testSurfaceTemplateModel); });
-    const bool suppressViewUpdate =
+    const bool updateView =
       camera.id == selectedCameraId() &&
-      (*context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry || *context().setupCameraId == camera.id);
+      *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry &&
+      *context().setupCameraId != camera.id;
     if (!result.processed || result.diagnosticImage.empty() || !result.localization.found)
     {
       context().lastSurfaceLocalizationResults->remove(camera.id);
       cameraRuntime()[camera.id].clearCurrentPose(camera.id);
-      if (!suppressViewUpdate)
+      if (updateView)
       {
         largeImage()->clearGeometryOverlay();
       }
@@ -344,7 +352,7 @@ void MainWindowSurfaceModule::testSurfaceTemplateModel(const CameraConfig& camer
       return;
     }
 
-    if (!suppressViewUpdate)
+    if (updateView)
     {
       selectedPreview() = context().imaging->matToPixmap(result.diagnosticImage);
       largeImage()->setImage(selectedPreview());
@@ -354,7 +362,10 @@ void MainWindowSurfaceModule::testSurfaceTemplateModel(const CameraConfig& camer
     }
     GeometryOverlay overlay;
     context().geometry->appendCurrentPartPoseOverlay(camera, overlay);
-    largeImage()->setGeometryOverlay(overlay);
+    if (updateView)
+    {
+      largeImage()->setGeometryOverlay(overlay);
+    }
     log(QString("%1: %2 template cx=%3 cy=%4 angle=%5 score=%6")
                 .arg(tr("log.surfaceStrategyFound"))
                 .arg(camera.id)

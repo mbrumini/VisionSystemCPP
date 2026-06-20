@@ -9,6 +9,7 @@
 #include "gui/modules/MainWindowContext.h"
 #include "gui/modules/MainWindowSurfaceModule.h"
 #include "gui/modules/setup/SetupCameraResolver.h"
+#include "util/AsyncExecutor.h"
 
 #include <QElapsedTimer>
 #include <QTimer>
@@ -18,14 +19,6 @@
 void MainWindowSetupModule::startCameraSimulation(const CameraConfig& camera, bool refreshSetupPanel)
 {
   const CameraConfig effectiveCamera = currentConfiguredCamera(config(), camera);
-
-  if (effectiveCamera.id != selectedCamera().id ||
-      effectiveCamera.type != selectedCamera().type ||
-      effectiveCamera.usbIndex != selectedCamera().usbIndex ||
-      effectiveCamera.deviceId != selectedCamera().deviceId)
-  {
-    context().selectCamera(effectiveCamera);
-  }
 
   if (effectiveCamera.type != "file" && effectiveCamera.type != "usb" &&
       effectiveCamera.type != "vimba" && effectiveCamera.type != "simulator")
@@ -135,7 +128,7 @@ void MainWindowSetupModule::advanceCameraFrame(const CameraConfig& camera)
 {
   const CameraConfig effectiveCamera = currentConfiguredCamera(config(), camera);
 
-  if (effectiveCamera.id != selectedCamera().id)
+  if (m_cameraGrabInProgress.value(effectiveCamera.id, false))
   {
     return;
   }
@@ -147,64 +140,96 @@ void MainWindowSetupModule::advanceCameraFrame(const CameraConfig& camera)
     return;
   }
 
-  CameraRuntime& runtime = cameraRuntime()[effectiveCamera.id];
-  QString error;
+  m_cameraGrabInProgress[effectiveCamera.id] = true;
+  CameraRuntime* runtimePtr = &cameraRuntime()[effectiveCamera.id];
   const QString testFolder = context().imaging->cameraTestImagesFolder(effectiveCamera);
-  if (!runtime.step(effectiveCamera, testFolder, &error))
-  {
-    if (effectiveCamera.type == "simulator" && runtime.running())
-    {
-      updateCameraSetupDetails(effectiveCamera);
-      return;
-    }
-    log(error.isEmpty() ? tr("log.cameraNoMoreFrames") + ": " + effectiveCamera.id : error);
-    if (effectiveCamera.type == "vimba" && runtime.running())
-    {
-      updateCameraSetupDetails(effectiveCamera);
-      return;
-    }
-    context().simulationTimer->stop();
-    return;
-  }
 
-  log(QString("pipeline frame begin: %1 frame=%2").arg(effectiveCamera.id).arg(runtime.frameIndex()));
-  selectedPreview() = context().imaging->matToPixmap(runtime.currentFrame());
-  for (CameraTileWidget* tile : *context().tiles)
-  {
-    if (tile->camera().id == effectiveCamera.id)
-    {
-      tile->setPreview(selectedPreview());
-      break;
-    }
-  }
-  largeImage()->setImage(selectedPreview());
-  if (context().geometry)
-  {
-    context().geometry->showRuntimeGeometryOverlay(effectiveCamera);
-  }
-  QElapsedTimer scanTimer;
-  scanTimer.start();
-  processCurrentCameraFrame(effectiveCamera);
-  (*context().lastSetupScanElapsedMs)[effectiveCamera.id] = scanTimer.elapsed();
-  if (context().publishSimulatorResult)
-  {
-    QTimer::singleShot(0, window(), [this, cameraId = effectiveCamera.id]() {
-      if (context().cameraPendingJobs->value(cameraId, 0) == 0)
+  auto grabJob = [runtimePtr, effectiveCamera, testFolder]() {
+    struct GrabTaskResult {
+      bool success = false;
+      cv::Mat frame;
+      SimulatorFrameMetadata metadata;
+      QString error;
+    } result;
+    result.success = runtimePtr->grabFrame(effectiveCamera, testFolder, result.frame, result.metadata, result.error);
+    return result;
+  };
+
+  AsyncExecutor::runAsyncTask(
+    std::move(grabJob),
+    window(),
+    [this, runtimePtr, effectiveCamera](auto grabResult) {
+      m_cameraGrabInProgress[effectiveCamera.id] = false;
+
+      if (!runtimePtr->running())
       {
-        context().publishSimulatorResult(cameraId);
+        return;
       }
-    });
-  }
-  if (context().updateMeasurementResults)
-  {
-    context().updateMeasurementResults();
-  }
-  log(QString("pipeline frame end: %1 frame=%2 elapsedMs=%3 pendingJobs=%4")
-        .arg(effectiveCamera.id)
-        .arg(runtime.frameIndex())
-        .arg((*context().lastSetupScanElapsedMs)[effectiveCamera.id])
-        .arg(context().cameraPendingJobs->value(effectiveCamera.id, 0)));
-  updateCameraSetupDetails(effectiveCamera);
+
+      if (!grabResult.success)
+      {
+        if (effectiveCamera.type == "simulator" && runtimePtr->running())
+        {
+          updateCameraSetupDetails(effectiveCamera);
+          return;
+        }
+        log(grabResult.error.isEmpty() ? tr("log.cameraNoMoreFrames") + ": " + effectiveCamera.id : grabResult.error);
+        if (effectiveCamera.type == "vimba" && runtimePtr->running())
+        {
+          updateCameraSetupDetails(effectiveCamera);
+          return;
+        }
+        runtimePtr->stop();
+        return;
+      }
+
+      runtimePtr->updateStateAfterGrab(grabResult.frame, grabResult.metadata);
+
+      log(QString("pipeline frame begin: %1 frame=%2").arg(effectiveCamera.id).arg(runtimePtr->frameIndex()));
+      const QPixmap framePreview =
+        context().imaging->matToPixmap(runtimePtr->currentFrame(), QSize(1920, 1080));
+      for (CameraTileWidget* tile : *context().tiles)
+      {
+        if (tile->camera().id == effectiveCamera.id)
+        {
+          tile->setPreview(framePreview);
+          break;
+        }
+      }
+      if (effectiveCamera.id == selectedCamera().id)
+      {
+        selectedPreview() = framePreview;
+        largeImage()->setImage(selectedPreview());
+        if (context().geometry)
+        {
+          context().geometry->showRuntimeGeometryOverlay(effectiveCamera);
+        }
+      }
+      QElapsedTimer scanTimer;
+      scanTimer.start();
+      processCurrentCameraFrame(effectiveCamera);
+      (*context().lastSetupScanElapsedMs)[effectiveCamera.id] = scanTimer.elapsed();
+      if (context().publishSimulatorResult)
+      {
+        QTimer::singleShot(0, window(), [this, cameraId = effectiveCamera.id]() {
+          if (context().cameraPendingJobs->value(cameraId, 0) == 0)
+          {
+            context().publishSimulatorResult(cameraId);
+          }
+        });
+      }
+      if (effectiveCamera.id == selectedCamera().id && context().updateMeasurementResults)
+      {
+        context().updateMeasurementResults();
+      }
+      log(QString("pipeline frame end: %1 frame=%2 elapsedMs=%3 pendingJobs=%4")
+            .arg(effectiveCamera.id)
+            .arg(runtimePtr->frameIndex())
+            .arg((*context().lastSetupScanElapsedMs)[effectiveCamera.id])
+            .arg(context().cameraPendingJobs->value(effectiveCamera.id, 0)));
+      updateCameraSetupDetails(effectiveCamera);
+    },
+    QString("grab.%1").arg(effectiveCamera.id));
 }
 
 
@@ -280,7 +305,7 @@ void MainWindowSetupModule::processCurrentCameraFrame(const CameraConfig& camera
 
 void MainWindowSetupModule::refreshSetupGeometryResults(const CameraConfig& camera)
 {
-  if (camera.id != selectedCamera().id || !context().geometry)
+  if (!context().geometry)
   {
     return;
   }
@@ -293,11 +318,14 @@ void MainWindowSetupModule::refreshSetupGeometryResults(const CameraConfig& came
   if (context().measurement)
   {
     context().measurement->rebuildMeasurementRecipe(camera);
-    GeometryOverlay overlay = largeImage()->geometryOverlay();
-    context().measurement->appendMeasurementOverlay(camera, overlay);
-    largeImage()->setGeometryOverlay(overlay);
+    if (camera.id == selectedCamera().id)
+    {
+      GeometryOverlay overlay = largeImage()->geometryOverlay();
+      context().measurement->appendMeasurementOverlay(camera, overlay);
+      largeImage()->setGeometryOverlay(overlay);
+    }
   }
-  if (context().updateMeasurementResults)
+  if (camera.id == selectedCamera().id && context().updateMeasurementResults)
   {
     context().updateMeasurementResults();
   }

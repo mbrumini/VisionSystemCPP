@@ -158,6 +158,7 @@
     "edgeBandOuter": "Outer band",
     "edgeFitMaxError": "Fit error",
     "modelMaxShapeDistance": "Max shape distance",
+    "modelUseConvexHull": "Use convex hull",
     "modelMinTemplateScore": "Min template score",
     "modelAngleStart": "Min angle",
     "modelAngleEnd": "Max angle",

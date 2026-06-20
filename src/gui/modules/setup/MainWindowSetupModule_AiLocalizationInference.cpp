@@ -25,9 +25,9 @@
 
 namespace
 {
-cv::Mat diagnosticImage(const QString& imagePath, const MaskPoseResult& pose)
+cv::Mat diagnosticImage(const cv::Mat& original, const MaskPoseResult& pose)
 {
-  cv::Mat diagnostic = cv::imread(imagePath.toStdString(), cv::IMREAD_COLOR);
+  cv::Mat diagnostic = original.clone();
   if (diagnostic.empty() || !pose.found)
   {
     return diagnostic;
@@ -54,9 +54,8 @@ cv::Mat diagnosticImage(const QString& imagePath, const MaskPoseResult& pose)
   return diagnostic;
 }
 
-bool maskCentroid(const QString& maskPath, cv::Point2d* center)
+bool maskCentroid(const cv::Mat& mask, cv::Point2d* center)
 {
-  const cv::Mat mask = cv::imread(maskPath.toStdString(), cv::IMREAD_GRAYSCALE);
   if (mask.empty())
   {
     return false;
@@ -120,54 +119,54 @@ void MainWindowSetupModule::runAiLocalizationInferenceFrame(
     callback(immediate);
     return;
   }
-  if (!ensureAiLocalizationInferenceWorker(modelPath))
+  if (!ensureAiLocalizationInferenceWorker(camera.id, modelPath))
   {
     immediate.error = "Worker localizzazione AI non avviato";
     callback(immediate);
     return;
   }
 
-  const QString folder = QDir(RecipeManager::recipesRootPath()).filePath(
-    QString("%1/images/%2/ai/localization_segmentation/inference")
-      .arg(recipes().recipeId(), camera.id));
-  QDir().mkpath(folder);
-  const QString stamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss_zzz");
-  const QString requestId = QUuid::createUuid().toString(QUuid::WithoutBraces);
-  const QString imagePath = QDir(folder).filePath(
-    QString("%1_input_%2.png").arg(camera.id, stamp));
-  const QString maskPath = QDir(folder).filePath(
-    QString("%1_mask_%2.png").arg(camera.id, stamp));
-  const QString referenceMaskPath = QDir(folder).filePath(
-    QString("%1_reference_%2.png").arg(camera.id, stamp));
-  if (!cv::imwrite(imagePath.toStdString(), frame))
+  std::vector<uchar> buffer;
+  if (!cv::imencode(".png", frame, buffer))
   {
-    immediate.error = "Salvataggio frame inferenza fallito";
+    immediate.error = "Codifica in memoria fallita";
     callback(immediate);
     return;
   }
 
+  QByteArray b64 = QByteArray(reinterpret_cast<const char*>(buffer.data()), static_cast<int>(buffer.size())).toBase64();
+  const QString requestId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+
   m_aiLocalizationInferenceCallbacks.insert(requestId, std::move(callback));
+  m_aiLocalizationInferenceFrames.insert(requestId, frame.clone());
+  m_aiLocalizationInferenceRequestIdToCameraId.insert(requestId, camera.id);
+
   QJsonObject request;
   request["request_id"] = requestId;
-  request["image"] = imagePath;
-  request["mask"] = maskPath;
-  request["reference_mask"] = referenceMaskPath;
+  request["image_data"] = QString::fromLatin1(b64);
   request["camera_id"] = camera.id;
-  m_aiLocalizationInferenceProcess->write(
-    QJsonDocument(request).toJson(QJsonDocument::Compact) + "\n");
+  QProcess* process = m_aiLocalizationInferenceProcesses.value(camera.id, nullptr);
+  if (process)
+  {
+    process->write(
+      QJsonDocument(request).toJson(QJsonDocument::Compact) + "\n");
+  }
   log(QString("Localizzazione AI richiesta: camera=%1 request=%2")
     .arg(camera.id, requestId));
 }
 
-bool MainWindowSetupModule::ensureAiLocalizationInferenceWorker(const QString& modelPath)
+bool MainWindowSetupModule::ensureAiLocalizationInferenceWorker(const QString& cameraId, const QString& modelPath)
 {
-  if (m_aiLocalizationInferenceProcess &&
-      m_aiLocalizationInferenceProcess->state() != QProcess::NotRunning &&
-      m_aiLocalizationInferenceModelPath == modelPath)
+  QProcess* process = m_aiLocalizationInferenceProcesses.value(cameraId, nullptr);
+  QString currentModelPath = m_aiLocalizationInferenceModelPaths.value(cameraId, QString());
+
+  if (process &&
+      process->state() != QProcess::NotRunning &&
+      currentModelPath == modelPath)
   {
     return true;
   }
-  stopAiLocalizationInferenceWorker();
+  stopAiLocalizationInferenceWorker(cameraId);
   const QString script = aiProjectPath(
     "tools/ai/localization_segmentation_inference_worker.py");
   if (!QFileInfo::exists(script))
@@ -175,80 +174,108 @@ bool MainWindowSetupModule::ensureAiLocalizationInferenceWorker(const QString& m
     return false;
   }
 
-  m_aiLocalizationInferenceProcess = new QProcess(window());
-  m_aiLocalizationInferenceProcess->setWorkingDirectory(RecipeJsonUtils::appRootPath());
-  m_aiLocalizationInferenceProcess->setProcessChannelMode(QProcess::SeparateChannels);
+  process = new QProcess(window());
+  process->setWorkingDirectory(RecipeJsonUtils::appRootPath());
+  process->setProcessChannelMode(QProcess::SeparateChannels);
   QObject::connect(
-    m_aiLocalizationInferenceProcess,
+    process,
     &QProcess::readyReadStandardOutput,
     window(),
-    [this]() { handleAiLocalizationInferenceOutput(); });
+    [this, cameraId]() { handleAiLocalizationInferenceOutput(cameraId); });
   QObject::connect(
-    m_aiLocalizationInferenceProcess,
+    process,
     &QProcess::readyReadStandardError,
     window(),
-    [this]() {
-      const QString text = QString::fromLocal8Bit(
-        m_aiLocalizationInferenceProcess->readAllStandardError()).trimmed();
+    [this, cameraId]() {
+      QProcess* p = m_aiLocalizationInferenceProcesses.value(cameraId, nullptr);
+      if (!p) return;
+      const QString text = QString::fromLocal8Bit(p->readAllStandardError()).trimmed();
       for (const QString& line : text.split('\n', Qt::SkipEmptyParts))
       {
-        log("Localizzazione AI: " + line.trimmed());
+        log(QString("Localizzazione AI (%1): %2").arg(cameraId, line.trimmed()));
       }
     });
   QObject::connect(
-    m_aiLocalizationInferenceProcess,
+    process,
     qOverload<int, QProcess::ExitStatus>(&QProcess::finished),
     window(),
-    [this](int code, QProcess::ExitStatus status) {
-      log(QString("Worker localizzazione AI terminato: code=%1 status=%2")
-        .arg(code)
+    [this, cameraId](int code, QProcess::ExitStatus status) {
+      log(QString("Worker localizzazione AI per %1 terminato: code=%2 status=%3")
+        .arg(cameraId).arg(code)
         .arg(status == QProcess::NormalExit ? "normal" : "crash"));
       AiLocalizationFrameResult failed;
       failed.error = "Worker localizzazione AI terminato";
-      const auto callbacks = m_aiLocalizationInferenceCallbacks;
-      m_aiLocalizationInferenceCallbacks.clear();
-      for (const auto& callback : callbacks)
+
+      QList<QString> requestsToFail;
+      for (auto it = m_aiLocalizationInferenceCallbacks.cbegin(); it != m_aiLocalizationInferenceCallbacks.cend(); ++it)
       {
-        callback(failed);
+        if (m_aiLocalizationInferenceRequestIdToCameraId.value(it.key()) == cameraId)
+        {
+          requestsToFail.append(it.key());
+        }
       }
-      m_aiLocalizationInferenceModelPath.clear();
+      for (const QString& reqId : requestsToFail)
+      {
+        auto callback = m_aiLocalizationInferenceCallbacks.take(reqId);
+        m_aiLocalizationInferenceFrames.remove(reqId);
+        m_aiLocalizationInferenceRequestIdToCameraId.remove(reqId);
+        if (callback)
+        {
+          callback(failed);
+        }
+      }
+      m_aiLocalizationInferenceModelPaths.remove(cameraId);
     });
 
-  m_aiLocalizationInferenceModelPath = modelPath;
-  m_aiLocalizationInferenceProcess->start(
+  m_aiLocalizationInferenceProcesses[cameraId] = process;
+  m_aiLocalizationInferenceModelPaths[cameraId] = modelPath;
+  process->start(
     aiPythonProgram(),
     aiPythonUnbufferedArguments({
       script,
       "--model", modelPath,
       "--device", "0"
     }));
-  return m_aiLocalizationInferenceProcess->waitForStarted(5000);
+  return process->waitForStarted(5000);
+}
+
+void MainWindowSetupModule::stopAiLocalizationInferenceWorker(const QString& cameraId)
+{
+  QProcess* process = m_aiLocalizationInferenceProcesses.take(cameraId);
+  if (!process)
+  {
+    return;
+  }
+  if (process->state() != QProcess::NotRunning)
+  {
+    process->closeWriteChannel();
+    process->terminate();
+    if (!process->waitForFinished(1500))
+    {
+      process->kill();
+    }
+  }
+  process->deleteLater();
+  m_aiLocalizationInferenceModelPaths.remove(cameraId);
 }
 
 void MainWindowSetupModule::stopAiLocalizationInferenceWorker()
 {
-  if (!m_aiLocalizationInferenceProcess)
+  const QList<QString> cameraIds = m_aiLocalizationInferenceProcesses.keys();
+  for (const QString& cameraId : cameraIds)
+  {
+    stopAiLocalizationInferenceWorker(cameraId);
+  }
+}
+
+void MainWindowSetupModule::handleAiLocalizationInferenceOutput(const QString& cameraId)
+{
+  QProcess* process = m_aiLocalizationInferenceProcesses.value(cameraId, nullptr);
+  if (!process)
   {
     return;
   }
-  if (m_aiLocalizationInferenceProcess->state() != QProcess::NotRunning)
-  {
-    m_aiLocalizationInferenceProcess->closeWriteChannel();
-    m_aiLocalizationInferenceProcess->terminate();
-    if (!m_aiLocalizationInferenceProcess->waitForFinished(1500))
-    {
-      m_aiLocalizationInferenceProcess->kill();
-    }
-  }
-  m_aiLocalizationInferenceProcess->deleteLater();
-  m_aiLocalizationInferenceProcess = nullptr;
-  m_aiLocalizationInferenceModelPath.clear();
-}
-
-void MainWindowSetupModule::handleAiLocalizationInferenceOutput()
-{
-  const QString text = QString::fromUtf8(
-    m_aiLocalizationInferenceProcess->readAllStandardOutput()).trimmed();
+  const QString text = QString::fromUtf8(process->readAllStandardOutput()).trimmed();
   for (const QString& line : text.split('\n', Qt::SkipEmptyParts))
   {
     const QJsonDocument document = QJsonDocument::fromJson(line.trimmed().toUtf8());
@@ -261,8 +288,8 @@ void MainWindowSetupModule::handleAiLocalizationInferenceOutput()
     const QString type = object.value("type").toString();
     if (type == "ready")
     {
-      log(QString("Modello localizzazione AI pronto: load=%1 ms")
-        .arg(object.value("load_ms").toDouble(), 0, 'f', 1));
+      log(QString("Modello localizzazione AI per %1 pronto: load=%2 ms")
+        .arg(cameraId).arg(object.value("load_ms").toDouble(), 0, 'f', 1));
       continue;
     }
 
@@ -275,54 +302,79 @@ void MainWindowSetupModule::handleAiLocalizationInferenceOutput()
     }
     const auto callback = callbackIt.value();
     m_aiLocalizationInferenceCallbacks.erase(callbackIt);
+    m_aiLocalizationInferenceRequestIdToCameraId.remove(requestId);
 
     AiLocalizationFrameResult result;
     result.processed = type == "result";
     result.error = type == "error" ? object.value("message").toString() : QString();
     result.found = object.value("found").toBool();
-    result.imagePath = object.value("image").toString();
-    result.maskPath = object.value("mask").toString();
-    result.referenceMaskPath = object.value("reference_mask").toString();
     result.confidence = object.value("confidence").toDouble();
     result.referenceConfidence = object.value("reference_confidence").toDouble();
     result.elapsedMs = object.value("elapsed_ms").toDouble();
+
+    cv::Mat originalFrame = m_aiLocalizationInferenceFrames.take(requestId);
+
     if (result.found)
     {
-      const cv::Mat mask = cv::imread(
-        result.maskPath.toStdString(), cv::IMREAD_GRAYSCALE);
-      result.pose = MaskPoseEstimator().estimate(mask);
-      result.found = result.pose.found;
-      if (!result.found)
+      cv::Mat mask;
+      const QString maskData = object.value("mask_data").toString();
+      if (!maskData.isEmpty())
       {
-        result.error = "Maschera AI non valida";
+        QByteArray bytes = QByteArray::fromBase64(maskData.toUtf8());
+        std::vector<uchar> buf(bytes.begin(), bytes.end());
+        mask = cv::imdecode(buf, cv::IMREAD_GRAYSCALE);
       }
-      result.diagnosticImage = diagnosticImage(result.imagePath, result.pose);
-      if (object.value("reference_found").toBool())
+
+      if (mask.empty())
       {
-        result.hasOrientationReference = maskCentroid(
-          result.referenceMaskPath,
-          &result.orientationReferenceCenter);
+        result.found = false;
+        result.error = "Maschera AI non valida o vuota";
       }
-      if (result.hasOrientationReference && !result.diagnosticImage.empty())
+      else
       {
-        const cv::Point pieceCenter(
-          qRound(result.pose.center.x), qRound(result.pose.center.y));
-        const cv::Point referenceCenter(
-          qRound(result.orientationReferenceCenter.x),
-          qRound(result.orientationReferenceCenter.y));
-        cv::drawMarker(
-          result.diagnosticImage,
-          referenceCenter,
-          cv::Scalar(0, 165, 255),
-          cv::MARKER_DIAMOND,
-          20,
-          2);
-        cv::line(
-          result.diagnosticImage,
-          pieceCenter,
-          referenceCenter,
-          cv::Scalar(0, 165, 255),
-          2);
+        result.pose = MaskPoseEstimator().estimate(mask);
+        result.found = result.pose.found;
+        if (!result.found)
+        {
+          result.error = "Localizzazione contorno fallita";
+        }
+        else
+        {
+          result.diagnosticImage = diagnosticImage(originalFrame, result.pose);
+          if (object.value("reference_found").toBool())
+          {
+            cv::Mat refMask;
+            const QString refData = object.value("reference_mask_data").toString();
+            if (!refData.isEmpty())
+            {
+              QByteArray bytes = QByteArray::fromBase64(refData.toUtf8());
+              std::vector<uchar> buf(bytes.begin(), bytes.end());
+              refMask = cv::imdecode(buf, cv::IMREAD_GRAYSCALE);
+            }
+            result.hasOrientationReference = maskCentroid(refMask, &result.orientationReferenceCenter);
+          }
+          if (result.hasOrientationReference && !result.diagnosticImage.empty())
+          {
+            const cv::Point pieceCenter(
+              qRound(result.pose.center.x), qRound(result.pose.center.y));
+            const cv::Point referenceCenter(
+              qRound(result.orientationReferenceCenter.x),
+              qRound(result.orientationReferenceCenter.y));
+            cv::drawMarker(
+              result.diagnosticImage,
+              referenceCenter,
+              cv::Scalar(0, 165, 255),
+              cv::MARKER_DIAMOND,
+              20,
+              2);
+            cv::line(
+              result.diagnosticImage,
+              pieceCenter,
+              referenceCenter,
+              cv::Scalar(0, 165, 255),
+              2);
+          }
+        }
       }
     }
     callback(result);

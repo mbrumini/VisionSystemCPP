@@ -1,0 +1,39 @@
+{
+    "protocolVersion": 1,
+    "name": "cross_rotation_cam16",
+    "recipeId": "test_cross_template",
+    "strategyId": "edgePca",
+    "cameraId": "CAM16",
+    "slot": 16,
+    "channel": "CAM16",
+    "canvas": {
+        "width": 640,
+        "height": 480,
+        "background": 240
+    },
+    "master": {
+        "file": "../assets/cross_asymmetric/master.png",
+        "centerX": 320.0,
+        "centerY": 240.0
+    },
+    "sequence": {
+        "anglesDeg": [
+            0.0,
+            15.0,
+            30.0,
+            45.0
+        ],
+        "translationX": 0.0,
+        "translationY": 0.0,
+        "repetitions": 2
+    },
+    "timeouts": {
+        "connectMs": 5000,
+        "resultMs": 5000
+    },
+    "tolerances": {
+        "centerPx": 2.0,
+        "angleDeg": 2.0
+    },
+    "output": "../reports/cross_rotation_cam16.json"
+}

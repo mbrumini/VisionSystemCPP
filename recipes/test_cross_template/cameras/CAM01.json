@@ -7,25 +7,21 @@
                     "id": "edgePca",
                     "label": "edgePca",
                     "searchRoi": {
-                        "height": 348,
-                        "width": 416,
-                        "x": 141,
-                        "y": 79
+                        "height": 430,
+                        "width": 562,
+                        "x": 41,
+                        "y": 24
                     }
                 }
             },
-            "edge": {
-                "sensitivity": 134
-            },
             "enabled": true,
-            "exclusionRects": [
-            ],
+            "exclusionRects": [],
             "method": "edgePca",
             "searchRoi": {
-                "height": 348,
-                "width": 416,
-                "x": 141,
-                "y": 79
+                "height": 430,
+                "width": 562,
+                "x": 41,
+                "y": 24
             }
         }
     }

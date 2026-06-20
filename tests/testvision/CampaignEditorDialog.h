@@ -5,6 +5,7 @@
 #include <QStringList>
 
 class QComboBox;
+class QCheckBox;
 class QDoubleSpinBox;
 class QLineEdit;
 class QListWidget;
@@ -32,7 +33,9 @@ private:
 
   QLineEdit* m_name = nullptr;
   QSpinBox* m_cycles = nullptr;
+  QCheckBox* m_parallel = nullptr;
   QListWidget* m_items = nullptr;
+  QComboBox* m_camera = nullptr;
   QComboBox* m_recipe = nullptr;
   QComboBox* m_strategy = nullptr;
   QComboBox* m_shape = nullptr;

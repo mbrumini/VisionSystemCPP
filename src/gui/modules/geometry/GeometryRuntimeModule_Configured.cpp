@@ -34,11 +34,6 @@ double normalizedSetupArcAngle(double angle)
 
 void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& camera)
 {
-  if (camera.id != selectedCameraId())
-  {
-    return;
-  }
-
   loadGeometryLinesRecipe(camera);
   QVector<GeometryLineRuntimeConfig>& lines = m_lineConfigs[camera.id];
   const PartPose& pose = cameraRuntime()[camera.id].currentPose();
@@ -352,12 +347,17 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
       cv::LINE_AA);
   }
 
-  selectedPreview() = context().imaging->matToPixmap(diagnostic);
-  largeImage()->setImage(selectedPreview());
-  largeImage()->clearRoi();
-  largeImage()->clearCircles();
+  const bool updateView = camera.id == selectedCameraId();
+  if (updateView)
+  {
+    selectedPreview() = context().imaging->matToPixmap(diagnostic);
+    largeImage()->setImage(selectedPreview());
+    largeImage()->clearRoi();
+    largeImage()->clearCircles();
+  }
 
-  if (*context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry &&
+  if (updateView &&
+      *context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry &&
       m_drawingTarget == DrawingTarget::Line)
   {
     GeometryLineRuntimeConfig& activeLine = activeGeometryLineConfig(camera.id);
@@ -383,15 +383,19 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
     return;
   }
 
-  if (*context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry &&
+  if (updateView &&
+      *context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry &&
       m_drawingTarget == DrawingTarget::Point)
   {
     updateGeometryPointOverlay(camera, detectedOverlay);
     return;
   }
 
-  GeometryOverlay setupOverlay = detectedOverlay;
-  appendCurrentPartPoseOverlay(camera, setupOverlay);
-  largeImage()->setGeometryOverlay(setupOverlay);
+  if (updateView)
+  {
+    GeometryOverlay setupOverlay = detectedOverlay;
+    appendCurrentPartPoseOverlay(camera, setupOverlay);
+    largeImage()->setGeometryOverlay(setupOverlay);
+  }
 }
 

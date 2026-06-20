@@ -89,9 +89,10 @@ private:
     double valRatio,
     const QString& baseModel);
   void runAiLocalizationInference(const CameraConfig& camera);
-  bool ensureAiLocalizationInferenceWorker(const QString& modelPath);
+  bool ensureAiLocalizationInferenceWorker(const QString& cameraId, const QString& modelPath);
   void stopAiLocalizationInferenceWorker();
-  void handleAiLocalizationInferenceOutput();
+  void stopAiLocalizationInferenceWorker(const QString& cameraId);
+  void handleAiLocalizationInferenceOutput(const QString& cameraId);
   void applyAiLocalizationInferenceResult(
     const CameraConfig& camera,
     const AiLocalizationFrameResult& result);
@@ -123,15 +124,17 @@ private:
   QTimer* m_aiTrainingGraphTimer = nullptr;
   QProcess* m_aiProcess = nullptr;
   QProcess* m_aiInferenceProcess = nullptr;
-  QProcess* m_aiLocalizationInferenceProcess = nullptr;
+  QHash<QString, QProcess*> m_aiLocalizationInferenceProcesses;
   QPointer<QLabel> m_aiInferenceResultLabel;
   QPointer<QLabel> m_aiLocalizationInferenceResultLabel;
   QString m_aiInferenceModelPath;
-  QString m_aiLocalizationInferenceModelPath;
+  QHash<QString, QString> m_aiLocalizationInferenceModelPaths;
   QString m_aiLocalizationInferenceImagePath;
   CameraConfig m_aiLocalizationInferenceCamera;
   QHash<QString, std::function<void(const AiLocalizationFrameResult&)>>
     m_aiLocalizationInferenceCallbacks;
+  QHash<QString, cv::Mat> m_aiLocalizationInferenceFrames;
+  QHash<QString, QString> m_aiLocalizationInferenceRequestIdToCameraId;
   QString m_aiTrainingCameraId;
   QString m_aiLocalizationTrainingCameraId;
   QString m_aiTrainingPreviousModelPath;
@@ -152,4 +155,5 @@ private:
   CameraConfig m_aiClassificationCaptureCamera;
   bool m_aiClassificationCaptureToClass = false;
   AiClassificationClassConfig m_aiClassificationCaptureClass;
+  QHash<QString, bool> m_cameraGrabInProgress;
 };

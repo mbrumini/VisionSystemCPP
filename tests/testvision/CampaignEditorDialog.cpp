@@ -1,6 +1,7 @@
 #include "CampaignEditorDialog.h"
 
 #include <QComboBox>
+#include <QCheckBox>
 #include <QDialogButtonBox>
 #include <QDoubleSpinBox>
 #include <QFormLayout>
@@ -31,6 +32,7 @@ QDoubleSpinBox* numberBox(double value, double minimum, double maximum, double s
 QJsonObject defaultItem()
 {
   return {
+    {"cameraId", "CAM01"},
     {"recipeId", ""},
     {"strategyId", "aiYolo"},
     {"shapeId", "plate"},
@@ -64,8 +66,11 @@ CampaignEditorDialog::CampaignEditorDialog(
   m_cycles = new QSpinBox(this);
   m_cycles->setRange(1, 100000);
   m_cycles->setValue(qMax(1, campaign.value("cycles").toInt(1)));
+  m_parallel = new QCheckBox("Esegui contemporaneamente le telecamere compatibili", this);
+  m_parallel->setChecked(campaign.value("parallel").toBool(true));
   header->addRow("Nome campagna", m_name);
   header->addRow("Cicli completi", m_cycles);
+  header->addRow("Multicamera", m_parallel);
   root->addLayout(header);
 
   auto* splitter = new QSplitter(Qt::Horizontal, this);
@@ -87,6 +92,12 @@ CampaignEditorDialog::CampaignEditorDialog(
   scroll->setWidgetResizable(true);
   auto* formPanel = new QWidget(scroll);
   auto* form = new QFormLayout(formPanel);
+  m_camera = new QComboBox(formPanel);
+  for (int index = 1; index <= 16; ++index)
+  {
+    const QString cameraId = QString("CAM%1").arg(index, 2, 10, QChar('0'));
+    m_camera->addItem(cameraId, cameraId);
+  }
   m_recipe = new QComboBox(formPanel);
   m_recipe->addItems(recipes);
   m_strategy = new QComboBox(formPanel);
@@ -124,6 +135,7 @@ CampaignEditorDialog::CampaignEditorDialog(
   m_timeMean = numberBox(250, 0, 600000, 10);
   m_timeMax = numberBox(2000, 0, 600000, 100);
 
+  form->addRow("Telecamera", m_camera);
   form->addRow("Ricetta", m_recipe);
   form->addRow("Localizzazione", m_strategy);
   form->addRow("Forma campione", m_shape);
@@ -222,8 +234,9 @@ void CampaignEditorDialog::updateItemLabel(int row)
 {
   if (row < 0 || row >= m_items->count()) return;
   const QJsonObject item = m_items->item(row)->data(Qt::UserRole).toJsonObject();
-  m_items->item(row)->setText(QString("%1. %2 | %3 | %4")
+  m_items->item(row)->setText(QString("%1. %2 | %3 | %4 | %5")
     .arg(row + 1)
+    .arg(item.value("cameraId").toString("CAM01"))
     .arg(item.value("recipeId").toString("<ricetta>"))
     .arg(item.value("strategyId").toString())
     .arg(item.value("shapeId").toString()));
@@ -232,6 +245,7 @@ void CampaignEditorDialog::updateItemLabel(int row)
 QJsonObject CampaignEditorDialog::formItem() const
 {
   QJsonObject item;
+  item["cameraId"] = m_camera->currentData().toString();
   item["recipeId"] = m_recipe->currentText();
   item["strategyId"] = m_strategy->currentData().toString();
   item["shapeId"] = m_shape->currentData().toString();
@@ -260,6 +274,7 @@ void CampaignEditorDialog::setFormItem(const QJsonObject& source)
     if (index >= 0) box->setCurrentIndex(index);
   };
   select(m_recipe, item.value("recipeId").toString(), false);
+  select(m_camera, item.value("cameraId").toString("CAM01"), true);
   select(m_strategy, item.value("strategyId").toString(), true);
   select(m_shape, item.value("shapeId").toString(), true);
   m_passes->setValue(item.value("passes").toInt(2));
@@ -286,6 +301,7 @@ QJsonObject CampaignEditorDialog::campaign() const
   return {
     {"name", m_name->text().trimmed()},
     {"cycles", m_cycles->value()},
+    {"parallel", m_parallel->isChecked()},
     {"items", items}
   };
 }

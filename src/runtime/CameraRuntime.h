@@ -9,6 +9,7 @@
 #include <QString>
 
 #include <memory>
+#include <mutex>
 
 class CameraRuntime
 {
@@ -24,11 +25,14 @@ public:
   bool start(const CameraConfig& camera, const QString& resolvedFolder, QString* errorMessage = nullptr);
   void stop();
   bool step(const CameraConfig& camera, const QString& resolvedFolder, QString* errorMessage = nullptr);
+  bool grabFrame(const CameraConfig& camera, const QString& resolvedFolder, cv::Mat& frame, SimulatorFrameMetadata& metadata, QString& error);
+  void updateStateAfterGrab(const cv::Mat& frame, const SimulatorFrameMetadata& metadata);
   bool applyAcquisitionSettings(
     const CameraAcquisitionConfig& acquisition,
     QString* errorMessage = nullptr);
 
   bool running() const;
+  std::shared_ptr<ICamera> source() const;
   bool loop() const;
   void setLoop(bool loop);
 
@@ -60,9 +64,10 @@ private:
   SimulatorFrameMetadata m_currentSimulatorFrame;
   PartPose m_currentPose;
   GeometrySet m_geometries;
-  std::unique_ptr<ICamera> m_source;
+  std::shared_ptr<ICamera> m_source;
   QString m_sourceType;
   QString m_sourceFolder;
   QString m_sourceDeviceId;
   int m_sourceUsbIndex = -1;
+  mutable std::mutex m_sourceMutex;
 };

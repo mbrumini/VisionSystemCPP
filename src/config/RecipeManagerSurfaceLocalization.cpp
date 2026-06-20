@@ -416,6 +416,7 @@ SurfaceModelConfig RecipeManager::loadSurfaceModel(const QString& cameraId) cons
   config.edgeSensitivity = model.value("edgeSensitivity").toInt(config.edgeSensitivity);
   config.maxShapeDistance = model.value("maxShapeDistance").toDouble(config.maxShapeDistance);
   config.minTemplateScore = model.value("minTemplateScore").toDouble(config.minTemplateScore);
+  config.useConvexHull = model.value("useConvexHull").toBool(config.useConvexHull);
 
   const QJsonObject angleRange = model.value("angleRange").toObject();
   config.angleStartDegrees = angleRange.value("start").toDouble(config.angleStartDegrees);
@@ -457,6 +458,7 @@ bool RecipeManager::saveSurfaceModel(const QString& cameraId, const QRect& searc
   model["edgeSensitivity"] = model.value("edgeSensitivity").toInt(SurfaceModelConfig().edgeSensitivity);
   model["maxShapeDistance"] = model.value("maxShapeDistance").toDouble(SurfaceModelConfig().maxShapeDistance);
   model["minTemplateScore"] = model.value("minTemplateScore").toDouble(SurfaceModelConfig().minTemplateScore);
+  model["useConvexHull"] = model.value("useConvexHull").toBool(SurfaceModelConfig().useConvexHull);
 
   QJsonObject angleRange = model.value("angleRange").toObject();
   if (!angleRange.contains("start"))
@@ -518,6 +520,25 @@ bool RecipeManager::saveSurfaceModelMaxShapeDistance(const QString& cameraId, do
   pruneSurfaceLocalizationForMethod(surfaceLocalization, "model");
   QJsonObject model = surfaceLocalization.value("model").toObject();
   model["maxShapeDistance"] = qBound(0.001, distance, 5.0);
+  surfaceLocalization["model"] = model;
+  surfaceLocalization["enabled"] = true;
+  tools["surfaceLocalization"] = surfaceLocalization;
+  root["tools"] = tools;
+  return saveJsonObject(path, root, errorMessage);
+}
+
+bool RecipeManager::saveSurfaceModelUseConvexHull(const QString& cameraId, bool useConvexHull, QString* errorMessage) const
+{
+  const QString path = cameraRecipePath(cameraId);
+  QJsonObject root;
+  loadJsonObject(path, root);
+
+  root["cameraId"] = cameraId;
+  QJsonObject tools = root.value("tools").toObject();
+  QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
+  pruneSurfaceLocalizationForMethod(surfaceLocalization, "model");
+  QJsonObject model = surfaceLocalization.value("model").toObject();
+  model["useConvexHull"] = useConvexHull;
   surfaceLocalization["model"] = model;
   surfaceLocalization["enabled"] = true;
   tools["surfaceLocalization"] = surfaceLocalization;

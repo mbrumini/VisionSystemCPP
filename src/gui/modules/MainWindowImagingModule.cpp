@@ -171,21 +171,31 @@ void MainWindowImagingModule::restoreSampleWorkspace(const CameraConfig& camera)
   }
 }
 
-QPixmap MainWindowImagingModule::matToPixmap(const cv::Mat& image) const
+QPixmap MainWindowImagingModule::matToPixmap(const cv::Mat& image, const QSize& targetSize) const
 {
   if (image.empty())
   {
     return {};
   }
 
-  cv::Mat rgb;
-  if (image.channels() == 1)
+  cv::Mat processed = image;
+  if (targetSize.isValid() && (image.cols > targetSize.width() || image.rows > targetSize.height()))
   {
-    cv::cvtColor(image, rgb, cv::COLOR_GRAY2RGB);
+    double scale = std::min(static_cast<double>(targetSize.width()) / image.cols,
+                            static_cast<double>(targetSize.height()) / image.rows);
+    int newWidth = std::max(1, static_cast<int>(image.cols * scale));
+    int newHeight = std::max(1, static_cast<int>(image.rows * scale));
+    cv::resize(image, processed, cv::Size(newWidth, newHeight), 0, 0, cv::INTER_AREA);
+  }
+
+  cv::Mat rgb;
+  if (processed.channels() == 1)
+  {
+    cv::cvtColor(processed, rgb, cv::COLOR_GRAY2RGB);
   }
   else
   {
-    cv::cvtColor(image, rgb, cv::COLOR_BGR2RGB);
+    cv::cvtColor(processed, rgb, cv::COLOR_BGR2RGB);
   }
 
   QImage qimage(rgb.data, rgb.cols, rgb.rows, static_cast<int>(rgb.step), QImage::Format_RGB888);

@@ -49,22 +49,27 @@ def main() -> None:
         try:
             request = json.loads(line)
             request_id = str(request.get("request_id", ""))
-            image_path = Path(request["image"])
-            mask_path = Path(request["mask"])
-            reference_mask_path = Path(request["reference_mask"])
             camera_id = str(request.get("camera_id", ""))
-            if not image_path.is_file():
-                raise FileNotFoundError(f"Image not found: {image_path}")
+
+            image_data = request.get("image_data", "")
+            if not image_data:
+                raise ValueError("Missing 'image_data'")
+
+            import base64
+            img_bytes = base64.b64decode(image_data)
+            nparr = np.frombuffer(img_bytes, np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if img is None:
+                raise ValueError("Failed to decode image from Base64")
 
             infer_started = time.perf_counter()
-            result = model(str(image_path), device=args.device, verbose=False)[0]
+            result = model(img, device=args.device, verbose=False)[0]
             if result.masks is None or len(result.masks.data) == 0:
                 emit({
                     "type": "result",
                     "request_id": request_id,
                     "found": False,
                     "camera_id": camera_id,
-                    "image": str(image_path),
                     "elapsed_ms": round((time.perf_counter() - infer_started) * 1000.0, 1),
                 })
                 continue
@@ -78,7 +83,6 @@ def main() -> None:
                     "request_id": request_id,
                     "found": False,
                     "camera_id": camera_id,
-                    "image": str(image_path),
                     "elapsed_ms": round((time.perf_counter() - infer_started) * 1000.0, 1),
                 })
                 continue
@@ -88,13 +92,14 @@ def main() -> None:
             original_height, original_width = result.orig_shape
             mask = cv2.resize(mask, (original_width, original_height), interpolation=cv2.INTER_NEAREST)
             binary = (mask >= 0.5).astype(np.uint8) * 255
-            mask_path.parent.mkdir(parents=True, exist_ok=True)
-            if not cv2.imwrite(str(mask_path), binary):
-                raise RuntimeError(f"Cannot save mask: {mask_path}")
+
+            _, mask_buf = cv2.imencode(".png", binary)
+            mask_base64 = base64.b64encode(mask_buf).decode("utf-8")
 
             reference_indices = np.where(classes == 1)[0]
             reference_found = len(reference_indices) > 0
             reference_confidence = 0.0
+            ref_base64 = ""
             if reference_found:
                 combined_reference = np.zeros((original_height, original_width), dtype=np.uint8)
                 for reference_index in reference_indices:
@@ -108,9 +113,8 @@ def main() -> None:
                         combined_reference,
                         (reference_mask >= 0.5).astype(np.uint8) * 255,
                     )
-                reference_mask_path.parent.mkdir(parents=True, exist_ok=True)
-                if not cv2.imwrite(str(reference_mask_path), combined_reference):
-                    raise RuntimeError(f"Cannot save reference mask: {reference_mask_path}")
+                _, ref_buf = cv2.imencode(".png", combined_reference)
+                ref_base64 = base64.b64encode(ref_buf).decode("utf-8")
                 reference_confidence = float(np.max(confidences[reference_indices]))
 
             emit({
@@ -118,10 +122,9 @@ def main() -> None:
                 "request_id": request_id,
                 "found": True,
                 "camera_id": camera_id,
-                "image": str(image_path),
-                "mask": str(mask_path),
+                "mask_data": mask_base64,
                 "reference_found": reference_found,
-                "reference_mask": str(reference_mask_path) if reference_found else "",
+                "reference_mask_data": ref_base64 if reference_found else "",
                 "confidence": round(confidence, 6),
                 "reference_confidence": round(reference_confidence, 6),
                 "elapsed_ms": round((time.perf_counter() - infer_started) * 1000.0, 1),

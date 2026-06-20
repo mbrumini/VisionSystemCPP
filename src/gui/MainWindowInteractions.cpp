@@ -32,6 +32,10 @@ void MainWindow::incPendingJobs(const QString& cameraId)
   m_cameraPendingJobs[cameraId] = v;
   m_cameraProcessingBusy[cameraId] = true;
   updateCameraStripStatus(cameraId);
+  if (m_machineRunning && cameraId == m_selectedCameraId)
+  {
+    updateControlPanel(&m_selectedCamera);
+  }
 }
 
 void MainWindow::decPendingJobs(const QString& cameraId)
@@ -47,6 +51,10 @@ void MainWindow::decPendingJobs(const QString& cameraId)
   if (cameraId == m_selectedCameraId)
   {
     updateMeasurementResults();
+    if (m_machineRunning)
+    {
+      updateControlPanel(&m_selectedCamera);
+    }
   }
 }
 
@@ -117,14 +125,29 @@ void MainWindow::publishSimulatorResult(const QString& cameraId)
 void MainWindow::handleSimulatorFrameAvailable(const QString& channel)
 {
   CameraConfig simulatorCamera;
-  for (const CameraConfig& camera : m_config.activeCameras())
+  if (channel != "SELECTED")
   {
-    const QString configuredChannel =
-      camera.simulatorChannel.isEmpty() ? camera.id : camera.simulatorChannel;
-    if (camera.type == "simulator" && configuredChannel == channel)
+    for (const CameraConfig& camera : m_config.activeCameras())
     {
-      simulatorCamera = camera;
-      break;
+      const QString configuredChannel =
+        camera.simulatorChannel.isEmpty() ? camera.id : camera.simulatorChannel;
+      if (camera.type == "simulator" && configuredChannel == channel)
+      {
+        simulatorCamera = camera;
+        break;
+      }
+    }
+  }
+
+  if (simulatorCamera.id.isEmpty())
+  {
+    for (const CameraConfig& camera : m_config.activeCameras())
+    {
+      if (camera.id == m_selectedCameraId)
+      {
+        simulatorCamera = camera;
+        break;
+      }
     }
   }
 
@@ -155,19 +178,35 @@ void MainWindow::handleSimulatorFrameAvailable(const QString& channel)
 void MainWindow::handleSimulatorSampleAvailable(const SimulatorFrame& frame)
 {
   CameraConfig camera;
-  for (const CameraConfig& configured : m_config.activeCameras())
+  if (frame.metadata.channel != "SELECTED" && frame.metadata.cameraId != "SELECTED")
   {
-    const QString channel =
-      configured.simulatorChannel.isEmpty() ? configured.id : configured.simulatorChannel;
-    if (configured.type == "simulator" && channel == frame.metadata.channel)
+    for (const CameraConfig& configured : m_config.activeCameras())
     {
-      camera = configured;
-      break;
+      const QString channel =
+        configured.simulatorChannel.isEmpty() ? configured.id : configured.simulatorChannel;
+      if (configured.type == "simulator" && channel == frame.metadata.channel)
+      {
+        camera = configured;
+        break;
+      }
     }
   }
+
+  if (camera.id.isEmpty())
+  {
+    for (const CameraConfig& configured : m_config.activeCameras())
+    {
+      if (configured.id == m_selectedCameraId)
+      {
+        camera = configured;
+        break;
+      }
+    }
+  }
+
   if (camera.id.isEmpty() || frame.image.empty())
   {
-    appendLog("Campione simulatore senza camera configurata: " + frame.metadata.channel);
+    appendLog("Campione simulatore senza camera valida: " + frame.metadata.channel);
     return;
   }
 
@@ -751,7 +790,7 @@ void MainWindow::startMachine()
         .arg(camera.id, camera.simulatorChannel.isEmpty() ? camera.id : camera.simulatorChannel));
       processNextSimulatorFrame(camera);
     }
-    else if (camera.id == m_selectedCameraId)
+    else
     {
       m_setup.startCameraSimulation(camera, false);
     }

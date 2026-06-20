@@ -72,13 +72,53 @@ QIcon cameraStripIcon(const CameraConfig& camera, const QString& state)
 }
 }
 
+#include <QScrollArea>
+#include <QVBoxLayout>
+
 CameraStripWidget::CameraStripWidget(QWidget* parent)
   : QFrame(parent)
 {
   setObjectName("cameraStrip");
-  m_layout = new QHBoxLayout(this);
+
+  auto* mainLayout = new QVBoxLayout(this);
+  mainLayout->setContentsMargins(0, 0, 0, 0);
+  mainLayout->setSpacing(0);
+
+  auto* scrollArea = new QScrollArea(this);
+  scrollArea->setWidgetResizable(true);
+  scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+  scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+  scrollArea->setFrameShape(QFrame::NoFrame);
+  scrollArea->setStyleSheet(
+    "QScrollArea { background: transparent; }"
+    "QWidget { background: transparent; }"
+    "QScrollBar:horizontal {"
+    "    border: none;"
+    "    background: #111820;"
+    "    height: 8px;"
+    "    margin: 0px 0px 0px 0px;"
+    "}"
+    "QScrollBar::handle:horizontal {"
+    "    background: #303a45;"
+    "    min-width: 20px;"
+    "    border-radius: 4px;"
+    "}"
+    "QScrollBar::handle:horizontal:hover {"
+    "    background: #404b57;"
+    "}"
+    "QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {"
+    "    width: 0px;"
+    "    background: none;"
+    "}"
+  );
+
+  auto* scrollWidget = new QWidget(scrollArea);
+  m_layout = new QHBoxLayout(scrollWidget);
   m_layout->setContentsMargins(10, 6, 10, 6);
   m_layout->setSpacing(8);
+
+  scrollArea->setWidget(scrollWidget);
+  mainLayout->addWidget(scrollArea);
 }
 
 void CameraStripWidget::setCameras(const QVector<CameraConfig>& cameras)
@@ -126,7 +166,7 @@ void CameraStripWidget::rebuild()
 
   for (const CameraConfig& camera : m_cameras)
   {
-    auto* button = new QToolButton(this);
+    auto* button = new QToolButton(m_layout->parentWidget());
     button->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     button->setIconSize(QSize(58, 42));
     button->setMinimumSize(78, 70);

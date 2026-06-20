@@ -8,7 +8,8 @@ SurfaceModelTrainingResult SurfaceModelTrainer::trainFromRoi(
   const cv::Mat& input,
   const cv::Rect& searchRoi,
   const std::vector<cv::Rect>& exclusionRects,
-  int edgeSensitivity) const
+  int edgeSensitivity,
+  bool useConvexHull) const
 {
   SurfaceModelTrainingResult result;
 
@@ -87,7 +88,26 @@ SurfaceModelTrainingResult SurfaceModelTrainer::trainFromRoi(
   std::vector<cv::Point> modelContour;
   const double minModelArea = std::max(50.0, static_cast<double>(roi.area()) * 0.01);
 
-  if (bestIndex >= 0 && bestArea >= minModelArea)
+  if (useConvexHull)
+  {
+    std::vector<cv::Point> hullPoints;
+    for (const auto& c : contours)
+    {
+      if (std::abs(cv::contourArea(c)) >= 10.0)
+      {
+        hullPoints.insert(hullPoints.end(), c.begin(), c.end());
+      }
+    }
+    if (hullPoints.empty())
+    {
+      cv::findNonZero(edges, hullPoints);
+    }
+    if (hullPoints.size() >= 3)
+    {
+      cv::convexHull(hullPoints, modelContour);
+    }
+  }
+  else if (bestIndex >= 0 && bestArea >= minModelArea)
   {
     modelContour = contours[bestIndex];
   }

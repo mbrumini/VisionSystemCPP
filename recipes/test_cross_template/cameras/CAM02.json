@@ -1,0 +1,144 @@
+{
+    "cameraId": "CAM02",
+    "tools": {
+        "surfaceLocalization": {
+            "aoes": {
+                "model": {
+                    "id": "model",
+                    "label": "model",
+                    "searchRoi": {
+                        "height": 259,
+                        "width": 382,
+                        "x": 130,
+                        "y": 111
+                    }
+                }
+            },
+            "enabled": true,
+            "exclusionRects": [
+            ],
+            "method": "model",
+            "model": {
+                "angleRange": {
+                    "end": 180,
+                    "start": -180,
+                    "step": 5
+                },
+                "contour": [
+                    {
+                        "x": 147,
+                        "y": 117
+                    },
+                    {
+                        "x": 146,
+                        "y": 118
+                    },
+                    {
+                        "x": 143,
+                        "y": 118
+                    },
+                    {
+                        "x": 138,
+                        "y": 123
+                    },
+                    {
+                        "x": 138,
+                        "y": 126
+                    },
+                    {
+                        "x": 137,
+                        "y": 127
+                    },
+                    {
+                        "x": 137,
+                        "y": 353
+                    },
+                    {
+                        "x": 138,
+                        "y": 354
+                    },
+                    {
+                        "x": 138,
+                        "y": 357
+                    },
+                    {
+                        "x": 143,
+                        "y": 362
+                    },
+                    {
+                        "x": 146,
+                        "y": 362
+                    },
+                    {
+                        "x": 147,
+                        "y": 363
+                    },
+                    {
+                        "x": 493,
+                        "y": 363
+                    },
+                    {
+                        "x": 494,
+                        "y": 362
+                    },
+                    {
+                        "x": 497,
+                        "y": 362
+                    },
+                    {
+                        "x": 502,
+                        "y": 357
+                    },
+                    {
+                        "x": 502,
+                        "y": 354
+                    },
+                    {
+                        "x": 503,
+                        "y": 353
+                    },
+                    {
+                        "x": 503,
+                        "y": 127
+                    },
+                    {
+                        "x": 502,
+                        "y": 126
+                    },
+                    {
+                        "x": 502,
+                        "y": 123
+                    },
+                    {
+                        "x": 497,
+                        "y": 118
+                    },
+                    {
+                        "x": 494,
+                        "y": 118
+                    },
+                    {
+                        "x": 493,
+                        "y": 117
+                    }
+                ],
+                "edgeSensitivity": 60,
+                "maxShapeDistance": 0.25,
+                "minTemplateScore": 0.45,
+                "searchRoi": {
+                    "height": 259,
+                    "width": 382,
+                    "x": 130,
+                    "y": 111
+                },
+                "templateImagePath": "assets/CAM02_surface_model_template.png"
+            },
+            "searchRoi": {
+                "height": 259,
+                "width": 382,
+                "x": 130,
+                "y": 111
+            }
+        }
+    }
+}

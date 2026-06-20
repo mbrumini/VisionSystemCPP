@@ -61,9 +61,12 @@ void MainWindow::buildUi()
   {
     m_simulationTimer = new QTimer(this);
     connect(m_simulationTimer, &QTimer::timeout, this, [this]() {
-      if (!m_selectedCameraId.isEmpty())
+      for (const CameraConfig& camera : m_config.activeCameras())
       {
-        m_setup.advanceCameraFrame(m_selectedCamera);
+        if (camera.type != "simulator" && m_cameraRuntime[camera.id].running())
+        {
+          m_setup.advanceCameraFrame(camera);
+        }
       }
     });
   }
