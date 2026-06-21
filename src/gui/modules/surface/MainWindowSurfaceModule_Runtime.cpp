@@ -10,6 +10,7 @@
 
 #include <QPolygon>
 
+#include <cmath>
 #include <memory>
 #include <vector>
 
@@ -102,8 +103,7 @@ void MainWindowSurfaceModule::testSurfaceAnnulusLocalization(const CameraConfig&
 
     const bool updateView =
       camera.id == selectedCameraId() &&
-      *context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::None &&
-      *context().setupCameraId != camera.id;
+      *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry;
     if (!result.processed || result.diagnosticImage.empty())
     {
       log(tr("log.surfaceFailed") + ": " + camera.id);
@@ -115,7 +115,10 @@ void MainWindowSurfaceModule::testSurfaceAnnulusLocalization(const CameraConfig&
       selectedPreview() = context().imaging->matToPixmap(result.diagnosticImage);
       largeImage()->setImage(selectedPreview());
       largeImage()->setExclusionRects(exclusionRects);
-      largeImage()->clearCircles();
+      if (*context().setupCameraId != camera.id)
+      {
+        largeImage()->clearCircles();
+      }
     }
 
     if (result.blobs.empty())
@@ -219,22 +222,27 @@ void MainWindowSurfaceModule::testSurfaceLocalization(const CameraConfig& camera
   SurfaceThresholdSettings thresholdSettings;
   thresholdSettings.minValue = recipeSettings.thresholdMin;
   thresholdSettings.maxValue = recipeSettings.thresholdMax;
+  thresholdSettings.resolveAmbiguity = recipeSettings.pcaResolveAmbiguity;
 
   const QVector<QRect> exclusionRects = recipes().loadSurfaceDefectExclusionRects(camera.id);
 
-  auto job = [input, roi, searchPolygon, exclusionRects, thresholdSettings]() -> SurfaceDefectResult {
+  QRect globalAoi;
+  const bool hasGlobalAoi = recipes().loadGlobalSurfaceAoi(camera.id, globalAoi);
+  cv::Rect searchRect;
+  if (hasGlobalAoi)
+  {
+    searchRect = cv::Rect(globalAoi.x(), globalAoi.y(), globalAoi.width(), globalAoi.height());
+  }
+  else
+  {
+    searchRect = cv::Rect(0, 0, input.cols, input.rows);
+  }
+
+  auto job = [input, searchRect, exclusionRects, thresholdSettings]() -> SurfaceDefectResult {
     SurfaceDefectProcessor processor;
-    if (searchPolygon.size() >= 3)
-    {
-      return processor.detectByGrayscaleThreshold(
-        input,
-        toCvPoints(searchPolygon),
-        toCvRects(exclusionRects),
-        thresholdSettings);
-    }
     return processor.detectByGrayscaleThreshold(
       input,
-      cv::Rect(roi.x(), roi.y(), roi.width(), roi.height()),
+      searchRect,
       toCvRects(exclusionRects),
       thresholdSettings);
   };
@@ -245,8 +253,7 @@ void MainWindowSurfaceModule::testSurfaceLocalization(const CameraConfig& camera
     auto __dec_guard = std::shared_ptr<void>(nullptr, [this, __pendingCameraId_testSurfaceLocalization](void*) { context().decPendingJobs(__pendingCameraId_testSurfaceLocalization); });
     const bool updateView =
       camera.id == selectedCameraId() &&
-      *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry &&
-      *context().setupCameraId != camera.id;
+      *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry;
     if (!result.processed || result.diagnosticImage.empty())
     {
       log(tr("log.surfaceFailed") + ": " + camera.id);
@@ -257,8 +264,16 @@ void MainWindowSurfaceModule::testSurfaceLocalization(const CameraConfig& camera
     {
       selectedPreview() = context().imaging->matToPixmap(result.diagnosticImage);
       largeImage()->setImage(selectedPreview());
-      largeImage()->setRoi(roi);
-      largeImage()->setSearchPolygon(searchPolygon);
+      if (*context().setupCameraId != camera.id)
+      {
+        largeImage()->clearRoi();
+        largeImage()->setSearchPolygon({});
+      }
+      else
+      {
+        largeImage()->setRoi(roi);
+        largeImage()->setSearchPolygon(searchPolygon);
+      }
       largeImage()->setExclusionRects(exclusionRects);
     }
 
@@ -370,8 +385,43 @@ void MainWindowSurfaceModule::testSurfaceLocalizationStrategy(const CameraConfig
 
     if (!result.found)
     {
+      context().lastSurfaceLocalizationResults->remove(camera.id);
+      cameraRuntime()[camera.id].clearCurrentPose(camera.id);
+      if (updateView)
+      {
+        largeImage()->clearGeometryOverlay();
+      }
       log(tr("log.surfaceStrategyNotFound") + ": " + camera.id);
       return;
+    }
+
+    SurfaceLocalizationReference reference;
+    reference.found = true;
+    reference.method = result.strategyName;
+    reference.center = result.origin;
+    reference.angleRadians = std::atan2(
+      result.xAxisEnd.y - result.xAxisStart.y,
+      result.xAxisEnd.x - result.xAxisStart.x);
+    reference.score = 1.0;
+    reference.inputPoints = static_cast<int>(result.features.size());
+    reference.usedPoints = static_cast<int>(result.features.size());
+    reference.xAxisStart = result.xAxisStart;
+    reference.xAxisEnd = result.xAxisEnd;
+    reference.yAxisStart = result.yAxisStart;
+    reference.yAxisEnd = result.yAxisEnd;
+    context().lastSurfaceLocalizationResults->insert(camera.id, reference);
+    cameraRuntime()[camera.id].setCurrentPose(
+      context().imaging->partPoseFromSurfaceReference(camera, reference));
+    if (context().setup)
+    {
+      context().setup->refreshSetupGeometryResults(camera);
+    }
+
+    if (updateView)
+    {
+      GeometryOverlay overlay;
+      context().geometry->appendCurrentPartPoseOverlay(camera, overlay);
+      largeImage()->setGeometryOverlay(overlay);
     }
 
     log(QString("%1: %2 originX=%3 originY=%4 features=%5")
@@ -415,21 +465,26 @@ void MainWindowSurfaceModule::testSurfaceEdgePcaLocalization(const CameraConfig&
   const SurfaceAnnulusLocalizationConfig annulus = recipes().loadSurfaceAnnulusLocalization(camera.id);
   const QVector<QRect> exclusionRects = recipes().loadSurfaceDefectExclusionRects(camera.id);
 
-  auto job = [input, roi, searchPolygon, exclusionRects, annulus]() -> SurfaceDefectResult {
+  QRect globalAoi;
+  const bool hasGlobalAoi = recipes().loadGlobalSurfaceAoi(camera.id, globalAoi);
+  cv::Rect searchRect;
+  if (hasGlobalAoi)
+  {
+    searchRect = cv::Rect(globalAoi.x(), globalAoi.y(), globalAoi.width(), globalAoi.height());
+  }
+  else
+  {
+    searchRect = cv::Rect(0, 0, input.cols, input.rows);
+  }
+
+  auto job = [input, searchRect, exclusionRects, annulus]() -> SurfaceDefectResult {
     SurfaceDefectProcessor processor;
-    if (searchPolygon.size() >= 3)
-    {
-      return processor.locateByEdgePca(
-        input,
-        toCvPoints(searchPolygon),
-        toCvRects(exclusionRects),
-        annulus.edgeSensitivity);
-    }
     return processor.locateByEdgePca(
       input,
-      cv::Rect(roi.x(), roi.y(), roi.width(), roi.height()),
+      searchRect,
       toCvRects(exclusionRects),
-      annulus.edgeSensitivity);
+      annulus.edgeSensitivity,
+      annulus.pcaResolveAmbiguity);
   };
 
   const QString __pendingCameraId_testSurfaceEdgePca = camera.id;
@@ -461,8 +516,16 @@ void MainWindowSurfaceModule::testSurfaceEdgePcaLocalization(const CameraConfig&
     {
       selectedPreview() = context().imaging->matToPixmap(result.diagnosticImage);
       largeImage()->setImage(selectedPreview());
-      largeImage()->setRoi(roi);
-      largeImage()->setSearchPolygon(searchPolygon);
+      if (*context().setupCameraId != camera.id)
+      {
+        largeImage()->clearRoi();
+        largeImage()->setSearchPolygon({});
+      }
+      else
+      {
+        largeImage()->setRoi(roi);
+        largeImage()->setSearchPolygon(searchPolygon);
+      }
       largeImage()->setExclusionRects(exclusionRects);
       largeImage()->clearCircles();
     }

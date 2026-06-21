@@ -73,20 +73,16 @@ bool maskCentroid(const cv::Mat& mask, cv::Point2d* center)
 void MainWindowSetupModule::runAiLocalizationInference(const CameraConfig& camera)
 {
   const CameraConfig effectiveCamera = currentConfiguredCamera(config(), camera);
-  CameraRuntime& runtime = cameraRuntime()[effectiveCamera.id];
-  cv::Mat frame = runtime.currentFrame().clone();
+  QString error;
+  cv::Mat frame = context().imaging->currentInputImage(effectiveCamera, &error);
   if (frame.empty())
   {
-    QString error;
-    if (!runtime.step(
-          effectiveCamera,
-          context().imaging->cameraTestImagesFolder(effectiveCamera),
-          &error))
+    log(error.isEmpty() ? "Localizzazione AI: acquisizione fallita." : error);
+    if (m_aiLocalizationInferenceResultLabel)
     {
-      log(error.isEmpty() ? "Localizzazione AI: acquisizione fallita." : error);
-      return;
+      m_aiLocalizationInferenceResultLabel->setText("Inferenza: immagine non disponibile");
     }
-    frame = runtime.currentFrame().clone();
+    return;
   }
   if (m_aiLocalizationInferenceResultLabel)
   {
@@ -175,6 +171,7 @@ bool MainWindowSetupModule::ensureAiLocalizationInferenceWorker(const QString& c
   }
 
   process = new QProcess(window());
+  configureHiddenProcess(process);
   process->setWorkingDirectory(RecipeJsonUtils::appRootPath());
   process->setProcessChannelMode(QProcess::SeparateChannels);
   QObject::connect(
@@ -275,13 +272,17 @@ void MainWindowSetupModule::handleAiLocalizationInferenceOutput(const QString& c
   {
     return;
   }
-  const QString text = QString::fromUtf8(process->readAllStandardOutput()).trimmed();
-  for (const QString& line : text.split('\n', Qt::SkipEmptyParts))
+  while (process->canReadLine())
   {
-    const QJsonDocument document = QJsonDocument::fromJson(line.trimmed().toUtf8());
+    const QByteArray lineBytes = process->readLine().trimmed();
+    if (lineBytes.isEmpty())
+    {
+      continue;
+    }
+    const QJsonDocument document = QJsonDocument::fromJson(lineBytes);
     if (!document.isObject())
     {
-      log("Localizzazione AI: " + line);
+      log("Localizzazione AI: " + QString::fromUtf8(lineBytes));
       continue;
     }
     const QJsonObject object = document.object();

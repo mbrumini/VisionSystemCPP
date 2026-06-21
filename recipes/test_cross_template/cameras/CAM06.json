@@ -15,7 +15,8 @@
                 }
             },
             "enabled": true,
-            "exclusionRects": [],
+            "exclusionRects": [
+            ],
             "method": "edgePca",
             "searchRoi": {
                 "height": 430,

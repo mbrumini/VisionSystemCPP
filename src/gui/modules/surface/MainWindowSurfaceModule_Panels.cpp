@@ -22,7 +22,6 @@ MainWindowSurfaceModule::MainWindowSurfaceModule(MainWindowContext& context)
   : MainWindowModuleBase(context)
 {
 }
-
 void MainWindowSurfaceModule::showSurfaceLocalizationStrategyPanel(const CameraConfig& camera, const QString& strategyId)
 {
   context().deactivateImageDrawingTools();
@@ -37,6 +36,12 @@ void MainWindowSurfaceModule::showSurfaceLocalizationStrategyPanel(const CameraC
     }
 
     showCircleAnnulusLocalizationPanel(camera);
+    return;
+  }
+
+  if (strategyId == "two_circles_axis")
+  {
+    showTwoCirclesLocalizationPanel(camera);
     return;
   }
 
@@ -611,3 +616,114 @@ void MainWindowSurfaceModule::showStoredSurfaceLocalizationGeometry(const Camera
   largeImage()->setCircleBandEditingEnabled(circles.size() >= 2);
 }
 
+void MainWindowSurfaceModule::activateSurfaceCircleADrawing(const CameraConfig& camera)
+{
+  if (!MainWindowCameraProfile::isGrayscaleLocalization(camera, config()))
+  {
+    log(tr("log.surfaceNotAvailable") + ": " + camera.id);
+    return;
+  }
+
+  if (camera.id != selectedCameraId())
+  {
+    return;
+  }
+
+  m_circleTarget = CircleTarget::CircleA;
+  largeImage()->setOuterCircleDrawingEnabled(true);
+  *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::SurfaceDefects;
+  log(tr("log.surfaceCircleADrawing") + ": " + camera.id);
+}
+
+void MainWindowSurfaceModule::activateSurfaceCircleBDrawing(const CameraConfig& camera)
+{
+  if (!MainWindowCameraProfile::isGrayscaleLocalization(camera, config()))
+  {
+    log(tr("log.surfaceNotAvailable") + ": " + camera.id);
+    return;
+  }
+
+  if (camera.id != selectedCameraId())
+  {
+    return;
+  }
+
+  m_circleTarget = CircleTarget::CircleB;
+  largeImage()->setOuterCircleDrawingEnabled(true);
+  *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::SurfaceDefects;
+  log(tr("log.surfaceCircleBDrawing") + ": " + camera.id);
+}
+
+void MainWindowSurfaceModule::showStoredSurfaceStrategyGeometry(const CameraConfig& camera)
+{
+  const SurfaceLocalizationStrategyConfig strategy = recipes().loadSurfaceLocalizationStrategy(camera.id);
+  showStoredSurfaceStrategyGeometry(camera, strategy);
+}
+
+void MainWindowSurfaceModule::showStoredSurfaceStrategyGeometry(const CameraConfig& camera, const SurfaceLocalizationStrategyConfig& strategy)
+{
+  if (camera.id != selectedCameraId())
+  {
+    return;
+  }
+
+  selectedPreview() = context().imaging->loadCameraSamplePreview(camera);
+  if (!selectedPreview().isNull())
+  {
+    largeImage()->setImage(selectedPreview());
+  }
+  else
+  {
+    context().imaging->ensureReferenceImageVisible(camera);
+  }
+  largeImage()->setExclusionRects(recipes().loadSurfaceDefectExclusionRects(camera.id));
+  largeImage()->setSearchPolygon(recipes().loadSurfaceDefectPolygon(camera.id));
+
+  QVector<ImageCircle> circles;
+  for (const SurfaceStrategyFeatureConfig& feature : strategy.features)
+  {
+    if (feature.searchRoi.isValid())
+    {
+      const QPoint center = feature.searchRoi.center();
+      const int radius = feature.searchRoi.width() / 2;
+      circles.append({center, radius});
+    }
+  }
+
+  largeImage()->setCircles(circles);
+  largeImage()->setCircleBandEditingEnabled(false);
+}
+
+void MainWindowSurfaceModule::saveSurfaceStrategyThresholdAndPreview(const CameraConfig& camera, const QString& featureId, int thresholdValue)
+{
+  if (!MainWindowCameraProfile::isGrayscaleLocalization(camera, config()))
+  {
+    log(tr("log.surfaceNotAvailable") + ": " + camera.id);
+    return;
+  }
+
+  if (camera.id != selectedCameraId())
+  {
+    return;
+  }
+
+  QString error;
+  SurfaceLocalizationStrategyConfig config = recipes().loadSurfaceLocalizationStrategy(camera.id);
+  bool modified = false;
+  for (SurfaceStrategyFeatureConfig& feature : config.features)
+  {
+    if (feature.id == featureId)
+    {
+      feature.thresholdMax = thresholdValue;
+      modified = true;
+      break;
+    }
+  }
+
+  if (modified)
+  {
+    recipes().saveSurfaceLocalizationStrategy(camera.id, config, &error);
+    log(tr("log.surfaceThresholdSaved") + ": " + camera.id + " (" + featureId + "=" + QString::number(thresholdValue) + ")");
+    testSurfaceLocalizationStrategy(camera);
+  }
+}

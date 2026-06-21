@@ -115,6 +115,6 @@ ThresholdCircleDetectorResult ThresholdCircleDetector::detect(
 
   cv::drawContours(result.diagnosticImage, std::vector<std::vector<cv::Point>>{imageContour}, 0, cv::Scalar(0, 255, 0), 2);
   cv::circle(result.diagnosticImage, surfacePoint(fit.center), static_cast<int>(fit.radius), cv::Scalar(255, 255, 0), 2);
-  drawSurfaceCenterOfMass(result.diagnosticImage, fit.center);
+  drawStyledCenterOfMass(result.diagnosticImage, fit.center);
   return result;
 }

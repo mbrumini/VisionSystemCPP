@@ -82,10 +82,12 @@ SurfaceStrategyResult SurfaceTwoCirclesStrategy::locate(
 
     if (feature.found)
     {
-      cv::drawContours(result.diagnosticImage, std::vector<std::vector<cv::Point>>{feature.contour}, 0, cv::Scalar(0, 255, 0), 2);
-      cv::rectangle(result.diagnosticImage, feature.boundingRect, cv::Scalar(255, 0, 0), 2);
-      drawSurfaceCenterOfMass(result.diagnosticImage, feature.center);
-      cv::putText(result.diagnosticImage, feature.id, surfacePoint(feature.center + cv::Point2d(8, -8)), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 0, 255), 2);
+      drawStyledContour(result.diagnosticImage, feature.contour, cv::Scalar(94, 197, 34));
+      // cv::rectangle(result.diagnosticImage, feature.boundingRect, cv::Scalar(255, 0, 0), 2);
+      drawStyledCenterOfMass(result.diagnosticImage, feature.center);
+      const cv::Point textPos = surfacePoint(feature.center + cv::Point2d(10, -10));
+      cv::putText(result.diagnosticImage, feature.id, textPos, cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(16, 16, 16), 4, cv::LINE_AA);
+      cv::putText(result.diagnosticImage, feature.id, textPos, cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
     }
     else
     {
@@ -128,11 +130,8 @@ SurfaceStrategyResult SurfaceTwoCirclesStrategy::locate(
   result.yAxisEnd = result.origin + yDirection * axisLength;
   result.found = true;
 
-  cv::arrowedLine(result.diagnosticImage, surfacePoint(result.xAxisStart), surfacePoint(result.xAxisEnd), cv::Scalar(0, 0, 255), 2, cv::LINE_AA, 0, 0.12);
-  cv::arrowedLine(result.diagnosticImage, surfacePoint(result.yAxisStart), surfacePoint(result.yAxisEnd), cv::Scalar(255, 0, 255), 2, cv::LINE_AA, 0, 0.12);
-  cv::circle(result.diagnosticImage, result.origin, 8, cv::Scalar(0, 255, 255), -1);
-  cv::putText(result.diagnosticImage, "X", surfacePoint(result.xAxisEnd), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 255), 2);
-  cv::putText(result.diagnosticImage, "Y", surfacePoint(result.yAxisEnd), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(255, 0, 255), 2);
+  drawStyledAxes(result.diagnosticImage, result.origin, result.xAxisStart, result.xAxisEnd, result.yAxisStart, result.yAxisEnd, cv::Scalar(0, 0, 255), cv::Scalar(255, 0, 255));
+  drawStyledCenterOfMass(result.diagnosticImage, result.origin);
 
   return result;
 }

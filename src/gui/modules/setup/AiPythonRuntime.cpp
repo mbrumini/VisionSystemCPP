@@ -4,6 +4,11 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <QProcess>
+
+#ifdef Q_OS_WIN
+#include <qt_windows.h>
+#endif
 
 QString aiProjectPath(const QString& relativePath)
 {
@@ -50,4 +55,22 @@ QString aiPowerShellQuote(const QString& text)
   QString escaped = QDir::toNativeSeparators(text);
   escaped.replace("'", "''");
   return "'" + escaped + "'";
+}
+
+void configureHiddenProcess(QProcess* process)
+{
+#ifdef Q_OS_WIN
+  if (!process)
+  {
+    return;
+  }
+  process->setCreateProcessArgumentsModifier(
+    [](QProcess::CreateProcessArguments* arguments) {
+      arguments->flags |= CREATE_NO_WINDOW;
+      arguments->startupInfo->dwFlags |= STARTF_USESHOWWINDOW;
+      arguments->startupInfo->wShowWindow = SW_HIDE;
+    });
+#else
+  Q_UNUSED(process);
+#endif
 }

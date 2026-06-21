@@ -163,13 +163,21 @@ void MainWindowSetupModule::stopAiInferenceWorker()
 
 void MainWindowSetupModule::handleAiInferenceOutput()
 {
-  const QString text = QString::fromUtf8(m_aiInferenceProcess->readAllStandardOutput()).trimmed();
-  for (const QString& line : text.split('\n', Qt::SkipEmptyParts))
+  if (!m_aiInferenceProcess)
   {
-    const QJsonDocument document = QJsonDocument::fromJson(line.trimmed().toUtf8());
+    return;
+  }
+  while (m_aiInferenceProcess->canReadLine())
+  {
+    const QByteArray lineBytes = m_aiInferenceProcess->readLine().trimmed();
+    if (lineBytes.isEmpty())
+    {
+      continue;
+    }
+    const QJsonDocument document = QJsonDocument::fromJson(lineBytes);
     if (!document.isObject())
     {
-      log("AI inference: " + line.trimmed());
+      log("AI inference: " + QString::fromUtf8(lineBytes));
       continue;
     }
 

@@ -93,6 +93,7 @@ SurfaceDefectSettings RecipeManager::loadSurfaceDefectSettings(const QString& ca
 
   settings.thresholdMin = threshold.value("min").toInt(settings.thresholdMin);
   settings.thresholdMax = threshold.value("max").toInt(settings.thresholdMax);
+  settings.pcaResolveAmbiguity = threshold.value("pcaResolveAmbiguity").toBool(settings.pcaResolveAmbiguity);
   return settings;
 }
 
@@ -136,8 +137,6 @@ bool RecipeManager::saveSurfaceDefectRoi(const QString& cameraId, const QRect& r
   surfaceDefects["enabled"] = true;
   const QString method = normalizedSurfaceLocalizationMethod(surfaceDefects.value("method").toString("threshold"));
   pruneSurfaceLocalizationForMethod(surfaceDefects, method);
-  surfaceDefects["searchRoi"] = rectToJson(roi.normalized());
-  surfaceDefects.remove("searchPolygon");
 
   QJsonObject aoes = surfaceDefects.value("aoes").toObject();
   QJsonObject methodAoe = aoes.value(method).toObject();
@@ -189,12 +188,10 @@ bool RecipeManager::saveSurfaceDefectPolygon(const QString& cameraId, const QVec
   {
     points.append(pointToJson(point));
   }
-  surfaceLocalization["searchPolygon"] = points;
 
   if (polygon.size() >= 3)
   {
     const QRect boundingRoi = QPolygon(polygon).boundingRect().normalized();
-    surfaceLocalization["searchRoi"] = rectToJson(boundingRoi);
 
     QJsonObject aoes = surfaceLocalization.value("aoes").toObject();
     QJsonObject methodAoe = aoes.value(method).toObject();
@@ -289,7 +286,7 @@ bool RecipeManager::saveSurfaceDefectThreshold(const QString& cameraId, int minV
   const QString method = normalizedSurfaceLocalizationMethod(surfaceLocalization.value("method").toString("massPca"));
   pruneSurfaceLocalizationForMethod(surfaceLocalization, method == "threshold" ? "threshold" : "massPca");
 
-  QJsonObject threshold;
+  QJsonObject threshold = surfaceLocalization.value("threshold").toObject();
   threshold["min"] = qBound(0, minValue, 255);
   threshold["max"] = qBound(threshold.value("min").toInt(), maxValue, 255);
   threshold["value"] = threshold.value("max").toInt();
@@ -366,6 +363,70 @@ bool RecipeManager::clearSurfaceDefectExclusionRects(const QString& cameraId, QS
   tools["surfaceLocalization"] = surfaceDefects;
   root["tools"] = tools;
 
+  return saveJsonObject(path, root, errorMessage);
+}
+
+bool RecipeManager::saveSurfaceDefectPcaResolveAmbiguity(const QString& cameraId, bool resolve, QString* errorMessage) const
+{
+  const QString path = cameraRecipePath(cameraId);
+  QJsonObject root;
+  loadJsonObject(path, root);
+
+  root["cameraId"] = cameraId;
+
+  QJsonObject tools = root.value("tools").toObject();
+  QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
+  surfaceLocalization["enabled"] = true;
+  const QString method = normalizedSurfaceLocalizationMethod(surfaceLocalization.value("method").toString("threshold"));
+  pruneSurfaceLocalizationForMethod(surfaceLocalization, method == "threshold" ? "threshold" : "massPca");
+
+  QJsonObject threshold = surfaceLocalization.value("threshold").toObject();
+  threshold["pcaResolveAmbiguity"] = resolve;
+  surfaceLocalization["threshold"] = threshold;
+  tools["surfaceLocalization"] = surfaceLocalization;
+  root["tools"] = tools;
+
+  return saveJsonObject(path, root, errorMessage);
+}
+
+bool RecipeManager::loadGlobalSurfaceAoi(const QString& cameraId, QRect& roi) const
+{
+  QJsonObject root;
+  if (!loadJsonObject(cameraRecipePath(cameraId), root))
+  {
+    return false;
+  }
+  const QJsonObject surfaceLocalization = root.value("tools").toObject()
+    .value("surfaceLocalization").toObject();
+  const QJsonObject searchRoi = surfaceLocalization.value("searchRoi").toObject();
+  if (searchRoi.isEmpty())
+  {
+    return false;
+  }
+  roi = rectFromJson(searchRoi);
+  return roi.isValid();
+}
+
+bool RecipeManager::saveGlobalSurfaceAoi(const QString& cameraId, const QRect& roi, QString* errorMessage) const
+{
+  const QString path = cameraRecipePath(cameraId);
+  QJsonObject root;
+  loadJsonObject(path, root);
+  root["cameraId"] = cameraId;
+
+  QJsonObject tools = root.value("tools").toObject();
+
+  // 1. Save to surfaceLocalization.searchRoi
+  QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
+  surfaceLocalization["searchRoi"] = rectToJson(roi.normalized());
+  tools["surfaceLocalization"] = surfaceLocalization;
+
+  // 2. Save to localization.searchRoi for consistency
+  QJsonObject localization = tools.value("localization").toObject();
+  localization["searchRoi"] = rectToJson(roi.normalized());
+  tools["localization"] = localization;
+
+  root["tools"] = tools;
   return saveJsonObject(path, root, errorMessage);
 }
 

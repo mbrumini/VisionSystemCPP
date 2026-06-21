@@ -32,7 +32,6 @@ bool RecipeManager::clearSurfaceLocalizationGeometry(const QString& cameraId, QS
 
   return saveJsonObject(path, root, errorMessage);
 }
-
 SurfaceLocalizationStrategyConfig RecipeManager::loadSurfaceLocalizationStrategy(const QString& cameraId) const
 {
   SurfaceLocalizationStrategyConfig config;
@@ -149,6 +148,7 @@ SurfaceAnnulusLocalizationConfig RecipeManager::loadSurfaceAnnulusLocalization(c
   const QJsonObject edge = surfaceLocalization.value("edge").toObject();
   config.edgeSensitivity = edge.value("sensitivity").toInt(config.edgeSensitivity);
   config.edgeFitMaxError = edge.value("fitMaxError").toInt(config.edgeFitMaxError);
+  config.pcaResolveAmbiguity = edge.value("pcaResolveAmbiguity").toBool(config.pcaResolveAmbiguity);
 
   const QJsonObject edgeCircle = edge.value("circle").toObject();
 
@@ -371,6 +371,30 @@ bool RecipeManager::saveSurfaceEdgeFitMaxError(const QString& cameraId, int maxE
   return saveJsonObject(path, root, errorMessage);
 }
 
+bool RecipeManager::saveSurfacePcaResolveAmbiguity(const QString& cameraId, bool resolve, QString* errorMessage) const
+{
+  const QString path = cameraRecipePath(cameraId);
+  QJsonObject root;
+  loadJsonObject(path, root);
+
+  root["cameraId"] = cameraId;
+
+  QJsonObject tools = root.value("tools").toObject();
+  QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
+  surfaceLocalization["enabled"] = true;
+  const QString currentMethod = surfaceLocalization.value("method").toString("edge");
+  pruneSurfaceLocalizationForMethod(surfaceLocalization, currentMethod == "edgePca" ? currentMethod : "edge");
+
+  QJsonObject edge = surfaceLocalization.value("edge").toObject();
+  edge["pcaResolveAmbiguity"] = resolve;
+  surfaceLocalization["edge"] = edge;
+  tools["surfaceLocalization"] = surfaceLocalization;
+  root["tools"] = tools;
+
+  return saveJsonObject(path, root, errorMessage);
+}
+
+
 SurfaceModelConfig RecipeManager::loadSurfaceModel(const QString& cameraId) const
 {
   SurfaceModelConfig config;
@@ -417,6 +441,7 @@ SurfaceModelConfig RecipeManager::loadSurfaceModel(const QString& cameraId) cons
   config.maxShapeDistance = model.value("maxShapeDistance").toDouble(config.maxShapeDistance);
   config.minTemplateScore = model.value("minTemplateScore").toDouble(config.minTemplateScore);
   config.useConvexHull = model.value("useConvexHull").toBool(config.useConvexHull);
+  config.modelUseEdges = model.value("modelUseEdges").toBool(config.modelUseEdges);
 
   const QJsonObject angleRange = model.value("angleRange").toObject();
   config.angleStartDegrees = angleRange.value("start").toDouble(config.angleStartDegrees);
@@ -459,6 +484,7 @@ bool RecipeManager::saveSurfaceModel(const QString& cameraId, const QRect& searc
   model["maxShapeDistance"] = model.value("maxShapeDistance").toDouble(SurfaceModelConfig().maxShapeDistance);
   model["minTemplateScore"] = model.value("minTemplateScore").toDouble(SurfaceModelConfig().minTemplateScore);
   model["useConvexHull"] = model.value("useConvexHull").toBool(SurfaceModelConfig().useConvexHull);
+  model["modelUseEdges"] = model.value("modelUseEdges").toBool(SurfaceModelConfig().modelUseEdges);
 
   QJsonObject angleRange = model.value("angleRange").toObject();
   if (!angleRange.contains("start"))
@@ -546,6 +572,25 @@ bool RecipeManager::saveSurfaceModelUseConvexHull(const QString& cameraId, bool 
   return saveJsonObject(path, root, errorMessage);
 }
 
+bool RecipeManager::saveSurfaceModelUseEdges(const QString& cameraId, bool useEdges, QString* errorMessage) const
+{
+  const QString path = cameraRecipePath(cameraId);
+  QJsonObject root;
+  loadJsonObject(path, root);
+
+  root["cameraId"] = cameraId;
+  QJsonObject tools = root.value("tools").toObject();
+  QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
+  pruneSurfaceLocalizationForMethod(surfaceLocalization, "model");
+  QJsonObject model = surfaceLocalization.value("model").toObject();
+  model["modelUseEdges"] = useEdges;
+  surfaceLocalization["model"] = model;
+  surfaceLocalization["enabled"] = true;
+  tools["surfaceLocalization"] = surfaceLocalization;
+  root["tools"] = tools;
+  return saveJsonObject(path, root, errorMessage);
+}
+
 bool RecipeManager::saveSurfaceModelMinTemplateScore(const QString& cameraId, double score, QString* errorMessage) const
 {
   const QString path = cameraRecipePath(cameraId);
@@ -593,3 +638,122 @@ QString RecipeManager::surfaceModelTemplateImagePath(const QString& cameraId) co
   return QDir(recipesRoot()).filePath(m_recipeId + "/assets/" + cameraId + "_surface_model_template.png");
 }
 
+bool RecipeManager::saveSurfaceLocalizationStrategy(const QString& cameraId, const SurfaceLocalizationStrategyConfig& config, QString* errorMessage) const
+{
+  const QString path = cameraRecipePath(cameraId);
+  QJsonObject root;
+  loadJsonObject(path, root);
+
+  root["cameraId"] = cameraId;
+
+  QJsonObject tools = root.value("tools").toObject();
+  QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
+  surfaceLocalization["enabled"] = true;
+  pruneSurfaceLocalizationForMethod(surfaceLocalization, "two_circles_axis");
+
+  QJsonObject strategy;
+  strategy["name"] = config.name;
+  strategy["origin"] = config.origin;
+
+  QJsonObject xAxis;
+  xAxis["from"] = config.xAxisFrom;
+  xAxis["to"] = config.xAxisTo;
+  strategy["xAxis"] = xAxis;
+
+  QJsonArray features;
+  for (const SurfaceStrategyFeatureConfig& feature : config.features)
+  {
+    QJsonObject featureObject;
+    featureObject["id"] = feature.id;
+    featureObject["type"] = "circle";
+    featureObject["polarity"] = feature.polarity;
+    featureObject["searchRoi"] = rectToJson(feature.searchRoi);
+
+    QJsonObject threshold;
+    threshold["min"] = feature.thresholdMin;
+    threshold["max"] = feature.thresholdMax;
+    featureObject["threshold"] = threshold;
+
+    QJsonObject expectedRadius;
+    expectedRadius["min"] = feature.expectedRadiusMin;
+    expectedRadius["max"] = feature.expectedRadiusMax;
+    featureObject["expectedRadius"] = expectedRadius;
+
+    features.append(featureObject);
+  }
+  strategy["features"] = features;
+
+  surfaceLocalization["strategy"] = strategy;
+  tools["surfaceLocalization"] = surfaceLocalization;
+  root["tools"] = tools;
+
+  return saveJsonObject(path, root, errorMessage);
+}
+
+bool RecipeManager::saveSurfaceStrategyCircle(const QString& cameraId, const QString& featureId, const QPoint& center, int radius, QString* errorMessage) const
+{
+  SurfaceLocalizationStrategyConfig config = loadSurfaceLocalizationStrategy(cameraId);
+  config.name = "two_circles_axis";
+  if (config.origin.isEmpty())
+  {
+    config.origin = "midpoint";
+  }
+  if (config.xAxisFrom.isEmpty())
+  {
+    config.xAxisFrom = "circle_a";
+  }
+  if (config.xAxisTo.isEmpty())
+  {
+    config.xAxisTo = "circle_b";
+  }
+
+  int featureIndex = -1;
+  for (int i = 0; i < config.features.size(); ++i)
+  {
+    if (config.features[i].id == featureId)
+    {
+      featureIndex = i;
+      break;
+    }
+  }
+
+  SurfaceStrategyFeatureConfig feature;
+  if (featureIndex >= 0)
+  {
+    feature = config.features[featureIndex];
+  }
+  else
+  {
+    feature.id = featureId;
+    feature.polarity = "NB";
+    feature.thresholdMin = 0;
+    feature.thresholdMax = 80;
+  }
+
+  feature.searchRoi = QRect(center.x() - radius, center.y() - radius, radius * 2, radius * 2);
+  feature.expectedRadiusMin = qMax(1.0, radius * 0.7);
+  feature.expectedRadiusMax = radius * 1.3;
+
+  if (featureIndex >= 0)
+  {
+    config.features[featureIndex] = feature;
+  }
+  else
+  {
+    if (config.features.isEmpty() && featureId == "circle_b")
+    {
+      SurfaceStrategyFeatureConfig firstFeature;
+      firstFeature.id = "circle_a";
+      firstFeature.polarity = "NB";
+      firstFeature.searchRoi = QRect(100, 100, 100, 100);
+      firstFeature.thresholdMin = 0;
+      firstFeature.thresholdMax = 80;
+      firstFeature.expectedRadiusMin = 20.0;
+      firstFeature.expectedRadiusMax = 80.0;
+      config.features.append(firstFeature);
+    }
+    config.features.append(feature);
+  }
+
+  return saveSurfaceLocalizationStrategy(cameraId, config, errorMessage);
+}

@@ -19,7 +19,8 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
   const cv::Mat& input,
   const cv::Rect& searchRoi,
   const std::vector<cv::Rect>& exclusionRects,
-  int edgeSensitivity) const
+  int edgeSensitivity,
+  bool resolveAmbiguity) const
 {
   SurfaceDefectResult result;
 
@@ -70,7 +71,7 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
   cv::morphologyEx(edgeMask, edgeMask, cv::MORPH_CLOSE, kernel);
 
   std::vector<std::vector<cv::Point>> contours;
-  cv::findContours(edgeMask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+  cv::findContours(edgeMask, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
 
   if (input.channels() == 1)
   {
@@ -81,27 +82,59 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
     input.copyTo(result.diagnosticImage);
   }
 
-  cv::rectangle(result.diagnosticImage, roi, cv::Scalar(255, 0, 0), 2);
+  // cv::rectangle(result.diagnosticImage, roi, cv::Scalar(255, 0, 0), 2);
+
+  // Determine if there is at least one significant contour that does not span the entire ROI
+  bool hasSmallSignificantContour = false;
+  for (const auto& c : contours)
+  {
+    if (c.size() >= 30)
+    {
+      const cv::Rect bounding = cv::boundingRect(c);
+      if (bounding.width <= 0.95 * roi.width || bounding.height <= 0.95 * roi.height)
+      {
+        hasSmallSignificantContour = true;
+        break;
+      }
+    }
+  }
 
   int bestContourIndex = -1;
-  double bestContourArea = 0.0;
   size_t bestContourPoints = 0;
   for (int i = 0; i < static_cast<int>(contours.size()); ++i)
   {
-    const double area = std::abs(cv::contourArea(contours[i]));
-    if (area > bestContourArea || (area == bestContourArea && contours[i].size() > bestContourPoints))
+    if (contours[i].size() < 8)
+    {
+      continue;
+    }
+
+    if (hasSmallSignificantContour)
+    {
+      const cv::Rect bounding = cv::boundingRect(contours[i]);
+      if (bounding.width > 0.95 * roi.width && bounding.height > 0.95 * roi.height)
+      {
+        continue;
+      }
+    }
+
+    if (contours[i].size() > bestContourPoints)
     {
       bestContourIndex = i;
-      bestContourArea = area;
       bestContourPoints = contours[i].size();
     }
+  }
+
+  double bestContourArea = 0.0;
+  if (bestContourIndex >= 0)
+  {
+    bestContourArea = std::abs(cv::contourArea(contours[bestContourIndex]));
   }
 
   std::vector<cv::Point> edgePixels;
   if (bestContourIndex >= 0)
   {
-    edgePixels = contours[bestContourIndex];
-    cv::drawContours(result.diagnosticImage, contours, bestContourIndex, cv::Scalar(0, 255, 0), 2);
+    edgePixels = smoothSurfaceContour(contours[bestContourIndex], 5);
+    drawStyledContour(result.diagnosticImage, edgePixels, cv::Scalar(94, 197, 34));
   }
 
   if (edgePixels.size() < 8)
@@ -120,8 +153,62 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
   const cv::PCA pca(data, cv::Mat(), cv::PCA::DATA_AS_ROW);
   const cv::Point2d center(pca.mean.at<double>(0, 0), pca.mean.at<double>(0, 1));
   const cv::Point2d xDirection(pca.eigenvectors.at<double>(0, 0), pca.eigenvectors.at<double>(0, 1));
-  const cv::Point2d yDirection(-xDirection.y, xDirection.x);
-  const double angle = std::atan2(xDirection.y, xDirection.x);
+  double angle = std::atan2(xDirection.y, xDirection.x);
+
+  if (resolveAmbiguity && bestContourIndex >= 0)
+  {
+    const std::vector<std::vector<cv::Point>>& allContours = contours;
+
+    int bestInternalIndex = -1;
+    double bestInternalArea = 0.0;
+    for (int i = 0; i < static_cast<int>(allContours.size()); ++i)
+    {
+      const double area = std::abs(cv::contourArea(allContours[i]));
+      if (area < 0.8 * bestContourArea && area > 8.0)
+      {
+        if (area > bestInternalArea)
+        {
+          bestInternalIndex = i;
+          bestInternalArea = area;
+        }
+      }
+    }
+
+    if (bestInternalIndex >= 0)
+    {
+      cv::Moments m = cv::moments(allContours[bestInternalIndex]);
+      cv::Point2d internalCenter;
+      if (std::abs(m.m00) > 1e-6)
+      {
+        internalCenter = cv::Point2d(m.m10 / m.m00, m.m01 / m.m00);
+      }
+      else
+      {
+        cv::Rect r = cv::boundingRect(allContours[bestInternalIndex]);
+        internalCenter = cv::Point2d(r.x + r.width / 2.0, r.y + r.height / 2.0);
+      }
+
+      cv::drawContours(result.diagnosticImage, allContours, bestInternalIndex, cv::Scalar(0, 165, 255), 2);
+
+      const cv::Point2d toInternal = internalCenter - center;
+      const double dot = toInternal.x * xDirection.x + toInternal.y * xDirection.y;
+      if (dot < 0.0)
+      {
+        angle = angle + CV_PI;
+        if (angle > CV_PI)
+        {
+          angle -= 2.0 * CV_PI;
+        }
+        else if (angle <= -CV_PI)
+        {
+          angle += 2.0 * CV_PI;
+        }
+      }
+    }
+  }
+
+  const cv::Point2d xDir(std::cos(angle), std::sin(angle));
+  const cv::Point2d yDir(-xDir.y, xDir.x);
 
   const cv::Rect bounding = cv::boundingRect(edgePixels);
   const double axisLength = std::max(20.0, 0.55 * std::max(bounding.width, bounding.height));
@@ -144,15 +231,14 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
   result.localization.score = std::min(1.0, static_cast<double>(edgePixels.size()) / static_cast<double>(std::max(1, roi.area()) / 20));
   result.localization.inputPoints = static_cast<int>(edgePixels.size());
   result.localization.usedPoints = static_cast<int>(edgePixels.size());
-  result.localization.xAxisStart = center - xDirection * axisLength;
-  result.localization.xAxisEnd = center + xDirection * axisLength;
-  result.localization.yAxisStart = center - yDirection * axisLength;
-  result.localization.yAxisEnd = center + yDirection * axisLength;
+  result.localization.xAxisStart = center - xDir * axisLength;
+  result.localization.xAxisEnd = center + xDir * axisLength;
+  result.localization.yAxisStart = center - yDir * axisLength;
+  result.localization.yAxisEnd = center + yDir * axisLength;
 
-  cv::rectangle(result.diagnosticImage, bounding, cv::Scalar(255, 0, 0), 2);
-  drawSurfaceCenterOfMass(result.diagnosticImage, center);
-  cv::line(result.diagnosticImage, surfacePoint(result.localization.xAxisStart), surfacePoint(result.localization.xAxisEnd), cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
-  cv::line(result.diagnosticImage, surfacePoint(result.localization.yAxisStart), surfacePoint(result.localization.yAxisEnd), cv::Scalar(255, 255, 0), 2, cv::LINE_AA);
+  // cv::rectangle(result.diagnosticImage, bounding, cv::Scalar(255, 0, 0), 2);
+  drawStyledCenterOfMass(result.diagnosticImage, center);
+  drawStyledAxes(result.diagnosticImage, center, result.localization.xAxisStart, result.localization.xAxisEnd, result.localization.yAxisStart, result.localization.yAxisEnd);
 
   result.processed = true;
   return result;
@@ -162,7 +248,8 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
   const cv::Mat& input,
   const std::vector<cv::Point>& searchPolygon,
   const std::vector<cv::Rect>& exclusionRects,
-  int edgeSensitivity) const
+  int edgeSensitivity,
+  bool resolveAmbiguity) const
 {
   SurfaceDefectResult result;
 
@@ -212,7 +299,7 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
   cv::morphologyEx(edgeMask, edgeMask, cv::MORPH_CLOSE, kernel);
 
   std::vector<std::vector<cv::Point>> contours;
-  cv::findContours(edgeMask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+  cv::findContours(edgeMask, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
 
   if (input.channels() == 1)
   {
@@ -223,27 +310,59 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
     input.copyTo(result.diagnosticImage);
   }
 
-  cv::polylines(result.diagnosticImage, std::vector<std::vector<cv::Point>>{searchPolygon}, true, cv::Scalar(255, 0, 0), 2);
+  // cv::polylines(result.diagnosticImage, std::vector<std::vector<cv::Point>>{searchPolygon}, true, cv::Scalar(255, 0, 0), 2);
+
+  // Determine if there is at least one significant contour that does not span the entire ROI
+  bool hasSmallSignificantContour = false;
+  for (const auto& c : contours)
+  {
+    if (c.size() >= 30)
+    {
+      const cv::Rect bounding = cv::boundingRect(c);
+      if (bounding.width <= 0.95 * roi.width || bounding.height <= 0.95 * roi.height)
+      {
+        hasSmallSignificantContour = true;
+        break;
+      }
+    }
+  }
 
   int bestContourIndex = -1;
-  double bestContourArea = 0.0;
   size_t bestContourPoints = 0;
   for (int i = 0; i < static_cast<int>(contours.size()); ++i)
   {
-    const double area = std::abs(cv::contourArea(contours[i]));
-    if (area > bestContourArea || (area == bestContourArea && contours[i].size() > bestContourPoints))
+    if (contours[i].size() < 8)
+    {
+      continue;
+    }
+
+    if (hasSmallSignificantContour)
+    {
+      const cv::Rect bounding = cv::boundingRect(contours[i]);
+      if (bounding.width > 0.95 * roi.width && bounding.height > 0.95 * roi.height)
+      {
+        continue;
+      }
+    }
+
+    if (contours[i].size() > bestContourPoints)
     {
       bestContourIndex = i;
-      bestContourArea = area;
       bestContourPoints = contours[i].size();
     }
+  }
+
+  double bestContourArea = 0.0;
+  if (bestContourIndex >= 0)
+  {
+    bestContourArea = std::abs(cv::contourArea(contours[bestContourIndex]));
   }
 
   std::vector<cv::Point> edgePixels;
   if (bestContourIndex >= 0)
   {
-    edgePixels = contours[bestContourIndex];
-    cv::drawContours(result.diagnosticImage, contours, bestContourIndex, cv::Scalar(0, 255, 0), 2);
+    edgePixels = smoothSurfaceContour(contours[bestContourIndex], 5);
+    drawStyledContour(result.diagnosticImage, edgePixels, cv::Scalar(94, 197, 34));
   }
 
   if (edgePixels.size() < 8)
@@ -262,7 +381,63 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
   const cv::PCA pca(data, cv::Mat(), cv::PCA::DATA_AS_ROW);
   const cv::Point2d center(pca.mean.at<double>(0, 0), pca.mean.at<double>(0, 1));
   const cv::Point2d xDirection(pca.eigenvectors.at<double>(0, 0), pca.eigenvectors.at<double>(0, 1));
-  const cv::Point2d yDirection(-xDirection.y, xDirection.x);
+  double angle = std::atan2(xDirection.y, xDirection.x);
+
+  if (resolveAmbiguity && bestContourIndex >= 0)
+  {
+    const std::vector<std::vector<cv::Point>>& allContours = contours;
+
+    int bestInternalIndex = -1;
+    double bestInternalArea = 0.0;
+    for (int i = 0; i < static_cast<int>(allContours.size()); ++i)
+    {
+      const double area = std::abs(cv::contourArea(allContours[i]));
+      if (area < 0.8 * bestContourArea && area > 8.0)
+      {
+        if (area > bestInternalArea)
+        {
+          bestInternalIndex = i;
+          bestInternalArea = area;
+        }
+      }
+    }
+
+    if (bestInternalIndex >= 0)
+    {
+      cv::Moments m = cv::moments(allContours[bestInternalIndex]);
+      cv::Point2d internalCenter;
+      if (std::abs(m.m00) > 1e-6)
+      {
+        internalCenter = cv::Point2d(m.m10 / m.m00, m.m01 / m.m00);
+      }
+      else
+      {
+        cv::Rect r = cv::boundingRect(allContours[bestInternalIndex]);
+        internalCenter = cv::Point2d(r.x + r.width / 2.0, r.y + r.height / 2.0);
+      }
+
+      cv::drawContours(result.diagnosticImage, allContours, bestInternalIndex, cv::Scalar(0, 165, 255), 2);
+
+      const cv::Point2d toInternal = internalCenter - center;
+      const double dot = toInternal.x * xDirection.x + toInternal.y * xDirection.y;
+      if (dot < 0.0)
+      {
+        angle = angle + CV_PI;
+        if (angle > CV_PI)
+        {
+          angle -= 2.0 * CV_PI;
+        }
+        else if (angle <= -CV_PI)
+        {
+          angle += 2.0 * CV_PI;
+        }
+      }
+    }
+  }
+
+  const cv::Point2d xDir(std::cos(angle), std::sin(angle));
+  const cv::Point2d yDir(-xDir.y, xDir.x);
+
   const cv::Rect bounding = cv::boundingRect(edgePixels);
   const double axisLength = std::max(20.0, 0.55 * std::max(bounding.width, bounding.height));
 
@@ -280,19 +455,18 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
   result.localization.found = true;
   result.localization.method = "edge_polygon_pca";
   result.localization.center = center;
-  result.localization.angleRadians = std::atan2(xDirection.y, xDirection.x);
+  result.localization.angleRadians = angle;
   result.localization.score = std::min(1.0, static_cast<double>(edgePixels.size()) / static_cast<double>(std::max(1, roi.area()) / 20));
   result.localization.inputPoints = static_cast<int>(edgePixels.size());
   result.localization.usedPoints = static_cast<int>(edgePixels.size());
-  result.localization.xAxisStart = center - xDirection * axisLength;
-  result.localization.xAxisEnd = center + xDirection * axisLength;
-  result.localization.yAxisStart = center - yDirection * axisLength;
-  result.localization.yAxisEnd = center + yDirection * axisLength;
+  result.localization.xAxisStart = center - xDir * axisLength;
+  result.localization.xAxisEnd = center + xDir * axisLength;
+  result.localization.yAxisStart = center - yDir * axisLength;
+  result.localization.yAxisEnd = center + yDir * axisLength;
 
-  cv::rectangle(result.diagnosticImage, bounding, cv::Scalar(255, 0, 0), 2);
-  drawSurfaceCenterOfMass(result.diagnosticImage, center);
-  cv::line(result.diagnosticImage, surfacePoint(result.localization.xAxisStart), surfacePoint(result.localization.xAxisEnd), cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
-  cv::line(result.diagnosticImage, surfacePoint(result.localization.yAxisStart), surfacePoint(result.localization.yAxisEnd), cv::Scalar(255, 255, 0), 2, cv::LINE_AA);
+  // cv::rectangle(result.diagnosticImage, bounding, cv::Scalar(255, 0, 0), 2);
+  drawStyledCenterOfMass(result.diagnosticImage, center);
+  drawStyledAxes(result.diagnosticImage, center, result.localization.xAxisStart, result.localization.xAxisEnd, result.localization.yAxisStart, result.localization.yAxisEnd);
 
   result.processed = true;
   return result;

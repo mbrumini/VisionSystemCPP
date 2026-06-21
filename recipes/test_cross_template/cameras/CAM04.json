@@ -3,25 +3,30 @@
     "tools": {
         "surfaceLocalization": {
             "aoes": {
-                "edgePca": {
-                    "id": "edgePca",
-                    "label": "edgePca",
+                "massPca": {
+                    "id": "massPca",
+                    "label": "massPca",
                     "searchRoi": {
-                        "height": 430,
-                        "width": 562,
-                        "x": 41,
-                        "y": 24
+                        "height": 181,
+                        "width": 304,
+                        "x": 166,
+                        "y": 152
                     }
                 }
             },
             "enabled": true,
-            "exclusionRects": [],
-            "method": "edgePca",
+            "exclusionRects": [
+            ],
+            "method": "massPca",
             "searchRoi": {
-                "height": 430,
-                "width": 562,
-                "x": 41,
-                "y": 24
+                "height": 181,
+                "width": 304,
+                "x": 166,
+                "y": 152
+            },
+            "threshold": {
+                "max": 80,
+                "min": 0
             }
         }
     }

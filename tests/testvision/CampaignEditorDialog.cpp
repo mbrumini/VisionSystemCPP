@@ -106,6 +106,7 @@ CampaignEditorDialog::CampaignEditorDialog(
   m_strategy->addItem("Edge / PCA", "edgePca");
   m_strategy->addItem("Corona soglia", "threshold");
   m_strategy->addItem("Corona edge", "edge");
+  m_strategy->addItem("Due cerchi / asse", "two_circles_axis");
   m_strategy->addItem("Shape model", "shapeModel");
   m_strategy->addItem("Template model", "templateModel");
   m_shape = new QComboBox(formPanel);

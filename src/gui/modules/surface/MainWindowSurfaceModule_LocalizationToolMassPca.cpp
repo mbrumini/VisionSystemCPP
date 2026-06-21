@@ -4,6 +4,7 @@
 #include "gui/SurfaceLocalizationStrategies.h"
 #include "gui/TouchIconButton.h"
 
+#include <QCheckBox>
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QLabel>
@@ -108,6 +109,19 @@ void MainWindowSurfaceModule::showMassPcaLocalizationPanel(const CameraConfig& c
     saveThreshold();
   });
   layout->addWidget(thresholdBox);
+
+  auto* resolveBox = new QCheckBox(tr("labels.pcaResolveAmbiguity"), panel);
+  resolveBox->setChecked(settings.pcaResolveAmbiguity);
+  QObject::connect(resolveBox, &QCheckBox::toggled, window(), [this, camera](bool checked) {
+    QString error;
+    if (!recipes().saveSurfaceDefectPcaResolveAmbiguity(camera.id, checked, &error))
+    {
+      log(error);
+      return;
+    }
+    testSurfaceLocalization(camera);
+  });
+  layout->addWidget(resolveBox);
 
   auto* backButton = createTouchIconButton("back", tr("groups.localizationStrategies"), panel);
   QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() {

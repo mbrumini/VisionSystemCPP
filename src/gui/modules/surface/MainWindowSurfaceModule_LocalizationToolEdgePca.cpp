@@ -10,6 +10,7 @@
 #include <QPushButton>
 #include <QSlider>
 #include <QVBoxLayout>
+#include <QCheckBox>
 
 void MainWindowSurfaceModule::showEdgePcaLocalizationPanel(const CameraConfig& camera)
 {
@@ -85,6 +86,19 @@ void MainWindowSurfaceModule::showEdgePcaLocalizationPanel(const CameraConfig& c
     testSurfaceEdgePcaLocalization(camera);
   });
   layout->addWidget(sensitivityBox);
+
+  auto* resolveBox = new QCheckBox(tr("labels.pcaResolveAmbiguity"), panel);
+  resolveBox->setChecked(annulus.pcaResolveAmbiguity);
+  QObject::connect(resolveBox, &QCheckBox::toggled, window(), [this, camera](bool checked) {
+    QString error;
+    if (!recipes().saveSurfacePcaResolveAmbiguity(camera.id, checked, &error))
+    {
+      log(error);
+      return;
+    }
+    testSurfaceEdgePcaLocalization(camera);
+  });
+  layout->addWidget(resolveBox);
 
   auto* backButton = createTouchIconButton("back", tr("groups.localizationStrategies"), panel);
   QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() {

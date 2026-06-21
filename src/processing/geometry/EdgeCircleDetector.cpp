@@ -282,15 +282,57 @@ EdgeCircleDetectorResult EdgeCircleDetector::detect(const cv::Mat& input, const 
     cv::circle(result.diagnosticImage, surfacePoint(config.guideCenter), static_cast<int>(std::round(config.guideRadius - config.innerBand)), cv::Scalar(0, 255, 255), 1, cv::LINE_AA);
     cv::circle(result.diagnosticImage, surfacePoint(config.guideCenter), static_cast<int>(std::round(config.guideRadius + config.outerBand)), cv::Scalar(0, 255, 255), 1, cv::LINE_AA);
   }
+  // Draw 8 scan direction arrows showing normal positive (outward) vs normal negative (inward)
+  const bool outwardScan = config.scanDirection == EdgeLineScanDirection::NormalPositive;
+  const double startOffset = outwardScan ? -static_cast<double>(config.innerBand) : static_cast<double>(config.outerBand);
+  const double endOffset = outwardScan ? static_cast<double>(config.outerBand) : -static_cast<double>(config.innerBand);
+
+  double startAngle = 0.0;
+  double angleSpan = 2.0 * CV_PI;
+  if (config.useArc)
+  {
+    startAngle = config.startAngleRadians;
+    angleSpan = config.endAngleRadians - config.startAngleRadians;
+    while (angleSpan < 0.0) angleSpan += 2.0 * CV_PI;
+  }
+
+  for (int i = 0; i < 8; ++i)
+  {
+    double angle = startAngle + angleSpan * static_cast<double>(i) / 7.0;
+    const cv::Point2d radial(std::cos(angle), std::sin(angle));
+    cv::Point2d ptStart = config.guideCenter + radial * (config.guideRadius + startOffset);
+    cv::Point2d ptEnd = config.guideCenter + radial * (config.guideRadius + endOffset);
+
+    // Draw arrow
+    cv::Point startPt = surfacePoint(ptStart);
+    cv::Point endPt = surfacePoint(ptEnd);
+    cv::arrowedLine(result.diagnosticImage, startPt, endPt, cv::Scalar(16, 16, 16), 3, cv::LINE_AA, 0, 0.25);
+    cv::arrowedLine(result.diagnosticImage, startPt, endPt, cv::Scalar(0, 255, 255), 1, cv::LINE_AA, 0, 0.25);
+  }
+
+  // Draw transition text label B->N (Light to Dark) vs N->B (Dark to Light) near center of circle/arc
+  std::string transitionText = (config.transition == EdgeLineTransition::DarkToLight) ? "N->B" : "B->N";
+  std::string dirText = outwardScan ? "OUT" : "IN";
+  std::string fullLabel = transitionText + " (" + dirText + ")";
+
+  cv::Point textPos = surfacePoint(config.guideCenter + cv::Point2d(-35, 5));
+  cv::putText(result.diagnosticImage, fullLabel, textPos, cv::FONT_HERSHEY_SIMPLEX, 0.45, cv::Scalar(16, 16, 16), 3, cv::LINE_AA);
+  cv::putText(result.diagnosticImage, fullLabel, textPos, cv::FONT_HERSHEY_SIMPLEX, 0.45, cv::Scalar(0, 255, 255), 1, cv::LINE_AA);
+
+  // Draw raw edge points
   for (const cv::Point2d& point : result.rawEdgePoints)
   {
-    cv::circle(result.diagnosticImage, surfacePoint(point), 3, cv::Scalar(0, 120, 255), cv::FILLED, cv::LINE_AA);
+    cv::circle(result.diagnosticImage, surfacePoint(point), 1, cv::Scalar(0, 120, 255), -1, cv::LINE_AA);
   }
+
+  // Draw filtered edge points with high visibility (fine dots with shadow)
   for (const cv::Point2d& point : result.edgePoints)
   {
     const cv::Point imagePoint = surfacePoint(point);
-    cv::circle(result.diagnosticImage, imagePoint, 6, cv::Scalar(255, 255, 255), 1, cv::LINE_AA);
-    cv::circle(result.diagnosticImage, imagePoint, 5, cv::Scalar(0, 0, 255), cv::FILLED, cv::LINE_AA);
+    // Draw black outline shadow first
+    cv::circle(result.diagnosticImage, imagePoint, 3, cv::Scalar(16, 16, 16), -1, cv::LINE_AA);
+    // Draw main colored dot (cyan/yellow)
+    cv::circle(result.diagnosticImage, imagePoint, 2, cv::Scalar(0, 255, 255), -1, cv::LINE_AA);
   }
 
   const double span = configuredArcSpanRadians(config);
@@ -332,13 +374,21 @@ EdgeCircleDetectorResult EdgeCircleDetector::detect(const cv::Mat& input, const 
     result.arc.startAngleRadians = config.startAngleRadians;
     result.arc.endAngleRadians = config.endAngleRadians;
     result.arc.meanError = fit.meanError;
+    // Draw shadow first
     cv::ellipse(result.diagnosticImage, surfacePoint(fit.center),
       cv::Size(static_cast<int>(std::round(fit.radius)), static_cast<int>(std::round(fit.radius))),
-      0.0, startDegrees, endDegrees, cv::Scalar(216, 79, 255), 4, cv::LINE_AA);
+      0.0, startDegrees, endDegrees, cv::Scalar(16, 16, 16), 5, cv::LINE_AA);
+    // Draw main line
+    cv::ellipse(result.diagnosticImage, surfacePoint(fit.center),
+      cv::Size(static_cast<int>(std::round(fit.radius)), static_cast<int>(std::round(fit.radius))),
+      0.0, startDegrees, endDegrees, cv::Scalar(216, 79, 255), 2, cv::LINE_AA);
   }
   else
   {
-    cv::circle(result.diagnosticImage, surfacePoint(fit.center), static_cast<int>(std::round(fit.radius)), cv::Scalar(255, 255, 0), 4, cv::LINE_AA);
+    // Draw shadow first
+    cv::circle(result.diagnosticImage, surfacePoint(fit.center), static_cast<int>(std::round(fit.radius)), cv::Scalar(16, 16, 16), 5, cv::LINE_AA);
+    // Draw main line
+    cv::circle(result.diagnosticImage, surfacePoint(fit.center), static_cast<int>(std::round(fit.radius)), cv::Scalar(255, 255, 0), 2, cv::LINE_AA);
   }
   return result;
 }

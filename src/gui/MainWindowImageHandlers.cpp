@@ -19,6 +19,24 @@ void MainWindow::setupLargeImageHandlers()
 
     QString error;
 
+    if (m_activeDrawingRecipe == MainWindowActiveDrawingRecipe::GlobalAoi)
+    {
+      if (!m_recipeManager.saveGlobalSurfaceAoi(m_selectedCameraId, roi, &error))
+      {
+        appendLog(error);
+        return;
+      }
+
+      appendLog(QString("%1: %2 x=%3 y=%4 w=%5 h=%6")
+                  .arg(trText("actions.defineAoi"))
+                  .arg(m_selectedCameraId)
+                  .arg(roi.x())
+                  .arg(roi.y())
+                  .arg(roi.width())
+                  .arg(roi.height()));
+      return;
+    }
+
     if (m_activeDrawingRecipe == MainWindowActiveDrawingRecipe::SurfaceDefects)
     {
       if (!m_recipeManager.saveSurfaceDefectRoi(m_selectedCameraId, roi, &error))
@@ -237,6 +255,31 @@ void MainWindow::setupLargeImageHandlers()
       return;
     }
 
+    if (m_surface.circleTarget() == MainWindowSurfaceModule::CircleTarget::CircleA ||
+        m_surface.circleTarget() == MainWindowSurfaceModule::CircleTarget::CircleB)
+    {
+      const bool isA = m_surface.circleTarget() == MainWindowSurfaceModule::CircleTarget::CircleA;
+      const QString featureId = isA ? "circle_a" : "circle_b";
+      if (!m_recipeManager.saveSurfaceStrategyCircle(m_selectedCameraId, featureId, circle.center, circle.radius, &error))
+      {
+        appendLog(error);
+        return;
+      }
+
+      m_largeImage->setThreePointCircleDrawingEnabled(false);
+      m_largeImage->setCircleBandEditingEnabled(false);
+
+      appendLog(QString("%1: %2 cx=%3 cy=%4 r=%5")
+                  .arg(isA ? trText("log.surfaceCircleASaved") : trText("log.surfaceCircleBSaved"))
+                  .arg(m_selectedCameraId)
+                  .arg(circle.center.x())
+                  .arg(circle.center.y())
+                  .arg(circle.radius));
+      m_surface.showStoredSurfaceStrategyGeometry(m_selectedCamera);
+      m_surface.testSurfaceLocalizationStrategy(m_selectedCamera);
+      return;
+    }
+
     const bool targetOuter = m_surface.circleTarget() == MainWindowSurfaceModule::CircleTarget::Inner ? false : outerCircle;
 
     if (!m_recipeManager.saveSurfaceAnnulusCircle(m_selectedCameraId, targetOuter, circle.center, circle.radius, &error))
@@ -431,6 +474,31 @@ void MainWindow::setupLargeImageHandlers()
                   .arg(circle.center.y())
                   .arg(circle.radius));
       m_surface.testSurfaceAnnulusLocalization(m_selectedCamera);
+      return;
+    }
+
+    if (m_surface.circleTarget() == MainWindowSurfaceModule::CircleTarget::CircleA ||
+        m_surface.circleTarget() == MainWindowSurfaceModule::CircleTarget::CircleB)
+    {
+      const bool isA = m_surface.circleTarget() == MainWindowSurfaceModule::CircleTarget::CircleA;
+      const QString featureId = isA ? "circle_a" : "circle_b";
+      if (!m_recipeManager.saveSurfaceStrategyCircle(m_selectedCameraId, featureId, circle.center, circle.radius, &error))
+      {
+        appendLog(error);
+        return;
+      }
+
+      m_largeImage->setThreePointCircleDrawingEnabled(false);
+      m_largeImage->setCircleBandEditingEnabled(false);
+
+      appendLog(QString("%1: %2 cx=%3 cy=%4 r=%5")
+                  .arg(isA ? trText("log.surfaceCircleASaved") : trText("log.surfaceCircleBSaved"))
+                  .arg(m_selectedCameraId)
+                  .arg(circle.center.x())
+                  .arg(circle.center.y())
+                  .arg(circle.radius));
+      m_surface.showStoredSurfaceStrategyGeometry(m_selectedCamera);
+      m_surface.testSurfaceLocalizationStrategy(m_selectedCamera);
       return;
     }
 

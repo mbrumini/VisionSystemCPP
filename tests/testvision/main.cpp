@@ -7,6 +7,7 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFormLayout>
+#include <QGroupBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QImage>
@@ -22,6 +23,7 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QSet>
+#include <QSignalBlocker>
 #include <QSpinBox>
 #include <QSplitter>
 #include <QTabWidget>
@@ -495,7 +497,8 @@ public:
   void startCampaignWorker(
     const QJsonObject& item,
     int cycle,
-    std::function<void(const QJsonObject&)> completion)
+    std::function<void(const QJsonObject&)> completion,
+    std::function<void(const QString&, const TestResult&)> resultCallback = {})
   {
     const QString cameraId = item.value("cameraId").toString("CAM01");
     const QString baseScenarioName = m_scenario.value("name").toString(
@@ -506,6 +509,7 @@ public:
     m_workerItem = item;
     m_workerCycle = cycle;
     m_workerCompletion = std::move(completion);
+    m_workerResultCallback = std::move(resultCallback);
     m_isCampaignWorker = true;
     applyCampaignItem(item);
     QTimer::singleShot(0, this, [this]() { startTest(); });
@@ -541,6 +545,45 @@ public:
       QTimer::singleShot(0, this, [this]() { startCampaign(); });
     }
     return true;
+  }
+
+  void startBroadcastFromCameras(const QStringList& cameras)
+  {
+    if (!m_cameraTargets)
+    {
+      return;
+    }
+    QMap<QString, QString> requested;
+    for (const QString& configuredTarget : cameras)
+    {
+      const QStringList parts = configuredTarget.split(':');
+      const QString cameraId = parts.value(0).trimmed().toUpper();
+      const QString strategyId = parts.value(1).trimmed();
+      requested.insert(cameraId, strategyId);
+    }
+    for (int row = 0; row < m_cameraTargets->rowCount(); ++row)
+    {
+      QTableWidgetItem* enabled = m_cameraTargets->item(row, 0);
+      QTableWidgetItem* camera = m_cameraTargets->item(row, 1);
+      const QString cameraId = camera->data(Qt::UserRole).toString();
+      enabled->setCheckState(
+        requested.contains(cameraId)
+          ? Qt::Checked
+          : Qt::Unchecked);
+      if (requested.contains(cameraId) && !requested.value(cameraId).isEmpty())
+      {
+        auto* strategy = qobject_cast<QComboBox*>(
+          m_cameraTargets->cellWidget(row, 2));
+        const int strategyIndex = strategy
+          ? strategy->findData(requested.value(cameraId))
+          : -1;
+        if (strategyIndex >= 0)
+        {
+          strategy->setCurrentIndex(strategyIndex);
+        }
+      }
+    }
+    QTimer::singleShot(0, this, [this]() { startTest(); });
   }
 
 private:
@@ -588,6 +631,8 @@ private:
 
     auto* configPanel = new QWidget(splitter);
     auto* configLayout = new QVBoxLayout(configPanel);
+    auto* broadcast = new QWidget(tabs);
+    auto* broadcastLayout = new QVBoxLayout(broadcast);
     auto* form = new QFormLayout();
     m_xMin = doubleSpin(0.0, -1000.0, 1000.0, 0.5);
     m_xMax = doubleSpin(0.0, -1000.0, 1000.0, 0.5);
@@ -611,6 +656,7 @@ private:
     m_strategyCombo->addItem("Edge / PCA", "edgePca");
     m_strategyCombo->addItem("Corona a soglia", "threshold");
     m_strategyCombo->addItem("Corona edge", "edge");
+    m_strategyCombo->addItem("Due cerchi / asse", "two_circles_axis");
     m_strategyCombo->addItem("Shape model", "shapeModel");
     m_strategyCombo->addItem("Template model", "templateModel");
     m_strategyCombo->addItem("Localizzazione AI YOLO", "aiYolo");
@@ -621,6 +667,33 @@ private:
     {
       const QString camId = QString("CAM%1").arg(i, 2, 10, QChar('0'));
       m_cameraCombo->addItem(camId, camId);
+    }
+    m_cameraTargets = new QTableWidget(16, 3, broadcast);
+    m_cameraTargets->setHorizontalHeaderLabels({"Usa", "Camera", "Strategia"});
+    m_cameraTargets->verticalHeader()->hide();
+    m_cameraTargets->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    m_cameraTargets->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    m_cameraTargets->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+    m_cameraTargets->setMinimumHeight(430);
+    for (int i = 1; i <= 16; ++i)
+    {
+      const QString camId = QString("CAM%1").arg(i, 2, 10, QChar('0'));
+      auto* enabled = new QTableWidgetItem();
+      enabled->setFlags(Qt::ItemIsEnabled | Qt::ItemIsUserCheckable);
+      enabled->setCheckState(Qt::Unchecked);
+      m_cameraTargets->setItem(i - 1, 0, enabled);
+      auto* camera = new QTableWidgetItem(camId);
+      camera->setData(Qt::UserRole, camId);
+      camera->setFlags(Qt::ItemIsEnabled);
+      m_cameraTargets->setItem(i - 1, 1, camera);
+      auto* strategy = new QComboBox(m_cameraTargets);
+      for (int index = 0; index < m_strategyCombo->count(); ++index)
+      {
+        strategy->addItem(
+          m_strategyCombo->itemText(index),
+          m_strategyCombo->itemData(index));
+      }
+      m_cameraTargets->setCellWidget(i - 1, 2, strategy);
     }
     m_passes = new QSpinBox(configPanel);
     m_passes->setRange(1, 1000);
@@ -649,6 +722,15 @@ private:
     m_totalLabel = new QLabel(configPanel);
     m_totalLabel->setWordWrap(true);
     configLayout->addWidget(m_totalLabel);
+    m_broadcastTable = new QTableWidget(broadcast);
+    m_broadcastTable->setColumnCount(9);
+    m_broadcastTable->setHorizontalHeaderLabels({
+      "Camera", "Frame", "Valida", "X", "Y", "Angolo",
+      "Err. centro", "Err. angolo", "ms"
+    });
+    m_broadcastTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    m_broadcastTable->setMinimumHeight(220);
+    m_broadcastTable->hide();
     auto* buttons = new QHBoxLayout();
     m_startButton = new QPushButton("Start", configPanel);
     m_stopButton = new QPushButton("Stop", configPanel);
@@ -681,6 +763,24 @@ private:
     executionLayout->addWidget(m_log);
     tabs->addTab(execution, "Esecuzione");
 
+    auto* broadcastTitle = new QLabel(
+      "Seleziona le telecamere da usare e assegna a ciascuna la propria strategia.",
+      broadcast);
+    broadcastTitle->setWordWrap(true);
+    broadcastLayout->addWidget(broadcastTitle);
+    broadcastLayout->addWidget(m_cameraTargets, 3);
+    auto* broadcastButtons = new QHBoxLayout();
+    auto* startBroadcastButton = new QPushButton("Avvia broadcast", broadcast);
+    auto* stopBroadcastButton = new QPushButton("Ferma broadcast", broadcast);
+    broadcastButtons->addStretch(1);
+    broadcastButtons->addWidget(startBroadcastButton);
+    broadcastButtons->addWidget(stopBroadcastButton);
+    broadcastLayout->addLayout(broadcastButtons);
+    auto* broadcastResultsTitle = new QLabel("Risultati sincronizzati", broadcast);
+    broadcastLayout->addWidget(broadcastResultsTitle);
+    broadcastLayout->addWidget(m_broadcastTable, 2);
+    tabs->addTab(broadcast, "Multicamera");
+
     auto* analysis = new QWidget(tabs);
     auto* analysisLayout = new QVBoxLayout(analysis);
     m_summaryLabel = new QLabel("Nessun dato", analysis);
@@ -707,8 +807,86 @@ private:
     analysisLayout->addWidget(m_repeatabilityPlot);
     tabs->addTab(analysis, "Analisi");
 
+    auto* multiAnalysis = new QWidget(tabs);
+    auto* multiAnalysisLayout = new QVBoxLayout(multiAnalysis);
+    m_multiSummaryTable = new QTableWidget(multiAnalysis);
+    m_multiSummaryTable->setColumnCount(10);
+    m_multiSummaryTable->setHorizontalHeaderLabels({
+      "Camera", "Frame", "Validi", "Centro medio", "Centro max",
+      "Angolo medio", "Angolo max", "Tempo medio", "Tempo max", "Stato"
+    });
+    m_multiSummaryTable->horizontalHeader()->setSectionResizeMode(
+      QHeaderView::ResizeToContents);
+    m_multiSummaryTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_multiSummaryTable->setSelectionMode(QAbstractItemView::SingleSelection);
+    m_multiSummaryTable->setMaximumHeight(260);
+    multiAnalysisLayout->addWidget(m_multiSummaryTable);
+
+    auto* multiSelectors = new QHBoxLayout();
+    m_multiPrimaryCamera = new QComboBox(multiAnalysis);
+    m_multiCompareCamera = new QComboBox(multiAnalysis);
+    m_multiCompareCamera->addItem("Nessun confronto", "");
+    multiSelectors->addWidget(new QLabel("Telecamera da analizzare", multiAnalysis));
+    multiSelectors->addWidget(m_multiPrimaryCamera, 1);
+    multiSelectors->addWidget(new QLabel("Confronta con", multiAnalysis));
+    multiSelectors->addWidget(m_multiCompareCamera, 1);
+    multiAnalysisLayout->addLayout(multiSelectors);
+
+    auto* multiPlots = new QSplitter(Qt::Horizontal, multiAnalysis);
+    auto* primaryGroup = new QGroupBox("Dettaglio telecamera", multiPlots);
+    auto* primaryLayout = new QVBoxLayout(primaryGroup);
+    m_multiPrimarySummary = new QLabel("Nessun dato", primaryGroup);
+    m_multiPrimaryAnglePlot = new PlotWidget(
+      "Angolo atteso → rilevato", PlotWidget::Mode::Angle, primaryGroup);
+    m_multiPrimaryCenterPlot = new PlotWidget(
+      "Errore centro rispetto all'angolo", PlotWidget::Mode::CenterError, primaryGroup);
+    primaryLayout->addWidget(m_multiPrimarySummary);
+    primaryLayout->addWidget(m_multiPrimaryAnglePlot);
+    primaryLayout->addWidget(m_multiPrimaryCenterPlot);
+
+    m_multiCompareGroup = new QGroupBox("Confronto", multiPlots);
+    auto* compareLayout = new QVBoxLayout(m_multiCompareGroup);
+    m_multiCompareSummary = new QLabel("Nessun confronto", m_multiCompareGroup);
+    m_multiCompareAnglePlot = new PlotWidget(
+      "Angolo atteso → rilevato", PlotWidget::Mode::Angle, m_multiCompareGroup);
+    m_multiCompareCenterPlot = new PlotWidget(
+      "Errore centro rispetto all'angolo", PlotWidget::Mode::CenterError, m_multiCompareGroup);
+    compareLayout->addWidget(m_multiCompareSummary);
+    compareLayout->addWidget(m_multiCompareAnglePlot);
+    compareLayout->addWidget(m_multiCompareCenterPlot);
+    m_multiCompareGroup->hide();
+    multiPlots->addWidget(primaryGroup);
+    multiPlots->addWidget(m_multiCompareGroup);
+    multiAnalysisLayout->addWidget(multiPlots, 1);
+    tabs->addTab(multiAnalysis, "Analisi multicamera");
+
     connect(m_startButton, &QPushButton::clicked, this, [this]() { startTest(); });
-    connect(m_stopButton, &QPushButton::clicked, this, [this]() { stopTest("Arrestato dall'utente"); });
+    connect(startBroadcastButton, &QPushButton::clicked, this, [this]() { startTest(); });
+    connect(stopBroadcastButton, &QPushButton::clicked, this, [this]() {
+      const QList<TestVisionWindow*> workers = m_broadcastWorkers;
+      for (TestVisionWindow* worker : workers)
+      {
+        if (worker)
+        {
+          worker->stopTest("Broadcast arrestato dall'utente");
+        }
+      }
+    });
+    connect(m_stopButton, &QPushButton::clicked, this, [this]() {
+      if (m_broadcastRunning)
+      {
+        const QList<TestVisionWindow*> workers = m_broadcastWorkers;
+        for (TestVisionWindow* worker : workers)
+        {
+          if (worker)
+          {
+            worker->stopTest("Broadcast arrestato dall'utente");
+          }
+        }
+        return;
+      }
+      stopTest("Arrestato dall'utente");
+    });
     connect(m_sendSampleButton, &QPushButton::clicked, this, [this]() { sendSample(); });
     connect(m_generateDatasetButton, &QPushButton::clicked, this, [this]() { generateAiDataset(); });
     connect(m_loadCampaignButton, &QPushButton::clicked, this, [this]() { loadCampaign(); });
@@ -718,6 +896,43 @@ private:
     connect(m_recipeCombo, &QComboBox::currentTextChanged, this, [this](const QString& text) {
       m_expectedRecipeId = text.trimmed();
       updateScenarioLabel();
+    });
+    connect(m_cameraCombo, &QComboBox::currentIndexChanged, this, [this]() {
+      if (!m_cameraTargets)
+      {
+        return;
+      }
+      const QString cameraId = m_cameraCombo->currentData().toString();
+      if (cameraId == "SELECTED")
+      {
+        return;
+      }
+      for (int row = 0; row < m_cameraTargets->rowCount(); ++row)
+      {
+        if (m_cameraTargets->item(row, 1)->data(Qt::UserRole).toString() == cameraId)
+        {
+          m_cameraTargets->item(row, 0)->setCheckState(Qt::Checked);
+          break;
+        }
+      }
+    });
+    connect(m_multiSummaryTable, &QTableWidget::cellClicked, this, [this](int row, int) {
+      if (row < 0 || row >= m_multiSummaryTable->rowCount())
+      {
+        return;
+      }
+      const QString cameraId = m_multiSummaryTable->item(row, 0)->text();
+      const int index = m_multiPrimaryCamera->findData(cameraId);
+      if (index >= 0)
+      {
+        m_multiPrimaryCamera->setCurrentIndex(index);
+      }
+    });
+    connect(m_multiPrimaryCamera, &QComboBox::currentIndexChanged, this, [this]() {
+      refreshBroadcastAnalysisSelection();
+    });
+    connect(m_multiCompareCamera, &QComboBox::currentIndexChanged, this, [this]() {
+      refreshBroadcastAnalysisSelection();
     });
     for (QDoubleSpinBox* spin : {
            m_xMin, m_xMax, m_xStep, m_yMin, m_yMax, m_yStep,
@@ -771,6 +986,7 @@ private:
     {
       m_cameraCombo->setCurrentIndex(0);
     }
+    selectBroadcastCamera(cameraId);
     updateMasterShape();
     const QDir scenarioDir = QFileInfo(m_scenarioPath).dir();
     const QString masterPath = scenarioDir.absoluteFilePath(
@@ -1083,6 +1299,7 @@ private:
     {
       m_cameraCombo->setCurrentIndex(cameraIndex);
     }
+    selectBroadcastCamera(cameraId);
     const QString recipeId = item.value("recipeId").toString();
     const int recipeIndex = m_recipeCombo->findText(recipeId);
     if (recipeIndex >= 0)
@@ -1112,6 +1329,58 @@ private:
     m_passes->setValue(qMax(1, item.value("passes").toInt(m_passes->value())));
     m_intervalMs->setValue(qMax(0, item.value("intervalMs").toInt(m_intervalMs->value())));
     updateMasterShape();
+  }
+
+  void selectBroadcastCamera(const QString& cameraId)
+  {
+    if (!m_cameraTargets || cameraId.isEmpty() || cameraId == "SELECTED")
+    {
+      return;
+    }
+    for (int row = 0; row < m_cameraTargets->rowCount(); ++row)
+    {
+      const bool match =
+        m_cameraTargets->item(row, 1)->data(Qt::UserRole).toString() == cameraId;
+      m_cameraTargets->item(row, 0)->setCheckState(
+        match ? Qt::Checked : Qt::Unchecked);
+      if (match)
+      {
+        auto* strategy = qobject_cast<QComboBox*>(
+          m_cameraTargets->cellWidget(row, 2));
+        const int strategyIndex = strategy
+          ? strategy->findData(m_strategyCombo->currentData())
+          : -1;
+        if (strategyIndex >= 0)
+        {
+          strategy->setCurrentIndex(strategyIndex);
+        }
+      }
+    }
+  }
+
+  QJsonArray selectedBroadcastItems() const
+  {
+    QJsonArray items;
+    if (m_cameraTargets)
+    {
+      for (int row = 0; row < m_cameraTargets->rowCount(); ++row)
+      {
+        if (m_cameraTargets->item(row, 0)->checkState() != Qt::Checked)
+        {
+          continue;
+        }
+        auto* strategy = qobject_cast<QComboBox*>(
+          m_cameraTargets->cellWidget(row, 2));
+        items.append(QJsonObject{
+          {"cameraId", m_cameraTargets->item(row, 1)
+            ->data(Qt::UserRole).toString()},
+          {"strategyId", strategy
+            ? strategy->currentData().toString()
+            : m_strategyCombo->currentData().toString()}
+        });
+      }
+    }
+    return items;
   }
 
   void startCampaign()
@@ -1405,8 +1674,297 @@ private:
     m_stateLabel->setText(message);
   }
 
+  QJsonObject currentBroadcastItem(
+    const QString& cameraId,
+    const QString& strategyId) const
+  {
+    return {
+      {"cameraId", cameraId},
+      {"recipeId", m_recipeCombo->currentText().trimmed()},
+      {"strategyId", strategyId},
+      {"shapeId", m_shapeCombo->currentData().toString()},
+      {"passes", m_passes->value()},
+      {"intervalMs", m_intervalMs->value()},
+      {"xMinMm", m_xMin->value()},
+      {"xMaxMm", m_xMax->value()},
+      {"xStepMm", m_xStep->value()},
+      {"yMinMm", m_yMin->value()},
+      {"yMaxMm", m_yMax->value()},
+      {"yStepMm", m_yStep->value()},
+      {"angleMinDeg", m_angleMin->value()},
+      {"angleMaxDeg", m_angleMax->value()},
+      {"angleStepDeg", m_angleStep->value()},
+      {"limits", QJsonObject{
+        {"centerMeanMaxPx", 1.0e9},
+        {"centerMaxPx", 1.0e9},
+        {"angleMeanMaxDeg", 1.0e9},
+        {"angleMaxDeg", 1.0e9},
+        {"processingMeanMaxMs", 1.0e9},
+        {"processingMaxMs", 1.0e9}
+      }}
+    };
+  }
+
+  void appendBroadcastResult(const QString& cameraId, const TestResult& result)
+  {
+    if (!m_broadcastTable)
+    {
+      return;
+    }
+    const int row = m_broadcastTable->rowCount();
+    m_broadcastTable->insertRow(row);
+    const QStringList values = {
+      cameraId,
+      QString::number(result.frameId),
+      result.valid ? "SI" : "NO",
+      QString::number(result.actualX, 'f', 2),
+      QString::number(result.actualY, 'f', 2),
+      QString::number(result.actualAngle, 'f', 2),
+      QString::number(result.centerError, 'f', 2),
+      QString::number(result.angleError, 'f', 2),
+      QString::number(result.processingMs, 'f', 1)
+    };
+    for (int column = 0; column < values.size(); ++column)
+    {
+      m_broadcastTable->setItem(row, column, new QTableWidgetItem(values[column]));
+    }
+    m_broadcastResultsByCamera[cameraId].append(result);
+    refreshBroadcastAnalysisSummary();
+    m_broadcastTable->scrollToBottom();
+    m_stateLabel->setText(QString(
+      "Broadcast: %1 frame %2 ricevuto | attivi %3")
+      .arg(cameraId)
+      .arg(result.frameId)
+      .arg(m_activeBroadcastWorkers));
+  }
+
+  void refreshBroadcastAnalysisSummary()
+  {
+    if (!m_multiSummaryTable || !m_multiPrimaryCamera || !m_multiCompareCamera)
+    {
+      return;
+    }
+
+    const QString primaryCamera = m_multiPrimaryCamera->currentData().toString();
+    const QString compareCamera = m_multiCompareCamera->currentData().toString();
+    const QSignalBlocker primaryBlocker(m_multiPrimaryCamera);
+    const QSignalBlocker compareBlocker(m_multiCompareCamera);
+    m_multiPrimaryCamera->clear();
+    m_multiCompareCamera->clear();
+    m_multiCompareCamera->addItem("Nessun confronto", "");
+    m_multiSummaryTable->setRowCount(0);
+
+    QStringList cameraIds = m_broadcastResultsByCamera.keys();
+    cameraIds.sort();
+    for (const QString& cameraId : cameraIds)
+    {
+      const QVector<TestResult>& results = m_broadcastResultsByCamera[cameraId];
+      double centerSum = 0.0;
+      double centerMax = 0.0;
+      double angleSum = 0.0;
+      double angleMax = 0.0;
+      double timeSum = 0.0;
+      double timeMax = 0.0;
+      int validCount = 0;
+      for (const TestResult& result : results)
+      {
+        if (result.valid)
+        {
+          ++validCount;
+        }
+        centerSum += result.centerError;
+        centerMax = std::max(centerMax, result.centerError);
+        angleSum += result.angleError;
+        angleMax = std::max(angleMax, result.angleError);
+        timeSum += result.processingMs;
+        timeMax = std::max(timeMax, result.processingMs);
+      }
+      const int count = results.size();
+      const double centerMean = count > 0 ? centerSum / count : 0.0;
+      const double angleMean = count > 0 ? angleSum / count : 0.0;
+      const double timeMean = count > 0 ? timeSum / count : 0.0;
+      const bool problem =
+        validCount != count || centerMax > 10.0 ||
+        angleMax > 15.0 || timeMax > 2000.0;
+      const QStringList values = {
+        cameraId,
+        QString::number(count),
+        QString("%1/%2").arg(validCount).arg(count),
+        QString::number(centerMean, 'f', 2),
+        QString::number(centerMax, 'f', 2),
+        QString::number(angleMean, 'f', 2),
+        QString::number(angleMax, 'f', 2),
+        QString::number(timeMean, 'f', 1),
+        QString::number(timeMax, 'f', 1),
+        problem ? "PROBLEMA" : "OK"
+      };
+      const int row = m_multiSummaryTable->rowCount();
+      m_multiSummaryTable->insertRow(row);
+      for (int column = 0; column < values.size(); ++column)
+      {
+        auto* item = new QTableWidgetItem(values[column]);
+        if (column == values.size() - 1)
+        {
+          item->setBackground(problem ? QColor("#7a2633") : QColor("#17633a"));
+        }
+        m_multiSummaryTable->setItem(row, column, item);
+      }
+      m_multiPrimaryCamera->addItem(cameraId, cameraId);
+      m_multiCompareCamera->addItem(cameraId, cameraId);
+    }
+
+    int primaryIndex = m_multiPrimaryCamera->findData(primaryCamera);
+    if (primaryIndex < 0 && m_multiPrimaryCamera->count() > 0)
+    {
+      primaryIndex = 0;
+    }
+    if (primaryIndex >= 0)
+    {
+      m_multiPrimaryCamera->setCurrentIndex(primaryIndex);
+    }
+    const int compareIndex = m_multiCompareCamera->findData(compareCamera);
+    m_multiCompareCamera->setCurrentIndex(compareIndex >= 0 ? compareIndex : 0);
+    refreshBroadcastAnalysisSelection();
+  }
+
+  void refreshBroadcastAnalysisSelection()
+  {
+    if (!m_multiPrimaryCamera || !m_multiPrimaryAnglePlot)
+    {
+      return;
+    }
+    auto summaryText = [](const QString& cameraId, const QVector<TestResult>& results) {
+      if (results.isEmpty())
+      {
+        return QString("%1: nessun dato").arg(cameraId);
+      }
+      double centerSum = 0.0;
+      double angleSum = 0.0;
+      double timeSum = 0.0;
+      for (const TestResult& result : results)
+      {
+        centerSum += result.centerError;
+        angleSum += result.angleError;
+        timeSum += result.processingMs;
+      }
+      return QString("%1 | frame %2 | centro medio %3 px | angolo medio %4° | tempo medio %5 ms")
+        .arg(cameraId)
+        .arg(results.size())
+        .arg(centerSum / results.size(), 0, 'f', 2)
+        .arg(angleSum / results.size(), 0, 'f', 2)
+        .arg(timeSum / results.size(), 0, 'f', 1);
+    };
+
+    const QString primaryCamera = m_multiPrimaryCamera->currentData().toString();
+    const QVector<TestResult> primaryResults =
+      m_broadcastResultsByCamera.value(primaryCamera);
+    m_multiPrimarySummary->setText(summaryText(primaryCamera, primaryResults));
+    m_multiPrimaryAnglePlot->setResults(primaryResults);
+    m_multiPrimaryCenterPlot->setResults(primaryResults);
+
+    const QString compareCamera = m_multiCompareCamera->currentData().toString();
+    const QVector<TestResult> compareResults =
+      m_broadcastResultsByCamera.value(compareCamera);
+    const bool hasComparison = !compareCamera.isEmpty();
+    m_multiCompareGroup->setVisible(hasComparison);
+    if (hasComparison)
+    {
+      m_multiCompareSummary->setText(summaryText(compareCamera, compareResults));
+      m_multiCompareAnglePlot->setResults(compareResults);
+      m_multiCompareCenterPlot->setResults(compareResults);
+    }
+  }
+
+  void startBroadcastTest(const QJsonArray& targets)
+  {
+    if (targets.size() < 2 || m_broadcastRunning)
+    {
+      return;
+    }
+    m_broadcastRunning = true;
+    m_activeBroadcastWorkers = targets.size();
+    m_broadcastSummaries = {};
+    m_broadcastResultsByCamera.clear();
+    m_broadcastTable->setRowCount(0);
+    refreshBroadcastAnalysisSummary();
+    m_broadcastTable->show();
+    m_startButton->setEnabled(false);
+    m_stopButton->setEnabled(true);
+    QStringList targetDescriptions;
+    for (const QJsonValue& value : targets)
+    {
+      const QJsonObject target = value.toObject();
+      targetDescriptions.append(QString("%1=%2")
+        .arg(
+          target.value("cameraId").toString(),
+          target.value("strategyId").toString()));
+    }
+    appendLog(QString("Broadcast avviato: %1 telecamere | %2")
+      .arg(targets.size())
+      .arg(targetDescriptions.join(", ")));
+
+    for (const QJsonValue& value : targets)
+    {
+      const QJsonObject target = value.toObject();
+      const QString cameraId = target.value("cameraId").toString();
+      const QString strategyId = target.value("strategyId").toString();
+      auto* worker = new TestVisionWindow(m_scenarioPath, this);
+      worker->hide();
+      m_broadcastWorkers.append(worker);
+      worker->startCampaignWorker(
+        currentBroadcastItem(cameraId, strategyId),
+        1,
+        [this, worker, cameraId](const QJsonObject& summary) {
+          m_broadcastSummaries.append(summary);
+          appendLog(QString("Broadcast %1 terminato: %2")
+            .arg(cameraId, summary.value("status").toString()));
+          m_broadcastWorkers.removeAll(worker);
+          worker->deleteLater();
+          --m_activeBroadcastWorkers;
+          if (m_activeBroadcastWorkers == 0)
+          {
+            m_broadcastRunning = false;
+            m_startButton->setEnabled(true);
+            m_stopButton->setEnabled(false);
+            m_stateLabel->setText(QString(
+              "Broadcast completato: %1 telecamere, %2 risultati")
+              .arg(m_broadcastSummaries.size())
+              .arg(m_broadcastTable->rowCount()));
+          }
+        },
+        [this](const QString& cameraId, const TestResult& result) {
+          appendBroadcastResult(cameraId, result);
+        });
+    }
+  }
+
   void startTest()
   {
+    if (!m_isCampaignWorker)
+    {
+      const QJsonArray broadcastTargets = selectedBroadcastItems();
+      if (broadcastTargets.size() > 1)
+      {
+        startBroadcastTest(broadcastTargets);
+        return;
+      }
+      if (broadcastTargets.size() == 1)
+      {
+        const QJsonObject target = broadcastTargets.first().toObject();
+        const int cameraIndex = m_cameraCombo->findData(
+          target.value("cameraId").toString());
+        if (cameraIndex >= 0)
+        {
+          m_cameraCombo->setCurrentIndex(cameraIndex);
+        }
+        const int strategyIndex = m_strategyCombo->findData(
+          target.value("strategyId").toString());
+        if (strategyIndex >= 0)
+        {
+          m_strategyCombo->setCurrentIndex(strategyIndex);
+        }
+      }
+    }
     QString error;
     if (!buildPlan(&error))
     {
@@ -1720,6 +2278,13 @@ private:
     result.angleError = pcaAngleError(result.actualAngle, result.expectedAngle);
     result.processingMs = message.value("processingMs").toDouble();
     m_results.append(result);
+    if (m_workerResultCallback)
+    {
+      m_workerResultCallback(
+        m_workerItem.value("cameraId").toString(
+          m_cameraCombo->currentData().toString()),
+        result);
+    }
 
     m_actualLabel->setText(QString("X=%1 Y=%2 A=%3° | Ec=%4 px Ea=%5°")
       .arg(result.actualX, 0, 'f', 2).arg(result.actualY, 0, 'f', 2)
@@ -1938,6 +2503,18 @@ private:
   QComboBox* m_strategyCombo = nullptr;
   QComboBox* m_recipeCombo = nullptr;
   QComboBox* m_cameraCombo = nullptr;
+  QTableWidget* m_cameraTargets = nullptr;
+  QTableWidget* m_broadcastTable = nullptr;
+  QTableWidget* m_multiSummaryTable = nullptr;
+  QComboBox* m_multiPrimaryCamera = nullptr;
+  QComboBox* m_multiCompareCamera = nullptr;
+  QLabel* m_multiPrimarySummary = nullptr;
+  QLabel* m_multiCompareSummary = nullptr;
+  PlotWidget* m_multiPrimaryAnglePlot = nullptr;
+  PlotWidget* m_multiPrimaryCenterPlot = nullptr;
+  PlotWidget* m_multiCompareAnglePlot = nullptr;
+  PlotWidget* m_multiCompareCenterPlot = nullptr;
+  QGroupBox* m_multiCompareGroup = nullptr;
   QPushButton* m_sendSampleButton = nullptr;
   QPushButton* m_generateDatasetButton = nullptr;
   QPushButton* m_loadCampaignButton = nullptr;
@@ -1968,6 +2545,12 @@ private:
   QJsonObject m_workerItem;
   QString m_workerFailure;
   std::function<void(const QJsonObject&)> m_workerCompletion;
+  std::function<void(const QString&, const TestResult&)> m_workerResultCallback;
+  bool m_broadcastRunning = false;
+  int m_activeBroadcastWorkers = 0;
+  QJsonArray m_broadcastSummaries;
+  QMap<QString, QVector<TestResult>> m_broadcastResultsByCamera;
+  QList<TestVisionWindow*> m_broadcastWorkers;
 
   QTimer m_pollTimer;
   HANDLE m_pipe = INVALID_HANDLE_VALUE;
@@ -1981,6 +2564,7 @@ int main(int argc, char* argv[])
   QString scenarioPath = QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath(
     "tests/scenarios/cross_rotation_cam01.json");
   QString campaignPath;
+  QStringList broadcastCameras;
   for (int index = 1; index < argc; ++index)
   {
     const QString argument = QString::fromLocal8Bit(argv[index]);
@@ -1988,6 +2572,20 @@ int main(int argc, char* argv[])
     {
       campaignPath = QFileInfo(
         QString::fromLocal8Bit(argv[++index])).absoluteFilePath();
+    }
+    else if (argument == "--broadcast" && index + 1 < argc)
+    {
+      broadcastCameras = QString::fromLocal8Bit(argv[++index])
+        .split(',', Qt::SkipEmptyParts);
+      for (QString& cameraId : broadcastCameras)
+      {
+        const QStringList parts = cameraId.trimmed().split(':');
+        cameraId = parts.value(0).toUpper();
+        if (parts.size() > 1)
+        {
+          cameraId += ":" + parts.value(1);
+        }
+      }
     }
     else if (!argument.startsWith("--"))
     {
@@ -2003,6 +2601,10 @@ int main(int argc, char* argv[])
     {
       QMessageBox::critical(&window, "Campagna TestVision", error);
     }
+  }
+  else if (!broadcastCameras.isEmpty())
+  {
+    window.startBroadcastFromCameras(broadcastCameras);
   }
   return app.exec();
 }

@@ -316,6 +316,7 @@ void MainWindowSurfaceModule::testSurfaceTemplateModel(const CameraConfig& camer
   config.angleStartDegrees = model.angleStartDegrees;
   config.angleEndDegrees = model.angleEndDegrees;
   config.angleStepDegrees = model.angleStepDegrees;
+  config.useEdges = model.modelUseEdges;
 
   const QVector<QRect> exclusionRects = recipes().loadSurfaceDefectExclusionRects(camera.id);
 

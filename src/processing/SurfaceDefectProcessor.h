@@ -9,6 +9,7 @@ struct SurfaceThresholdSettings
 {
   int minValue = 0;
   int maxValue = 80;
+  bool resolveAmbiguity = false;
 };
 
 struct SurfaceBlob
@@ -119,6 +120,7 @@ struct SurfaceTemplateMatchConfig
   double angleStartDegrees = -180.0;
   double angleEndDegrees = 180.0;
   double angleStepDegrees = 5.0;
+  bool useEdges = true;
 };
 
 class SurfaceDefectProcessor
@@ -155,13 +157,15 @@ public:
     const cv::Mat& input,
     const cv::Rect& searchRoi,
     const std::vector<cv::Rect>& exclusionRects = {},
-    int edgeSensitivity = 60) const;
+    int edgeSensitivity = 60,
+    bool resolveAmbiguity = false) const;
 
   SurfaceDefectResult locateByEdgePca(
     const cv::Mat& input,
     const std::vector<cv::Point>& searchPolygon,
     const std::vector<cv::Rect>& exclusionRects = {},
-    int edgeSensitivity = 60) const;
+    int edgeSensitivity = 60,
+    bool resolveAmbiguity = false) const;
 
   SurfaceDefectResult locateByShapeMatching(
     const cv::Mat& input,

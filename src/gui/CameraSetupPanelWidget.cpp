@@ -70,6 +70,7 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
   std::function<void()> toggleGrab,
   std::function<void()> nextFrame,
   std::function<void()> results,
+  std::function<void()> drawAoi,
   QVector<std::function<void()>> toolHandlers,
   std::function<void()> back,
   QWidget* parent)
@@ -127,9 +128,11 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
   auto* acquisitionButton = createTouchButton("lighting", texts.acquisitionSettings, cameraSetupBox);
   auto* stepButton = createTouchButton("nextFrame", texts.nextFrame, cameraSetupBox);
   auto* resultsButton = createTouchButton("measurements", texts.results, cameraSetupBox);
+  auto* aoiButton = createTouchButton("roi", texts.aoi, cameraSetupBox);
   cameraSetupLayout->addWidget(acquisitionButton, 0, 0);
   cameraSetupLayout->addWidget(stepButton, 0, 1);
   cameraSetupLayout->addWidget(resultsButton, 0, 2);
+  cameraSetupLayout->addWidget(aoiButton, 0, 3);
   layout->addWidget(cameraSetupBox);
 
   auto* backButton = createTouchButton("back", texts.back, this);
@@ -143,6 +146,7 @@ CameraSetupPanelWidget::CameraSetupPanelWidget(
   Q_UNUSED(toggleGrab);
   connectButton(stepButton, nextFrame);
   connectButton(resultsButton, results);
+  connectButton(aoiButton, drawAoi);
   connectButton(backButton, back);
 
   layout->addStretch(1);

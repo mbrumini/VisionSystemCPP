@@ -15,8 +15,9 @@
                 }
             },
             "enabled": true,
-            "exclusionRects": [],
-            "method": "edgePca",
+            "exclusionRects": [
+            ],
+            "method": "massPca",
             "searchRoi": {
                 "height": 430,
                 "width": 562,

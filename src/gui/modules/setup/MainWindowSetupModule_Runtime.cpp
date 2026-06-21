@@ -243,6 +243,13 @@ void MainWindowSetupModule::processCurrentCameraFrame(const CameraConfig& camera
 
   const SurfaceAnnulusLocalizationConfig annulus = recipes().loadSurfaceAnnulusLocalization(camera.id);
   QRect roi;
+  if (annulus.method == "two_circles_axis")
+  {
+    log(QString("pipeline surface strategy begin: %1").arg(camera.id));
+    context().surface->testSurfaceLocalizationStrategy(camera);
+    return;
+  }
+
   if (annulus.method == "massPca")
   {
     if (recipes().loadSurfaceDefectRoi(camera.id, roi))
@@ -346,6 +353,12 @@ void MainWindowSetupModule::refreshPoseForCurrentFrame(const CameraConfig& camer
 
   const SurfaceAnnulusLocalizationConfig annulus = recipes().loadSurfaceAnnulusLocalization(camera.id);
   QRect roi;
+  if (annulus.method == "two_circles_axis")
+  {
+    context().surface->testSurfaceLocalizationStrategy(camera);
+    return;
+  }
+
   if (annulus.method == "massPca")
   {
     if (recipes().loadSurfaceDefectRoi(camera.id, roi))

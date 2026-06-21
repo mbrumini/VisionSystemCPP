@@ -44,6 +44,7 @@ public:
   static QString runtimeStatusText(const MainWindowContext& context, CameraRuntime::Status status);
 
   void showCameraSetupPanel(const CameraConfig& camera);
+  void activateGlobalAoiDrawing(const CameraConfig& camera);
   void showToolPanel(const CameraConfig& camera, const QString& toolId);
   void showAiPanel(const CameraConfig& camera);
   void showAiLocalizationPanel(const CameraConfig& camera);

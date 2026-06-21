@@ -127,6 +127,7 @@ void MainWindowSetupModule::startAiProcess(
   if (!m_aiProcess)
   {
     m_aiProcess = new QProcess(window());
+    configureHiddenProcess(m_aiProcess);
     m_aiProcess->setWorkingDirectory(RecipeJsonUtils::appRootPath());
     m_aiProcess->setProcessChannelMode(QProcess::MergedChannels);
     QObject::connect(m_aiProcess, &QProcess::readyReadStandardOutput, window(), [this]() {

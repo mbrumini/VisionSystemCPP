@@ -172,6 +172,7 @@ add_executable(VisionSystemCPP
     src/gui/modules/MainWindowSurfaceModule.h
     src/gui/modules/surface/MainWindowSurfaceModule_Panels.cpp
     src/gui/modules/surface/MainWindowSurfaceModule_LocalizationToolCircleAnnulus.cpp
+    src/gui/modules/surface/MainWindowSurfaceModule_LocalizationToolTwoCircles.cpp
     src/gui/modules/surface/MainWindowSurfaceModule_LocalizationToolMassPca.cpp
     src/gui/modules/surface/MainWindowSurfaceModule_LocalizationToolEdgePca.cpp
     src/gui/modules/surface/MainWindowSurfaceModule_LocalizationToolModel.cpp

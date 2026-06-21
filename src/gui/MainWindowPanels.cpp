@@ -302,9 +302,10 @@ void MainWindow::showLocalizationStrategyList(const CameraConfig& camera)
     }
     const QString iconId = strategy.id == "threshold" ? "surfaceCircleThreshold" :
       (strategy.id == "edge" ? "surfaceCircleEdge" :
-       (strategy.id == "edgePca" ? "surfacePca" :
-        (strategy.id == "massPca" ? "surfaceSearchRoi" :
-        (strategy.id == "model" ? "surfaceModel" : "aiModel"))));
+       (strategy.id == "two_circles_axis" ? "circleCircleIntersection" :
+        (strategy.id == "edgePca" ? "surfacePca" :
+         (strategy.id == "massPca" ? "surfaceSearchRoi" :
+          (strategy.id == "model" ? "surfaceModel" : "aiModel")))));
     auto* button = createTouchIconButton(iconId, strategy.label, strategyGrid);
     connect(button, &QPushButton::clicked, this, [this, camera, strategy]() {
       if (strategy.id == "aiYolo")

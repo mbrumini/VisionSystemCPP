@@ -26,6 +26,7 @@ struct CameraSetupPanelTexts
   QString cameraSetupTitle;
   QString toolsTitle;
   QStringList toolLabels;
+  QString aoi;
 };
 
 class QLabel;
@@ -45,6 +46,7 @@ public:
     std::function<void()> toggleGrab,
     std::function<void()> nextFrame,
     std::function<void()> results,
+    std::function<void()> drawAoi,
     QVector<std::function<void()>> toolHandlers,
     std::function<void()> back,
     QWidget* parent = nullptr);

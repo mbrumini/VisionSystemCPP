@@ -41,7 +41,8 @@ enum class MainWindowActiveDrawingRecipe
   Localization,
   SurfaceDefects,
   AiLocalization,
-  Geometry
+  Geometry,
+  GlobalAoi
 };
 
 struct MainWindowContext

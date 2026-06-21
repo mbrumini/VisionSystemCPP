@@ -169,7 +169,7 @@ bool saveJsonObject(const QString& path, const QJsonObject& root, QString* error
 
 QString normalizedSurfaceLocalizationMethod(const QString& method)
 {
-  if (method == "edge" || method == "edgePca" || method == "massPca" || method == "model" || method == "aiYolo")
+  if (method == "edge" || method == "edgePca" || method == "massPca" || method == "model" || method == "aiYolo" || method == "two_circles_axis")
   {
     return method;
   }
@@ -203,7 +203,10 @@ void pruneSurfaceLocalizationForMethod(QJsonObject& surfaceLocalization, const Q
     surfaceLocalization.remove("aiYolo");
   }
 
-  surfaceLocalization.remove("strategy");
+  if (normalizedMethod != "two_circles_axis")
+  {
+    surfaceLocalization.remove("strategy");
+  }
 }
 
 void setGeometryArray(QJsonObject& geometries, const QString& key, const QJsonArray& values)

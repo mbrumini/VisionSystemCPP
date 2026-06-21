@@ -73,6 +73,7 @@ void MainWindowSetupModule::showCameraSetupPanel(const CameraConfig& camera)
   texts.back = tr("commands.backToCameraTools");
   texts.recipeImagesTitle = tr("groups.recipeImages");
   texts.cameraSetupTitle = tr("groups.cameraSetup");
+  texts.aoi = tr("actions.defineAoi");
 
   auto* panel = new CameraSetupPanelWidget(
     texts,
@@ -100,6 +101,7 @@ void MainWindowSetupModule::showCameraSetupPanel(const CameraConfig& camera)
     },
     [this, camera]() { stepCameraSimulation(camera); },
     [this, camera]() { showSetupResultsPopup(camera); },
+    [this, camera]() { activateGlobalAoiDrawing(camera); },
     {},
     [this, camera]() {
       stopCameraSimulation(camera);
@@ -112,6 +114,17 @@ void MainWindowSetupModule::showCameraSetupPanel(const CameraConfig& camera)
   panel->setDetailsVisible(context().setupDetailsVisible && *context().setupDetailsVisible);
   *context().setupCameraId = camera.id;
   toolsLayout()->addWidget(panel);
+
+  QRect aoi;
+  if (recipes().loadGlobalSurfaceAoi(camera.id, aoi))
+  {
+    largeImage()->setRoi(aoi);
+  }
+  else
+  {
+    largeImage()->clearRoi();
+  }
+
   refreshSetupGeometryResults(camera);
 }
 
@@ -298,5 +311,18 @@ void MainWindowSetupModule::showToolPanel(const CameraConfig& camera, const QStr
 
   toolsLayout()->addWidget(panel);
   log(tr("log.toolPanel") + ": " + tool.label);
+}
+
+void MainWindowSetupModule::activateGlobalAoiDrawing(const CameraConfig& camera)
+{
+  if (camera.id != selectedCameraId())
+  {
+    return;
+  }
+
+  context().imaging->ensureReferenceImageVisible(camera);
+  largeImage()->setRoiDrawingEnabled(true);
+  *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::GlobalAoi;
+  log(tr("actions.defineAoi") + ": " + camera.id);
 }
 

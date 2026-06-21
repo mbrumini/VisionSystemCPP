@@ -122,7 +122,20 @@ void MainWindowSurfaceModule::showModelLocalizationPanel(const CameraConfig& cam
     acquireSurfaceModel(camera);
   });
 
-  addSlider(tr("labels.edgeSensitivity"), 1, 1, 255, model.edgeSensitivity, [this, camera](int value) {
+  auto* useEdgesCheck = new QCheckBox(tr("labels.modelUseEdges"), modelBox);
+  useEdgesCheck->setChecked(model.modelUseEdges);
+  modelLayout->addWidget(useEdgesCheck, 1, 0, 1, 2);
+  QObject::connect(useEdgesCheck, &QCheckBox::toggled, window(), [this, camera](bool checked) {
+    QString error;
+    if (!recipes().saveSurfaceModelUseEdges(camera.id, checked, &error))
+    {
+      log(error);
+      return;
+    }
+    acquireSurfaceModel(camera);
+  });
+
+  addSlider(tr("labels.edgeSensitivity"), 2, 1, 255, model.edgeSensitivity, [this, camera](int value) {
     QString error;
     if (!recipes().saveSurfaceModelEdgeSensitivity(camera.id, value, &error))
     {
@@ -131,21 +144,21 @@ void MainWindowSurfaceModule::showModelLocalizationPanel(const CameraConfig& cam
     }
     acquireSurfaceModel(camera);
   }, 1.0, true);
-  addSlider(tr("labels.modelMaxShapeDistance"), 3, 1, 500, static_cast<int>(model.maxShapeDistance * 100.0), [this, camera](int value) {
+  addSlider(tr("labels.modelMaxShapeDistance"), 4, 1, 500, static_cast<int>(model.maxShapeDistance * 100.0), [this, camera](int value) {
     QString error;
     if (!recipes().saveSurfaceModelMaxShapeDistance(camera.id, value / 100.0, &error))
     {
       log(error);
     }
   }, 0.01);
-  addSlider(tr("labels.modelMinTemplateScore"), 5, 0, 100, static_cast<int>(model.minTemplateScore * 100.0), [this, camera](int value) {
+  addSlider(tr("labels.modelMinTemplateScore"), 6, 0, 100, static_cast<int>(model.minTemplateScore * 100.0), [this, camera](int value) {
     QString error;
     if (!recipes().saveSurfaceModelMinTemplateScore(camera.id, value / 100.0, &error))
     {
       log(error);
     }
   }, 0.01);
-  addSlider(tr("labels.modelAngleStart"), 7, -180, 180, static_cast<int>(model.angleStartDegrees), [this, camera](int value) {
+  addSlider(tr("labels.modelAngleStart"), 8, -180, 180, static_cast<int>(model.angleStartDegrees), [this, camera](int value) {
     const SurfaceModelConfig current = recipes().loadSurfaceModel(camera.id);
     QString error;
     if (!recipes().saveSurfaceModelAngleRange(camera.id, value, current.angleEndDegrees, current.angleStepDegrees, &error))
@@ -153,7 +166,7 @@ void MainWindowSurfaceModule::showModelLocalizationPanel(const CameraConfig& cam
       log(error);
     }
   });
-  addSlider(tr("labels.modelAngleEnd"), 9, -180, 180, static_cast<int>(model.angleEndDegrees), [this, camera](int value) {
+  addSlider(tr("labels.modelAngleEnd"), 10, -180, 180, static_cast<int>(model.angleEndDegrees), [this, camera](int value) {
     const SurfaceModelConfig current = recipes().loadSurfaceModel(camera.id);
     QString error;
     if (!recipes().saveSurfaceModelAngleRange(camera.id, current.angleStartDegrees, value, current.angleStepDegrees, &error))
@@ -161,7 +174,7 @@ void MainWindowSurfaceModule::showModelLocalizationPanel(const CameraConfig& cam
       log(error);
     }
   });
-  addSlider(tr("labels.modelAngleStep"), 11, 1, 45, static_cast<int>(model.angleStepDegrees), [this, camera](int value) {
+  addSlider(tr("labels.modelAngleStep"), 12, 1, 45, static_cast<int>(model.angleStepDegrees), [this, camera](int value) {
     const SurfaceModelConfig current = recipes().loadSurfaceModel(camera.id);
     QString error;
     if (!recipes().saveSurfaceModelAngleRange(camera.id, current.angleStartDegrees, current.angleEndDegrees, value, &error))

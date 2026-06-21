@@ -52,18 +52,20 @@ SurfaceDefectResult SurfaceDefectProcessor::locateByEdgePca(
   const cv::Mat& input,
   const cv::Rect& searchRoi,
   const std::vector<cv::Rect>& exclusionRects,
-  int edgeSensitivity) const
+  int edgeSensitivity,
+  bool resolveAmbiguity) const
 {
-  return SurfacePcaStrategy().locateByEdgePca(input, searchRoi, exclusionRects, edgeSensitivity);
+  return SurfacePcaStrategy().locateByEdgePca(input, searchRoi, exclusionRects, edgeSensitivity, resolveAmbiguity);
 }
 
 SurfaceDefectResult SurfaceDefectProcessor::locateByEdgePca(
   const cv::Mat& input,
   const std::vector<cv::Point>& searchPolygon,
   const std::vector<cv::Rect>& exclusionRects,
-  int edgeSensitivity) const
+  int edgeSensitivity,
+  bool resolveAmbiguity) const
 {
-  return SurfacePcaStrategy().locateByEdgePca(input, searchPolygon, exclusionRects, edgeSensitivity);
+  return SurfacePcaStrategy().locateByEdgePca(input, searchPolygon, exclusionRects, edgeSensitivity, resolveAmbiguity);
 }
 
 SurfaceDefectResult SurfaceDefectProcessor::locateByShapeMatching(

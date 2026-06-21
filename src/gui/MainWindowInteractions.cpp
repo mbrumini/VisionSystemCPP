@@ -415,6 +415,8 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
   const bool hasArea =
     m_recipeManager.loadSurfaceDefectRoi(camera.id, roi) || polygon.size() >= 3;
   const SurfaceModelConfig model = m_recipeManager.loadSurfaceModel(camera.id);
+  const SurfaceLocalizationStrategyConfig surfaceStrategy =
+    m_recipeManager.loadSurfaceLocalizationStrategy(camera.id);
   QString setupError;
   if ((requestedStrategy == "massPca" || requestedStrategy == "edgePca") && !hasArea)
   {
@@ -435,9 +437,16 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
   {
     setupError = "Modello non acquisito nella ricetta";
   }
+  else if (requestedStrategy == "two_circles_axis" &&
+           (surfaceStrategy.name != "two_circles_axis" ||
+            surfaceStrategy.features.size() < 2))
+  {
+    setupError = "Strategia due cerchi non configurata";
+  }
   else if (requestedStrategy != "massPca" && requestedStrategy != "edgePca" &&
            requestedStrategy != "threshold" && requestedStrategy != "edge" &&
-           requestedStrategy != "shapeModel" && requestedStrategy != "templateModel")
+           requestedStrategy != "shapeModel" && requestedStrategy != "templateModel" &&
+           requestedStrategy != "two_circles_axis")
   {
     setupError = "Strategia non supportata: " + requestedStrategy;
   }
@@ -469,6 +478,8 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
   const QVector<QRect> exclusions = m_recipeManager.loadSurfaceDefectExclusionRects(camera.id);
   const SurfaceDefectSettings thresholdSettings =
     m_recipeManager.loadSurfaceDefectSettings(camera.id);
+  const SurfaceTwoCirclesStrategyConfig twoCirclesConfig =
+    SurfaceLocalizationAdapters::toProcessorStrategy(surfaceStrategy);
   cv::Mat templateImage;
   if (requestedStrategy == "templateModel")
   {
@@ -482,10 +493,22 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
       return;
     }
   }
+  QRect globalAoi;
+  const bool hasGlobalAoi = m_recipeManager.loadGlobalSurfaceAoi(camera.id, globalAoi);
+  cv::Rect searchRect;
+  if (hasGlobalAoi)
+  {
+    searchRect = cv::Rect(globalAoi.x(), globalAoi.y(), globalAoi.width(), globalAoi.height());
+  }
+  else
+  {
+    searchRect = cv::Rect(0, 0, input.cols, input.rows);
+  }
+
   const qint64 startedAt = QDateTime::currentMSecsSinceEpoch();
   auto job = [
-      input, roi, polygon, exclusions, localization, thresholdSettings,
-      requestedStrategy, model, templateImage]() {
+      input, searchRect, exclusions, localization, thresholdSettings,
+      requestedStrategy, model, templateImage, twoCirclesConfig]() {
     try
     {
       SurfaceDefectProcessor processor;
@@ -494,46 +517,18 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
         SurfaceThresholdSettings settings;
         settings.minValue = thresholdSettings.thresholdMin;
         settings.maxValue = thresholdSettings.thresholdMax;
-        if (polygon.size() >= 3)
-        {
-          std::vector<cv::Point> points;
-          points.reserve(polygon.size());
-          for (const QPoint& point : polygon)
-          {
-            points.emplace_back(point.x(), point.y());
-          }
-          return processor.detectByGrayscaleThreshold(
-            input,
-            points,
-            SurfaceLocalizationAdapters::toCvRects(exclusions),
-            settings);
-        }
         return processor.detectByGrayscaleThreshold(
           input,
-          cv::Rect(roi.x(), roi.y(), roi.width(), roi.height()),
+          searchRect,
           SurfaceLocalizationAdapters::toCvRects(exclusions),
           settings);
       }
 
       if (requestedStrategy == "edgePca")
       {
-        if (polygon.size() >= 3)
-        {
-          std::vector<cv::Point> points;
-          points.reserve(polygon.size());
-          for (const QPoint& point : polygon)
-          {
-            points.emplace_back(point.x(), point.y());
-          }
-          return processor.locateByEdgePca(
-            input,
-            points,
-            SurfaceLocalizationAdapters::toCvRects(exclusions),
-            localization.edgeSensitivity);
-        }
         return processor.locateByEdgePca(
           input,
-          cv::Rect(roi.x(), roi.y(), roi.width(), roi.height()),
+          searchRect,
           SurfaceLocalizationAdapters::toCvRects(exclusions),
           localization.edgeSensitivity);
       }
@@ -558,6 +553,34 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
         config.edgeFitMaxError = localization.edgeFitMaxError;
         return processor.locateAnnulusByEdge(
           input, config, SurfaceLocalizationAdapters::toCvRects(exclusions));
+      }
+
+      if (requestedStrategy == "two_circles_axis")
+      {
+        const SurfaceStrategyResult strategyResult =
+          processor.locateTwoCirclesAxis(
+            input,
+            twoCirclesConfig,
+            SurfaceLocalizationAdapters::toCvRects(exclusions));
+        SurfaceDefectResult converted;
+        converted.processed = !strategyResult.diagnosticImage.empty();
+        converted.diagnosticImage = strategyResult.diagnosticImage;
+        converted.localization.found = strategyResult.found;
+        converted.localization.method = strategyResult.strategyName;
+        converted.localization.center = strategyResult.origin;
+        converted.localization.angleRadians = std::atan2(
+          strategyResult.xAxisEnd.y - strategyResult.xAxisStart.y,
+          strategyResult.xAxisEnd.x - strategyResult.xAxisStart.x);
+        converted.localization.score = strategyResult.found ? 1.0 : 0.0;
+        converted.localization.inputPoints =
+          static_cast<int>(strategyResult.features.size());
+        converted.localization.usedPoints =
+          static_cast<int>(strategyResult.features.size());
+        converted.localization.xAxisStart = strategyResult.xAxisStart;
+        converted.localization.xAxisEnd = strategyResult.xAxisEnd;
+        converted.localization.yAxisStart = strategyResult.yAxisStart;
+        converted.localization.yAxisEnd = strategyResult.yAxisEnd;
+        return converted;
       }
 
       if (requestedStrategy == "shapeModel")
@@ -653,19 +676,24 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
         }
 
         QRect displayRoi;
-        if (m_recipeManager.loadSurfaceDefectRoi(camera.id, displayRoi))
-        {
-          m_largeImage->setRoi(displayRoi);
-        }
-        if (completedRuntime.currentSimulatorFrame().strategyId == "shapeModel" ||
+        if (completedRuntime.currentSimulatorFrame().strategyId == "massPca" ||
+            completedRuntime.currentSimulatorFrame().strategyId == "edgePca" ||
+            completedRuntime.currentSimulatorFrame().strategyId == "shapeModel" ||
             completedRuntime.currentSimulatorFrame().strategyId == "templateModel")
         {
-          // The recipe polygon is a fixed search area, not the model pose.
-          // Hiding it in runtime avoids confusing it with the dynamic match.
+          m_largeImage->clearRoi();
           m_largeImage->setSearchPolygon({});
         }
         else
         {
+          if (m_recipeManager.loadSurfaceDefectRoi(camera.id, displayRoi))
+          {
+            m_largeImage->setRoi(displayRoi);
+          }
+          else
+          {
+            m_largeImage->clearRoi();
+          }
           m_largeImage->setSearchPolygon(
             m_recipeManager.loadSurfaceDefectPolygon(camera.id));
         }
