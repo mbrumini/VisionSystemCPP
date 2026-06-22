@@ -84,6 +84,7 @@ struct MainWindowContext
   QHash<QString, int>* cameraDroppedFrames = nullptr;
   QHash<QString, int>* cameraPendingJobs = nullptr;
 
+  bool* machineRunning = nullptr;
   MainWindowActiveDrawingRecipe* activeDrawingRecipe = nullptr;
 
   MainWindowGeometryModule* geometry = nullptr;

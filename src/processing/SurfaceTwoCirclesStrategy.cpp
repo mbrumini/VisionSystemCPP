@@ -24,23 +24,29 @@ const SurfaceCircleFeatureResult* findFeature(
 SurfaceStrategyResult SurfaceTwoCirclesStrategy::locate(
   const cv::Mat& input,
   const SurfaceTwoCirclesStrategyConfig& config,
-  const std::vector<cv::Rect>& exclusionRects) const
+  const std::vector<cv::Rect>& exclusionRects,
+  bool createDiagnosticImage,
+  bool drawContours) const
 {
   SurfaceStrategyResult result;
   result.strategyName = "two_circles_axis";
 
   if (input.empty() || config.features.size() < 2)
   {
+    result.processed = true;
     return result;
   }
 
-  if (input.channels() == 1)
+  if (createDiagnosticImage)
   {
-    cv::cvtColor(input, result.diagnosticImage, cv::COLOR_GRAY2BGR);
-  }
-  else
-  {
-    input.copyTo(result.diagnosticImage);
+    if (input.channels() == 1)
+    {
+      cv::cvtColor(input, result.diagnosticImage, cv::COLOR_GRAY2BGR);
+    }
+    else
+    {
+      input.copyTo(result.diagnosticImage);
+    }
   }
 
   SurfaceThresholdStrategy thresholdStrategy;
@@ -51,13 +57,18 @@ SurfaceStrategyResult SurfaceTwoCirclesStrategy::locate(
       input,
       featureConfig.searchRoi,
       exclusionRects,
-      featureConfig.threshold);
+      featureConfig.threshold,
+      createDiagnosticImage,
+      drawContours);
 
     SurfaceCircleFeatureResult feature;
     feature.id = featureConfig.id;
     feature.polarity = featureConfig.polarity;
 
-    cv::rectangle(result.diagnosticImage, featureConfig.searchRoi, cv::Scalar(0, 255, 255), 2);
+    if (createDiagnosticImage)
+    {
+      cv::rectangle(result.diagnosticImage, featureConfig.searchRoi, cv::Scalar(0, 255, 255), 2);
+    }
 
     if (!featureMask.blobs.empty())
     {
@@ -82,16 +93,25 @@ SurfaceStrategyResult SurfaceTwoCirclesStrategy::locate(
 
     if (feature.found)
     {
-      drawStyledContour(result.diagnosticImage, feature.contour, cv::Scalar(94, 197, 34));
-      // cv::rectangle(result.diagnosticImage, feature.boundingRect, cv::Scalar(255, 0, 0), 2);
-      drawStyledCenterOfMass(result.diagnosticImage, feature.center);
-      const cv::Point textPos = surfacePoint(feature.center + cv::Point2d(10, -10));
-      cv::putText(result.diagnosticImage, feature.id, textPos, cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(16, 16, 16), 4, cv::LINE_AA);
-      cv::putText(result.diagnosticImage, feature.id, textPos, cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+      if (createDiagnosticImage)
+      {
+        if (drawContours)
+        {
+          drawStyledContour(result.diagnosticImage, feature.contour, cv::Scalar(94, 197, 34));
+        }
+        // cv::rectangle(result.diagnosticImage, feature.boundingRect, cv::Scalar(255, 0, 0), 2);
+        drawStyledCenterOfMass(result.diagnosticImage, feature.center);
+        const cv::Point textPos = surfacePoint(feature.center + cv::Point2d(10, -10));
+        cv::putText(result.diagnosticImage, feature.id, textPos, cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(16, 16, 16), 4, cv::LINE_AA);
+        cv::putText(result.diagnosticImage, feature.id, textPos, cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+      }
     }
     else
     {
-      cv::putText(result.diagnosticImage, feature.id + "?", featureConfig.searchRoi.tl(), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 0, 255), 2);
+      if (createDiagnosticImage)
+      {
+        cv::putText(result.diagnosticImage, feature.id + "?", featureConfig.searchRoi.tl(), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 0, 255), 2);
+      }
     }
 
     result.features.push_back(feature);
@@ -104,6 +124,7 @@ SurfaceStrategyResult SurfaceTwoCirclesStrategy::locate(
 
   if (!fromFeature || !toFeature || !fromFeature->found || !toFeature->found)
   {
+    result.processed = true;
     return result;
   }
 
@@ -112,6 +133,7 @@ SurfaceStrategyResult SurfaceTwoCirclesStrategy::locate(
 
   if (length <= 0.0)
   {
+    result.processed = true;
     return result;
   }
 
@@ -130,8 +152,12 @@ SurfaceStrategyResult SurfaceTwoCirclesStrategy::locate(
   result.yAxisEnd = result.origin + yDirection * axisLength;
   result.found = true;
 
-  drawStyledAxes(result.diagnosticImage, result.origin, result.xAxisStart, result.xAxisEnd, result.yAxisStart, result.yAxisEnd, cv::Scalar(0, 0, 255), cv::Scalar(255, 0, 255));
-  drawStyledCenterOfMass(result.diagnosticImage, result.origin);
+  if (createDiagnosticImage)
+  {
+    drawStyledAxes(result.diagnosticImage, result.origin, result.xAxisStart, result.xAxisEnd, result.yAxisStart, result.yAxisEnd, cv::Scalar(0, 0, 255), cv::Scalar(255, 0, 255));
+    drawStyledCenterOfMass(result.diagnosticImage, result.origin);
+  }
 
+  result.processed = true;
   return result;
 }

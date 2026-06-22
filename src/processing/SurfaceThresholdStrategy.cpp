@@ -23,7 +23,9 @@ SurfaceDefectResult SurfaceThresholdStrategy::detectInRoi(
   const cv::Mat& input,
   const cv::Rect& searchRoi,
   const std::vector<cv::Rect>& exclusionRects,
-  const SurfaceThresholdSettings& settings) const
+  const SurfaceThresholdSettings& settings,
+  bool createDiagnosticImage,
+  bool drawContours) const
 {
   SurfaceDefectResult result;
 
@@ -79,13 +81,16 @@ SurfaceDefectResult SurfaceThresholdStrategy::detectInRoi(
   std::vector<std::vector<cv::Point>> contours;
   cv::findContours(mask, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
 
-  if (input.channels() == 1)
+  if (createDiagnosticImage)
   {
-    cv::cvtColor(input, result.diagnosticImage, cv::COLOR_GRAY2BGR);
-  }
-  else
-  {
-    input.copyTo(result.diagnosticImage);
+    if (input.channels() == 1)
+    {
+      cv::cvtColor(input, result.diagnosticImage, cv::COLOR_GRAY2BGR);
+    }
+    else
+    {
+      input.copyTo(result.diagnosticImage);
+    }
   }
 
   // cv::rectangle(result.diagnosticImage, roi, cv::Scalar(0, 255, 255), 2);
@@ -141,7 +146,10 @@ SurfaceDefectResult SurfaceThresholdStrategy::detectInRoi(
   }
 
   sortSurfaceBlobsByArea(result);
-  drawSurfaceBlobs(result.diagnosticImage, result.blobs);
+  if (createDiagnosticImage)
+  {
+    drawSurfaceBlobs(result.diagnosticImage, result.blobs, drawContours);
+  }
   if (!result.blobs.empty())
   {
     const SurfaceBlob& mainBlob = result.blobs.front();
@@ -163,67 +171,40 @@ SurfaceDefectResult SurfaceThresholdStrategy::detectInRoi(
       }
 
       const cv::PCA pca(data, cv::Mat(), cv::PCA::DATA_AS_ROW);
-      const cv::Point2d xDirection(pca.eigenvectors.at<double>(0, 0), pca.eigenvectors.at<double>(0, 1));
-      double angle = std::atan2(xDirection.y, xDirection.x);
+      cv::Point2d xDirection(pca.eigenvectors.at<double>(0, 0), pca.eigenvectors.at<double>(0, 1));
 
-      if (settings.resolveAmbiguity)
+      std::vector<std::vector<cv::Point>> imageContours;
+      cv::findContours(mask.clone(), imageContours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
+      for (std::vector<cv::Point>& contour : imageContours)
       {
-        std::vector<std::vector<cv::Point>> allContours;
-        cv::findContours(mask.clone(), allContours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
-
-        int bestInternalIndex = -1;
-        double bestInternalArea = 0.0;
-        for (int i = 0; i < static_cast<int>(allContours.size()); ++i)
+        for (cv::Point& point : contour)
         {
-          const double area = std::abs(cv::contourArea(allContours[i]));
-          if (area < 0.8 * mainBlob.area && area > 8.0)
-          {
-            if (area > bestInternalArea)
-            {
-              bestInternalIndex = i;
-              bestInternalArea = area;
-            }
-          }
+          point.x += roi.x;
+          point.y += roi.y;
         }
+      }
 
-        if (bestInternalIndex >= 0)
-        {
-          std::vector<cv::Point> internalContour = allContours[bestInternalIndex];
-          for (cv::Point& pt : internalContour)
-          {
-            pt.x += roi.x;
-            pt.y += roi.y;
-          }
+      int selectedInternalContourIndex = -1;
+      xDirection = resolveSurfacePcaAxisDirection(
+        mainBlob.center,
+        xDirection,
+        mask,
+        cv::Point2d(roi.x, roi.y),
+        mainBlob.boundingRect,
+        settings.resolveAmbiguity,
+        &imageContours,
+        mainBlob.area,
+        &selectedInternalContourIndex);
+      const double angle = std::atan2(xDirection.y, xDirection.x);
 
-          cv::Moments m = cv::moments(internalContour);
-          cv::Point2d internalCenter;
-          if (std::abs(m.m00) > 1e-6)
-          {
-            internalCenter = cv::Point2d(m.m10 / m.m00, m.m01 / m.m00);
-          }
-          else
-          {
-            cv::Rect r = cv::boundingRect(internalContour);
-            internalCenter = cv::Point2d(r.x + r.width / 2.0, r.y + r.height / 2.0);
-          }
-
-          cv::drawContours(result.diagnosticImage, std::vector<std::vector<cv::Point>>{internalContour}, -1, cv::Scalar(0, 165, 255), 2);
-
-          const cv::Point2d toInternal = internalCenter - mainBlob.center;
-          const double dot = toInternal.x * xDirection.x + toInternal.y * xDirection.y;
-          if (dot < 0.0)
-          {
-            angle = angle + CV_PI;
-            if (angle > CV_PI)
-            {
-              angle -= 2.0 * CV_PI;
-            }
-            else if (angle <= -CV_PI)
-            {
-              angle += 2.0 * CV_PI;
-            }
-          }
-        }
+      if (createDiagnosticImage && drawContours && selectedInternalContourIndex >= 0)
+      {
+        cv::drawContours(
+          result.diagnosticImage,
+          imageContours,
+          selectedInternalContourIndex,
+          cv::Scalar(0, 165, 255),
+          2);
       }
 
       const cv::Point2d xDir(std::cos(angle), std::sin(angle));
@@ -236,7 +217,10 @@ SurfaceDefectResult SurfaceThresholdStrategy::detectInRoi(
       result.localization.yAxisStart = mainBlob.center - yDir * axisLength;
       result.localization.yAxisEnd = mainBlob.center + yDir * axisLength;
 
-      drawStyledAxes(result.diagnosticImage, mainBlob.center, result.localization.xAxisStart, result.localization.xAxisEnd, result.localization.yAxisStart, result.localization.yAxisEnd);
+      if (createDiagnosticImage)
+      {
+        drawStyledAxes(result.diagnosticImage, mainBlob.center, result.localization.xAxisStart, result.localization.xAxisEnd, result.localization.yAxisStart, result.localization.yAxisEnd);
+      }
     }
   }
 
@@ -248,7 +232,9 @@ SurfaceDefectResult SurfaceThresholdStrategy::detectInPolygon(
   const cv::Mat& input,
   const std::vector<cv::Point>& searchPolygon,
   const std::vector<cv::Rect>& exclusionRects,
-  const SurfaceThresholdSettings& settings) const
+  const SurfaceThresholdSettings& settings,
+  bool createDiagnosticImage,
+  bool drawContours) const
 {
   if (searchPolygon.size() < 3)
   {
@@ -308,13 +294,16 @@ SurfaceDefectResult SurfaceThresholdStrategy::detectInPolygon(
   std::vector<std::vector<cv::Point>> contours;
   cv::findContours(mask, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
 
-  if (input.channels() == 1)
+  if (createDiagnosticImage)
   {
-    cv::cvtColor(input, result.diagnosticImage, cv::COLOR_GRAY2BGR);
-  }
-  else
-  {
-    input.copyTo(result.diagnosticImage);
+    if (input.channels() == 1)
+    {
+      cv::cvtColor(input, result.diagnosticImage, cv::COLOR_GRAY2BGR);
+    }
+    else
+    {
+      input.copyTo(result.diagnosticImage);
+    }
   }
 
   // cv::polylines(result.diagnosticImage, std::vector<std::vector<cv::Point>>{searchPolygon}, true, cv::Scalar(0, 255, 255), 2);
@@ -369,7 +358,10 @@ SurfaceDefectResult SurfaceThresholdStrategy::detectInPolygon(
   }
 
   sortSurfaceBlobsByArea(result);
-  drawSurfaceBlobs(result.diagnosticImage, result.blobs);
+  if (createDiagnosticImage)
+  {
+    drawSurfaceBlobs(result.diagnosticImage, result.blobs, drawContours);
+  }
   if (!result.blobs.empty())
   {
     const SurfaceBlob& mainBlob = result.blobs.front();
@@ -390,67 +382,40 @@ SurfaceDefectResult SurfaceThresholdStrategy::detectInPolygon(
         data.at<double>(i, 1) = mainBlob.contour[i].y;
       }
       const cv::PCA pca(data, cv::Mat(), cv::PCA::DATA_AS_ROW);
-      const cv::Point2d xDirection(pca.eigenvectors.at<double>(0, 0), pca.eigenvectors.at<double>(0, 1));
-      double angle = std::atan2(xDirection.y, xDirection.x);
+      cv::Point2d xDirection(pca.eigenvectors.at<double>(0, 0), pca.eigenvectors.at<double>(0, 1));
 
-      if (settings.resolveAmbiguity)
+      std::vector<std::vector<cv::Point>> imageContours;
+      cv::findContours(mask.clone(), imageContours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
+      for (std::vector<cv::Point>& contour : imageContours)
       {
-        std::vector<std::vector<cv::Point>> allContours;
-        cv::findContours(mask.clone(), allContours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
-
-        int bestInternalIndex = -1;
-        double bestInternalArea = 0.0;
-        for (int i = 0; i < static_cast<int>(allContours.size()); ++i)
+        for (cv::Point& point : contour)
         {
-          const double area = std::abs(cv::contourArea(allContours[i]));
-          if (area < 0.8 * mainBlob.area && area > 8.0)
-          {
-            if (area > bestInternalArea)
-            {
-              bestInternalIndex = i;
-              bestInternalArea = area;
-            }
-          }
+          point.x += roi.x;
+          point.y += roi.y;
         }
+      }
 
-        if (bestInternalIndex >= 0)
-        {
-          std::vector<cv::Point> internalContour = allContours[bestInternalIndex];
-          for (cv::Point& pt : internalContour)
-          {
-            pt.x += roi.x;
-            pt.y += roi.y;
-          }
+      int selectedInternalContourIndex = -1;
+      xDirection = resolveSurfacePcaAxisDirection(
+        mainBlob.center,
+        xDirection,
+        mask,
+        cv::Point2d(roi.x, roi.y),
+        mainBlob.boundingRect,
+        settings.resolveAmbiguity,
+        &imageContours,
+        mainBlob.area,
+        &selectedInternalContourIndex);
+      const double angle = std::atan2(xDirection.y, xDirection.x);
 
-          cv::Moments m = cv::moments(internalContour);
-          cv::Point2d internalCenter;
-          if (std::abs(m.m00) > 1e-6)
-          {
-            internalCenter = cv::Point2d(m.m10 / m.m00, m.m01 / m.m00);
-          }
-          else
-          {
-            cv::Rect r = cv::boundingRect(internalContour);
-            internalCenter = cv::Point2d(r.x + r.width / 2.0, r.y + r.height / 2.0);
-          }
-
-          cv::drawContours(result.diagnosticImage, std::vector<std::vector<cv::Point>>{internalContour}, -1, cv::Scalar(0, 165, 255), 2);
-
-          const cv::Point2d toInternal = internalCenter - mainBlob.center;
-          const double dot = toInternal.x * xDirection.x + toInternal.y * xDirection.y;
-          if (dot < 0.0)
-          {
-            angle = angle + CV_PI;
-            if (angle > CV_PI)
-            {
-              angle -= 2.0 * CV_PI;
-            }
-            else if (angle <= -CV_PI)
-            {
-              angle += 2.0 * CV_PI;
-            }
-          }
-        }
+      if (createDiagnosticImage && drawContours && selectedInternalContourIndex >= 0)
+      {
+        cv::drawContours(
+          result.diagnosticImage,
+          imageContours,
+          selectedInternalContourIndex,
+          cv::Scalar(0, 165, 255),
+          2);
       }
 
       const cv::Point2d xDir(std::cos(angle), std::sin(angle));
@@ -461,7 +426,10 @@ SurfaceDefectResult SurfaceThresholdStrategy::detectInPolygon(
       result.localization.xAxisEnd = mainBlob.center + xDir * axisLength;
       result.localization.yAxisStart = mainBlob.center - yDir * axisLength;
       result.localization.yAxisEnd = mainBlob.center + yDir * axisLength;
-      drawStyledAxes(result.diagnosticImage, mainBlob.center, result.localization.xAxisStart, result.localization.xAxisEnd, result.localization.yAxisStart, result.localization.yAxisEnd);
+      if (createDiagnosticImage)
+      {
+        drawStyledAxes(result.diagnosticImage, mainBlob.center, result.localization.xAxisStart, result.localization.xAxisEnd, result.localization.yAxisStart, result.localization.yAxisEnd);
+      }
     }
   }
 
@@ -472,7 +440,9 @@ SurfaceDefectResult SurfaceThresholdStrategy::detectInPolygon(
 SurfaceDefectResult SurfaceThresholdStrategy::locateAnnulus(
   const cv::Mat& input,
   const SurfaceAnnulusThresholdConfig& config,
-  const std::vector<cv::Rect>& exclusionRects) const
+  const std::vector<cv::Rect>& exclusionRects,
+  bool createDiagnosticImage,
+  bool drawContours) const
 {
   SurfaceDefectResult result;
 
@@ -518,13 +488,16 @@ SurfaceDefectResult SurfaceThresholdStrategy::locateAnnulus(
   std::vector<std::vector<cv::Point>> contours;
   cv::findContours(thresholdMask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 
-  if (input.channels() == 1)
+  if (createDiagnosticImage)
   {
-    cv::cvtColor(input, result.diagnosticImage, cv::COLOR_GRAY2BGR);
-  }
-  else
-  {
-    input.copyTo(result.diagnosticImage);
+    if (input.channels() == 1)
+    {
+      cv::cvtColor(input, result.diagnosticImage, cv::COLOR_GRAY2BGR);
+    }
+    else
+    {
+      input.copyTo(result.diagnosticImage);
+    }
   }
 
   // Draw outer circle with shadow
@@ -555,7 +528,10 @@ SurfaceDefectResult SurfaceThresholdStrategy::locateAnnulus(
   }
 
   sortSurfaceBlobsByArea(result);
-  drawSurfaceBlobs(result.diagnosticImage, result.blobs);
+  if (createDiagnosticImage)
+  {
+    drawSurfaceBlobs(result.diagnosticImage, result.blobs, drawContours);
+  }
   if (!result.blobs.empty())
   {
     const SurfaceBlob& mainBlob = result.blobs.front();
@@ -568,7 +544,7 @@ SurfaceDefectResult SurfaceThresholdStrategy::locateAnnulus(
     result.localization.usedPoints = result.localization.inputPoints;
 
     // Draw equivalent radius circle with shadow
-    if (result.localization.radius > 0.0)
+    if (createDiagnosticImage && drawContours && result.localization.radius > 0.0)
     {
       const cv::Point centerPt = surfacePoint(mainBlob.center);
       const int radiusPt = static_cast<int>(std::round(result.localization.radius));

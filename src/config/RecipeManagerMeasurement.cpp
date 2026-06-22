@@ -74,6 +74,7 @@ bool RecipeManager::saveMeasurements(const QString& cameraId, const QVector<Meas
   QJsonObject tools = root.value("tools").toObject();
   QJsonObject measurements;
   QJsonArray items;
+  QStringList assignedIds;
   for (const MeasurementRecipeConfig& config : configs)
   {
     if (config.type.isEmpty() || config.sourceAId.isEmpty())
@@ -83,7 +84,7 @@ bool RecipeManager::saveMeasurements(const QString& cameraId, const QVector<Meas
 
     QJsonObject item;
     item["enabled"] = config.enabled;
-    item["id"] = config.id.isEmpty() ? QString("measurement_%1").arg(items.size() + 1) : config.id;
+    item["id"] = ensureUniquePrefixedId("measurement", config.id, assignedIds);
     if (!config.alias.trimmed().isEmpty())
     {
       item["alias"] = config.alias.trimmed();
@@ -160,7 +161,13 @@ bool RecipeManager::appendMeasurement(const QString& cameraId, const Measurement
   MeasurementRecipeConfig saved = config;
   if (saved.id.isEmpty())
   {
-    saved.id = QString("measurement_%1").arg(configs.size() + 1);
+    QStringList existingIds;
+    existingIds.reserve(configs.size());
+    for (const MeasurementRecipeConfig& existing : configs)
+    {
+      existingIds.append(existing.id);
+    }
+    saved.id = nextPrefixedId("measurement", existingIds);
   }
   configs.append(saved);
   return saveMeasurements(cameraId, configs, errorMessage);

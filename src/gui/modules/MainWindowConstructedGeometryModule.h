@@ -2,6 +2,8 @@
 
 #include "gui/modules/MainWindowModuleBase.h"
 
+#include <QHash>
+
 class CameraConfig;
 
 class MainWindowConstructedGeometryModule : public MainWindowModuleBase
@@ -23,6 +25,7 @@ private:
   void showTangentLinePanel(const CameraConfig& camera);
   void showProjectPointPanel(const CameraConfig& camera);
   void refreshConstructedGeometrySources(const CameraConfig& camera);
+  QHash<QString, QString> geometryAliasesForCamera(const CameraConfig& camera) const;
 
   void saveConstructedGeometryRecipeAction(const CameraConfig& camera,
                                            const QString& type,

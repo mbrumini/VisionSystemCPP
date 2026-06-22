@@ -251,4 +251,38 @@ void writeGeometriesTool(QJsonObject& tools, QJsonObject geometries)
   geometries["enabled"] = true;
   tools["geometries"] = geometries;
 }
+
+QString nextPrefixedId(const QString& prefix, const QStringList& existingIds)
+{
+  const QString pattern = prefix + "_";
+  int maxIndex = 0;
+  for (const QString& id : existingIds)
+  {
+    if (!id.startsWith(pattern))
+    {
+      continue;
+    }
+
+    bool ok = false;
+    const int index = id.mid(pattern.size()).toInt(&ok);
+    if (ok && index > maxIndex)
+    {
+      maxIndex = index;
+    }
+  }
+
+  return QString("%1_%2").arg(prefix).arg(maxIndex + 1);
+}
+
+QString ensureUniquePrefixedId(const QString& prefix, const QString& preferredId, QStringList& assignedIds)
+{
+  QString id = preferredId.trimmed();
+  if (id.isEmpty() || assignedIds.contains(id))
+  {
+    id = nextPrefixedId(prefix, assignedIds);
+  }
+
+  assignedIds.append(id);
+  return id;
+}
 }

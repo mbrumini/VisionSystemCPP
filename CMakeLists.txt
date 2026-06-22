@@ -222,6 +222,8 @@ add_executable(VisionSystemCPP
     src/gui/geometry/GeometryOverlay.cpp
     src/gui/geometry/GeometryOverlayPrimitives.h
     src/gui/geometry/GeometryOverlayPrimitives.cpp
+    src/gui/geometry/GeometryDisplayNames.h
+    src/gui/geometry/GeometryDisplayNames.cpp
     src/gui/geometry/GeometryDiagnosticDrawing.h
     src/gui/geometry/GeometryDiagnosticDrawing.cpp
     src/gui/geometry/GeometryMath.h

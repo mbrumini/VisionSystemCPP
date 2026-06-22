@@ -6,7 +6,9 @@
 SurfaceDefectResult SurfaceEdgeStrategy::locateAnnulus(
   const cv::Mat& input,
   const SurfaceAnnulusThresholdConfig& config,
-  const std::vector<cv::Rect>& exclusionRects) const
+  const std::vector<cv::Rect>& exclusionRects,
+  bool createDiagnosticImage,
+  bool drawContours) const
 {
   SurfaceDefectResult result;
 
@@ -55,31 +57,37 @@ SurfaceDefectResult SurfaceEdgeStrategy::locateAnnulus(
   std::vector<std::vector<cv::Point>> contours;
   cv::findContours(edgeMask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 
-  if (input.channels() == 1)
+  if (createDiagnosticImage)
   {
-    cv::cvtColor(input, result.diagnosticImage, cv::COLOR_GRAY2BGR);
-  }
-  else
-  {
-    input.copyTo(result.diagnosticImage);
-  }
+    if (input.channels() == 1)
+    {
+      cv::cvtColor(input, result.diagnosticImage, cv::COLOR_GRAY2BGR);
+    }
+    else
+    {
+      input.copyTo(result.diagnosticImage);
+    }
 
-  // Draw outer circle with shadow
-  cv::circle(result.diagnosticImage, config.center, config.outerRadius, cv::Scalar(16, 16, 16), 4, cv::LINE_AA);
-  cv::circle(result.diagnosticImage, config.center, config.outerRadius, cv::Scalar(0, 255, 0), 2, cv::LINE_AA);
+    // Draw outer circle with shadow
+    cv::circle(result.diagnosticImage, config.center, config.outerRadius, cv::Scalar(16, 16, 16), 4, cv::LINE_AA);
+    cv::circle(result.diagnosticImage, config.center, config.outerRadius, cv::Scalar(0, 255, 0), 2, cv::LINE_AA);
 
-  // Draw inner circle with shadow
-  cv::circle(result.diagnosticImage, config.center, config.innerRadius, cv::Scalar(16, 16, 16), 4, cv::LINE_AA);
-  cv::circle(result.diagnosticImage, config.center, config.innerRadius, cv::Scalar(0, 165, 255), 2, cv::LINE_AA);
+    // Draw inner circle with shadow
+    cv::circle(result.diagnosticImage, config.center, config.innerRadius, cv::Scalar(16, 16, 16), 4, cv::LINE_AA);
+    cv::circle(result.diagnosticImage, config.center, config.innerRadius, cv::Scalar(0, 165, 255), 2, cv::LINE_AA);
+  }
 
   std::vector<cv::Point> edgePixels;
   cv::findNonZero(edgeMask, edgePixels);
 
-  // Draw contours with shadow
-  for (const std::vector<cv::Point>& contour : contours)
+  if (createDiagnosticImage && drawContours)
   {
-    cv::drawContours(result.diagnosticImage, std::vector<std::vector<cv::Point>>{contour}, 0, cv::Scalar(16, 16, 16), 4, cv::LINE_AA);
-    cv::drawContours(result.diagnosticImage, std::vector<std::vector<cv::Point>>{contour}, 0, cv::Scalar(94, 197, 34), 2, cv::LINE_AA);
+    // Draw contours with shadow
+    for (const std::vector<cv::Point>& contour : contours)
+    {
+      cv::drawContours(result.diagnosticImage, std::vector<std::vector<cv::Point>>{contour}, 0, cv::Scalar(16, 16, 16), 4, cv::LINE_AA);
+      cv::drawContours(result.diagnosticImage, std::vector<std::vector<cv::Point>>{contour}, 0, cv::Scalar(94, 197, 34), 2, cv::LINE_AA);
+    }
   }
 
   if (!edgePixels.empty())
@@ -105,22 +113,29 @@ SurfaceDefectResult SurfaceEdgeStrategy::locateAnnulus(
 
     result.totalArea = mergedBlob.area;
     result.blobs.push_back(mergedBlob);
-    cv::rectangle(result.diagnosticImage, mergedBlob.boundingRect, cv::Scalar(255, 0, 0), 2);
 
-    // Draw the inlier points used for fitting with high visibility (fine dots with shadow)
-    for (const cv::Point& pt : contourPoints)
+    if (createDiagnosticImage && drawContours)
     {
-      cv::circle(result.diagnosticImage, pt, 3, cv::Scalar(16, 16, 16), -1, cv::LINE_AA);
-      cv::circle(result.diagnosticImage, pt, 2, cv::Scalar(0, 255, 255), -1, cv::LINE_AA);
+      cv::rectangle(result.diagnosticImage, mergedBlob.boundingRect, cv::Scalar(255, 0, 0), 2);
+
+      // Draw the inlier points used for fitting with high visibility (fine dots with shadow)
+      for (const cv::Point& pt : contourPoints)
+      {
+        cv::circle(result.diagnosticImage, pt, 3, cv::Scalar(16, 16, 16), -1, cv::LINE_AA);
+        cv::circle(result.diagnosticImage, pt, 2, cv::Scalar(0, 255, 255), -1, cv::LINE_AA);
+      }
     }
 
     if (fit.found)
     {
       const cv::Point centerPt = surfacePoint(fit.center);
       const int radiusPt = static_cast<int>(std::round(fit.radius));
-      // Draw fitted circle with shadow
-      cv::circle(result.diagnosticImage, centerPt, radiusPt, cv::Scalar(16, 16, 16), 3, cv::LINE_AA);
-      cv::circle(result.diagnosticImage, centerPt, radiusPt, cv::Scalar(255, 255, 0), 1, cv::LINE_AA);
+      if (createDiagnosticImage && drawContours)
+      {
+        // Draw fitted circle with shadow
+        cv::circle(result.diagnosticImage, centerPt, radiusPt, cv::Scalar(16, 16, 16), 3, cv::LINE_AA);
+        cv::circle(result.diagnosticImage, centerPt, radiusPt, cv::Scalar(255, 255, 0), 1, cv::LINE_AA);
+      }
       result.localization.found = true;
       result.localization.method = "edge_circle_fit";
       result.localization.center = fit.center;
@@ -139,7 +154,10 @@ SurfaceDefectResult SurfaceEdgeStrategy::locateAnnulus(
       result.localization.usedPoints = static_cast<int>(edgePixels.size());
       result.localization.score = 1.0;
     }
-    drawStyledCenterOfMass(result.diagnosticImage, mergedBlob.center);
+    if (createDiagnosticImage)
+    {
+      drawStyledCenterOfMass(result.diagnosticImage, mergedBlob.center);
+    }
   }
 
   result.processed = true;

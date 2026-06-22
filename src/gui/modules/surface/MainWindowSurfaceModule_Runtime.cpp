@@ -83,13 +83,15 @@ void MainWindowSurfaceModule::testSurfaceAnnulusLocalization(const CameraConfig&
 
   const QVector<QRect> exclusionRects = recipes().loadSurfaceDefectExclusionRects(camera.id);
 
-  auto job = [input, processorConfig, exclusionRects, annulus]() -> SurfaceDefectResult {
+  const bool createDiagnosticImage = camera.id == selectedCameraId() && *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry;
+
+  auto job = [input, processorConfig, exclusionRects, annulus, createDiagnosticImage]() -> SurfaceDefectResult {
     SurfaceDefectProcessor processor;
     if (annulus.method == "edge")
     {
-      return processor.locateAnnulusByEdge(input, processorConfig, toCvRects(exclusionRects));
+      return processor.locateAnnulusByEdge(input, processorConfig, toCvRects(exclusionRects), createDiagnosticImage);
     }
-    return processor.locateAnnulusByGrayscaleThreshold(input, processorConfig, toCvRects(exclusionRects));
+    return processor.locateAnnulusByGrayscaleThreshold(input, processorConfig, toCvRects(exclusionRects), createDiagnosticImage);
   };
   const QString __pendingCameraId_testSurfaceAnnulus = camera.id;
   const int setupFrameIndex = cameraRuntime()[camera.id].frameIndex();
@@ -104,7 +106,7 @@ void MainWindowSurfaceModule::testSurfaceAnnulusLocalization(const CameraConfig&
     const bool updateView =
       camera.id == selectedCameraId() &&
       *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry;
-    if (!result.processed || result.diagnosticImage.empty())
+    if (!result.processed || (updateView && result.diagnosticImage.empty()))
     {
       log(tr("log.surfaceFailed") + ": " + camera.id);
       return;
@@ -238,13 +240,16 @@ void MainWindowSurfaceModule::testSurfaceLocalization(const CameraConfig& camera
     searchRect = cv::Rect(0, 0, input.cols, input.rows);
   }
 
-  auto job = [input, searchRect, exclusionRects, thresholdSettings]() -> SurfaceDefectResult {
+  const bool createDiagnosticImage = camera.id == selectedCameraId() && *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry;
+
+  auto job = [input, searchRect, exclusionRects, thresholdSettings, createDiagnosticImage]() -> SurfaceDefectResult {
     SurfaceDefectProcessor processor;
     return processor.detectByGrayscaleThreshold(
       input,
       searchRect,
       toCvRects(exclusionRects),
-      thresholdSettings);
+      thresholdSettings,
+      createDiagnosticImage);
   };
 
   const QString __pendingCameraId_testSurfaceLocalization = camera.id;
@@ -254,7 +259,7 @@ void MainWindowSurfaceModule::testSurfaceLocalization(const CameraConfig& camera
     const bool updateView =
       camera.id == selectedCameraId() &&
       *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry;
-    if (!result.processed || result.diagnosticImage.empty())
+    if (!result.processed || (updateView && result.diagnosticImage.empty()))
     {
       log(tr("log.surfaceFailed") + ": " + camera.id);
       return;
@@ -357,9 +362,14 @@ void MainWindowSurfaceModule::testSurfaceLocalizationStrategy(const CameraConfig
   const QVector<QRect> exclusionRects = recipes().loadSurfaceDefectExclusionRects(camera.id);
   auto processorStrategy = toProcessorStrategy(recipeStrategy);
 
-  auto job = [input, processorStrategy, exclusionRects]() -> SurfaceStrategyResult {
+  const bool createDiagnosticImage =
+    camera.id == selectedCameraId() &&
+    *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry &&
+    *context().setupCameraId != camera.id;
+
+  auto job = [input, processorStrategy, exclusionRects, createDiagnosticImage]() -> SurfaceStrategyResult {
     SurfaceDefectProcessor processor;
-    return processor.locateTwoCirclesAxis(input, processorStrategy, toCvRects(exclusionRects));
+    return processor.locateTwoCirclesAxis(input, processorStrategy, toCvRects(exclusionRects), createDiagnosticImage);
   };
 
   const QString __pendingCameraId_testSurfaceLocalizationStrategy = camera.id;
@@ -370,7 +380,7 @@ void MainWindowSurfaceModule::testSurfaceLocalizationStrategy(const CameraConfig
       camera.id == selectedCameraId() &&
       *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry &&
       *context().setupCameraId != camera.id;
-    if (result.diagnosticImage.empty())
+    if (!result.processed || (updateView && result.diagnosticImage.empty()))
     {
       log(tr("log.surfaceFailed") + ": " + camera.id);
       return;
@@ -477,14 +487,17 @@ void MainWindowSurfaceModule::testSurfaceEdgePcaLocalization(const CameraConfig&
     searchRect = cv::Rect(0, 0, input.cols, input.rows);
   }
 
-  auto job = [input, searchRect, exclusionRects, annulus]() -> SurfaceDefectResult {
+  const bool createDiagnosticImage = camera.id == selectedCameraId() && *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry;
+
+  auto job = [input, searchRect, exclusionRects, annulus, createDiagnosticImage]() -> SurfaceDefectResult {
     SurfaceDefectProcessor processor;
     return processor.locateByEdgePca(
       input,
       searchRect,
       toCvRects(exclusionRects),
       annulus.edgeSensitivity,
-      annulus.pcaResolveAmbiguity);
+      annulus.pcaResolveAmbiguity,
+      createDiagnosticImage);
   };
 
   const QString __pendingCameraId_testSurfaceEdgePca = camera.id;
@@ -500,7 +513,7 @@ void MainWindowSurfaceModule::testSurfaceEdgePcaLocalization(const CameraConfig&
     const bool updateView =
       camera.id == selectedCameraId() &&
       *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry;
-    if (!result.processed || result.diagnosticImage.empty())
+    if (!result.processed || (updateView && result.diagnosticImage.empty()))
     {
       context().lastSurfaceLocalizationResults->remove(camera.id);
       cameraRuntime()[camera.id].clearCurrentPose(camera.id);
@@ -553,10 +566,7 @@ void MainWindowSurfaceModule::testSurfaceEdgePcaLocalization(const CameraConfig&
     context().geometry->appendCurrentPartPoseOverlay(camera, overlay);
     if (updateView)
     {
-    if (updateView)
-    {
       largeImage()->setGeometryOverlay(overlay);
-    }
     }
     log(QString("%1: %2 cx=%3 cy=%4 angle=%5 score=%6")
                 .arg(tr("log.surfaceStrategyFound"))

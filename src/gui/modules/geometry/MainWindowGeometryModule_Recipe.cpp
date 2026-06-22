@@ -3,6 +3,8 @@
 #include "gui/modules/MainWindowImagingModule.h"
 #include "gui/modules/MainWindowContext.h"
 
+#include "config/RecipeJsonUtils.h"
+
 #include "gui/geometry/GeometryDiagnosticDrawing.h"
 #include "processing/geometry/EdgePointDetector.h"
 #include "util/AsyncExecutor.h"
@@ -75,6 +77,18 @@ EdgeLinePickMode pickModeFromRecipe(const QString& value)
   return EdgeLinePickMode::First;
 }
 
+template<typename Config>
+QString nextGeometryId(const QString& prefix, const QVector<Config>& configs)
+{
+  QStringList existingIds;
+  existingIds.reserve(configs.size());
+  for (const Config& config : configs)
+  {
+    existingIds.append(config.id);
+  }
+  return RecipeJsonUtils::nextPrefixedId(prefix, existingIds);
+}
+
 }
 
 MainWindowGeometryModule::MainWindowGeometryModule(MainWindowContext& context)
@@ -92,7 +106,7 @@ LineGeometryMouseController& MainWindowGeometryModule::pointMouseController(cons
   return m_pointMouseControllers[cameraId];
 }
 
-void MainWindowGeometryModule::clearRecipeState()
+void MainWindowGeometryModule::reloadRecipeState()
 {
   m_lineConfigs.clear();
   m_activeLineIndexes.clear();
@@ -105,6 +119,14 @@ void MainWindowGeometryModule::clearRecipeState()
   m_lineMouseControllers.clear();
   m_pointMouseControllers.clear();
   m_drawingTarget = DrawingTarget::None;
+
+  for (const CameraConfig& camera : config().activeCameras())
+  {
+    loadGeometryLinesRecipe(camera);
+    loadGeometryPointRecipe(camera);
+    loadGeometryCirclesRecipe(camera);
+    loadGeometryArcsRecipe(camera);
+  }
 }
 
 GeometryLineRuntimeConfig& MainWindowGeometryModule::activeGeometryLineConfig(const QString& cameraId)
@@ -156,7 +178,7 @@ void MainWindowGeometryModule::addGeometryLine(const CameraConfig& camera)
   }
 
   GeometryLineRuntimeConfig line = activeGeometryLineConfig(camera.id);
-  line.id = QString("line_%1").arg(lines.size() + 1);
+  line.id = nextGeometryId("line", lines);
   line.hasImageLine = false;
   line.hasLine = false;
   lines.append(line);
@@ -172,6 +194,7 @@ void MainWindowGeometryModule::loadGeometryPointRecipe(const CameraConfig& camer
   }
 
   const QVector<GeometryPointRecipeConfig> pointRecipes = recipes().loadGeometryPoints(camera.id);
+  QStringList usedIds;
   for (const GeometryPointRecipeConfig& recipe : pointRecipes)
   {
     if (!recipe.enabled)
@@ -181,7 +204,7 @@ void MainWindowGeometryModule::loadGeometryPointRecipe(const CameraConfig& camer
 
     GeometryPointRuntimeConfig point;
     point.enabled = recipe.enabled;
-    point.id = recipe.id;
+    point.id = RecipeJsonUtils::ensureUniquePrefixedId("point", recipe.id, usedIds);
     point.alias = recipe.alias;
     point.partStart = cv::Point2d(recipe.partStart.x(), recipe.partStart.y());
     point.partEnd = cv::Point2d(recipe.partEnd.x(), recipe.partEnd.y());
@@ -211,6 +234,7 @@ void MainWindowGeometryModule::loadGeometryCirclesRecipe(const CameraConfig& cam
   }
 
   const QVector<GeometryCircleRecipeConfig> circleRecipes = recipes().loadGeometryCircles(camera.id);
+  QStringList usedIds;
   for (const GeometryCircleRecipeConfig& recipe : circleRecipes)
   {
     if (!recipe.enabled)
@@ -220,9 +244,8 @@ void MainWindowGeometryModule::loadGeometryCirclesRecipe(const CameraConfig& cam
 
     GeometryCircleRuntimeConfig circle;
     circle.enabled = recipe.enabled;
-    circle.id = recipe.id;
+    circle.id = RecipeJsonUtils::ensureUniquePrefixedId("circle", recipe.id, usedIds);
     circle.alias = recipe.alias;
-    circle.partCenter = cv::Point2d(recipe.partCenter.x(), recipe.partCenter.y());
     circle.radius = recipe.radius;
     circle.innerBand = recipe.innerBand;
     circle.outerBand = recipe.outerBand;
@@ -233,7 +256,16 @@ void MainWindowGeometryModule::loadGeometryCirclesRecipe(const CameraConfig& cam
     circle.scanDirection = scanDirectionFromRecipe(recipe.scanDirection);
     circle.transition = transitionFromRecipe(recipe.transition);
     circle.pickMode = pickModeFromRecipe(recipe.pickMode);
-    circle.hasCircle = true;
+    if (recipe.coordinateSpace == "image")
+    {
+      circle.imageCenter = cv::Point2d(recipe.imageCenter.x(), recipe.imageCenter.y());
+      circle.hasImageCircle = true;
+    }
+    else
+    {
+      circle.partCenter = cv::Point2d(recipe.partCenter.x(), recipe.partCenter.y());
+      circle.hasCircle = true;
+    }
     circles.append(circle);
   }
 
@@ -281,7 +313,7 @@ void MainWindowGeometryModule::saveGeometryCirclesRecipe(const CameraConfig& cam
   QVector<GeometryCircleRecipeConfig> recipeList;
   for (const GeometryCircleRuntimeConfig& circle : m_circleConfigs[camera.id])
   {
-    if (!circle.hasCircle)
+    if (!circle.hasCircle && !circle.hasImageCircle)
     {
       continue;
     }
@@ -290,7 +322,16 @@ void MainWindowGeometryModule::saveGeometryCirclesRecipe(const CameraConfig& cam
     recipe.enabled = circle.enabled;
     recipe.id = circle.id;
     recipe.alias = circle.alias;
-    recipe.partCenter = QPointF(circle.partCenter.x, circle.partCenter.y);
+    if (circle.hasCircle)
+    {
+      recipe.coordinateSpace = "part";
+      recipe.partCenter = QPointF(circle.partCenter.x, circle.partCenter.y);
+    }
+    else
+    {
+      recipe.coordinateSpace = "image";
+      recipe.imageCenter = QPointF(circle.imageCenter.x, circle.imageCenter.y);
+    }
     recipe.radius = circle.radius;
     recipe.innerBand = circle.innerBand;
     recipe.outerBand = circle.outerBand;
@@ -302,6 +343,11 @@ void MainWindowGeometryModule::saveGeometryCirclesRecipe(const CameraConfig& cam
     recipe.transition = transitionToRecipe(circle.transition);
     recipe.pickMode = pickModeToRecipe(circle.pickMode);
     recipeList.append(recipe);
+  }
+
+  if (recipeList.isEmpty())
+  {
+    return;
   }
 
   QString error;
@@ -330,7 +376,7 @@ void MainWindowGeometryModule::addGeometryPoint(const CameraConfig& camera)
   }
 
   GeometryPointRuntimeConfig point = activeGeometryPointConfig(camera.id);
-  point.id = QString("point_%1").arg(points.size() + 1);
+  point.id = nextGeometryId("point", points);
   point.alias.clear();
   point.hasImageGuide = false;
   point.hasGuide = false;
@@ -357,7 +403,7 @@ void MainWindowGeometryModule::addGeometryCircle(const CameraConfig& camera)
   }
 
   GeometryCircleRuntimeConfig circle = activeCircle;
-  circle.id = QString("circle_%1").arg(circles.size() + 1);
+  circle.id = nextGeometryId("circle", circles);
   circle.alias.clear();
   circle.hasImageCircle = false;
   circle.hasCircle = false;
@@ -430,6 +476,7 @@ void MainWindowGeometryModule::loadGeometryLinesRecipe(const CameraConfig& camer
   }
 
   const QVector<GeometryLineRecipeConfig> lineRecipes = recipes().loadGeometryLines(camera.id);
+  QStringList usedIds;
   for (const GeometryLineRecipeConfig& recipe : lineRecipes)
   {
     if (!recipe.enabled)
@@ -438,7 +485,7 @@ void MainWindowGeometryModule::loadGeometryLinesRecipe(const CameraConfig& camer
     }
 
     GeometryLineRuntimeConfig line;
-    line.id = recipe.id;
+    line.id = RecipeJsonUtils::ensureUniquePrefixedId("line", recipe.id, usedIds);
     line.alias = recipe.alias;
     line.enabled = recipe.enabled;
     line.partStart = cv::Point2d(recipe.partStart.x(), recipe.partStart.y());

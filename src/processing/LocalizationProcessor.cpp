@@ -27,12 +27,14 @@ LocalizationResult LocalizationProcessor::locateDarkObjectOnLightBackground(
   const cv::Rect& searchRoi,
   const std::vector<cv::Rect>& exclusionRects,
   double thresholdFactor,
-  double thresholdOffset) const
+  double thresholdOffset,
+  bool createDiagnosticImage) const
 {
   LocalizationResult result;
 
   if (input.empty())
   {
+    result.processed = true;
     return result;
   }
 
@@ -51,6 +53,7 @@ LocalizationResult LocalizationProcessor::locateDarkObjectOnLightBackground(
 
   if (roi.width < 4 || roi.height < 4)
   {
+    result.processed = true;
     return result;
   }
 
@@ -98,19 +101,23 @@ LocalizationResult LocalizationProcessor::locateDarkObjectOnLightBackground(
     }
   }
 
-  if (input.channels() == 1)
+  if (createDiagnosticImage)
   {
-    cv::cvtColor(input, result.diagnosticImage, cv::COLOR_GRAY2BGR);
-  }
-  else
-  {
-    input.copyTo(result.diagnosticImage);
-  }
+    if (input.channels() == 1)
+    {
+      cv::cvtColor(input, result.diagnosticImage, cv::COLOR_GRAY2BGR);
+    }
+    else
+    {
+      input.copyTo(result.diagnosticImage);
+    }
 
-  cv::rectangle(result.diagnosticImage, roi, cv::Scalar(0, 255, 255), 2);
+    cv::rectangle(result.diagnosticImage, roi, cv::Scalar(0, 255, 255), 2);
+  }
 
   if (bestIndex < 0)
   {
+    result.processed = true;
     return result;
   }
 
@@ -126,6 +133,7 @@ LocalizationResult LocalizationProcessor::locateDarkObjectOnLightBackground(
 
   if (moments.m00 == 0.0)
   {
+    result.processed = true;
     return result;
   }
 
@@ -144,30 +152,34 @@ LocalizationResult LocalizationProcessor::locateDarkObjectOnLightBackground(
   result.yAxisStart = result.center - yDirection * axisLength;
   result.yAxisEnd = result.center + yDirection * axisLength;
 
-  cv::drawContours(result.diagnosticImage, std::vector<std::vector<cv::Point>>{contour}, 0, cv::Scalar(0, 255, 0), 2);
-  cv::rectangle(result.diagnosticImage, result.boundingRect, cv::Scalar(255, 0, 0), 2);
-  cv::circle(result.diagnosticImage, result.center, 8, cv::Scalar(0, 0, 255), -1);
-  cv::arrowedLine(
-    result.diagnosticImage,
-    toPoint(result.xAxisStart),
-    toPoint(result.xAxisEnd),
-    cv::Scalar(0, 0, 255),
-    2,
-    cv::LINE_AA,
-    0,
-    0.12);
-  cv::arrowedLine(
-    result.diagnosticImage,
-    toPoint(result.yAxisStart),
-    toPoint(result.yAxisEnd),
-    cv::Scalar(255, 0, 255),
-    2,
-    cv::LINE_AA,
-    0,
-    0.12);
-  cv::putText(result.diagnosticImage, "X", toPoint(result.xAxisEnd), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 255), 2);
-  cv::putText(result.diagnosticImage, "Y", toPoint(result.yAxisEnd), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(255, 0, 255), 2);
+  if (createDiagnosticImage)
+  {
+    cv::drawContours(result.diagnosticImage, std::vector<std::vector<cv::Point>>{contour}, 0, cv::Scalar(0, 255, 0), 2);
+    cv::rectangle(result.diagnosticImage, result.boundingRect, cv::Scalar(255, 0, 0), 2);
+    cv::circle(result.diagnosticImage, result.center, 8, cv::Scalar(0, 0, 255), -1);
+    cv::arrowedLine(
+      result.diagnosticImage,
+      toPoint(result.xAxisStart),
+      toPoint(result.xAxisEnd),
+      cv::Scalar(0, 0, 255),
+      2,
+      cv::LINE_AA,
+      0,
+      0.12);
+    cv::arrowedLine(
+      result.diagnosticImage,
+      toPoint(result.yAxisStart),
+      toPoint(result.yAxisEnd),
+      cv::Scalar(255, 0, 255),
+      2,
+      cv::LINE_AA,
+      0,
+      0.12);
+    cv::putText(result.diagnosticImage, "X", toPoint(result.xAxisEnd), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 0, 255), 2);
+    cv::putText(result.diagnosticImage, "Y", toPoint(result.yAxisEnd), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(255, 0, 255), 2);
+  }
 
+  result.processed = true;
   return result;
 }
 

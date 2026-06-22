@@ -2,6 +2,7 @@
 
 #include "gui/modules/MainWindowModuleBase.h"
 
+#include <QHash>
 #include <QPointF>
 
 class CameraConfig;
@@ -21,6 +22,7 @@ public:
   void showLineLineAnglePanel(const CameraConfig& camera);
   void showMeasurementRealValuesPanel(const CameraConfig& camera);
   void rebuildMeasurementRecipe(const CameraConfig& camera);
+  void removeMeasurement(const CameraConfig& camera, const QString& measurementId);
   void appendMeasurementOverlay(const CameraConfig& camera, GeometryOverlay& overlay) const;
   void setMeasurementLabelPosition(const CameraConfig& camera, const QString& measurementKey, const QPointF& imagePoint);
 
@@ -37,4 +39,5 @@ private:
                                    const QString& sourceAId,
                                    const QString& sourceBId = {},
                                    double samplePixels = 0.0);
+  QHash<QString, QString> geometryAliasesForCamera(const CameraConfig& camera) const;
 };

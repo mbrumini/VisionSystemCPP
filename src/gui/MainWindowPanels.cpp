@@ -4,6 +4,7 @@
 #include "gui/SurfaceLocalizationStrategies.h"
 #include "gui/ToolCatalog.h"
 #include "gui/TouchIconButton.h"
+#include "simulator/SimulatorBridge.h"
 
 #include <QGridLayout>
 #include <QHBoxLayout>
@@ -88,12 +89,16 @@ void MainWindow::updateControlPanel(const CameraConfig* camera)
     note->setWordWrap(true);
     m_toolsLayout->addWidget(note);
     const bool busy = m_cameraProcessingBusy.value(camera->id, false);
+    const QString channel = camera->simulatorChannel.isEmpty() ? camera->id : camera->simulatorChannel;
+    const int pendingQueue = camera->type == "simulator"
+      ? SimulatorBridge::instance().queueSize(channel)
+      : 0;
     auto* stats = new QLabel(
       QString("%1: %2\n%3: %4\n%5: %6 ms")
         .arg(trText("labels.cameraState"))
         .arg(busy ? "BUSY" : "READY")
         .arg(trText("labels.pendingFrames"))
-        .arg(m_cameraPendingJobs.value(camera->id, 0))
+        .arg(m_cameraPendingJobs.value(camera->id, 0) + pendingQueue)
         .arg(trText("labels.lastScan"))
         .arg(m_lastSetupScanElapsedMs.value(camera->id, 0)),
       m_toolsContainer);

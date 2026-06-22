@@ -111,7 +111,16 @@ void MainWindowSurfaceModule::acquireSurfaceModel(const CameraConfig& camera)
   largeImage()->setImage(selectedPreview());
   largeImage()->setRoi(roi);
   largeImage()->setExclusionRects(exclusionRects);
-  restoreSurfaceModelPoseFromSample(camera);
+  if (restoreSurfaceModelPoseFromSample(camera) && context().geometry)
+  {
+    GeometryOverlay overlay;
+    context().geometry->appendCurrentPartPoseOverlay(camera, overlay);
+    largeImage()->setGeometryOverlay(overlay);
+  }
+  else
+  {
+    largeImage()->clearGeometryOverlay();
+  }
   log(QString("%1: %2 points=%3").arg(tr("actions.acquireModel")).arg(camera.id).arg(contour.size()));
 }
 

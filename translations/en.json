@@ -379,6 +379,7 @@
     "measurementLineAngleInvalid": "Angle measurement unavailable: invalid lines",
     "measurementLineAngleCreated": "Line-line angle created",
     "measurementRecipeSaveFailed": "Measurement save failed",
+    "measurementDeleted": "Measurement deleted",
     "startReadOnly": "START: edit panels disabled"
   },
   "messages": {
@@ -453,6 +454,7 @@
     "deleteGeometryCircle": "Delete circle",
     "newGeometryArc": "New arc",
     "deleteGeometryArc": "Delete arc",
+    "deleteMeasurement": "Delete measurement",
     "circleGeometry": "Circle",
     "arcGeometry": "Arc",
     "edgeGeometry": "Edge",

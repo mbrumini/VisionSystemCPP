@@ -247,7 +247,9 @@ void MainWindowGeometryModule::showGeometryArcPanel(const CameraConfig& camera)
   QObject::connect(aliasEdit, &QLineEdit::editingFinished, window(), [this, camera, aliasEdit]() {
     activeGeometryArcConfig(camera.id).alias = aliasEdit->text().trimmed();
     saveGeometryArcsRecipe(camera);
+    syncRuntimeGeometryLabels(camera);
     showConfiguredGeometryArcs(camera);
+    refreshMeasurementOverlay(camera);
   });
 
   auto* testButton = createTouchIconButton("testGeometry", tr("actions.testGeometry"), panel);

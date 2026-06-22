@@ -1,8 +1,15 @@
 #include "gui/modules/ConstructedGeometryCircleSource.h"
 
 #include "geometry/GeometrySet.h"
+#include "gui/geometry/GeometryDisplayNames.h"
 
 QVector<ConstructedGeometryCircleSource> constructedGeometryCircleSources(const QVector<CircleGeometry>& circles)
+{
+  return constructedGeometryCircleSources(circles, QHash<QString, QString>());
+}
+
+QVector<ConstructedGeometryCircleSource> constructedGeometryCircleSources(const QVector<CircleGeometry>& circles,
+                                                                          const QHash<QString, QString>& aliases)
 {
   QVector<ConstructedGeometryCircleSource> sources;
   sources.reserve(circles.size());
@@ -11,7 +18,7 @@ QVector<ConstructedGeometryCircleSource> constructedGeometryCircleSources(const 
   {
     ConstructedGeometryCircleSource source;
     source.id = circle.meta.id;
-    source.label = circle.meta.label.isEmpty() ? circle.meta.id : QString("%1 (%2)").arg(circle.meta.label, circle.meta.id);
+    source.label = GeometryDisplayNames::circleSourceLabel(circle, aliases);
     source.circle = &circle;
     sources.append(source);
   }
@@ -19,17 +26,23 @@ QVector<ConstructedGeometryCircleSource> constructedGeometryCircleSources(const 
   return sources;
 }
 
-QVector<ConstructedGeometryCircleSource> constructedGeometryCircleSources(const GeometrySet& set)
+QVector<ConstructedGeometryCircleSource> constructedGeometryCircleSources(const GeometrySet& set,
+                                                                          const QHash<QString, QString>& aliases)
 {
-  QVector<ConstructedGeometryCircleSource> sources = constructedGeometryCircleSources(set.circles);
+  QVector<ConstructedGeometryCircleSource> sources = constructedGeometryCircleSources(set.circles, aliases);
   sources.reserve(set.circles.size() + set.arcs.size());
 
   for (const ArcGeometry& arc : set.arcs)
   {
+    CircleGeometry circle;
+    circle.meta = arc.meta;
+    circle.center = arc.center;
+    circle.radius = arc.radius;
+    circle.meanError = arc.meanError;
+
     ConstructedGeometryCircleSource source;
     source.id = arc.meta.id;
-    const QString label = arc.meta.label.isEmpty() ? arc.meta.id : QString("%1 (%2)").arg(arc.meta.label, arc.meta.id);
-    source.label = QString("Arc %1").arg(label);
+    source.label = GeometryDisplayNames::circleSourceLabel(circle, aliases, true);
     source.arcSource = true;
     sources.append(source);
   }

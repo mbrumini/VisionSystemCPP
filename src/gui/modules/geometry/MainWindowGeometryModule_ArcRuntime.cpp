@@ -3,6 +3,8 @@
 #include "gui/modules/MainWindowImagingModule.h"
 #include "gui/modules/MainWindowContext.h"
 
+#include "config/RecipeJsonUtils.h"
+
 #include "gui/geometry/GeometryOverlayPrimitives.h"
 
 #include "processing/geometry/EdgeCircleDetector.h"
@@ -194,6 +196,7 @@ void MainWindowGeometryModule::loadGeometryArcsRecipe(const CameraConfig& camera
   }
 
   const QVector<GeometryArcRecipeConfig> arcRecipes = recipes().loadGeometryArcs(camera.id);
+  QStringList usedIds;
   for (const GeometryArcRecipeConfig& recipe : arcRecipes)
   {
     if (!recipe.enabled)
@@ -203,7 +206,7 @@ void MainWindowGeometryModule::loadGeometryArcsRecipe(const CameraConfig& camera
 
     GeometryArcRuntimeConfig arc;
     arc.enabled = recipe.enabled;
-    arc.id = recipe.id;
+    arc.id = RecipeJsonUtils::ensureUniquePrefixedId("arc", recipe.id, usedIds);
     arc.alias = recipe.alias;
     arc.partCenter = cv::Point2d(recipe.partCenter.x(), recipe.partCenter.y());
     arc.partStart = cv::Point2d(recipe.partStart.x(), recipe.partStart.y());
@@ -276,7 +279,13 @@ void MainWindowGeometryModule::addGeometryArc(const CameraConfig& camera)
 {
   QVector<GeometryArcRuntimeConfig>& arcs = m_arcConfigs[camera.id];
   GeometryArcRuntimeConfig arc;
-  arc.id = QString("arc_%1").arg(arcs.size() + 1);
+  QStringList existingIds;
+  existingIds.reserve(arcs.size());
+  for (const GeometryArcRuntimeConfig& existing : arcs)
+  {
+    existingIds.append(existing.id);
+  }
+  arc.id = RecipeJsonUtils::nextPrefixedId("arc", existingIds);
   arcs.append(arc);
   m_activeArcIndexes[camera.id] = arcs.size() - 1;
 }

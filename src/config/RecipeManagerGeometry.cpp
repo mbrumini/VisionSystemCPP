@@ -77,11 +77,12 @@ bool RecipeManager::saveGeometryLines(const QString& cameraId, const QVector<Geo
   QJsonObject tools = root.value("tools").toObject();
   QJsonObject geometries = tools.value("geometries").toObject();
   QJsonArray lines;
+  QStringList assignedIds;
   for (const GeometryLineRecipeConfig& config : configs)
   {
     QJsonObject line;
     line["enabled"] = config.enabled;
-    line["id"] = config.id.isEmpty() ? QString("line_%1").arg(lines.size() + 1) : config.id;
+    line["id"] = ensureUniquePrefixedId("line", config.id, assignedIds);
     if (!config.alias.trimmed().isEmpty())
     {
       line["alias"] = config.alias.trimmed();
@@ -195,11 +196,12 @@ bool RecipeManager::saveGeometryPoints(const QString& cameraId, const QVector<Ge
   QJsonObject geometries = tools.value("geometries").toObject();
 
   QJsonArray points;
+  QStringList assignedIds;
   for (const GeometryPointRecipeConfig& config : configs)
   {
     QJsonObject point;
     point["enabled"] = config.enabled;
-    point["id"] = config.id.isEmpty() ? QString("point_%1").arg(points.size() + 1) : config.id;
+    point["id"] = ensureUniquePrefixedId("point", config.id, assignedIds);
     if (!config.alias.trimmed().isEmpty())
     {
       point["alias"] = config.alias.trimmed();
@@ -269,7 +271,13 @@ QVector<GeometryCircleRecipeConfig> RecipeManager::loadGeometryCircles(const QSt
     }
 
     config.enabled = circle.value("enabled").toBool(false);
+    config.coordinateSpace = circle.value("coordinateSpace").toString("part");
     config.partCenter = pointFFromJson(circle.value("partCenter").toObject());
+    config.imageCenter = pointFFromJson(circle.value("imageCenter").toObject());
+    if (config.coordinateSpace == "image" && config.imageCenter.isNull())
+    {
+      config.imageCenter = pointFFromJson(circle.value("center").toObject());
+    }
     config.radius = circle.value("radius").toDouble(config.radius);
     config.innerBand = circle.value("innerBand").toInt(config.innerBand);
     config.outerBand = circle.value("outerBand").toInt(config.outerBand);
@@ -298,18 +306,26 @@ bool RecipeManager::saveGeometryCircles(const QString& cameraId, const QVector<G
   QJsonObject geometries = tools.value("geometries").toObject();
 
   QJsonArray circles;
+  QStringList assignedIds;
   for (const GeometryCircleRecipeConfig& config : configs)
   {
     QJsonObject circle;
     circle["enabled"] = config.enabled;
-    circle["id"] = config.id.isEmpty() ? QString("circle_%1").arg(circles.size() + 1) : config.id;
+    circle["id"] = ensureUniquePrefixedId("circle", config.id, assignedIds);
     if (!config.alias.trimmed().isEmpty())
     {
       circle["alias"] = config.alias.trimmed();
     }
     circle["type"] = "edge_circle";
-    circle["coordinateSpace"] = "part";
-    circle["partCenter"] = pointFToJson(config.partCenter);
+    circle["coordinateSpace"] = config.coordinateSpace == "image" ? "image" : "part";
+    if (config.coordinateSpace == "image")
+    {
+      circle["imageCenter"] = pointFToJson(config.imageCenter);
+    }
+    else
+    {
+      circle["partCenter"] = pointFToJson(config.partCenter);
+    }
     circle["radius"] = qMax(1.0, config.radius);
     circle["innerBand"] = qBound(1, config.innerBand, 500);
     circle["outerBand"] = qBound(1, config.outerBand, 500);
@@ -388,11 +404,12 @@ bool RecipeManager::saveGeometryArcs(const QString& cameraId, const QVector<Geom
   QJsonObject geometries = tools.value("geometries").toObject();
 
   QJsonArray arcs;
+  QStringList assignedIds;
   for (const GeometryArcRecipeConfig& config : configs)
   {
     QJsonObject arc;
     arc["enabled"] = config.enabled;
-    arc["id"] = config.id.isEmpty() ? QString("arc_%1").arg(arcs.size() + 1) : config.id;
+    arc["id"] = ensureUniquePrefixedId("arc", config.id, assignedIds);
     if (!config.alias.trimmed().isEmpty())
     {
       arc["alias"] = config.alias.trimmed();
@@ -472,6 +489,7 @@ bool RecipeManager::saveConstructedGeometries(const QString& cameraId,
   QJsonObject geometries = tools.value("geometries").toObject();
 
   QJsonArray constructed;
+  QStringList assignedIds;
   for (const ConstructedGeometryRecipeConfig& config : configs)
   {
     if (config.type.isEmpty() || config.sourceAId.isEmpty())
@@ -481,7 +499,7 @@ bool RecipeManager::saveConstructedGeometries(const QString& cameraId,
 
     QJsonObject item;
     item["enabled"] = config.enabled;
-    item["id"] = config.id.isEmpty() ? QString("constructed_%1").arg(constructed.size() + 1) : config.id;
+    item["id"] = ensureUniquePrefixedId("constructed", config.id, assignedIds);
     item["type"] = config.type;
     item["sourceAId"] = config.sourceAId;
     if (!config.sourceBId.isEmpty())
@@ -506,10 +524,31 @@ bool RecipeManager::appendConstructedGeometry(const QString& cameraId,
                                               QString* errorMessage) const
 {
   QVector<ConstructedGeometryRecipeConfig> configs = loadConstructedGeometries(cameraId);
+  for (ConstructedGeometryRecipeConfig& existing : configs)
+  {
+    if (existing.type == config.type &&
+        existing.sourceAId == config.sourceAId &&
+        existing.sourceBId == config.sourceBId)
+    {
+      existing.enabled = config.enabled;
+      if (config.type == "offset_line")
+      {
+        existing.offset = config.offset;
+      }
+      return saveConstructedGeometries(cameraId, configs, errorMessage);
+    }
+  }
+
   ConstructedGeometryRecipeConfig saved = config;
   if (saved.id.isEmpty())
   {
-    saved.id = QString("constructed_%1").arg(configs.size() + 1);
+    QStringList existingIds;
+    existingIds.reserve(configs.size());
+    for (const ConstructedGeometryRecipeConfig& existing : configs)
+    {
+      existingIds.append(existing.id);
+    }
+    saved.id = nextPrefixedId("constructed", existingIds);
   }
   configs.append(saved);
   return saveConstructedGeometries(cameraId, configs, errorMessage);

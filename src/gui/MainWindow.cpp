@@ -248,6 +248,7 @@ void MainWindow::bindModules()
   m_ctx.cameraProcessingBusy = &m_cameraProcessingBusy;
   m_ctx.cameraDroppedFrames = &m_cameraDroppedFrames;
   m_ctx.cameraPendingJobs = &m_cameraPendingJobs;
+  m_ctx.machineRunning = &m_machineRunning;
   m_ctx.activeDrawingRecipe = &m_activeDrawingRecipe;
 
   m_ctx.geometry = &m_geometry;

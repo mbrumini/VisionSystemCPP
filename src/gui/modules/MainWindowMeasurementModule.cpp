@@ -14,11 +14,65 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QGridLayout>
+#include <QHBoxLayout>
 #include <QVBoxLayout>
+
+namespace
+{
+QString measurementItemLabel(const MeasurementRecipeConfig& config)
+{
+  const QString name = config.alias.trimmed().isEmpty() ? config.id
+                                                        : QString("%1 (%2)").arg(config.alias.trimmed(), config.id);
+  return QString("%1 | %2").arg(name, config.type);
+}
+}
 
 MainWindowMeasurementModule::MainWindowMeasurementModule(MainWindowContext& context)
   : MainWindowModuleBase(context)
 {
+}
+
+void MainWindowMeasurementModule::removeMeasurement(const CameraConfig& camera, const QString& measurementId)
+{
+  if (measurementId.isEmpty())
+  {
+    return;
+  }
+
+  QVector<MeasurementRecipeConfig> configs = recipes().loadMeasurements(camera.id);
+  bool removed = false;
+  for (int i = configs.size() - 1; i >= 0; --i)
+  {
+    if (configs[i].id == measurementId)
+    {
+      configs.removeAt(i);
+      removed = true;
+      break;
+    }
+  }
+
+  if (!removed)
+  {
+    return;
+  }
+
+  QString error;
+  if (!recipes().saveMeasurements(camera.id, configs, &error))
+  {
+    log(QString("%1: %2").arg(tr("log.measurementRecipeSaveFailed"), error));
+    return;
+  }
+
+  rebuildMeasurementRecipe(camera);
+  if (context().geometry)
+  {
+    context().geometry->refreshMeasurementOverlay(camera);
+  }
+  if (context().updateMeasurementResults)
+  {
+    context().updateMeasurementResults();
+  }
+  log(tr("log.measurementDeleted") + ": " + measurementId);
 }
 
 void MainWindowMeasurementModule::refreshMeasurementSources(const CameraConfig& camera)
@@ -35,7 +89,21 @@ void MainWindowMeasurementModule::refreshMeasurementSources(const CameraConfig& 
   {
     context().constructedGeometry->rebuildConstructedGeometryRecipe(camera);
   }
+  if (context().geometry)
+  {
+    context().geometry->syncRuntimeGeometryLabels(camera);
+  }
   rebuildMeasurementRecipe(camera);
+}
+
+QHash<QString, QString> MainWindowMeasurementModule::geometryAliasesForCamera(const CameraConfig& camera) const
+{
+  if (!context().geometry)
+  {
+    return {};
+  }
+
+  return context().geometry->geometryAliasMap(camera.id);
 }
 
 void MainWindowMeasurementModule::showMeasurementPanel(const CameraConfig& camera)
@@ -52,6 +120,31 @@ void MainWindowMeasurementModule::showMeasurementPanel(const CameraConfig& camer
   auto* title = new QLabel(QString("%1 | %2").arg(tr("tools.measurements"), camera.id), panel);
   title->setObjectName("toolPanelTitle");
   layout->addWidget(title);
+
+  const QVector<MeasurementRecipeConfig> measurements = recipes().loadMeasurements(camera.id);
+  if (!measurements.isEmpty())
+  {
+    auto* listRow = new QWidget(panel);
+    auto* listLayout = new QHBoxLayout(listRow);
+    listLayout->setContentsMargins(0, 0, 0, 0);
+    listLayout->setSpacing(6);
+
+    auto* measureCombo = new QComboBox(listRow);
+    for (const MeasurementRecipeConfig& config : measurements)
+    {
+      measureCombo->addItem(measurementItemLabel(config), config.id);
+    }
+
+    auto* deleteButton = createTouchIconButton("delete", tr("actions.deleteMeasurement"), listRow);
+    QObject::connect(deleteButton, &QPushButton::clicked, window(), [this, camera, measureCombo]() {
+      removeMeasurement(camera, measureCombo->currentData().toString());
+      showMeasurementPanel(camera);
+    });
+
+    listLayout->addWidget(measureCombo, 1);
+    listLayout->addWidget(deleteButton);
+    layout->addWidget(listRow);
+  }
 
   auto* buttonGrid = new QWidget(panel);
   auto* buttonLayout = new QGridLayout(buttonGrid);
@@ -143,9 +236,7 @@ void MainWindowMeasurementModule::showMeasurementRealValuesPanel(const CameraCon
     auto* measureCombo = new QComboBox(form);
     for (int i = 0; i < configs.size(); ++i)
     {
-      const MeasurementRecipeConfig& config = configs[i];
-      const QString name = config.alias.trimmed().isEmpty() ? config.id : QString("%1 (%2)").arg(config.alias.trimmed(), config.id);
-      measureCombo->addItem(QString("%1 | %2").arg(name, config.type), i);
+      measureCombo->addItem(measurementItemLabel(configs[i]), i);
     }
 
     auto* aliasEdit = new QLineEdit(form);
@@ -207,7 +298,12 @@ void MainWindowMeasurementModule::showMeasurementRealValuesPanel(const CameraCon
     formLayout->addRow("Limite massimo", max);
     layout->addWidget(form);
 
-    auto* saveButton = createTouchIconButton("save", "Salva valori", panel);
+    auto* actionRow = new QWidget(panel);
+    auto* actionLayout = new QHBoxLayout(actionRow);
+    actionLayout->setContentsMargins(0, 0, 0, 0);
+    actionLayout->setSpacing(6);
+
+    auto* saveButton = createTouchIconButton("save", "Salva valori", actionRow);
     QObject::connect(saveButton, &QPushButton::clicked, window(), [=]() mutable {
       const int index = measureCombo->currentData().toInt();
       if (index < 0 || index >= configs.size())
@@ -253,7 +349,20 @@ void MainWindowMeasurementModule::showMeasurementRealValuesPanel(const CameraCon
         context().updateMeasurementResults();
       }
     });
-    layout->addWidget(saveButton);
+    actionLayout->addWidget(saveButton);
+
+    auto* deleteButton = createTouchIconButton("delete", tr("actions.deleteMeasurement"), actionRow);
+    QObject::connect(deleteButton, &QPushButton::clicked, window(), [=]() {
+      const int index = measureCombo->currentData().toInt();
+      if (index < 0 || index >= configs.size())
+      {
+        return;
+      }
+      removeMeasurement(camera, configs[index].id);
+      showMeasurementRealValuesPanel(camera);
+    });
+    actionLayout->addWidget(deleteButton);
+    layout->addWidget(actionRow);
   }
 
   auto* backButton = createTouchIconButton("back", tr("tools.measurements"), panel);

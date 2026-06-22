@@ -3,6 +3,7 @@
 #include "gui/geometry/GeometryOverlay.h"
 #include "gui/modules/MainWindowCameraProfile.h"
 #include "gui/modules/MainWindowGeometryModule.h"
+#include "gui/modules/MainWindowSetupModule.h"
 
 #include <QFileDialog>
 #include <QInputDialog>
@@ -157,7 +158,7 @@ void MainWindowRecipeModule::setActiveRecipe(const QString& recipeId)
   recipes().setRecipeId(recipeId);
   if (context().geometry)
   {
-    context().geometry->clearRecipeState();
+    context().geometry->reloadRecipeState();
   }
 
   QString error;
@@ -173,6 +174,10 @@ void MainWindowRecipeModule::setActiveRecipe(const QString& recipeId)
   log(tr("log.activeRecipe") + ": " + recipes().recipeId());
   ensureRecipeCameraFolders();
   refreshSelectedCameraRecipeData();
+  if (!selectedCameraId().isEmpty() && context().setup)
+  {
+    context().setup->refreshSetupGeometryResults(selectedCamera());
+  }
 }
 
 void MainWindowRecipeModule::refreshSelectedCameraRecipeData()

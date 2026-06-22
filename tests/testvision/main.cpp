@@ -61,6 +61,14 @@ struct TestPose
   double angleDeg = 0.0;
 };
 
+struct SentFrameInfo
+{
+  TestPose pose;
+  double expectedX = 0.0;
+  double expectedY = 0.0;
+  double expectedAngle = 0.0;
+};
+
 struct TestResult
 {
   TestPose pose;
@@ -192,10 +200,11 @@ cv::Mat transformImage(const cv::Mat& master, double angle, double txPx, double 
   return output;
 }
 
-QByteArray pngBase64(const cv::Mat& image)
+QByteArray jpegBase64(const cv::Mat& image)
 {
   std::vector<uchar> bytes;
-  cv::imencode(".png", image, bytes);
+  std::vector<int> params = {cv::IMWRITE_JPEG_QUALITY, 85};
+  cv::imencode(".jpg", image, bytes, params);
   return QByteArray(
     reinterpret_cast<const char*>(bytes.data()),
     static_cast<qsizetype>(bytes.size())).toBase64();
@@ -943,6 +952,8 @@ private:
     connect(m_passes, &QSpinBox::valueChanged, this, [this]() { updatePlanCount(); });
     m_pollTimer.setInterval(20);
     connect(&m_pollTimer, &QTimer::timeout, this, [this]() { pollPipe(); });
+    m_sendTimer.setSingleShot(true);
+    connect(&m_sendTimer, &QTimer::timeout, this, [this]() { sendNextFrame(); });
   }
 
   bool loadScenario(QString* error)
@@ -999,7 +1010,7 @@ private:
       .arg(m_scenario.value("channel").toString())
       .arg(m_expectedRecipeId));
     m_preview->setPixmap(matToPixmap(m_master).scaled(
-      m_preview->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+      m_preview->size(), Qt::KeepAspectRatio, Qt::FastTransformation));
     updatePlanCount();
     return true;
   }
@@ -1030,7 +1041,7 @@ private:
     if (m_preview && !m_master.empty())
     {
       m_preview->setPixmap(matToPixmap(m_master).scaled(
-        m_preview->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        m_preview->size(), Qt::KeepAspectRatio, Qt::FastTransformation));
     }
     if (!m_scenario.isEmpty())
     {
@@ -1059,6 +1070,7 @@ private:
   bool connectPipe()
   {
     closePipe();
+    m_sentFrames.clear();
     m_pipe = CreateFileW(kPipePath, GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr);
     if (m_pipe == INVALID_HANDLE_VALUE)
     {
@@ -1105,8 +1117,8 @@ private:
     sample["shapeId"] = m_shapeCombo->currentData().toString();
     sample["strategyId"] = m_strategyCombo->currentData().toString();
     sample["recipeId"] = m_expectedRecipeId;
-    sample["imageFormat"] = "png";
-    sample["imageBase64"] = QString::fromLatin1(pngBase64(m_master));
+    sample["imageFormat"] = "jpg";
+    sample["imageBase64"] = QString::fromLatin1(jpegBase64(m_master));
     QByteArray payload = QJsonDocument(sample).toJson(QJsonDocument::Compact);
     payload.append('\n');
     DWORD written = 0;
@@ -1988,6 +2000,20 @@ private:
 
   void stopTest(const QString& reason)
   {
+    m_sendTimer.stop();
+    std::sort(m_results.begin(), m_results.end(), [](const TestResult& a, const TestResult& b) {
+      return a.frameId < b.frameId;
+    });
+    if (m_table)
+    {
+      m_table->setRowCount(0);
+      for (const TestResult& result : m_results)
+      {
+        appendResultRow(result);
+      }
+    }
+    refreshAnalysis();
+
     if (!m_results.isEmpty())
     {
       saveReport();
@@ -2083,17 +2109,18 @@ private:
       stopTest("Campione ricevuto da Vision");
       return;
     }
-    if (type == "frameAccepted" && message.value("frameId").toInt() == m_currentFrameId)
+    if (type == "frameAccepted")
     {
+      int fid = message.value("frameId").toInt();
       m_state = State::WaitingResult;
-      m_stateLabel->setText(QString("Frame %1 accettato; attendo Vision").arg(m_currentFrameId));
+      m_stateLabel->setText(QString("Frame %1 accettato; attendo Vision").arg(fid));
       return;
     }
-    if ((type == "waitingStart" || type == "frameScheduled" ||
-         type == "processingStarted" || type == "processingCompleted" ||
-         type == "processingError") &&
-        message.value("frameId").toInt() == m_currentFrameId)
+    if (type == "waitingStart" || type == "frameScheduled" ||
+        type == "processingStarted" || type == "processingCompleted" ||
+        type == "processingError")
     {
+      int fid = message.value("frameId").toInt();
       const QString text = message.value("message").toString(type);
       if (type == "processingError")
       {
@@ -2109,20 +2136,31 @@ private:
           m_workerFailure = text;
         }
       }
-      m_stateLabel->setText(text);
-      appendLog(QString("%1: %2").arg(type, text));
+      m_stateLabel->setText(QString("Frame %1: %2").arg(fid).arg(text));
+      appendLog(QString("%1 (Frame %2): %3").arg(type).arg(fid).arg(text));
       return;
     }
-    if (type == "result" && message.value("frameId").toInt() == m_currentFrameId)
+    if (type == "result")
     {
+      int resultFrameId = message.value("frameId").toInt();
       handleResult(message);
-      if (m_abortCurrentCampaignItem)
+      if (resultFrameId == 1)
       {
-        QTimer::singleShot(0, this, [this]() { finishTest(); });
+        if (m_hasBaseline)
+        {
+          sendNextFrame();
+        }
+        else
+        {
+          stopTest("Impossibile stabilire il riferimento/baseline (Frame 1 non valido)");
+        }
       }
       else
       {
-        QTimer::singleShot(m_intervalMs->value(), this, [this]() { sendNextFrame(); });
+        if (m_results.size() == m_plan.size() || m_abortCurrentCampaignItem)
+        {
+          QTimer::singleShot(0, this, [this]() { finishTest(); });
+        }
       }
       return;
     }
@@ -2137,7 +2175,7 @@ private:
     ++m_currentIndex;
     if (m_currentIndex >= m_plan.size())
     {
-      finishTest();
+      m_sendTimer.stop();
       return;
     }
     ++m_currentFrameId;
@@ -2147,7 +2185,7 @@ private:
     const double tyPx = m_currentPose.yMm * pxPerMm;
     m_currentImage = transformImage(m_master, m_currentPose.angleDeg, txPx, tyPx);
     m_preview->setPixmap(matToPixmap(m_currentImage).scaled(
-      m_preview->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+      m_preview->size(), Qt::KeepAspectRatio, Qt::FastTransformation));
 
     if (m_hasBaseline)
     {
@@ -2212,10 +2250,19 @@ private:
     frame["strategyId"] = m_strategyCombo->currentData().toString();
     frame["recipeId"] = m_expectedRecipeId;
     frame["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODateWithMs);
-    frame["imageFormat"] = "png";
-    frame["imageBase64"] = QString::fromLatin1(pngBase64(m_currentImage));
+    frame["imageFormat"] = "jpg";
+    frame["imageBase64"] = QString::fromLatin1(jpegBase64(m_currentImage));
     m_lastProcessingError.clear();
     m_abortCurrentCampaignItem = false;
+
+    // Record the sent frame info so we can reconstruct results asynchronously
+    SentFrameInfo info;
+    info.pose = m_currentPose;
+    info.expectedX = m_expectedX;
+    info.expectedY = m_expectedY;
+    info.expectedAngle = m_expectedAngle;
+    m_sentFrames.insert(m_currentFrameId, info);
+
     QByteArray payload = QJsonDocument(frame).toJson(QJsonDocument::Compact);
     payload.append('\n');
     DWORD written = 0;
@@ -2226,6 +2273,12 @@ private:
     }
     m_state = State::WaitingAccepted;
     m_stateLabel->setText(QString("Frame %1 inviato").arg(m_currentFrameId));
+
+    // Schedule next frame ONLY if we already have a baseline reference
+    if (m_hasBaseline)
+    {
+      m_sendTimer.start(m_intervalMs->value());
+    }
   }
 
   void requestRecipe()
@@ -2248,10 +2301,18 @@ private:
 
   void handleResult(const QJsonObject& message)
   {
+    int resultFrameId = message.value("frameId").toInt();
+    if (!m_sentFrames.contains(resultFrameId))
+    {
+      appendLog(QString("Risultato ricevuto per frame %1 non configurato").arg(resultFrameId));
+      return;
+    }
+    const SentFrameInfo info = m_sentFrames.value(resultFrameId);
+
     const QJsonObject pose = message.value("pose").toObject();
     TestResult result;
-    result.pose = m_currentPose;
-    result.frameId = m_currentFrameId;
+    result.pose = info.pose;
+    result.frameId = resultFrameId;
     result.valid = pose.value("valid").toBool();
     result.actualX = pose.value("x").toDouble();
     result.actualY = pose.value("y").toDouble();
@@ -2260,20 +2321,26 @@ private:
     if (!m_hasBaseline && result.valid)
     {
       m_hasBaseline = true;
-      m_baselinePose = m_currentPose;
+      m_baselinePose = info.pose;
       m_baselineResult = result;
       m_expectedX = result.actualX;
       m_expectedY = result.actualY;
       m_expectedAngle = result.actualAngle;
+      result.expectedX = result.actualX;
+      result.expectedY = result.actualY;
+      result.expectedAngle = result.actualAngle;
       appendLog(QString("Frame zero Vision: X=%1 Y=%2 A=%3°")
         .arg(result.actualX, 0, 'f', 3)
         .arg(result.actualY, 0, 'f', 3)
         .arg(result.actualAngle, 0, 'f', 3));
     }
+    else
+    {
+      result.expectedX = info.expectedX;
+      result.expectedY = info.expectedY;
+      result.expectedAngle = info.expectedAngle;
+    }
 
-    result.expectedX = m_expectedX;
-    result.expectedY = m_expectedY;
-    result.expectedAngle = m_expectedAngle;
     result.centerError = std::hypot(result.actualX - result.expectedX, result.actualY - result.expectedY);
     result.angleError = pcaAngleError(result.actualAngle, result.expectedAngle);
     result.processingMs = message.value("processingMs").toDouble();
@@ -2286,19 +2353,20 @@ private:
         result);
     }
 
-    m_actualLabel->setText(QString("X=%1 Y=%2 A=%3° | Ec=%4 px Ea=%5°")
+    m_actualLabel->setText(QString("Frame %1 | X=%2 Y=%3 A=%4° | Ec=%5 px Ea=%6°")
+      .arg(resultFrameId)
       .arg(result.actualX, 0, 'f', 2).arg(result.actualY, 0, 'f', 2)
       .arg(result.actualAngle, 0, 'f', 2).arg(result.centerError, 0, 'f', 2)
       .arg(result.angleError, 0, 'f', 2));
     m_stateLabel->setText(
       result.valid
-        ? "Risultato ricevuto"
+        ? QString("Frame %1: Risultato ricevuto").arg(resultFrameId)
         : (m_lastProcessingError.isEmpty()
-             ? "Posa non valida"
-             : "Posa non valida: " + m_lastProcessingError));
+             ? QString("Frame %1: Posa non valida").arg(resultFrameId)
+             : QString("Frame %1: Posa non valida: %2").arg(resultFrameId).arg(m_lastProcessingError)));
     if (!result.valid && !m_lastProcessingError.isEmpty())
     {
-      appendLog("Motivo posa non valida: " + m_lastProcessingError);
+      appendLog(QString("Motivo posa non valida Frame %1: %2").arg(resultFrameId).arg(m_lastProcessingError));
     }
     m_lastProcessingError.clear();
     appendResultRow(result);
@@ -2327,7 +2395,12 @@ private:
     };
     for (int column = 0; column < values.size(); ++column)
     {
-      m_table->setItem(row, column, new QTableWidgetItem(values[column]));
+      auto* item = new QTableWidgetItem(values[column]);
+      if (!result.valid)
+      {
+        item->setBackground(QColor("#7a2633"));
+      }
+      m_table->setItem(row, column, item);
     }
   }
 
@@ -2347,8 +2420,13 @@ private:
     double angleSum = 0.0;
     double centerMax = 0.0;
     double angleMax = 0.0;
+    int invalidCount = 0;
     for (const TestResult& result : m_results)
     {
+      if (!result.valid)
+      {
+        ++invalidCount;
+      }
       centerSum += result.centerError;
       angleSum += result.angleError;
       centerMax = std::max(centerMax, result.centerError);
@@ -2382,10 +2460,11 @@ private:
     }
 
     m_summaryLabel->setText(
-      QString("Frame: %1 | Errore centro medio/max: %2 / %3 px | "
-              "Errore angolo medio/max: %4 / %5° | "
-              "Ripetibilità peggiore σ centro/angolo: %6 px / %7°")
+      QString("Frame: %1 (Falliti/Scartati: %2) | Errore centro medio/max: %3 / %4 px | "
+              "Errore angolo medio/max: %5 / %6° | "
+              "Ripetibilità peggiore σ centro/angolo: %7 px / %8°")
         .arg(m_results.size())
+        .arg(invalidCount)
         .arg(centerSum / m_results.size(), 0, 'f', 3)
         .arg(centerMax, 0, 'f', 3)
         .arg(angleSum / m_results.size(), 0, 'f', 3)
@@ -2553,6 +2632,8 @@ private:
   QList<TestVisionWindow*> m_broadcastWorkers;
 
   QTimer m_pollTimer;
+  QTimer m_sendTimer;
+  QHash<int, SentFrameInfo> m_sentFrames;
   HANDLE m_pipe = INVALID_HANDLE_VALUE;
   QByteArray m_buffer;
   State m_state = State::Idle;

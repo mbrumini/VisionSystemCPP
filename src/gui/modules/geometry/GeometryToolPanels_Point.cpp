@@ -178,6 +178,8 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
     activeGeometryPointConfig(camera.id).alias = aliasEdit->text().trimmed();
     saveGeometryPointRecipe(camera);
     testGeometryPoint(camera);
+    syncRuntimeGeometryLabels(camera);
+    refreshMeasurementOverlay(camera);
   });
 
   auto* testButton = createTouchIconButton("start", tr("actions.testGeometry"), panel);

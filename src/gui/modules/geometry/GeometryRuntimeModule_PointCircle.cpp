@@ -219,6 +219,19 @@ void MainWindowGeometryModule::testGeometryCircle(const CameraConfig& camera)
               .arg(result.circle.center.x, 0, 'f', 1)
               .arg(result.circle.center.y, 0, 'f', 1)
               .arg(result.circle.radius, 0, 'f', 1));
+
+  if (pose.valid)
+  {
+    circleConfig.partCenter = imageToPart(pose, result.circle.center);
+    circleConfig.hasCircle = true;
+  }
+  else
+  {
+    circleConfig.imageCenter = result.circle.center;
+    circleConfig.hasImageCircle = true;
+  }
+  circleConfig.radius = result.circle.radius;
+  saveGeometryCirclesRecipe(camera);
 }
 
 void MainWindowGeometryModule::handleGeometryPointGuidePoint(const CameraConfig& camera, const QPointF& imagePoint)
@@ -398,6 +411,24 @@ void MainWindowGeometryModule::appendCurrentPartPoseOverlay(const CameraConfig& 
   }
 
   GeometryDiagnosticDrawing::appendCyanPointCross(overlay, pose.origin);
+
+  const double armLength = 80.0;
+  const cv::Point2d xEnd = pose.origin + pose.xAxis * armLength;
+  const cv::Point2d yEnd = pose.origin + pose.yAxis * armLength;
+  overlay.lines.append({
+    QPointF(pose.origin.x, pose.origin.y),
+    QPointF(xEnd.x, xEnd.y),
+    QColor(255, 0, 0),
+    4
+  });
+  overlay.lines.append({
+    QPointF(pose.origin.x, pose.origin.y),
+    QPointF(yEnd.x, yEnd.y),
+    QColor(255, 0, 255),
+    4
+  });
+  overlay.points.append({QPointF(xEnd.x, xEnd.y), "X", QColor(255, 0, 0)});
+  overlay.points.append({QPointF(yEnd.x, yEnd.y), "Y", QColor(255, 0, 255)});
 }
 
 void MainWindowGeometryModule::testGeometryPoint(const CameraConfig& camera)

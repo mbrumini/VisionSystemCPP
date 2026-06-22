@@ -379,6 +379,7 @@
     "measurementLineAngleInvalid": "Misura angolo non disponibile: linee non valide",
     "measurementLineAngleCreated": "Angolo linea-linea creato",
     "measurementRecipeSaveFailed": "Salvataggio misura fallito",
+    "measurementDeleted": "Misura eliminata",
     "startReadOnly": "START: pannelli modifica disabilitati"
   },
   "messages": {
@@ -453,6 +454,7 @@
     "deleteGeometryCircle": "Elimina cerchio",
     "newGeometryArc": "Nuovo arco",
     "deleteGeometryArc": "Elimina arco",
+    "deleteMeasurement": "Elimina misura",
     "circleGeometry": "Cerchio",
     "arcGeometry": "Arco",
     "edgeGeometry": "Edge",

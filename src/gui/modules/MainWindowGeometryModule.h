@@ -26,7 +26,7 @@ public:
 
   explicit MainWindowGeometryModule(MainWindowContext& context);
 
-  void clearRecipeState();
+  void reloadRecipeState();
   DrawingTarget drawingTarget() const { return m_drawingTarget; }
   void setDrawingTarget(DrawingTarget target) { m_drawingTarget = target; }
 
@@ -59,6 +59,10 @@ public:
   void refreshMeasurementOverlay(const CameraConfig& camera);
   void testGeometryLine(const CameraConfig& camera);
   void testConfiguredGeometryLines(const CameraConfig& camera);
+
+  QHash<QString, QString> geometryAliasMap(const QString& cameraId) const;
+  QString geometryDisplayLabel(const QString& cameraId, const QString& geometryId) const;
+  void syncRuntimeGeometryLabels(const CameraConfig& camera);
 
   void activateGeometryPointDrawing(const CameraConfig& camera);
   void handleGeometryPointGuidePoint(const CameraConfig& camera, const QPointF& imagePoint);

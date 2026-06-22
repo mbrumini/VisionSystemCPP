@@ -250,7 +250,9 @@ void MainWindowGeometryModule::showGeometryCirclePanel(const CameraConfig& camer
   QObject::connect(aliasEdit, &QLineEdit::editingFinished, window(), [this, camera, aliasEdit]() {
     activeGeometryCircleConfig(camera.id).alias = aliasEdit->text().trimmed();
     saveGeometryCirclesRecipe(camera);
+    syncRuntimeGeometryLabels(camera);
     showConfiguredGeometryCircles(camera);
+    refreshMeasurementOverlay(camera);
   });
 
   auto* testButton = createTouchIconButton("start", tr("actions.testGeometry"), panel);

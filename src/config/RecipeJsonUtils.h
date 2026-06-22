@@ -38,4 +38,7 @@ void pruneSurfaceLocalizationForMethod(QJsonObject& surfaceLocalization, const Q
 
 void setGeometryArray(QJsonObject& geometries, const QString& key, const QJsonArray& values);
 void writeGeometriesTool(QJsonObject& tools, QJsonObject geometries);
+
+QString nextPrefixedId(const QString& prefix, const QStringList& existingIds);
+QString ensureUniquePrefixedId(const QString& prefix, const QString& preferredId, QStringList& assignedIds);
 }

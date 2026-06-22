@@ -23,6 +23,7 @@ public:
   QString serverName() const;
 
   bool takeFrame(const QString& channel, SimulatorFrame& frame);
+  int queueSize(const QString& channel) const;
   void publishResult(const SimulatorFrameMetadata& metadata, const QJsonObject& result);
   void publishFrameEvent(
     const SimulatorFrameMetadata& metadata,

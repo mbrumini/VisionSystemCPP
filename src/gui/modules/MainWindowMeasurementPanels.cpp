@@ -58,7 +58,8 @@ void MainWindowMeasurementModule::showPointPointDistancePanel(const CameraConfig
   refreshMeasurementSources(camera);
 
   const GeometrySet& set = cameraRuntime()[camera.id].geometries();
-  const QVector<ConstructedGeometryPointSource> pointSources = constructedGeometryPointSources(set);
+  const QVector<ConstructedGeometryPointSource> pointSources =
+    constructedGeometryPointSources(set, geometryAliasesForCamera(camera));
 
   auto* panel = new QWidget(toolsContainer());
   auto* layout = createMeasurementPage(panel, QString("%1 | %2").arg(tr("actions.pointPointDistance"), camera.id));
@@ -101,8 +102,9 @@ void MainWindowMeasurementModule::showPointLineDistancePanel(const CameraConfig&
   refreshMeasurementSources(camera);
 
   const GeometrySet& set = cameraRuntime()[camera.id].geometries();
-  const QVector<ConstructedGeometryPointSource> pointSources = constructedGeometryPointSources(set);
-  const QVector<ConstructedGeometryLineSource> lineSources = constructedGeometryLineSources(set);
+  const QVector<ConstructedGeometryPointSource> pointSources =
+    constructedGeometryPointSources(set, geometryAliasesForCamera(camera));
+  const QVector<ConstructedGeometryLineSource> lineSources = constructedGeometryLineSources(set, geometryAliasesForCamera(camera));
 
   auto* panel = new QWidget(toolsContainer());
   auto* layout = createMeasurementPage(panel, QString("%1 | %2").arg(tr("actions.pointLineDistance"), camera.id));
@@ -145,7 +147,7 @@ void MainWindowMeasurementModule::showLineLineDistancePanel(const CameraConfig& 
   refreshMeasurementSources(camera);
 
   const GeometrySet& set = cameraRuntime()[camera.id].geometries();
-  const QVector<ConstructedGeometryLineSource> lineSources = constructedGeometryLineSources(set);
+  const QVector<ConstructedGeometryLineSource> lineSources = constructedGeometryLineSources(set, geometryAliasesForCamera(camera));
 
   auto* panel = new QWidget(toolsContainer());
   auto* layout = createMeasurementPage(panel, QString("%1 | %2").arg(tr("actions.lineLineDistance"), camera.id));
@@ -188,7 +190,8 @@ void MainWindowMeasurementModule::showCircleDiameterPanel(const CameraConfig& ca
   refreshMeasurementSources(camera);
 
   const GeometrySet& set = cameraRuntime()[camera.id].geometries();
-  const QVector<ConstructedGeometryCircleSource> circleSources = constructedGeometryCircleSources(set);
+  const QVector<ConstructedGeometryCircleSource> circleSources =
+    constructedGeometryCircleSources(set, geometryAliasesForCamera(camera));
 
   auto* panel = new QWidget(toolsContainer());
   auto* layout = createMeasurementPage(panel, QString("%1 | %2").arg(tr("actions.circleDiameterMeasure"), camera.id));
@@ -227,7 +230,7 @@ void MainWindowMeasurementModule::showLineLineAnglePanel(const CameraConfig& cam
   refreshMeasurementSources(camera);
 
   const GeometrySet& set = cameraRuntime()[camera.id].geometries();
-  const QVector<ConstructedGeometryLineSource> lineSources = constructedGeometryLineSources(set);
+  const QVector<ConstructedGeometryLineSource> lineSources = constructedGeometryLineSources(set, geometryAliasesForCamera(camera));
 
   auto* panel = new QWidget(toolsContainer());
   auto* layout = createMeasurementPage(panel, QString("%1 | %2").arg(tr("actions.lineLineAngle"), camera.id));

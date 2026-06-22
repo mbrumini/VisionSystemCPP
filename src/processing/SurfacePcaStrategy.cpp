@@ -20,7 +20,9 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
   const cv::Rect& searchRoi,
   const std::vector<cv::Rect>& exclusionRects,
   int edgeSensitivity,
-  bool resolveAmbiguity) const
+  bool resolveAmbiguity,
+  bool createDiagnosticImage,
+  bool drawContours) const
 {
   SurfaceDefectResult result;
 
@@ -73,13 +75,16 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
   std::vector<std::vector<cv::Point>> contours;
   cv::findContours(edgeMask, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
 
-  if (input.channels() == 1)
+  if (createDiagnosticImage)
   {
-    cv::cvtColor(input, result.diagnosticImage, cv::COLOR_GRAY2BGR);
-  }
-  else
-  {
-    input.copyTo(result.diagnosticImage);
+    if (input.channels() == 1)
+    {
+      cv::cvtColor(input, result.diagnosticImage, cv::COLOR_GRAY2BGR);
+    }
+    else
+    {
+      input.copyTo(result.diagnosticImage);
+    }
   }
 
   // cv::rectangle(result.diagnosticImage, roi, cv::Scalar(255, 0, 0), 2);
@@ -134,7 +139,10 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
   if (bestContourIndex >= 0)
   {
     edgePixels = smoothSurfaceContour(contours[bestContourIndex], 5);
-    drawStyledContour(result.diagnosticImage, edgePixels, cv::Scalar(94, 197, 34));
+    if (createDiagnosticImage && drawContours)
+    {
+      drawStyledContour(result.diagnosticImage, edgePixels, cv::Scalar(94, 197, 34));
+    }
   }
 
   if (edgePixels.size() < 8)
@@ -152,59 +160,29 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
 
   const cv::PCA pca(data, cv::Mat(), cv::PCA::DATA_AS_ROW);
   const cv::Point2d center(pca.mean.at<double>(0, 0), pca.mean.at<double>(0, 1));
-  const cv::Point2d xDirection(pca.eigenvectors.at<double>(0, 0), pca.eigenvectors.at<double>(0, 1));
-  double angle = std::atan2(xDirection.y, xDirection.x);
+  cv::Point2d xDirection(pca.eigenvectors.at<double>(0, 0), pca.eigenvectors.at<double>(0, 1));
 
-  if (resolveAmbiguity && bestContourIndex >= 0)
+  int selectedInternalContourIndex = -1;
+  xDirection = resolveSurfacePcaAxisDirection(
+    center,
+    xDirection,
+    edgeMask,
+    cv::Point2d(),
+    bestContourIndex >= 0 ? cv::boundingRect(contours[bestContourIndex]) : roi,
+    resolveAmbiguity,
+    &contours,
+    bestContourArea,
+    &selectedInternalContourIndex);
+  const double angle = std::atan2(xDirection.y, xDirection.x);
+
+  if (createDiagnosticImage && drawContours && selectedInternalContourIndex >= 0)
   {
-    const std::vector<std::vector<cv::Point>>& allContours = contours;
-
-    int bestInternalIndex = -1;
-    double bestInternalArea = 0.0;
-    for (int i = 0; i < static_cast<int>(allContours.size()); ++i)
-    {
-      const double area = std::abs(cv::contourArea(allContours[i]));
-      if (area < 0.8 * bestContourArea && area > 8.0)
-      {
-        if (area > bestInternalArea)
-        {
-          bestInternalIndex = i;
-          bestInternalArea = area;
-        }
-      }
-    }
-
-    if (bestInternalIndex >= 0)
-    {
-      cv::Moments m = cv::moments(allContours[bestInternalIndex]);
-      cv::Point2d internalCenter;
-      if (std::abs(m.m00) > 1e-6)
-      {
-        internalCenter = cv::Point2d(m.m10 / m.m00, m.m01 / m.m00);
-      }
-      else
-      {
-        cv::Rect r = cv::boundingRect(allContours[bestInternalIndex]);
-        internalCenter = cv::Point2d(r.x + r.width / 2.0, r.y + r.height / 2.0);
-      }
-
-      cv::drawContours(result.diagnosticImage, allContours, bestInternalIndex, cv::Scalar(0, 165, 255), 2);
-
-      const cv::Point2d toInternal = internalCenter - center;
-      const double dot = toInternal.x * xDirection.x + toInternal.y * xDirection.y;
-      if (dot < 0.0)
-      {
-        angle = angle + CV_PI;
-        if (angle > CV_PI)
-        {
-          angle -= 2.0 * CV_PI;
-        }
-        else if (angle <= -CV_PI)
-        {
-          angle += 2.0 * CV_PI;
-        }
-      }
-    }
+    cv::drawContours(
+      result.diagnosticImage,
+      contours,
+      selectedInternalContourIndex,
+      cv::Scalar(0, 165, 255),
+      2);
   }
 
   const cv::Point2d xDir(std::cos(angle), std::sin(angle));
@@ -237,8 +215,11 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
   result.localization.yAxisEnd = center + yDir * axisLength;
 
   // cv::rectangle(result.diagnosticImage, bounding, cv::Scalar(255, 0, 0), 2);
-  drawStyledCenterOfMass(result.diagnosticImage, center);
-  drawStyledAxes(result.diagnosticImage, center, result.localization.xAxisStart, result.localization.xAxisEnd, result.localization.yAxisStart, result.localization.yAxisEnd);
+  if (createDiagnosticImage)
+  {
+    drawStyledCenterOfMass(result.diagnosticImage, center);
+    drawStyledAxes(result.diagnosticImage, center, result.localization.xAxisStart, result.localization.xAxisEnd, result.localization.yAxisStart, result.localization.yAxisEnd);
+  }
 
   result.processed = true;
   return result;
@@ -249,7 +230,9 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
   const std::vector<cv::Point>& searchPolygon,
   const std::vector<cv::Rect>& exclusionRects,
   int edgeSensitivity,
-  bool resolveAmbiguity) const
+  bool resolveAmbiguity,
+  bool createDiagnosticImage,
+  bool drawContours) const
 {
   SurfaceDefectResult result;
 
@@ -301,13 +284,16 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
   std::vector<std::vector<cv::Point>> contours;
   cv::findContours(edgeMask, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
 
-  if (input.channels() == 1)
+  if (createDiagnosticImage)
   {
-    cv::cvtColor(input, result.diagnosticImage, cv::COLOR_GRAY2BGR);
-  }
-  else
-  {
-    input.copyTo(result.diagnosticImage);
+    if (input.channels() == 1)
+    {
+      cv::cvtColor(input, result.diagnosticImage, cv::COLOR_GRAY2BGR);
+    }
+    else
+    {
+      input.copyTo(result.diagnosticImage);
+    }
   }
 
   // cv::polylines(result.diagnosticImage, std::vector<std::vector<cv::Point>>{searchPolygon}, true, cv::Scalar(255, 0, 0), 2);
@@ -362,7 +348,10 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
   if (bestContourIndex >= 0)
   {
     edgePixels = smoothSurfaceContour(contours[bestContourIndex], 5);
-    drawStyledContour(result.diagnosticImage, edgePixels, cv::Scalar(94, 197, 34));
+    if (createDiagnosticImage && drawContours)
+    {
+      drawStyledContour(result.diagnosticImage, edgePixels, cv::Scalar(94, 197, 34));
+    }
   }
 
   if (edgePixels.size() < 8)
@@ -380,59 +369,29 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
 
   const cv::PCA pca(data, cv::Mat(), cv::PCA::DATA_AS_ROW);
   const cv::Point2d center(pca.mean.at<double>(0, 0), pca.mean.at<double>(0, 1));
-  const cv::Point2d xDirection(pca.eigenvectors.at<double>(0, 0), pca.eigenvectors.at<double>(0, 1));
-  double angle = std::atan2(xDirection.y, xDirection.x);
+  cv::Point2d xDirection(pca.eigenvectors.at<double>(0, 0), pca.eigenvectors.at<double>(0, 1));
 
-  if (resolveAmbiguity && bestContourIndex >= 0)
+  int selectedInternalContourIndex = -1;
+  xDirection = resolveSurfacePcaAxisDirection(
+    center,
+    xDirection,
+    edgeMask,
+    cv::Point2d(),
+    bestContourIndex >= 0 ? cv::boundingRect(contours[bestContourIndex]) : roi,
+    resolveAmbiguity,
+    &contours,
+    bestContourArea,
+    &selectedInternalContourIndex);
+  const double angle = std::atan2(xDirection.y, xDirection.x);
+
+  if (createDiagnosticImage && drawContours && selectedInternalContourIndex >= 0)
   {
-    const std::vector<std::vector<cv::Point>>& allContours = contours;
-
-    int bestInternalIndex = -1;
-    double bestInternalArea = 0.0;
-    for (int i = 0; i < static_cast<int>(allContours.size()); ++i)
-    {
-      const double area = std::abs(cv::contourArea(allContours[i]));
-      if (area < 0.8 * bestContourArea && area > 8.0)
-      {
-        if (area > bestInternalArea)
-        {
-          bestInternalIndex = i;
-          bestInternalArea = area;
-        }
-      }
-    }
-
-    if (bestInternalIndex >= 0)
-    {
-      cv::Moments m = cv::moments(allContours[bestInternalIndex]);
-      cv::Point2d internalCenter;
-      if (std::abs(m.m00) > 1e-6)
-      {
-        internalCenter = cv::Point2d(m.m10 / m.m00, m.m01 / m.m00);
-      }
-      else
-      {
-        cv::Rect r = cv::boundingRect(allContours[bestInternalIndex]);
-        internalCenter = cv::Point2d(r.x + r.width / 2.0, r.y + r.height / 2.0);
-      }
-
-      cv::drawContours(result.diagnosticImage, allContours, bestInternalIndex, cv::Scalar(0, 165, 255), 2);
-
-      const cv::Point2d toInternal = internalCenter - center;
-      const double dot = toInternal.x * xDirection.x + toInternal.y * xDirection.y;
-      if (dot < 0.0)
-      {
-        angle = angle + CV_PI;
-        if (angle > CV_PI)
-        {
-          angle -= 2.0 * CV_PI;
-        }
-        else if (angle <= -CV_PI)
-        {
-          angle += 2.0 * CV_PI;
-        }
-      }
-    }
+    cv::drawContours(
+      result.diagnosticImage,
+      contours,
+      selectedInternalContourIndex,
+      cv::Scalar(0, 165, 255),
+      2);
   }
 
   const cv::Point2d xDir(std::cos(angle), std::sin(angle));
@@ -465,8 +424,11 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
   result.localization.yAxisEnd = center + yDir * axisLength;
 
   // cv::rectangle(result.diagnosticImage, bounding, cv::Scalar(255, 0, 0), 2);
-  drawStyledCenterOfMass(result.diagnosticImage, center);
-  drawStyledAxes(result.diagnosticImage, center, result.localization.xAxisStart, result.localization.xAxisEnd, result.localization.yAxisStart, result.localization.yAxisEnd);
+  if (createDiagnosticImage)
+  {
+    drawStyledCenterOfMass(result.diagnosticImage, center);
+    drawStyledAxes(result.diagnosticImage, center, result.localization.xAxisStart, result.localization.xAxisEnd, result.localization.yAxisStart, result.localization.yAxisEnd);
+  }
 
   result.processed = true;
   return result;

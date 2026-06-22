@@ -264,6 +264,8 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
     activeGeometryLineConfig(camera.id).alias = aliasEdit->text().trimmed();
     saveGeometryLinesRecipe(camera);
     testConfiguredGeometryLines(camera);
+    syncRuntimeGeometryLabels(camera);
+    refreshMeasurementOverlay(camera);
   });
 
   auto* testButton = createTouchIconButton("start", tr("actions.testGeometry"), panel);

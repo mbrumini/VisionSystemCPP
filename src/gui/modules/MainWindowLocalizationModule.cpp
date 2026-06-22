@@ -45,14 +45,20 @@ void MainWindowLocalizationModule::testLocalization(const CameraConfig& camera)
   const LocalizationSettings settings = recipes().loadLocalizationSettings(camera.id);
   const QVector<QRect> exclusionRects = recipes().loadLocalizationExclusionRects(camera.id);
 
-  auto job = [input, roi, exclusionRects, settings]() -> LocalizationResult {
+  const bool createDiagnosticImage =
+    camera.id == selectedCameraId() &&
+    *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry &&
+    *context().setupCameraId != camera.id;
+
+  auto job = [input, roi, exclusionRects, settings, createDiagnosticImage]() -> LocalizationResult {
     LocalizationProcessor processor;
     return processor.locateDarkObjectOnLightBackground(
       input,
       cv::Rect(roi.x(), roi.y(), roi.width(), roi.height()),
       toCvRects(exclusionRects),
       settings.thresholdFactor,
-      settings.thresholdOffset);
+      settings.thresholdOffset,
+      createDiagnosticImage);
   };
 
   const QString pendingCameraId = camera.id;
@@ -80,7 +86,7 @@ void MainWindowLocalizationModule::testLocalization(const CameraConfig& camera)
         *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry &&
         *context().setupCameraId != camera.id;
 
-      if (result.diagnosticImage.empty())
+      if (!result.processed || (updateView && result.diagnosticImage.empty()))
       {
         context().lastLocalizationResults->remove(camera.id);
         cameraRuntime()[camera.id].clearCurrentPose(camera.id);

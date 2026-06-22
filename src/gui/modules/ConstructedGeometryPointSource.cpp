@@ -1,6 +1,7 @@
 #include "gui/modules/ConstructedGeometryPointSource.h"
 
 #include "geometry/GeometrySet.h"
+#include "gui/geometry/GeometryDisplayNames.h"
 
 namespace
 {
@@ -8,16 +9,10 @@ QString pointSourceId(const QString& prefix, int index, const PointGeometry& poi
 {
   return QString("%1:%2:%3").arg(prefix).arg(index).arg(point.meta.id);
 }
-
-QString pointSourceLabel(const QString& prefix, int index, const PointGeometry& point)
-{
-  const QString id = point.meta.id.isEmpty() ? QString("%1_%2").arg(prefix).arg(index + 1) : point.meta.id;
-  const QString label = point.meta.label.isEmpty() ? id : QString("%1 (%2)").arg(point.meta.label, id);
-  return QString("%1 %2").arg(prefix, label);
-}
 }
 
-QVector<ConstructedGeometryPointSource> constructedGeometryPointSources(const GeometrySet& set)
+QVector<ConstructedGeometryPointSource> constructedGeometryPointSources(const GeometrySet& set,
+                                                                        const QHash<QString, QString>& aliases)
 {
   QVector<ConstructedGeometryPointSource> sources;
   sources.reserve(set.points.size() + set.constructedPoints.size());
@@ -27,7 +22,7 @@ QVector<ConstructedGeometryPointSource> constructedGeometryPointSources(const Ge
     const PointGeometry& point = set.points[i];
     ConstructedGeometryPointSource source;
     source.id = pointSourceId("point", i, point);
-    source.label = pointSourceLabel("P", i, point);
+    source.label = GeometryDisplayNames::pointSourceLabel("P", i, point, aliases);
     source.point = &point;
     sources.append(source);
   }
@@ -37,7 +32,7 @@ QVector<ConstructedGeometryPointSource> constructedGeometryPointSources(const Ge
     const PointGeometry& point = set.constructedPoints[i].point;
     ConstructedGeometryPointSource source;
     source.id = pointSourceId("constructed", i, point);
-    source.label = pointSourceLabel("C", i, point);
+    source.label = GeometryDisplayNames::pointSourceLabel("C", i, point, aliases);
     source.point = &point;
     sources.append(source);
   }

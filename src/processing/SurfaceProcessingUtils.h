@@ -72,43 +72,43 @@ inline void drawStyledCenterOfMass(cv::Mat& image, const cv::Point2d& center)
 {
   const cv::Point point = surfacePoint(center);
 
-  // 1. Shadow for reticle ring
-  cv::circle(image, point, 14, cv::Scalar(16, 16, 16), 4, cv::LINE_AA);
+  // 1. Shadow for reticle ring (thickness reduced from 4 to 2)
+  cv::circle(image, point, 14, cv::Scalar(16, 16, 16), 2, cv::LINE_AA);
   // 2. Cyan/Yellow reticle ring
   cv::circle(image, point, 14, cv::Scalar(255, 255, 0), 1, cv::LINE_AA);
 
-  // 3. Ticks pointing inwards (shadow first, then cyan line)
-  cv::line(image, cv::Point(point.x - 20, point.y), cv::Point(point.x - 14, point.y), cv::Scalar(16, 16, 16), 3, cv::LINE_AA);
-  cv::line(image, cv::Point(point.x + 14, point.y), cv::Point(point.x + 20, point.y), cv::Scalar(16, 16, 16), 3, cv::LINE_AA);
-  cv::line(image, cv::Point(point.x, point.y - 20), cv::Point(point.x, point.y - 14), cv::Scalar(16, 16, 16), 3, cv::LINE_AA);
-  cv::line(image, cv::Point(point.x, point.y + 14), cv::Point(point.x, point.y + 20), cv::Scalar(16, 16, 16), 3, cv::LINE_AA);
+  // 3. Ticks pointing inwards (shadow thickness reduced from 3 to 2)
+  cv::line(image, cv::Point(point.x - 20, point.y), cv::Point(point.x - 14, point.y), cv::Scalar(16, 16, 16), 2, cv::LINE_AA);
+  cv::line(image, cv::Point(point.x + 14, point.y), cv::Point(point.x + 20, point.y), cv::Scalar(16, 16, 16), 2, cv::LINE_AA);
+  cv::line(image, cv::Point(point.x, point.y - 20), cv::Point(point.x, point.y - 14), cv::Scalar(16, 16, 16), 2, cv::LINE_AA);
+  cv::line(image, cv::Point(point.x, point.y + 14), cv::Point(point.x, point.y + 20), cv::Scalar(16, 16, 16), 2, cv::LINE_AA);
 
   cv::line(image, cv::Point(point.x - 20, point.y), cv::Point(point.x - 14, point.y), cv::Scalar(255, 255, 0), 1, cv::LINE_AA);
   cv::line(image, cv::Point(point.x + 14, point.y), cv::Point(point.x + 20, point.y), cv::Scalar(255, 255, 0), 1, cv::LINE_AA);
   cv::line(image, cv::Point(point.x, point.y - 20), cv::Point(point.x, point.y - 14), cv::Scalar(255, 255, 0), 1, cv::LINE_AA);
   cv::line(image, cv::Point(point.x, point.y + 14), cv::Point(point.x, point.y + 20), cv::Scalar(255, 255, 0), 1, cv::LINE_AA);
 
-  // 4. Center Dot (orange core with black shadow border)
-  cv::circle(image, point, 4, cv::Scalar(16, 16, 16), -1, cv::LINE_AA);
-  cv::circle(image, point, 2, cv::Scalar(0, 165, 255), -1, cv::LINE_AA);
+  // 4. Center Dot (radius reduced from 4/2 to 3/1)
+  cv::circle(image, point, 3, cv::Scalar(16, 16, 16), -1, cv::LINE_AA);
+  cv::circle(image, point, 1, cv::Scalar(0, 165, 255), -1, cv::LINE_AA);
 }
 
 inline void drawStyledAxis(cv::Mat& image, const cv::Point& center, const cv::Point& start, const cv::Point& end, const cv::Scalar& color, const std::string& label)
 {
-  // Draw negative side (start to center) as a plain line
-  cv::line(image, start, center, cv::Scalar(16, 16, 16), 5, cv::LINE_AA);
-  cv::line(image, start, center, color, 2, cv::LINE_AA);
+  // Draw negative side (start to center) as a plain line (shadow from 5 to 3, color from 2 to 1)
+  cv::line(image, start, center, cv::Scalar(16, 16, 16), 3, cv::LINE_AA);
+  cv::line(image, start, center, color, 1, cv::LINE_AA);
 
-  // Draw positive side (center to end) as an arrowed line
-  cv::arrowedLine(image, center, end, cv::Scalar(16, 16, 16), 5, cv::LINE_AA, 0, 0.15);
-  cv::arrowedLine(image, center, end, color, 2, cv::LINE_AA, 0, 0.15);
+  // Draw positive side (center to end) as an arrowed line (shadow from 5 to 3, color from 2 to 1)
+  cv::arrowedLine(image, center, end, cv::Scalar(16, 16, 16), 3, cv::LINE_AA, 0, 0.15);
+  cv::arrowedLine(image, center, end, color, 1, cv::LINE_AA, 0, 0.15);
 
   if (!label.empty())
   {
     const cv::Point textPos = end + cv::Point(10, -10);
-    // Shadowed text
-    cv::putText(image, label, textPos, cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(16, 16, 16), 4, cv::LINE_AA);
-    cv::putText(image, label, textPos, cv::FONT_HERSHEY_SIMPLEX, 0.6, color, 2, cv::LINE_AA);
+    // Shadowed text (shadow thickness from 4 to 2, text thickness from 2 to 1, fontScale from 0.6 to 0.5)
+    cv::putText(image, label, textPos, cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(16, 16, 16), 2, cv::LINE_AA);
+    cv::putText(image, label, textPos, cv::FONT_HERSHEY_SIMPLEX, 0.5, color, 1, cv::LINE_AA);
   }
 }
 
@@ -126,11 +126,167 @@ inline void sortSurfaceBlobsByArea(SurfaceDefectResult& result)
   });
 }
 
-inline void drawSurfaceBlobs(cv::Mat& image, const std::vector<SurfaceBlob>& blobs)
+inline cv::Point2d surfaceContourCentroid(const std::vector<cv::Point>& contour)
+{
+  const cv::Moments moments = cv::moments(contour);
+  if (std::abs(moments.m00) <= 1e-6)
+  {
+    const cv::Rect bounds = cv::boundingRect(contour);
+    return cv::Point2d(
+      bounds.x + bounds.width / 2.0,
+      bounds.y + bounds.height / 2.0);
+  }
+
+  return cv::Point2d(moments.m10 / moments.m00, moments.m01 / moments.m00);
+}
+
+inline cv::Point2d surfaceMaskCentroid(
+  const cv::Mat& mask,
+  const cv::Point2d& origin = cv::Point2d())
+{
+  double sumX = 0.0;
+  double sumY = 0.0;
+  double count = 0.0;
+
+  for (int row = 0; row < mask.rows; ++row)
+  {
+    const uchar* rowPtr = mask.ptr<uchar>(row);
+    for (int col = 0; col < mask.cols; ++col)
+    {
+      if (rowPtr[col] == 0)
+      {
+        continue;
+      }
+
+      sumX += origin.x + col;
+      sumY += origin.y + row;
+      count += 1.0;
+    }
+  }
+
+  if (count <= 0.0)
+  {
+    return origin;
+  }
+
+  return cv::Point2d(sumX / count, sumY / count);
+}
+
+inline cv::Point2d resolveSurfacePcaAxisDirection(
+  const cv::Point2d& center,
+  cv::Point2d xDirection,
+  const cv::Mat& weightMask,
+  const cv::Point2d& maskOrigin,
+  const cv::Rect& referenceBounds,
+  bool resolveAmbiguity,
+  const std::vector<std::vector<cv::Point>>* contours,
+  double mainContourArea,
+  int* selectedInternalContourIndex = nullptr)
+{
+  if (selectedInternalContourIndex != nullptr)
+  {
+    *selectedInternalContourIndex = -1;
+  }
+
+  const double minOffset =
+    0.05 * std::max(20.0, std::hypot(referenceBounds.width, referenceBounds.height));
+
+  auto orientToward = [&](const cv::Point2d& target) {
+    const cv::Point2d offset = target - center;
+    const double projection = offset.x * xDirection.x + offset.y * xDirection.y;
+    if (projection < 0.0)
+    {
+      xDirection = -xDirection;
+    }
+  };
+
+  if (resolveAmbiguity && contours != nullptr && mainContourArea > 0.0)
+  {
+    int bestInternalIndex = -1;
+    double bestInternalDistance = 0.0;
+    for (int i = 0; i < static_cast<int>(contours->size()); ++i)
+    {
+      const double area = std::abs(cv::contourArea((*contours)[i]));
+      if (area >= 0.8 * mainContourArea || area <= 8.0)
+      {
+        continue;
+      }
+
+      const cv::Point2d internalCenter = surfaceContourCentroid((*contours)[i]);
+      const double distance = std::hypot(internalCenter.x - center.x, internalCenter.y - center.y);
+      if (distance < minOffset || distance <= bestInternalDistance)
+      {
+        continue;
+      }
+
+      bestInternalIndex = i;
+      bestInternalDistance = distance;
+    }
+
+    if (bestInternalIndex >= 0)
+    {
+      orientToward(surfaceContourCentroid((*contours)[bestInternalIndex]));
+      if (selectedInternalContourIndex != nullptr)
+      {
+        *selectedInternalContourIndex = bestInternalIndex;
+      }
+      return xDirection;
+    }
+  }
+
+  const cv::Point2d maskCentroid = surfaceMaskCentroid(weightMask, maskOrigin);
+  const cv::Point2d centroidOffset(maskCentroid.x - center.x, maskCentroid.y - center.y);
+  const double centroidProjection =
+    centroidOffset.x * xDirection.x + centroidOffset.y * xDirection.y;
+  if (std::abs(centroidProjection) >= minOffset * 0.5)
+  {
+    orientToward(maskCentroid);
+    return xDirection;
+  }
+
+  double positiveWeight = 0.0;
+  double negativeWeight = 0.0;
+  for (int row = 0; row < weightMask.rows; ++row)
+  {
+    const uchar* rowPtr = weightMask.ptr<uchar>(row);
+    for (int col = 0; col < weightMask.cols; ++col)
+    {
+      if (rowPtr[col] == 0)
+      {
+        continue;
+      }
+
+      const double projection =
+        (maskOrigin.x + col - center.x) * xDirection.x +
+        (maskOrigin.y + row - center.y) * xDirection.y;
+      const double weight = std::abs(projection) + 1.0;
+      if (projection > 0.0)
+      {
+        positiveWeight += weight;
+      }
+      else if (projection < 0.0)
+      {
+        negativeWeight += weight;
+      }
+    }
+  }
+
+  if (negativeWeight > positiveWeight)
+  {
+    xDirection = -xDirection;
+  }
+
+  return xDirection;
+}
+
+inline void drawSurfaceBlobs(cv::Mat& image, const std::vector<SurfaceBlob>& blobs, bool drawContours = true)
 {
   for (const SurfaceBlob& blob : blobs)
   {
-    drawStyledContour(image, blob.contour, cv::Scalar(94, 197, 34));
+    if (drawContours)
+    {
+      drawStyledContour(image, blob.contour, cv::Scalar(94, 197, 34));
+    }
     drawStyledCenterOfMass(image, blob.center);
   }
 }

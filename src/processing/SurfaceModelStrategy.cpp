@@ -187,7 +187,9 @@ RotatedTemplate rotateTemplate(const cv::Mat& image, double angleDegrees)
 SurfaceDefectResult SurfaceModelStrategy::locateByShapeMatching(
   const cv::Mat& input,
   const SurfaceShapeMatchConfig& config,
-  const std::vector<cv::Rect>& exclusionRects) const
+  const std::vector<cv::Rect>& exclusionRects,
+  bool createDiagnosticImage,
+  bool drawContours) const
 {
   SurfaceDefectResult result;
 
@@ -223,13 +225,16 @@ SurfaceDefectResult SurfaceModelStrategy::locateByShapeMatching(
   result.localization.method = "shape_matching";
   result.localization.inputPoints = static_cast<int>(contours.size());
 
-  if (input.channels() == 1)
+  if (createDiagnosticImage)
   {
-    cv::cvtColor(input, result.diagnosticImage, cv::COLOR_GRAY2BGR);
-  }
-  else
-  {
-    input.copyTo(result.diagnosticImage);
+    if (input.channels() == 1)
+    {
+      cv::cvtColor(input, result.diagnosticImage, cv::COLOR_GRAY2BGR);
+    }
+    else
+    {
+      input.copyTo(result.diagnosticImage);
+    }
   }
 
   // cv::rectangle(result.diagnosticImage, roi, cv::Scalar(255, 0, 0), 2);
@@ -363,42 +368,53 @@ SurfaceDefectResult SurfaceModelStrategy::locateByShapeMatching(
   result.localization.center = blob.center;
   fillReferenceAxes(result.localization, blob.boundingRect);
 
-  cv::Mat detectedArea = result.diagnosticImage.clone();
-  cv::drawContours(
-    detectedArea,
-    std::vector<std::vector<cv::Point>>{blob.contour},
-    0,
-    cv::Scalar(0, 210, 0),
-    cv::FILLED);
-  cv::addWeighted(detectedArea, 0.22, result.diagnosticImage, 0.78, 0.0, result.diagnosticImage);
-  cv::drawContours(
-    result.diagnosticImage,
-    std::vector<std::vector<cv::Point>>{blob.contour},
-    0,
-    cv::Scalar(0, 255, 0),
-    2);
-
-  cv::Point2d modelCenter;
-  double modelAngle = 0.0;
-  if (contourPose(config.modelContour, modelCenter, modelAngle))
+  if (createDiagnosticImage)
   {
-    const std::vector<cv::Point> posedModel = transformedContour(
-      config.modelContour,
-      modelCenter,
-      modelAngle,
-      blob.center,
-      result.localization.angleRadians);
-    drawStyledContour(result.diagnosticImage, posedModel, cv::Scalar(0, 255, 255));
+    if (drawContours)
+    {
+      cv::Mat detectedArea = result.diagnosticImage.clone();
+      cv::drawContours(
+        detectedArea,
+        std::vector<std::vector<cv::Point>>{blob.contour},
+        0,
+        cv::Scalar(0, 210, 0),
+        cv::FILLED);
+      cv::addWeighted(detectedArea, 0.22, result.diagnosticImage, 0.78, 0.0, result.diagnosticImage);
+      cv::drawContours(
+        result.diagnosticImage,
+        std::vector<std::vector<cv::Point>>{blob.contour},
+        0,
+        cv::Scalar(0, 255, 0),
+        2);
+    }
+
+    cv::Point2d modelCenter;
+    double modelAngle = 0.0;
+    if (contourPose(config.modelContour, modelCenter, modelAngle))
+    {
+      const std::vector<cv::Point> posedModel = transformedContour(
+        config.modelContour,
+        modelCenter,
+        modelAngle,
+        blob.center,
+        result.localization.angleRadians);
+      if (drawContours)
+      {
+        drawStyledContour(result.diagnosticImage, posedModel, cv::Scalar(0, 255, 255));
+      }
+    }
+    // cv::rectangle(result.diagnosticImage, blob.boundingRect, cv::Scalar(255, 0, 0), 2);
+    drawReference(result.diagnosticImage, result.localization);
   }
-  // cv::rectangle(result.diagnosticImage, blob.boundingRect, cv::Scalar(255, 0, 0), 2);
-  drawReference(result.diagnosticImage, result.localization);
   return result;
 }
 
 SurfaceDefectResult SurfaceModelStrategy::locateByTemplateMatching(
   const cv::Mat& input,
   const SurfaceTemplateMatchConfig& config,
-  const std::vector<cv::Rect>& exclusionRects) const
+  const std::vector<cv::Rect>& exclusionRects,
+  bool createDiagnosticImage,
+  bool drawContours) const
 {
   SurfaceDefectResult result;
 
@@ -431,13 +447,16 @@ SurfaceDefectResult SurfaceModelStrategy::locateByTemplateMatching(
     modelToMatch = toGray(config.modelImage);
   }
 
-  if (input.channels() == 1)
+  if (createDiagnosticImage)
   {
-    cv::cvtColor(input, result.diagnosticImage, cv::COLOR_GRAY2BGR);
-  }
-  else
-  {
-    input.copyTo(result.diagnosticImage);
+    if (input.channels() == 1)
+    {
+      cv::cvtColor(input, result.diagnosticImage, cv::COLOR_GRAY2BGR);
+    }
+    else
+    {
+      input.copyTo(result.diagnosticImage);
+    }
   }
 
   // cv::rectangle(result.diagnosticImage, roi, cv::Scalar(255, 0, 0), 2);
@@ -658,7 +677,13 @@ SurfaceDefectResult SurfaceModelStrategy::locateByTemplateMatching(
     matchRect,
     -result.localization.angleRadians);
 
-  cv::rectangle(result.diagnosticImage, matchRect, cv::Scalar(0, 255, 0), 2);
-  drawReference(result.diagnosticImage, result.localization);
+  if (createDiagnosticImage)
+  {
+    if (drawContours)
+    {
+      cv::rectangle(result.diagnosticImage, matchRect, cv::Scalar(0, 255, 0), 2);
+    }
+    drawReference(result.diagnosticImage, result.localization);
+  }
   return result;
 }

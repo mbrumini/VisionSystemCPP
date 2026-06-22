@@ -111,7 +111,9 @@ struct GeometryCircleRecipeConfig
   bool enabled = false;
   QString id = "circle_1";
   QString alias;
+  QString coordinateSpace = "part";
   QPointF partCenter;
+  QPointF imageCenter;
   double radius = 0.0;
   int innerBand = 20;
   int outerBand = 20;

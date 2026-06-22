@@ -86,6 +86,20 @@ void MainWindowConstructedGeometryModule::refreshConstructedGeometrySources(cons
     context().geometry->testConfiguredGeometryLines(camera);
   }
   rebuildConstructedGeometryRecipe(camera);
+  if (context().geometry)
+  {
+    context().geometry->syncRuntimeGeometryLabels(camera);
+  }
+}
+
+QHash<QString, QString> MainWindowConstructedGeometryModule::geometryAliasesForCamera(const CameraConfig& camera) const
+{
+  if (!context().geometry)
+  {
+    return {};
+  }
+
+  return context().geometry->geometryAliasMap(camera.id);
 }
 
 void MainWindowConstructedGeometryModule::showConstructedGeometryPanel(const CameraConfig& camera)
@@ -167,7 +181,8 @@ void MainWindowConstructedGeometryModule::showLineLineIntersectionPanel(const Ca
   context().clearToolPanel();
   refreshConstructedGeometrySources(camera);
 
-  const QVector<ConstructedGeometryLineSource> lineSources = constructedGeometryLineSources(cameraRuntime()[camera.id].geometries());
+  const QVector<ConstructedGeometryLineSource> lineSources =
+    constructedGeometryLineSources(cameraRuntime()[camera.id].geometries(), geometryAliasesForCamera(camera));
   auto* panel = createPanel(toolsContainer());
   auto* layout = createPanelLayout(panel);
   addTitle(layout, panel, QString("%1 | %2").arg(tr("actions.lineLineIntersection"), camera.id));
@@ -204,8 +219,8 @@ void MainWindowConstructedGeometryModule::showLineCircleIntersectionPanel(const 
   refreshConstructedGeometrySources(camera);
 
   const GeometrySet& set = cameraRuntime()[camera.id].geometries();
-  const QVector<ConstructedGeometryLineSource> lineSources = constructedGeometryLineSources(set);
-  const QVector<ConstructedGeometryCircleSource> circleSources = constructedGeometryCircleSources(set);
+  const QVector<ConstructedGeometryLineSource> lineSources = constructedGeometryLineSources(set, geometryAliasesForCamera(camera));
+  const QVector<ConstructedGeometryCircleSource> circleSources = constructedGeometryCircleSources(set, geometryAliasesForCamera(camera));
   auto* panel = createPanel(toolsContainer());
   auto* layout = createPanelLayout(panel);
   addTitle(layout, panel, QString("%1 | %2").arg(tr("actions.lineCircleIntersection"), camera.id));
@@ -240,7 +255,7 @@ void MainWindowConstructedGeometryModule::showCircleCircleIntersectionPanel(cons
   refreshConstructedGeometrySources(camera);
 
   const QVector<ConstructedGeometryCircleSource> circleSources =
-    constructedGeometryCircleSources(cameraRuntime()[camera.id].geometries());
+    constructedGeometryCircleSources(cameraRuntime()[camera.id].geometries(), geometryAliasesForCamera(camera));
   auto* panel = createPanel(toolsContainer());
   auto* layout = createPanelLayout(panel);
   addTitle(layout, panel, QString("%1 | %2").arg(tr("actions.circleCircleIntersection"), camera.id));
@@ -276,7 +291,8 @@ void MainWindowConstructedGeometryModule::showCircleCenterPanel(const CameraConf
   refreshConstructedGeometrySources(camera);
 
   const GeometrySet& set = cameraRuntime()[camera.id].geometries();
-  const QVector<ConstructedGeometryCircleSource> circleSources = constructedGeometryCircleSources(set);
+  const QVector<ConstructedGeometryCircleSource> circleSources =
+    constructedGeometryCircleSources(set, geometryAliasesForCamera(camera));
   auto* panel = createPanel(toolsContainer());
   auto* layout = createPanelLayout(panel);
   addTitle(layout, panel, QString("%1 | %2").arg(tr("actions.circleCenter"), camera.id));
@@ -306,7 +322,8 @@ void MainWindowConstructedGeometryModule::showMidpointPanel(const CameraConfig& 
   context().clearToolPanel();
   refreshConstructedGeometrySources(camera);
 
-  const QVector<ConstructedGeometryPointSource> pointSources = constructedGeometryPointSources(cameraRuntime()[camera.id].geometries());
+  const QVector<ConstructedGeometryPointSource> pointSources =
+    constructedGeometryPointSources(cameraRuntime()[camera.id].geometries(), geometryAliasesForCamera(camera));
   auto* panel = createPanel(toolsContainer());
   auto* layout = createPanelLayout(panel);
   addTitle(layout, panel, QString("%1 | %2").arg(tr("actions.midpoint"), camera.id));
@@ -341,7 +358,8 @@ void MainWindowConstructedGeometryModule::showOffsetLinePanel(const CameraConfig
   context().clearToolPanel();
   refreshConstructedGeometrySources(camera);
 
-  const QVector<ConstructedGeometryLineSource> lineSources = constructedGeometryLineSources(cameraRuntime()[camera.id].geometries());
+  const QVector<ConstructedGeometryLineSource> lineSources =
+    constructedGeometryLineSources(cameraRuntime()[camera.id].geometries(), geometryAliasesForCamera(camera));
   auto* panel = createPanel(toolsContainer());
   auto* layout = createPanelLayout(panel);
   addTitle(layout, panel, QString("%1 | %2").arg(tr("actions.offsetLine"), camera.id));
@@ -379,7 +397,8 @@ void MainWindowConstructedGeometryModule::showAngleBisectorPanel(const CameraCon
   context().clearToolPanel();
   refreshConstructedGeometrySources(camera);
 
-  const QVector<ConstructedGeometryLineSource> lineSources = constructedGeometryLineSources(cameraRuntime()[camera.id].geometries());
+  const QVector<ConstructedGeometryLineSource> lineSources =
+    constructedGeometryLineSources(cameraRuntime()[camera.id].geometries(), geometryAliasesForCamera(camera));
   auto* panel = createPanel(toolsContainer());
   auto* layout = createPanelLayout(panel);
   addTitle(layout, panel, QString("%1 | %2").arg(tr("actions.angleBisector"), camera.id));
@@ -415,8 +434,8 @@ void MainWindowConstructedGeometryModule::showTangentLinePanel(const CameraConfi
   refreshConstructedGeometrySources(camera);
 
   const GeometrySet& set = cameraRuntime()[camera.id].geometries();
-  const QVector<ConstructedGeometryPointSource> pointSources = constructedGeometryPointSources(set);
-  const QVector<ConstructedGeometryCircleSource> circleSources = constructedGeometryCircleSources(set);
+  const QVector<ConstructedGeometryPointSource> pointSources = constructedGeometryPointSources(set, geometryAliasesForCamera(camera));
+  const QVector<ConstructedGeometryCircleSource> circleSources = constructedGeometryCircleSources(set, geometryAliasesForCamera(camera));
   auto* panel = createPanel(toolsContainer());
   auto* layout = createPanelLayout(panel);
   addTitle(layout, panel, QString("%1 | %2").arg(tr("actions.tangentLine"), camera.id));
@@ -451,8 +470,8 @@ void MainWindowConstructedGeometryModule::showProjectPointPanel(const CameraConf
   refreshConstructedGeometrySources(camera);
 
   const GeometrySet& set = cameraRuntime()[camera.id].geometries();
-  const QVector<ConstructedGeometryPointSource> pointSources = constructedGeometryPointSources(set);
-  const QVector<ConstructedGeometryLineSource> lineSources = constructedGeometryLineSources(set);
+  const QVector<ConstructedGeometryPointSource> pointSources = constructedGeometryPointSources(set, geometryAliasesForCamera(camera));
+  const QVector<ConstructedGeometryLineSource> lineSources = constructedGeometryLineSources(set, geometryAliasesForCamera(camera));
   auto* panel = createPanel(toolsContainer());
   auto* layout = createPanelLayout(panel);
   addTitle(layout, panel, QString("%1 | %2").arg(tr("actions.projectPoint"), camera.id));

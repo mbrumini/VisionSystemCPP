@@ -2,6 +2,7 @@
 
 #include "geometry/PointGeometry.h"
 
+#include <QHash>
 #include <QString>
 #include <QVector>
 
@@ -14,5 +15,7 @@ struct ConstructedGeometryPointSource
   const PointGeometry* point = nullptr;
 };
 
-QVector<ConstructedGeometryPointSource> constructedGeometryPointSources(const GeometrySet& set);
+QVector<ConstructedGeometryPointSource> constructedGeometryPointSources(
+  const GeometrySet& set,
+  const QHash<QString, QString>& aliases = QHash<QString, QString>());
 const PointGeometry* findConstructedGeometryPointSource(const GeometrySet& set, const QString& sourceId);

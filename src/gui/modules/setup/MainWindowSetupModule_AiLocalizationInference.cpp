@@ -8,6 +8,7 @@
 #include "gui/modules/setup/AiLocalizationPaths.h"
 #include "gui/modules/setup/AiPythonRuntime.h"
 #include "gui/modules/setup/SetupCameraResolver.h"
+#include "processing/SurfaceProcessingUtils.h"
 
 #include <QDateTime>
 #include <QDir>
@@ -25,35 +26,6 @@
 
 namespace
 {
-cv::Mat diagnosticImage(const cv::Mat& original, const MaskPoseResult& pose)
-{
-  cv::Mat diagnostic = original.clone();
-  if (diagnostic.empty() || !pose.found)
-  {
-    return diagnostic;
-  }
-  cv::drawContours(
-    diagnostic,
-    std::vector<std::vector<cv::Point>>{pose.contour},
-    0,
-    cv::Scalar(0, 255, 0),
-    2);
-  const cv::Point center(qRound(pose.center.x), qRound(pose.center.y));
-  cv::drawMarker(
-    diagnostic, center, cv::Scalar(0, 255, 255),
-    cv::MARKER_CROSS, 24, 2);
-  const double axisLength = 60.0;
-  cv::line(
-    diagnostic,
-    center,
-    center + cv::Point(
-      qRound(std::cos(pose.angleRadians) * axisLength),
-      qRound(std::sin(pose.angleRadians) * axisLength)),
-    cv::Scalar(255, 255, 0),
-    2);
-  return diagnostic;
-}
-
 bool maskCentroid(const cv::Mat& mask, cv::Point2d* center)
 {
   if (mask.empty())
@@ -341,39 +313,68 @@ void MainWindowSetupModule::handleAiLocalizationInferenceOutput(const QString& c
         }
         else
         {
-          result.diagnosticImage = diagnosticImage(originalFrame, result.pose);
-          if (object.value("reference_found").toBool())
+          result.diagnosticImage = originalFrame.clone();
+          if (!result.diagnosticImage.empty())
           {
-            cv::Mat refMask;
-            const QString refData = object.value("reference_mask_data").toString();
-            if (!refData.isEmpty())
+            const bool drawContours = !context().machineRunning || !*context().machineRunning;
+            if (drawContours)
             {
-              QByteArray bytes = QByteArray::fromBase64(refData.toUtf8());
-              std::vector<uchar> buf(bytes.begin(), bytes.end());
-              refMask = cv::imdecode(buf, cv::IMREAD_GRAYSCALE);
+              drawStyledContour(result.diagnosticImage, result.pose.contour);
             }
-            result.hasOrientationReference = maskCentroid(refMask, &result.orientationReferenceCenter);
-          }
-          if (result.hasOrientationReference && !result.diagnosticImage.empty())
-          {
-            const cv::Point pieceCenter(
-              qRound(result.pose.center.x), qRound(result.pose.center.y));
-            const cv::Point referenceCenter(
-              qRound(result.orientationReferenceCenter.x),
-              qRound(result.orientationReferenceCenter.y));
-            cv::drawMarker(
-              result.diagnosticImage,
-              referenceCenter,
-              cv::Scalar(0, 165, 255),
-              cv::MARKER_DIAMOND,
-              20,
-              2);
-            cv::line(
-              result.diagnosticImage,
-              pieceCenter,
-              referenceCenter,
-              cv::Scalar(0, 165, 255),
-              2);
+
+            if (object.value("reference_found").toBool())
+            {
+              cv::Mat refMask;
+              const QString refData = object.value("reference_mask_data").toString();
+              if (!refData.isEmpty())
+              {
+                QByteArray bytes = QByteArray::fromBase64(refData.toUtf8());
+                std::vector<uchar> buf(bytes.begin(), bytes.end());
+                refMask = cv::imdecode(buf, cv::IMREAD_GRAYSCALE);
+              }
+              result.hasOrientationReference = maskCentroid(refMask, &result.orientationReferenceCenter);
+            }
+
+            double finalAngle = result.pose.angleRadians;
+            if (result.hasOrientationReference)
+            {
+              finalAngle = std::atan2(
+                result.orientationReferenceCenter.y - result.pose.center.y,
+                result.orientationReferenceCenter.x - result.pose.center.x);
+            }
+
+            const cv::Point2d xDir(std::cos(finalAngle), std::sin(finalAngle));
+            const cv::Point2d yDir(-xDir.y, xDir.x);
+            const double axisLength = 60.0;
+            const cv::Point2d xStart = result.pose.center - xDir * axisLength;
+            const cv::Point2d xEnd = result.pose.center + xDir * axisLength;
+            const cv::Point2d yStart = result.pose.center - yDir * axisLength;
+            const cv::Point2d yEnd = result.pose.center + yDir * axisLength;
+
+            drawStyledAxes(result.diagnosticImage, result.pose.center, xStart, xEnd, yStart, yEnd);
+            drawStyledCenterOfMass(result.diagnosticImage, result.pose.center);
+
+            if (result.hasOrientationReference)
+            {
+              const cv::Point pieceCenter(
+                qRound(result.pose.center.x), qRound(result.pose.center.y));
+              const cv::Point referenceCenter(
+                qRound(result.orientationReferenceCenter.x),
+                qRound(result.orientationReferenceCenter.y));
+              cv::drawMarker(
+                result.diagnosticImage,
+                referenceCenter,
+                cv::Scalar(0, 165, 255),
+                cv::MARKER_DIAMOND,
+                20,
+                2);
+              cv::line(
+                result.diagnosticImage,
+                pieceCenter,
+                referenceCenter,
+                cv::Scalar(0, 165, 255),
+                2);
+            }
           }
         }
       }

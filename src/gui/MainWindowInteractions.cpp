@@ -260,6 +260,8 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
   {
     return;
   }
+  runtime.clearCurrentPose(camera.id);
+  runtime.clearGeometries();
   appendLog(QString("Pipeline simulatore acquisito: %1 frame=%2")
     .arg(camera.id)
     .arg(runtime.currentSimulatorFrame().frameId));
@@ -396,11 +398,9 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
             m_selectedPreview = m_imaging.matToPixmap(result.diagnosticImage);
             m_largeImage->setImage(m_selectedPreview);
           }
-          GeometryOverlay overlay;
-          m_geometry.appendCurrentPartPoseOverlay(camera, overlay);
-          m_largeImage->setGeometryOverlay(overlay);
           updateLargePreview();
         }
+        m_setup.refreshSetupGeometryResults(camera);
         publishSimulatorResult(camera.id);
         decPendingJobs(camera.id);
         updateMeasurementResults();
@@ -506,9 +506,11 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
   }
 
   const qint64 startedAt = QDateTime::currentMSecsSinceEpoch();
+  const bool createDiagnosticImage = (camera.id == m_selectedCameraId);
+  const bool drawContours = !m_machineRunning;
   auto job = [
       input, searchRect, exclusions, localization, thresholdSettings,
-      requestedStrategy, model, templateImage, twoCirclesConfig]() {
+      requestedStrategy, model, templateImage, twoCirclesConfig, createDiagnosticImage, drawContours]() {
     try
     {
       SurfaceDefectProcessor processor;
@@ -521,7 +523,9 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
           input,
           searchRect,
           SurfaceLocalizationAdapters::toCvRects(exclusions),
-          settings);
+          settings,
+          createDiagnosticImage,
+          drawContours);
       }
 
       if (requestedStrategy == "edgePca")
@@ -530,7 +534,10 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
           input,
           searchRect,
           SurfaceLocalizationAdapters::toCvRects(exclusions),
-          localization.edgeSensitivity);
+          localization.edgeSensitivity,
+          localization.pcaResolveAmbiguity,
+          createDiagnosticImage,
+          drawContours);
       }
 
       if (requestedStrategy == "threshold" || requestedStrategy == "edge")
@@ -544,7 +551,7 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
           config.threshold.minValue = localization.thresholdMin;
           config.threshold.maxValue = localization.thresholdMax;
           return processor.locateAnnulusByGrayscaleThreshold(
-            input, config, SurfaceLocalizationAdapters::toCvRects(exclusions));
+            input, config, SurfaceLocalizationAdapters::toCvRects(exclusions), createDiagnosticImage, drawContours);
         }
         config.center = cv::Point(localization.edgeCenter.x(), localization.edgeCenter.y());
         config.outerRadius = localization.edgeRadius + localization.edgeBandOuter;
@@ -552,7 +559,7 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
         config.edgeSensitivity = localization.edgeSensitivity;
         config.edgeFitMaxError = localization.edgeFitMaxError;
         return processor.locateAnnulusByEdge(
-          input, config, SurfaceLocalizationAdapters::toCvRects(exclusions));
+          input, config, SurfaceLocalizationAdapters::toCvRects(exclusions), createDiagnosticImage, drawContours);
       }
 
       if (requestedStrategy == "two_circles_axis")
@@ -561,9 +568,11 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
           processor.locateTwoCirclesAxis(
             input,
             twoCirclesConfig,
-            SurfaceLocalizationAdapters::toCvRects(exclusions));
+            SurfaceLocalizationAdapters::toCvRects(exclusions),
+            createDiagnosticImage,
+            drawContours);
         SurfaceDefectResult converted;
-        converted.processed = !strategyResult.diagnosticImage.empty();
+        converted.processed = strategyResult.processed;
         converted.diagnosticImage = strategyResult.diagnosticImage;
         converted.localization.found = strategyResult.found;
         converted.localization.method = strategyResult.strategyName;
@@ -594,7 +603,7 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
           config.modelContour.emplace_back(point.x(), point.y());
         }
         return processor.locateByShapeMatching(
-          input, config, SurfaceLocalizationAdapters::toCvRects(exclusions));
+          input, config, SurfaceLocalizationAdapters::toCvRects(exclusions), createDiagnosticImage, drawContours);
       }
 
       SurfaceTemplateMatchConfig config;
@@ -606,7 +615,7 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
       config.angleEndDegrees = model.angleEndDegrees;
       config.angleStepDegrees = model.angleStepDegrees;
       return processor.locateByTemplateMatching(
-        input, config, SurfaceLocalizationAdapters::toCvRects(exclusions));
+        input, config, SurfaceLocalizationAdapters::toCvRects(exclusions), createDiagnosticImage, drawContours);
     }
     catch (const cv::Exception&)
     {
@@ -701,6 +710,8 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
           m_recipeManager.loadSurfaceDefectExclusionRects(camera.id));
         updateLargePreview();
       }
+
+      m_setup.refreshSetupGeometryResults(camera);
 
       appendLog(QString("Pipeline simulatore invio risultato: %1 frame=%2")
         .arg(camera.id)

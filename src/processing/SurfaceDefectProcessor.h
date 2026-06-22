@@ -87,6 +87,7 @@ struct SurfaceStrategyResult
   cv::Point2d yAxisEnd;
   std::vector<SurfaceCircleFeatureResult> features;
   cv::Mat diagnosticImage;
+  bool processed = false;
 };
 
 struct SurfaceAnnulusThresholdConfig
@@ -130,50 +131,68 @@ public:
     const cv::Mat& input,
     const cv::Rect& searchRoi,
     const std::vector<cv::Rect>& exclusionRects = {},
-    const SurfaceThresholdSettings& settings = {}) const;
+    const SurfaceThresholdSettings& settings = {},
+    bool createDiagnosticImage = true,
+    bool drawContours = true) const;
 
   SurfaceDefectResult detectByGrayscaleThreshold(
     const cv::Mat& input,
     const std::vector<cv::Point>& searchPolygon,
     const std::vector<cv::Rect>& exclusionRects = {},
-    const SurfaceThresholdSettings& settings = {}) const;
+    const SurfaceThresholdSettings& settings = {},
+    bool createDiagnosticImage = true,
+    bool drawContours = true) const;
 
   SurfaceStrategyResult locateTwoCirclesAxis(
     const cv::Mat& input,
     const SurfaceTwoCirclesStrategyConfig& config,
-    const std::vector<cv::Rect>& exclusionRects = {}) const;
+    const std::vector<cv::Rect>& exclusionRects = {},
+    bool createDiagnosticImage = true,
+    bool drawContours = true) const;
 
   SurfaceDefectResult locateAnnulusByGrayscaleThreshold(
     const cv::Mat& input,
     const SurfaceAnnulusThresholdConfig& config,
-    const std::vector<cv::Rect>& exclusionRects = {}) const;
+    const std::vector<cv::Rect>& exclusionRects = {},
+    bool createDiagnosticImage = true,
+    bool drawContours = true) const;
 
   SurfaceDefectResult locateAnnulusByEdge(
     const cv::Mat& input,
     const SurfaceAnnulusThresholdConfig& config,
-    const std::vector<cv::Rect>& exclusionRects = {}) const;
+    const std::vector<cv::Rect>& exclusionRects = {},
+    bool createDiagnosticImage = true,
+    bool drawContours = true) const;
 
   SurfaceDefectResult locateByEdgePca(
     const cv::Mat& input,
     const cv::Rect& searchRoi,
     const std::vector<cv::Rect>& exclusionRects = {},
     int edgeSensitivity = 60,
-    bool resolveAmbiguity = false) const;
+    bool resolveAmbiguity = false,
+    bool createDiagnosticImage = true,
+    bool drawContours = true) const;
 
   SurfaceDefectResult locateByEdgePca(
     const cv::Mat& input,
     const std::vector<cv::Point>& searchPolygon,
     const std::vector<cv::Rect>& exclusionRects = {},
     int edgeSensitivity = 60,
-    bool resolveAmbiguity = false) const;
+    bool resolveAmbiguity = false,
+    bool createDiagnosticImage = true,
+    bool drawContours = true) const;
 
   SurfaceDefectResult locateByShapeMatching(
     const cv::Mat& input,
     const SurfaceShapeMatchConfig& config,
-    const std::vector<cv::Rect>& exclusionRects = {}) const;
+    const std::vector<cv::Rect>& exclusionRects = {},
+    bool createDiagnosticImage = true,
+    bool drawContours = true) const;
 
   SurfaceDefectResult locateByTemplateMatching(
     const cv::Mat& input,
     const SurfaceTemplateMatchConfig& config,
-    const std::vector<cv::Rect>& exclusionRects = {}) const;
+    const std::vector<cv::Rect>& exclusionRects = {},
+    bool createDiagnosticImage = true,
+    bool drawContours = true) const;
 };

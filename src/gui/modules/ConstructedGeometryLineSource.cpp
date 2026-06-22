@@ -1,6 +1,7 @@
 #include "gui/modules/ConstructedGeometryLineSource.h"
 
 #include "geometry/GeometrySet.h"
+#include "gui/geometry/GeometryDisplayNames.h"
 
 namespace
 {
@@ -8,16 +9,15 @@ QString lineSourceId(const QString& prefix, int index, const LineGeometry& line)
 {
   return QString("%1:%2:%3").arg(prefix).arg(index).arg(line.meta.id);
 }
-
-QString lineSourceLabel(const QString& prefix, int index, const LineGeometry& line)
-{
-  const QString id = line.meta.id.isEmpty() ? QString("%1_%2").arg(prefix).arg(index + 1) : line.meta.id;
-  const QString label = line.meta.label.isEmpty() ? id : QString("%1 (%2)").arg(line.meta.label, id);
-  return QString("%1 %2").arg(prefix, label);
-}
 }
 
 QVector<ConstructedGeometryLineSource> constructedGeometryLineSources(const QVector<LineGeometry>& lines)
+{
+  return constructedGeometryLineSources(lines, QHash<QString, QString>());
+}
+
+QVector<ConstructedGeometryLineSource> constructedGeometryLineSources(const QVector<LineGeometry>& lines,
+                                                                      const QHash<QString, QString>& aliases)
 {
   QVector<ConstructedGeometryLineSource> sources;
   sources.reserve(lines.size());
@@ -26,7 +26,7 @@ QVector<ConstructedGeometryLineSource> constructedGeometryLineSources(const QVec
   {
     ConstructedGeometryLineSource source;
     source.id = line.meta.id;
-    source.label = line.meta.label.isEmpty() ? line.meta.id : QString("%1 (%2)").arg(line.meta.label, line.meta.id);
+    source.label = GeometryDisplayNames::resolvedLabel(line.meta.id, line.meta.label, aliases);
     source.line = &line;
     sources.append(source);
   }
@@ -34,7 +34,8 @@ QVector<ConstructedGeometryLineSource> constructedGeometryLineSources(const QVec
   return sources;
 }
 
-QVector<ConstructedGeometryLineSource> constructedGeometryLineSources(const GeometrySet& set)
+QVector<ConstructedGeometryLineSource> constructedGeometryLineSources(const GeometrySet& set,
+                                                                      const QHash<QString, QString>& aliases)
 {
   QVector<ConstructedGeometryLineSource> sources;
   sources.reserve(set.lines.size() + set.constructedLines.size());
@@ -44,7 +45,7 @@ QVector<ConstructedGeometryLineSource> constructedGeometryLineSources(const Geom
     const LineGeometry& line = set.lines[i];
     ConstructedGeometryLineSource source;
     source.id = lineSourceId("line", i, line);
-    source.label = lineSourceLabel("L", i, line);
+    source.label = GeometryDisplayNames::lineSourceLabel("L", i, line, aliases);
     source.line = &line;
     sources.append(source);
   }
@@ -54,7 +55,7 @@ QVector<ConstructedGeometryLineSource> constructedGeometryLineSources(const Geom
     const LineGeometry& line = set.constructedLines[i].line;
     ConstructedGeometryLineSource source;
     source.id = lineSourceId("constructed", i, line);
-    source.label = lineSourceLabel("C", i, line);
+    source.label = GeometryDisplayNames::lineSourceLabel("C", i, line, aliases);
     source.line = &line;
     sources.append(source);
   }

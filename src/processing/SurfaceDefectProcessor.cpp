@@ -10,42 +10,52 @@ SurfaceDefectResult SurfaceDefectProcessor::detectByGrayscaleThreshold(
   const cv::Mat& input,
   const cv::Rect& searchRoi,
   const std::vector<cv::Rect>& exclusionRects,
-  const SurfaceThresholdSettings& settings) const
+  const SurfaceThresholdSettings& settings,
+  bool createDiagnosticImage,
+  bool drawContours) const
 {
-  return SurfaceThresholdStrategy().detectInRoi(input, searchRoi, exclusionRects, settings);
+  return SurfaceThresholdStrategy().detectInRoi(input, searchRoi, exclusionRects, settings, createDiagnosticImage, drawContours);
 }
 
 SurfaceDefectResult SurfaceDefectProcessor::detectByGrayscaleThreshold(
   const cv::Mat& input,
   const std::vector<cv::Point>& searchPolygon,
   const std::vector<cv::Rect>& exclusionRects,
-  const SurfaceThresholdSettings& settings) const
+  const SurfaceThresholdSettings& settings,
+  bool createDiagnosticImage,
+  bool drawContours) const
 {
-  return SurfaceThresholdStrategy().detectInPolygon(input, searchPolygon, exclusionRects, settings);
+  return SurfaceThresholdStrategy().detectInPolygon(input, searchPolygon, exclusionRects, settings, createDiagnosticImage, drawContours);
 }
 
 SurfaceStrategyResult SurfaceDefectProcessor::locateTwoCirclesAxis(
   const cv::Mat& input,
   const SurfaceTwoCirclesStrategyConfig& config,
-  const std::vector<cv::Rect>& exclusionRects) const
+  const std::vector<cv::Rect>& exclusionRects,
+  bool createDiagnosticImage,
+  bool drawContours) const
 {
-  return SurfaceTwoCirclesStrategy().locate(input, config, exclusionRects);
+  return SurfaceTwoCirclesStrategy().locate(input, config, exclusionRects, createDiagnosticImage, drawContours);
 }
 
 SurfaceDefectResult SurfaceDefectProcessor::locateAnnulusByGrayscaleThreshold(
   const cv::Mat& input,
   const SurfaceAnnulusThresholdConfig& config,
-  const std::vector<cv::Rect>& exclusionRects) const
+  const std::vector<cv::Rect>& exclusionRects,
+  bool createDiagnosticImage,
+  bool drawContours) const
 {
-  return SurfaceThresholdStrategy().locateAnnulus(input, config, exclusionRects);
+  return SurfaceThresholdStrategy().locateAnnulus(input, config, exclusionRects, createDiagnosticImage, drawContours);
 }
 
 SurfaceDefectResult SurfaceDefectProcessor::locateAnnulusByEdge(
   const cv::Mat& input,
   const SurfaceAnnulusThresholdConfig& config,
-  const std::vector<cv::Rect>& exclusionRects) const
+  const std::vector<cv::Rect>& exclusionRects,
+  bool createDiagnosticImage,
+  bool drawContours) const
 {
-  return SurfaceEdgeStrategy().locateAnnulus(input, config, exclusionRects);
+  return SurfaceEdgeStrategy().locateAnnulus(input, config, exclusionRects, createDiagnosticImage, drawContours);
 }
 
 SurfaceDefectResult SurfaceDefectProcessor::locateByEdgePca(
@@ -53,9 +63,11 @@ SurfaceDefectResult SurfaceDefectProcessor::locateByEdgePca(
   const cv::Rect& searchRoi,
   const std::vector<cv::Rect>& exclusionRects,
   int edgeSensitivity,
-  bool resolveAmbiguity) const
+  bool resolveAmbiguity,
+  bool createDiagnosticImage,
+  bool drawContours) const
 {
-  return SurfacePcaStrategy().locateByEdgePca(input, searchRoi, exclusionRects, edgeSensitivity, resolveAmbiguity);
+  return SurfacePcaStrategy().locateByEdgePca(input, searchRoi, exclusionRects, edgeSensitivity, resolveAmbiguity, createDiagnosticImage, drawContours);
 }
 
 SurfaceDefectResult SurfaceDefectProcessor::locateByEdgePca(
@@ -63,23 +75,29 @@ SurfaceDefectResult SurfaceDefectProcessor::locateByEdgePca(
   const std::vector<cv::Point>& searchPolygon,
   const std::vector<cv::Rect>& exclusionRects,
   int edgeSensitivity,
-  bool resolveAmbiguity) const
+  bool resolveAmbiguity,
+  bool createDiagnosticImage,
+  bool drawContours) const
 {
-  return SurfacePcaStrategy().locateByEdgePca(input, searchPolygon, exclusionRects, edgeSensitivity, resolveAmbiguity);
+  return SurfacePcaStrategy().locateByEdgePca(input, searchPolygon, exclusionRects, edgeSensitivity, resolveAmbiguity, createDiagnosticImage, drawContours);
 }
 
 SurfaceDefectResult SurfaceDefectProcessor::locateByShapeMatching(
   const cv::Mat& input,
   const SurfaceShapeMatchConfig& config,
-  const std::vector<cv::Rect>& exclusionRects) const
+  const std::vector<cv::Rect>& exclusionRects,
+  bool createDiagnosticImage,
+  bool drawContours) const
 {
-  return SurfaceModelStrategy().locateByShapeMatching(input, config, exclusionRects);
+  return SurfaceModelStrategy().locateByShapeMatching(input, config, exclusionRects, createDiagnosticImage, drawContours);
 }
 
 SurfaceDefectResult SurfaceDefectProcessor::locateByTemplateMatching(
   const cv::Mat& input,
   const SurfaceTemplateMatchConfig& config,
-  const std::vector<cv::Rect>& exclusionRects) const
+  const std::vector<cv::Rect>& exclusionRects,
+  bool createDiagnosticImage,
+  bool drawContours) const
 {
-  return SurfaceModelStrategy().locateByTemplateMatching(input, config, exclusionRects);
+  return SurfaceModelStrategy().locateByTemplateMatching(input, config, exclusionRects, createDiagnosticImage, drawContours);
 }

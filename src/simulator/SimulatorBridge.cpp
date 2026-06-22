@@ -1,6 +1,8 @@
 #include "simulator/SimulatorBridge.h"
 
+#include <QJsonArray>
 #include <QJsonDocument>
+#include <QJsonObject>
 #include <QJsonParseError>
 
 #include <opencv2/imgcodecs.hpp>
@@ -431,7 +433,37 @@ void SimulatorBridge::processMessage(
     while (queue.size() >= kMaximumQueuedFramesPerChannel)
     {
       const SimulatorFrame dropped = queue.dequeue();
-      m_frameClients.remove(frameKey(dropped.metadata));
+      const QString droppedKey = frameKey(dropped.metadata);
+      std::shared_ptr<ClientConnection> droppedClient = m_frameClients.take(droppedKey);
+      if (droppedClient)
+      {
+        QJsonObject result;
+        result["type"] = "result";
+        result["protocolVersion"] = kProtocolVersion;
+        result["scenarioId"] = dropped.metadata.scenarioId;
+        result["cameraId"] = dropped.metadata.cameraId;
+        result["channel"] = dropped.metadata.channel;
+        result["slot"] = dropped.metadata.slot;
+        result["frameId"] = dropped.metadata.frameId;
+
+        QJsonObject poseObject;
+        poseObject["valid"] = false;
+        poseObject["x"] = 0.0;
+        poseObject["y"] = 0.0;
+        poseObject["angleDeg"] = 0.0;
+        poseObject["score"] = 0.0;
+        poseObject["method"] = "queue_overflow";
+        result["pose"] = poseObject;
+        result["processingMs"] = 0.0;
+
+        QJsonArray errors;
+        errors.append("Coda piena: frame scartato");
+        result["errors"] = errors;
+
+        std::thread([this, droppedClient, result]() {
+          sendMessage(droppedClient, result);
+        }).detach();
+      }
     }
     queue.enqueue(frame);
     queueDepth = queue.size();
@@ -489,4 +521,15 @@ QString SimulatorBridge::frameKey(const SimulatorFrameMetadata& metadata) const
   return QString("%1|%2|%3")
     .arg(metadata.scenarioId, metadata.channel)
     .arg(metadata.frameId);
+}
+
+int SimulatorBridge::queueSize(const QString& channel) const
+{
+  std::lock_guard lock(m_mutex);
+  auto it = m_framesByChannel.constFind(channel);
+  if (it == m_framesByChannel.constEnd())
+  {
+    return 0;
+  }
+  return it->size();
 }

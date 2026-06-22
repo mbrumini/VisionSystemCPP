@@ -8,6 +8,7 @@
 #include "gui/modules/MainWindowMeasurementModule.h"
 #include "gui/modules/MainWindowContext.h"
 #include "gui/modules/MainWindowSurfaceModule.h"
+#include "gui/modules/MainWindowCameraConfigModule.h"
 #include "gui/modules/setup/SetupCameraResolver.h"
 #include "util/AsyncExecutor.h"
 
@@ -19,6 +20,15 @@
 void MainWindowSetupModule::startCameraSimulation(const CameraConfig& camera, bool refreshSetupPanel)
 {
   const CameraConfig effectiveCamera = currentConfiguredCamera(config(), camera);
+
+  if (effectiveCamera.type == "usb" && effectiveCamera.usbIndex < 0)
+  {
+    if (context().cameraConfig)
+    {
+      context().cameraConfig->configureUsbCameraSlot(effectiveCamera.slot, effectiveCamera.id);
+    }
+    return;
+  }
 
   if (effectiveCamera.type != "file" && effectiveCamera.type != "usb" &&
       effectiveCamera.type != "vimba" && effectiveCamera.type != "simulator")
@@ -112,6 +122,15 @@ void MainWindowSetupModule::stepCameraSimulation(const CameraConfig& camera)
 {
   const CameraConfig effectiveCamera = currentConfiguredCamera(config(), camera);
 
+  if (effectiveCamera.type == "usb" && effectiveCamera.usbIndex < 0)
+  {
+    if (context().cameraConfig)
+    {
+      context().cameraConfig->configureUsbCameraSlot(effectiveCamera.slot, effectiveCamera.id);
+    }
+    return;
+  }
+
   if (effectiveCamera.type != "file" && effectiveCamera.type != "usb" &&
       effectiveCamera.type != "vimba" && effectiveCamera.type != "simulator")
   {
@@ -200,10 +219,6 @@ void MainWindowSetupModule::advanceCameraFrame(const CameraConfig& camera)
       {
         selectedPreview() = framePreview;
         largeImage()->setImage(selectedPreview());
-        if (context().geometry)
-        {
-          context().geometry->showRuntimeGeometryOverlay(effectiveCamera);
-        }
       }
       QElapsedTimer scanTimer;
       scanTimer.start();
@@ -238,6 +253,7 @@ void MainWindowSetupModule::processCurrentCameraFrame(const CameraConfig& camera
   if (!MainWindowCameraProfile::isGrayscaleLocalization(camera, config()))
   {
     log(QString("pipeline localization skipped: %1 profile=%2").arg(camera.id, camera.profile.id));
+    refreshSetupGeometryResults(camera);
     return;
   }
 

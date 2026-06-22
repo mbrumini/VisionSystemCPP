@@ -19,6 +19,7 @@ struct LocalizationResult
   cv::Point2d yAxisEnd;
   std::vector<cv::Point> contour;
   cv::Mat diagnosticImage;
+  bool processed = false;
 };
 
 class LocalizationProcessor
@@ -29,7 +30,8 @@ public:
     const cv::Rect& searchRoi,
     const std::vector<cv::Rect>& exclusionRects = {},
     double thresholdFactor = 0.5,
-    double thresholdOffset = 0.0) const;
+    double thresholdOffset = 0.0,
+    bool createDiagnosticImage = true) const;
 
 private:
   double estimateBackgroundLevel(const cv::Mat& grayRoi) const;
