@@ -5,12 +5,14 @@
 #include "gui/modules/MainWindowSetupModule.h"
 #include "gui/modules/MainWindowContext.h"
 
+#include "gui/geometry/GeometryOverlay.h"
 #include "gui/SurfaceLocalizationAdapters.h"
 #include "processing/SurfaceModelTrainer.h"
 #include "util/AsyncExecutor.h"
 
 #include <QDir>
 #include <QFileInfo>
+#include <QPolygon>
 
 #include <opencv2/imgcodecs.hpp>
 
@@ -31,6 +33,17 @@ cv::Rect toCvRect(const QRect& rect)
   return cv::Rect(rect.x(), rect.y(), rect.width(), rect.height());
 }
 
+cv::Rect sampleSearchRect(const CameraConfig& camera, const cv::Mat& input, const RecipeManager& recipes)
+{
+  QRect globalAoi;
+  if (recipes.loadGlobalSurfaceAoi(camera.id, globalAoi))
+  {
+    return cv::Rect(globalAoi.x(), globalAoi.y(), globalAoi.width(), globalAoi.height());
+  }
+
+  return cv::Rect(0, 0, input.cols, input.rows);
+}
+
 SurfaceShapeMatchConfig shapeMatchConfigFromModel(const SurfaceModelConfig& model, const cv::Mat& input)
 {
   SurfaceShapeMatchConfig config;
@@ -45,6 +58,100 @@ SurfaceShapeMatchConfig shapeMatchConfigFromModel(const SurfaceModelConfig& mode
   config.useConvexHull = model.useConvexHull;
   return config;
 }
+}
+
+bool MainWindowSurfaceModule::localizePoseOnSample(const CameraConfig& camera)
+{
+  if (!MainWindowCameraProfile::isGrayscaleLocalization(camera, config()))
+  {
+    return false;
+  }
+
+  QString imageError;
+  const cv::Mat input = context().imaging->sampleInputImage(camera, &imageError);
+  if (input.empty())
+  {
+    return false;
+  }
+
+  const SurfaceAnnulusLocalizationConfig annulus = recipes().loadSurfaceAnnulusLocalization(camera.id);
+  const QVector<QRect> exclusionRects = recipes().loadSurfaceDefectExclusionRects(camera.id);
+  const cv::Rect searchRect = sampleSearchRect(camera, input, recipes());
+  SurfaceDefectProcessor processor;
+  SurfaceDefectResult result;
+
+  if (annulus.method == "model")
+  {
+    return restoreSurfaceModelPoseFromSample(camera);
+  }
+
+  if (annulus.method == "edgePca")
+  {
+    result = processor.locateByEdgePca(
+      input,
+      searchRect,
+      toCvRects(exclusionRects),
+      annulus.edgeSensitivity,
+      annulus.pcaResolveAmbiguity,
+      false);
+  }
+  else if (annulus.method == "massPca")
+  {
+    SurfaceDefectSettings recipeSettings = recipes().loadSurfaceDefectSettings(camera.id);
+    SurfaceThresholdSettings thresholdSettings;
+    thresholdSettings.minValue = recipeSettings.thresholdMin;
+    thresholdSettings.maxValue = recipeSettings.thresholdMax;
+    thresholdSettings.resolveAmbiguity = recipeSettings.pcaResolveAmbiguity;
+    result = processor.detectByGrayscaleThreshold(
+      input,
+      searchRect,
+      toCvRects(exclusionRects),
+      thresholdSettings,
+      false);
+  }
+  else
+  {
+    result = processor.locateByEdgePca(
+      input,
+      searchRect,
+      toCvRects(exclusionRects),
+      annulus.edgeSensitivity,
+      annulus.pcaResolveAmbiguity,
+      false);
+  }
+
+  if (!result.processed || !result.localization.found)
+  {
+    return false;
+  }
+
+  context().lastSurfaceLocalizationResults->insert(camera.id, result.localization);
+  cameraRuntime()[camera.id].setCurrentPose(context().imaging->partPoseFromSurfaceReference(camera, result.localization));
+  return true;
+}
+
+void MainWindowSurfaceModule::showSamplePoseOverlay(const CameraConfig& camera)
+{
+  if (camera.id != selectedCameraId())
+  {
+    return;
+  }
+
+  if (!localizePoseOnSample(camera))
+  {
+    largeImage()->clearGeometryOverlay();
+    log(tr("log.localizationNotFound") + ": " + camera.id);
+    return;
+  }
+
+  if (!context().geometry)
+  {
+    return;
+  }
+
+  GeometryOverlay overlay;
+  context().geometry->appendCurrentPartPoseOverlay(camera, overlay);
+  largeImage()->setGeometryOverlay(overlay);
 }
 
 void MainWindowSurfaceModule::acquireSurfaceModel(const CameraConfig& camera)
@@ -111,16 +218,7 @@ void MainWindowSurfaceModule::acquireSurfaceModel(const CameraConfig& camera)
   largeImage()->setImage(selectedPreview());
   largeImage()->setRoi(roi);
   largeImage()->setExclusionRects(exclusionRects);
-  if (restoreSurfaceModelPoseFromSample(camera) && context().geometry)
-  {
-    GeometryOverlay overlay;
-    context().geometry->appendCurrentPartPoseOverlay(camera, overlay);
-    largeImage()->setGeometryOverlay(overlay);
-  }
-  else
-  {
-    largeImage()->clearGeometryOverlay();
-  }
+  showSamplePoseOverlay(camera);
   log(QString("%1: %2 points=%3").arg(tr("actions.acquireModel")).arg(camera.id).arg(contour.size()));
 }
 
@@ -203,6 +301,7 @@ void MainWindowSurfaceModule::previewSurfaceModel(const CameraConfig& camera)
   largeImage()->setImage(selectedPreview());
   largeImage()->setRoi(roi);
   largeImage()->setExclusionRects(exclusionRects);
+  showSamplePoseOverlay(camera);
   log(QString("%1: %2 points=%3")
               .arg(tr("actions.previewModel"))
               .arg(camera.id)

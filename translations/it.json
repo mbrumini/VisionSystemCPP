@@ -495,6 +495,7 @@
     "testStrategy": "Prova strategia",
     "previewModel": "Preview modello",
     "acquireModel": "Acquisisci modello",
+    "showSamplePoseAxes": "Assi pose sample",
     "testShapeModel": "Prova shape",
     "testTemplateModel": "Prova template",
     "testSurfaceLocalization": "Prova contorno singolo",

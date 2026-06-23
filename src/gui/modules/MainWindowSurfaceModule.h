@@ -70,6 +70,9 @@ public:
   void testSurfaceTemplateModel(const CameraConfig& camera);
 
 private:
+  bool localizePoseOnSample(const CameraConfig& camera);
+  void showSamplePoseOverlay(const CameraConfig& camera);
+
   void showCircleAnnulusLocalizationPanel(const CameraConfig& camera);
   void showTwoCirclesLocalizationPanel(const CameraConfig& camera);
   void showMassPcaLocalizationPanel(const CameraConfig& camera);

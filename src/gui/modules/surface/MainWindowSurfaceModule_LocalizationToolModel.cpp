@@ -51,6 +51,7 @@ void MainWindowSurfaceModule::showModelLocalizationPanel(const CameraConfig& cam
   auto* clearLocalizationButton = createTouchIconButton("clear", tr("actions.clearLocalization"), buttons);
   auto* previewButton = createTouchIconButton("previewModel", tr("actions.previewModel"), buttons);
   auto* acquireButton = createTouchIconButton("acquireModel", tr("actions.acquireModel"), buttons);
+  auto* poseAxesButton = createTouchIconButton("axes", tr("actions.showSamplePoseAxes"), buttons);
   auto* shapeButton = createTouchIconButton("testShapeModel", tr("actions.testShapeModel"), buttons);
   auto* templateButton = createTouchIconButton("testTemplateModel", tr("actions.testTemplateModel"), buttons);
   QObject::connect(roiButton, &QPushButton::clicked, window(), [this, camera]() { activateSurfaceDefectRoiDrawing(camera); });
@@ -58,12 +59,14 @@ void MainWindowSurfaceModule::showModelLocalizationPanel(const CameraConfig& cam
   QObject::connect(clearLocalizationButton, &QPushButton::clicked, window(), [this, camera]() { clearSurfaceLocalization(camera); });
   QObject::connect(previewButton, &QPushButton::clicked, window(), [this, camera]() { previewSurfaceModel(camera); });
   QObject::connect(acquireButton, &QPushButton::clicked, window(), [this, camera]() { acquireSurfaceModel(camera); });
+  QObject::connect(poseAxesButton, &QPushButton::clicked, window(), [this, camera]() { showSamplePoseOverlay(camera); });
   QObject::connect(shapeButton, &QPushButton::clicked, window(), [this, camera]() { testSurfaceShapeModel(camera); });
   QObject::connect(templateButton, &QPushButton::clicked, window(), [this, camera]() { testSurfaceTemplateModel(camera); });
   buttonsLayout->addWidget(roiButton, 0, 0);
   buttonsLayout->addWidget(polygonButton, 0, 1);
   buttonsLayout->addWidget(previewButton, 0, 2);
   buttonsLayout->addWidget(acquireButton, 0, 3);
+  buttonsLayout->addWidget(poseAxesButton, 1, 3);
   buttonsLayout->addWidget(shapeButton, 1, 0);
   buttonsLayout->addWidget(templateButton, 1, 1);
   buttonsLayout->addWidget(clearLocalizationButton, 1, 2, 1, 2);
@@ -196,4 +199,5 @@ void MainWindowSurfaceModule::showModelLocalizationPanel(const CameraConfig& cam
   toolsLayout()->addWidget(panel);
   log(tr("log.toolPanel") + ": " + strategy.label);
   showStoredSurfaceDefectAoe(camera);
+  showSamplePoseOverlay(camera);
 }

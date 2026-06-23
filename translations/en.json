@@ -495,6 +495,7 @@
     "testStrategy": "Test strategy",
     "previewModel": "Preview model",
     "acquireModel": "Acquire model",
+    "showSamplePoseAxes": "Sample pose axes",
     "testShapeModel": "Test shape",
     "testTemplateModel": "Test template",
     "testSurfaceLocalization": "Try single contour",
