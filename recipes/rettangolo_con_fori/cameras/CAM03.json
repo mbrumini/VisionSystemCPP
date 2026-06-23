@@ -4,10 +4,9 @@
         "geometries": {
             "circles": [
                 {
-                    "anchorInImageSpace": true,
                     "coordinateSpace": "image",
                     "edgeCleanupDerivative": 12,
-                    "edgeSensitivity": 115,
+                    "edgeSensitivity": 106,
                     "edgeStatisticalFilter": 0,
                     "enabled": true,
                     "id": "circle_1",
@@ -23,9 +22,153 @@
                     "transition": "light_to_dark",
                     "type": "edge_circle",
                     "useSubpixel": true
+                },
+                {
+                    "coordinateSpace": "image",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 106,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "circle_2",
+                    "imageCenter": {
+                        "x": 215.01623405876663,
+                        "y": 184.89284609390256
+                    },
+                    "innerBand": 20,
+                    "outerBand": 20,
+                    "pickMode": "best",
+                    "radius": 25.02405136972236,
+                    "scanDirection": "normal_negative",
+                    "transition": "light_to_dark",
+                    "type": "edge_circle",
+                    "useSubpixel": true
+                },
+                {
+                    "coordinateSpace": "image",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 106,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "circle_3",
+                    "imageCenter": {
+                        "x": 420.0141326400219,
+                        "y": 295.0104208430849
+                    },
+                    "innerBand": 20,
+                    "outerBand": 20,
+                    "pickMode": "best",
+                    "radius": 24.997558841005365,
+                    "scanDirection": "normal_negative",
+                    "transition": "light_to_dark",
+                    "type": "edge_circle",
+                    "useSubpixel": true
+                }
+            ],
+            "constructed": [
+                {
+                    "enabled": true,
+                    "id": "constructed_1",
+                    "sourceAId": "circle_2",
+                    "type": "circle_center"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_2",
+                    "sourceAId": "circle_3",
+                    "type": "circle_center"
                 }
             ],
             "enabled": true
+        },
+        "measurements": {
+            "enabled": true,
+            "items": [
+                {
+                    "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_1",
+                    "label": {
+                        "custom": true,
+                        "x": 550.3614457831326,
+                        "y": 343.13253012048193
+                    },
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 67.58330496651023,
+                    "sampleValue": 0,
+                    "sourceAId": "circle_1",
+                    "type": "circle_diameter",
+                    "unit": "px"
+                },
+                {
+                    "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_2",
+                    "label": {
+                        "custom": true,
+                        "x": 536.8674698795181,
+                        "y": 416.3855421686747
+                    },
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 232.72695471797093,
+                    "sampleValue": 0,
+                    "sourceAId": "circle_2_center",
+                    "sourceBId": "circle_3_center",
+                    "type": "point_point_distance",
+                    "unit": "px"
+                },
+                {
+                    "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_3",
+                    "label": {
+                        "custom": true,
+                        "x": 547.4698795180723,
+                        "y": 391.32530120481925
+                    },
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 50.12993403704611,
+                    "sampleValue": 0,
+                    "sourceAId": "circle_2",
+                    "type": "circle_diameter",
+                    "unit": "px"
+                },
+                {
+                    "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_4",
+                    "label": {
+                        "custom": true,
+                        "x": 551.3253012048193,
+                        "y": 367.2289156626506
+                    },
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 50.145807829479246,
+                    "sampleValue": 0,
+                    "sourceAId": "circle_3",
+                    "type": "circle_diameter",
+                    "unit": "px"
+                }
+            ]
         },
         "surfaceLocalization": {
             "aoes": {

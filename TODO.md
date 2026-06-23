@@ -1,5 +1,17 @@
 # TODO - VisionSystemCPP
 
+## PRIORITA CORRENTE - Debug, ottimizzazione e metrologia (giu 2026)
+
+Vedi anche `PROMEMORIA_DOMANI.md` per la checklist del giorno.
+
+- [ ] Test scalare multicamera: 4-5 → 6-7 → 8-10 → 12-16 camere (tempi, UI, isolamento risultati).
+- [ ] Verificare STOP/START produzione: reset pose/geometrie/misure senza tornare al sample.
+- [ ] Verificare geometrie in spazio pezzo su rotazione (cerchi, linee; no `anchorInImageSpace` su feature del pezzo).
+- [ ] Tarare edge per camera critica: banda, sensibilita', subpixel, filtri; correlare errore pose vs variazione misura su piu' angoli.
+- [ ] Profilare colli di bottiglia residui: clone immagini, matToPixmap in griglia, log con dettaglio spento.
+- [ ] TestVision (fase successiva): tabella misura x angolo (°), parse `measurements[]` dal JSON simulatore, export report correlazione.
+- [ ] NON integrare ancora tool verticali (filettature, ruote dentate, DIN 471-472) finche' la base non e' stabile a 16 camere.
+
 ## PRIORITA CORRENTE - Localizzazione AI tramite segmentazione
 
 - [ ] Rimuovere il forcing temporaneo `kForceGuruStartup` quando non servira' piu' avviare sempre il software come Guru.
@@ -38,18 +50,19 @@
 - [x] PIPELINE TEST MULTICAMERA - Fase 3: implementare `SimulatedCamera` compatibile con `ICamera`, collegabile a qualunque slot e alimentata dai frame ricevuti da TestVision.
 - [ ] PIPELINE TEST MULTICAMERA - Fase 3: gestire connessione assente, timeout, frame fuori ordine, duplicati, perdita frame, arresto e riavvio indipendente di una camera simulata.
 - [ ] PIPELINE TEST MULTICAMERA - Fase 4: estrarre una pipeline di elaborazione riusabile dalla GUI, chiamata sia dall'HMI sia dalla modalita' simulata, senza automazione dei click e senza duplicare gli algoritmi.
-- [ ] PIPELINE TEST MULTICAMERA - Fase 4: pubblicare il risultato strutturato al termine della pipeline associandolo sempre allo slot e al frame corretti.
-- [ ] PIPELINE TEST MULTICAMERA - Fase 5: creare il programma esterno TestVision con doppio ruolo di telecamera simulata e collettore/confrontatore dei risultati.
-- [ ] PIPELINE TEST MULTICAMERA - Fase 5: TestVision deve caricare una o piu' immagini master, applicare rotazioni, traslazioni, scala e ripetizioni note, calcolare il ground truth trasformato e inviare i frame a VisionSystemCPP.
-- [ ] PIPELINE TEST MULTICAMERA - Fase 5: usare immagini master asimmetriche quando si verifica l'orientamento, evitando ambiguita' geometriche di 90 o 180 gradi.
-- [ ] PIPELINE TEST MULTICAMERA - Fase 6: partire con un test verticale su `CAM01` usando una croce asimmetrica, confrontando centro, angolo e stabilita' su piu' ripetizioni.
+- [x] PIPELINE TEST MULTICAMERA - Fase 4: pubblicare il risultato strutturato al termine della pipeline associandolo sempre allo slot e al frame corretti.
+- [x] PIPELINE TEST MULTICAMERA - Fase 5: creare il programma esterno TestVision con doppio ruolo di telecamera simulata e collettore/confrontatore dei risultati.
+- [x] PIPELINE TEST MULTICAMERA - Fase 5: TestVision deve caricare una o piu' immagini master, applicare rotazioni, traslazioni, scala e ripetizioni note, calcolare il ground truth trasformato e inviare i frame a VisionSystemCPP.
+- [x] PIPELINE TEST MULTICAMERA - Fase 5: usare immagini master asimmetriche quando si verifica l'orientamento, evitando ambiguita' geometriche di 90 o 180 gradi.
+- [x] PIPELINE TEST MULTICAMERA - Fase 6: partire con un test verticale su `CAM01` usando una croce asimmetrica, confrontando centro, angolo e stabilita' su piu' ripetizioni.
 - [ ] PIPELINE TEST MULTICAMERA - Fase 6: estendere progressivamente a 2, 4 e fino a 16 slot simultanei, verificando isolamento dei risultati, tempi per camera e assenza di blocchi incrociati.
-- [ ] PIPELINE TEST MULTICAMERA - Fase 7: versionare su Git codice TestVision, scenari JSON, immagini master PNG, ground truth, ricette dedicate, configurazioni simulate e seed casuali per rendere i test replicabili su altri PC.
+- [x] PIPELINE TEST MULTICAMERA - Fase 7: versionare su Git codice TestVision, scenari JSON, immagini master PNG, ground truth, ricette dedicate, configurazioni simulate e seed casuali per rendere i test replicabili su altri PC.
 - [ ] PIPELINE TEST MULTICAMERA - Fase 7: escludere da Git frame temporanei trasformati, workspace di esecuzione, report generati, log e altri artefatti runtime; valutare Git LFS solo per futuri dataset o modelli pesanti.
 - [ ] PIPELINE TEST MULTICAMERA - Fase 8: generare report JSON e HTML con riepilogo OK/NOK, errori numerici, stabilita', tempi medi/massimi e immagini diagnostiche dei fallimenti.
 - [x] TestVision: salvare il report parziale anche quando il test viene fermato manualmente.
 - [x] TestVision: conservare uno storico timestampato dei report mantenendo anche il file `latest` configurato dallo scenario, per confrontare prima/dopo una modifica.
 - [x] TestVision: generare immagini AI persistenti direttamente nella cartella raw di localizzazione della ricetta/camera selezionata, con ground truth e manifest JSON versionato, senza cancellare le sessioni precedenti.
+- [ ] TestVision: aggiungere tabella misure per angolo (°) e correlazione pose ↔ errore misura (parse `measurements[]` gia' inviato dal simulatore).
 - [ ] TestVision: aggiungere confronto automatico tra due report storici con regressioni/miglioramenti su precisione, stabilita' e tempi.
 - [x] TestVision: aggiungere `Localizzazione AI YOLO` tra le strategie selezionabili.
 - [x] Collegare `aiYolo` alla pipeline simulata end-to-end, mantenendo associazione richiesta/frame e restituendo posa, confidenza e tempi a TestVision.
@@ -121,8 +134,8 @@
 ## Runtime camera e origine pezzo
 
 - [ ] Verificare deploy icone su altri PC: quando spariscono, controllare copia plugin Qt SVG `imageformats/qsvg.dll` e `iconengines/qsvgicon.dll` accanto all'exe; validare anche `QT_DIR` e il rilevamento Qt tramite CMakePresets.
-- [ ] IMPORTANTE: implementare runtime reale multicamera con pipeline/thread separato per ogni camera attiva, fino a 16 camere, e aggiornamento GUI tramite risultati asincroni.
-- [ ] Collegare misure future, controlli superficie e AI alla posa corrente invece che alle sole coordinate pixel assolute.
+- [x] IMPORTANTE: implementare runtime reale multicamera con pipeline/thread separato per ogni camera attiva, fino a 16 camere, e aggiornamento GUI tramite risultati asincroni (base: `CameraAsyncExecutor`, pipeline geometria async).
+- [x] Collegare misure future, controlli superficie e AI alla posa corrente invece che alle sole coordinate pixel assolute (in corso: promozione spazio pezzo, reset produzione).
 - [ ] Gestire il caso posa non valida: blocco tool dipendenti, risultato NOK o stato di allarme configurabile.
 - [ ] Aggiungere sub localizzazione relativa: dopo una localizzazione primaria su shape simmetrico, permettere una seconda ricerca dentro la posa trovata per agganciare dettagli asimmetrici, per esempio un foro non simmetrico, e risolvere ambiguita' di orientamento/posizione.
 - [ ] Aggiungere localizzazione pezzi cilindrici/gambi vite: rilevare due bordi paralleli del gambo, calcolare asse centrale, diametro/spessore, angolo, estremita' e riferimenti longitudinali; usare l'asse come posa pezzo per misure successive, controlli filettatura, fase, ammaccature e profilo.
@@ -134,8 +147,8 @@
 - [ ] Visualizzare il cerchio in set-up
 - [ ] Aggiungere pulsante `Elimina` a tutte le geometrie configurabili: punto, segmento/linea, cerchio, arco, edge e contorno.
 - [ ] Per tutte le geometrie, `Nuovo ...` deve creare/selezionare l'elemento e attivare subito il disegno; evitare pulsanti separati tipo `Disegna ...`.
-- [ ] Salvare configurazione geometrie in ricetta camera.
-- [ ] Disegnare overlay diagnostici delle geometrie rilevate.
+- [x] Salvare configurazione geometrie in ricetta camera.
+- [x] Disegnare overlay diagnostici delle geometrie rilevate.
 - [ ] Provare in GUI il flusso completo `Misure` con immagini reali.
 - [ ] Implementare tolleranze/criteri su misure e relazioni tra geometrie, per esempio concentricita' tra due cerchi.
 - [ ] IMPORTANTE: aggiungere tool `Filettature` con rilevamento e misure dedicate: diametro interno/esterno o maggiore/minore, passo filetto, cresta e fondo filetto, angolo profilo, profondita'/altezza filetto, numero creste/gole, presenza filetto, posizione rispetto a riferimenti, tolleranze OK/NOK e diagnostica overlay. Includere controlli su fase/smussi di ingresso, ammaccature o schiacciamenti del filetto/bordo, bave, profilo completo del filetto, continuita' del profilo e confronto con profilo campione/master. Prevedere uso su profilo BN/silhouette e, dove possibile, su superficie con illuminazione adeguata.

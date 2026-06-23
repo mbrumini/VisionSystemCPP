@@ -61,6 +61,7 @@ private:
   void selectCamera(const CameraConfig& camera);
   void startMachine();
   void stopMachine();
+  void resetProductionCameraState(const CameraConfig& camera);
   void showAccessLogin();
   void showAccessManagement();
   void showCameraSystemSettings();

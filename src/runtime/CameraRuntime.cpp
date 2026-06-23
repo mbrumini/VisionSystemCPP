@@ -224,6 +224,12 @@ void CameraRuntime::clearCurrentPose(const QString& cameraId)
   m_currentPose = makeInvalidPartPose(cameraId);
 }
 
+void CameraRuntime::clearProductionTracking(const QString& cameraId)
+{
+  clearCurrentPose(cameraId);
+  clearGeometries();
+}
+
 const GeometrySet& CameraRuntime::geometries() const
 {
   return m_geometries;

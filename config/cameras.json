@@ -87,7 +87,7 @@
                 "updatedAt": "2026-06-20T11:25:00"
             },
             "displayName": "Camera 4",
-            "enabled": false,
+            "enabled": true,
             "exists": true,
             "id": "CAM04",
             "processingProfile": "profile_cam04",

@@ -64,6 +64,7 @@ void applyGeometryPromotions(const PartPose& pose,
     }
     circle.partCenter = imageToPart(pose, circle.imageCenter);
     circle.hasCircle = true;
+    circle.anchorInImageSpace = false;
   }
 
   for (GeometryArcRuntimeConfig& arc : arcs)

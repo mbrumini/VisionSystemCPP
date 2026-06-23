@@ -3,6 +3,7 @@
 #include "gui/modules/MainWindowImagingModule.h"
 #include "gui/modules/MainWindowContext.h"
 
+#include "config/GeometryRecipeJson.h"
 #include "config/RecipeJsonUtils.h"
 
 #include "gui/geometry/GeometryDiagnosticDrawing.h"
@@ -228,7 +229,8 @@ void MainWindowGeometryModule::loadGeometryCirclesRecipe(const CameraConfig& cam
       recipe.coordinateSpace,
       recipe.partCenter,
       recipe.imageCenter);
-    circle.anchorInImageSpace = recipe.anchorInImageSpace;
+    circle.anchorInImageSpace =
+      GeometryRecipeJson::isImageSpace(recipe.coordinateSpace) && recipe.anchorInImageSpace;
     circles.append(circle);
   }
 
@@ -309,7 +311,7 @@ void MainWindowGeometryModule::saveGeometryCirclesRecipe(const CameraConfig& cam
     recipe.id = circle.id;
     recipe.alias = circle.alias;
     recipe.coordinateSpace = coords.coordinateSpace;
-    recipe.anchorInImageSpace = circle.anchorInImageSpace;
+    recipe.anchorInImageSpace = !circle.hasCircle && circle.anchorInImageSpace;
     recipe.partCenter = coords.partCenter;
     recipe.imageCenter = coords.imageCenter;
     recipe.radius = circle.radius;

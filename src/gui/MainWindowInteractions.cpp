@@ -275,6 +275,7 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
   });
   CameraRuntime& runtime = m_cameraRuntime[camera.id];
   QString error;
+  runtime.clearProductionTracking(camera.id);
   if (!runtime.running() && !runtime.start(camera, {}, &error))
   {
     appendLog(error);
@@ -284,8 +285,6 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
   {
     return;
   }
-  runtime.clearCurrentPose(camera.id);
-  runtime.clearGeometries();
   appendLogLazy([cameraId = camera.id, frameId = runtime.currentSimulatorFrame().frameId] {
     return QString("Pipeline simulatore acquisito: %1 frame=%2").arg(cameraId).arg(frameId);
   });
@@ -849,6 +848,20 @@ void MainWindow::showGridView()
   appendLog(trText("log.gridView"));
 }
 
+void MainWindow::resetProductionCameraState(const CameraConfig& camera)
+{
+  auto runtimeIt = m_cameraRuntime.find(camera.id);
+  if (runtimeIt != m_cameraRuntime.end())
+  {
+    runtimeIt->second.clearProductionTracking(camera.id);
+  }
+
+  m_lastSurfaceLocalizationResults.remove(camera.id);
+  m_lastSetupScanElapsedMs.remove(camera.id);
+
+  m_geometry.resetRuntimeGeometryForProduction(camera);
+}
+
 void MainWindow::startMachine()
 {
   m_machineRunning = true;
@@ -858,12 +871,10 @@ void MainWindow::startMachine()
     cameraIds.append(camera.id);
   }
   CameraAsyncExecutor::ensurePools(cameraIds);
-  if (m_geometry)
+  m_lastSurfaceLocalizationResults.clear();
+  for (const CameraConfig& camera : m_config.activeCameras())
   {
-    for (const CameraConfig& camera : m_config.activeCameras())
-    {
-      m_geometry->resetRuntimeGeometryForProduction(camera);
-    }
+    resetProductionCameraState(camera);
   }
   const bool keepCurrentTool =
     !m_selectedCameraId.isEmpty() &&
@@ -953,12 +964,27 @@ void MainWindow::stopMachine()
     {
       runtimeIt->second.stop();
     }
+    resetProductionCameraState(camera);
   }
 
   m_cameraPendingJobs.clear();
   m_cameraProcessingBusy.clear();
   m_lastPublishedMeasurements.clear();
   m_productionThroughput.clear();
+  m_measurementResultsUpdatePending = false;
+
+  if (m_largeImage)
+  {
+    m_largeImage->clearGeometryOverlay();
+  }
+  if (m_cameraStrip)
+  {
+    for (const CameraConfig& camera : m_config.activeCameras())
+    {
+      m_cameraStrip->setCameraBusy(camera.id, false);
+      m_cameraStrip->setCameraResult(camera.id, "READY");
+    }
+  }
   if (m_throughputRefreshTimer)
   {
     m_throughputRefreshTimer->stop();

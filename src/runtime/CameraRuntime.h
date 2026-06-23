@@ -48,6 +48,7 @@ public:
   const PartPose& currentPose() const;
   void setCurrentPose(const PartPose& pose);
   void clearCurrentPose(const QString& cameraId = {});
+  void clearProductionTracking(const QString& cameraId = {});
   const GeometrySet& geometries() const;
   GeometrySet& geometries();
   void clearGeometries();

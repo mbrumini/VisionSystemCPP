@@ -77,6 +77,7 @@ void MainWindowGeometryModule::handleGeometryCirclePoints(const CameraConfig& ca
   {
     config.partCenter = imageToPart(pose, config.imageCenter);
     config.hasCircle = true;
+    config.anchorInImageSpace = false;
   }
   else
   {
@@ -127,10 +128,11 @@ void MainWindowGeometryModule::testGeometryCircle(const CameraConfig& camera)
 
   GeometryCircleRuntimeConfig& circleConfig = activeGeometryCircleConfig(camera.id);
   const PartPose& pose = cameraRuntime()[camera.id].currentPose();
-  if (pose.valid && !circleConfig.hasCircle && circleConfig.hasImageCircle)
+  if (pose.valid && !circleConfig.hasCircle && circleConfig.hasImageCircle && !circleConfig.anchorInImageSpace)
   {
     circleConfig.partCenter = imageToPart(pose, circleConfig.imageCenter);
     circleConfig.hasCircle = true;
+    circleConfig.anchorInImageSpace = false;
     saveGeometryCirclesRecipe(camera);
   }
 
