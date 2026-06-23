@@ -23,6 +23,7 @@ struct GeometryLineRuntimeConfig
   EdgeLineScanDirection scanDirection = EdgeLineScanDirection::NormalPositive;
   EdgeLineTransition transition = EdgeLineTransition::LightToDark;
   EdgeLinePickMode pickMode = EdgeLinePickMode::First;
+  bool anchorInImageSpace = false;
   bool hasImageLine = false;
   bool hasLine = false;
 };
@@ -40,6 +41,7 @@ struct GeometryPointRuntimeConfig
   bool useSubpixel = true;
   EdgeLineTransition transition = EdgeLineTransition::LightToDark;
   EdgeLinePickMode pickMode = EdgeLinePickMode::First;
+  bool anchorInImageSpace = false;
   bool hasImageGuide = false;
   bool hasGuide = false;
 };
@@ -61,6 +63,7 @@ struct GeometryCircleRuntimeConfig
   EdgeLineScanDirection scanDirection = EdgeLineScanDirection::NormalPositive;
   EdgeLineTransition transition = EdgeLineTransition::LightToDark;
   EdgeLinePickMode pickMode = EdgeLinePickMode::First;
+  bool anchorInImageSpace = false;
   bool hasImageCircle = false;
   bool hasCircle = false;
 };
@@ -88,6 +91,7 @@ struct GeometryArcRuntimeConfig
   EdgeLineScanDirection scanDirection = EdgeLineScanDirection::NormalPositive;
   EdgeLineTransition transition = EdgeLineTransition::LightToDark;
   EdgeLinePickMode pickMode = EdgeLinePickMode::First;
+  bool anchorInImageSpace = false;
   bool hasImageArc = false;
   bool hasArc = false;
 };

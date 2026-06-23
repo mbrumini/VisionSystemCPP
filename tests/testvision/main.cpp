@@ -1,4 +1,5 @@
 #include <QApplication>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDateTime>
 #include <QDir>
@@ -503,6 +504,16 @@ public:
     closePipe();
   }
 
+  void setSendOnlyMode(bool enabled)
+  {
+    m_sendOnlyMode = enabled;
+    if (m_sendOnlyCheck)
+    {
+      m_sendOnlyCheck->setChecked(enabled);
+    }
+  }
+  bool sendOnlyMode() const { return m_sendOnlyMode; }
+
   void startCampaignWorker(
     const QJsonObject& item,
     int cycle,
@@ -726,6 +737,10 @@ private:
     form->addRow("Scala (mm/px)", m_pixelSize);
     form->addRow("Giri completi", m_passes);
     form->addRow("Intervallo frame (ms)", m_intervalMs);
+    m_sendOnlyCheck = new QCheckBox("Solo invio immagini (non attendere risultati)", configPanel);
+    m_sendOnlyCheck->setToolTip(
+      "Invia i frame al ritmo configurato senza aspettare la risposta di Vision.");
+    form->addRow(m_sendOnlyCheck);
     configLayout->addLayout(form);
 
     m_totalLabel = new QLabel(configPanel);
@@ -785,6 +800,13 @@ private:
     broadcastButtons->addWidget(startBroadcastButton);
     broadcastButtons->addWidget(stopBroadcastButton);
     broadcastLayout->addLayout(broadcastButtons);
+    auto* sendOnlyBroadcast = new QCheckBox(
+      "Solo invio immagini (non attendere risultati)", broadcast);
+    sendOnlyBroadcast->setToolTip(m_sendOnlyCheck->toolTip());
+    sendOnlyBroadcast->setChecked(m_sendOnlyCheck->isChecked());
+    connect(sendOnlyBroadcast, &QCheckBox::toggled, m_sendOnlyCheck, &QCheckBox::setChecked);
+    connect(m_sendOnlyCheck, &QCheckBox::toggled, sendOnlyBroadcast, &QCheckBox::setChecked);
+    broadcastLayout->addWidget(sendOnlyBroadcast);
     auto* broadcastResultsTitle = new QLabel("Risultati sincronizzati", broadcast);
     broadcastLayout->addWidget(broadcastResultsTitle);
     broadcastLayout->addWidget(m_broadcastTable, 2);
@@ -1482,6 +1504,7 @@ private:
       const QString cameraId = item.value("cameraId").toString("CAM01");
       auto* worker = new TestVisionWindow(m_scenarioPath, this);
       worker->hide();
+      worker->setSendOnlyMode(m_sendOnlyCheck && m_sendOnlyCheck->isChecked());
       worker->startCampaignWorker(
         item,
         m_campaignCycle + 1,
@@ -1530,6 +1553,20 @@ private:
     int cycle,
     const QString& pipelineFailure = {}) const
   {
+    if (m_sendOnlyMode)
+    {
+      QJsonObject summary;
+      summary["cycle"] = cycle;
+      summary["cameraId"] = item.value("cameraId").toString(
+        m_cameraCombo->currentData().toString());
+      summary["recipeId"] = m_recipeCombo->currentText();
+      summary["strategyId"] = m_strategyCombo->currentData().toString();
+      summary["framesSent"] = m_currentFrameId;
+      summary["status"] = "SENT";
+      summary["problems"] = QJsonArray{};
+      return summary;
+    }
+
     double centerSum = 0.0;
     double angleSum = 0.0;
     double centerMax = 0.0;
@@ -1923,6 +1960,7 @@ private:
       const QString strategyId = target.value("strategyId").toString();
       auto* worker = new TestVisionWindow(m_scenarioPath, this);
       worker->hide();
+      worker->setSendOnlyMode(m_sendOnlyCheck && m_sendOnlyCheck->isChecked());
       m_broadcastWorkers.append(worker);
       worker->startCampaignWorker(
         currentBroadcastItem(cameraId, strategyId),
@@ -2029,7 +2067,9 @@ private:
     refreshAnalysis();
     m_startButton->setEnabled(false);
     m_stopButton->setEnabled(true);
-    m_stateLabel->setText("Connessione a Vision...");
+    m_sendOnlyMode = m_sendOnlyCheck && m_sendOnlyCheck->isChecked();
+    m_stateLabel->setText(
+      m_sendOnlyMode ? "Connessione a Vision (solo invio)..." : "Connessione a Vision...");
     m_pendingSample = false;
     connectPipe();
   }
@@ -2065,7 +2105,9 @@ private:
     {
       m_workerCompleted = true;
       QString failure = m_workerFailure;
-      if (!reason.startsWith("Test completato") && failure.isEmpty())
+      if (!reason.startsWith("Test completato") &&
+          !reason.startsWith("Invio completato") &&
+          failure.isEmpty())
       {
         failure = reason;
       }
@@ -2147,6 +2189,10 @@ private:
     }
     if (type == "frameAccepted")
     {
+      if (m_sendOnlyMode)
+      {
+        return;
+      }
       int fid = message.value("frameId").toInt();
       m_state = State::WaitingResult;
       m_stateLabel->setText(QString("Frame %1 accettato; attendo Vision").arg(fid));
@@ -2156,6 +2202,10 @@ private:
         type == "processingStarted" || type == "processingCompleted" ||
         type == "processingError")
     {
+      if (m_sendOnlyMode && type != "processingError")
+      {
+        return;
+      }
       int fid = message.value("frameId").toInt();
       const QString text = message.value("message").toString(type);
       if (type == "processingError")
@@ -2178,6 +2228,10 @@ private:
     }
     if (type == "result")
     {
+      if (m_sendOnlyMode)
+      {
+        return;
+      }
       int resultFrameId = message.value("frameId").toInt();
       handleResult(message);
       if (resultFrameId == 1)
@@ -2297,7 +2351,10 @@ private:
     info.expectedX = m_expectedX;
     info.expectedY = m_expectedY;
     info.expectedAngle = m_expectedAngle;
-    m_sentFrames.insert(m_currentFrameId, info);
+    if (!m_sendOnlyMode)
+    {
+      m_sentFrames.insert(m_currentFrameId, info);
+    }
 
     QByteArray payload = QJsonDocument(frame).toJson(QJsonDocument::Compact);
     payload.append('\n');
@@ -2308,12 +2365,39 @@ private:
       return;
     }
     m_state = State::WaitingAccepted;
-    m_stateLabel->setText(QString("Frame %1 inviato").arg(m_currentFrameId));
+    m_stateLabel->setText(
+      m_sendOnlyMode
+        ? QString("Frame %1 inviato (%2/%3)")
+            .arg(m_currentFrameId)
+            .arg(m_currentIndex + 1)
+            .arg(m_plan.size())
+        : QString("Frame %1 inviato").arg(m_currentFrameId));
 
-    // Schedule next frame ONLY if we already have a baseline reference
-    if (m_hasBaseline)
+    if (m_sendOnlyMode)
+    {
+      if (m_currentIndex + 1 < m_plan.size())
+      {
+        m_sendTimer.start(m_intervalMs->value());
+      }
+      else
+      {
+        QTimer::singleShot(0, this, [this]() { finishSendOnlyTest(); });
+      }
+    }
+    else if (m_hasBaseline)
     {
       m_sendTimer.start(m_intervalMs->value());
+    }
+  }
+
+  void finishSendOnlyTest()
+  {
+    m_sendTimer.stop();
+    stopTest(QString("Invio completato: %1 frame").arg(m_currentFrameId));
+    if (m_campaignRunning)
+    {
+      recordCampaignSummary();
+      QTimer::singleShot(500, this, [this]() { runNextCampaignItem(); });
     }
   }
 
@@ -2635,10 +2719,12 @@ private:
   QPushButton* m_loadCampaignButton = nullptr;
   QPushButton* m_editCampaignButton = nullptr;
   QPushButton* m_startCampaignButton = nullptr;
+  QCheckBox* m_sendOnlyCheck = nullptr;
   int m_canvasWidth = 640;
   int m_canvasHeight = 480;
   int m_canvasBackground = 240;
   bool m_pendingSample = false;
+  bool m_sendOnlyMode = false;
   QString m_expectedRecipeId;
   QString m_lastProcessingError;
   QString m_campaignPath;
@@ -2682,10 +2768,15 @@ int main(int argc, char* argv[])
     "tests/scenarios/cross_rotation_cam01.json");
   QString campaignPath;
   QStringList broadcastCameras;
+  bool sendOnly = false;
   for (int index = 1; index < argc; ++index)
   {
     const QString argument = QString::fromLocal8Bit(argv[index]);
-    if (argument == "--campaign" && index + 1 < argc)
+    if (argument == "--send-only")
+    {
+      sendOnly = true;
+    }
+    else if (argument == "--campaign" && index + 1 < argc)
     {
       campaignPath = QFileInfo(
         QString::fromLocal8Bit(argv[++index])).absoluteFilePath();
@@ -2710,6 +2801,10 @@ int main(int argc, char* argv[])
     }
   }
   TestVisionWindow window(scenarioPath);
+  if (sendOnly)
+  {
+    window.setSendOnlyMode(true);
+  }
   window.show();
   if (!campaignPath.isEmpty())
   {

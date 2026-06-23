@@ -127,7 +127,7 @@ GeometryOverlay MainWindowGeometryModule::configuredGeometryLinesOverlay(const C
     }
 
     const GeometryLineRuntimeConfig& line = lines[i];
-    const bool usePartLine = pose.valid && line.hasLine;
+    const bool usePartLine = pose.valid && line.hasLine && !line.anchorInImageSpace;
     if (!usePartLine && !line.hasImageLine)
     {
       continue;
@@ -218,7 +218,7 @@ void MainWindowGeometryModule::testGeometryLine(const CameraConfig& camera)
     promotedToPart = true;
   }
 
-  const bool usePartLine = pose.valid && lineConfig.hasLine;
+  const bool usePartLine = pose.valid && lineConfig.hasLine && !lineConfig.anchorInImageSpace;
   if (!usePartLine && !lineConfig.hasImageLine)
   {
     log(tr("log.geometryLineRoiMissing") + ": " + camera.id);

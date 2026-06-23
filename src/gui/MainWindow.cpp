@@ -4,6 +4,7 @@
 #include "gui/modules/MainWindowCameraProfile.h"
 #include "config/RecipeJsonUtils.h"
 #include "util/AsyncExecutor.h"
+#include "util/CameraAsyncExecutor.h"
 #include "simulator/SimulatorBridge.h"
 
 #include <QDir>
@@ -125,11 +126,8 @@ MainWindow::MainWindow(QWidget* parent)
     }
   }
 
-  AsyncExecutor::setMetricsHandler([this](const QString& name, qint64 ms) {
-    appendLog(name.isEmpty()
-      ? QString("metric: %1 ms").arg(ms)
-      : QString("metric %1: %2 ms").arg(name).arg(ms));
-  });
+  AsyncExecutor::setMetricsHandler(nullptr);
+  syncAsyncMetricsLogging();
 
   {
     QSettings settings;
@@ -138,6 +136,10 @@ MainWindow::MainWindow(QWidget* parent)
     if (detailedLogEnabled)
     {
       setDetailedLogEnabled(true);
+    }
+    else
+    {
+      syncAsyncMetricsLogging();
     }
   }
 
@@ -156,7 +158,7 @@ void MainWindow::loadConfiguration()
     {
       m_commandToolbar->setStatusText(m_systemStatus->text());
     }
-    appendLog(error);
+    appendLog(error, true);
     return;
   }
 
@@ -262,9 +264,10 @@ void MainWindow::bindModules()
   m_ctx.measurement = &m_measurement;
 
   m_ctx.trText = [this](const QString& key) { return trText(key); };
+  m_ctx.isDetailedLogEnabled = [this]() { return isDetailedLogEnabled(); };
   m_ctx.appendLog = [this](const QString& message) { appendLog(message); };
   m_ctx.updateLargePreview = [this]() { updateLargePreview(); };
-  m_ctx.updateMeasurementResults = [this]() { updateMeasurementResults(); };
+  m_ctx.updateMeasurementResults = [this]() { scheduleMeasurementResultsUpdate(); };
   m_ctx.reloadCameraReferenceImage = [this](const CameraConfig& camera) { m_imaging.reloadCameraReferenceImage(camera); };
   m_ctx.updateControlPanel = [this](const CameraConfig* camera) { updateControlPanel(camera); };
   m_ctx.clearToolPanel = [this]() { clearToolPanel(); };

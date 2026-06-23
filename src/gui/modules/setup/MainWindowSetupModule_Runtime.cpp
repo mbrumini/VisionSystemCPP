@@ -332,32 +332,52 @@ void MainWindowSetupModule::processCurrentCameraFrame(const CameraConfig& camera
   log(QString("pipeline localization missing setup: %1").arg(camera.id));
 }
 
-void MainWindowSetupModule::refreshSetupGeometryResults(const CameraConfig& camera)
+void MainWindowSetupModule::refreshSetupGeometryResults(const CameraConfig& camera,
+                                                        std::function<void()> onComplete)
 {
   if (!context().geometry)
   {
+    if (onComplete)
+    {
+      onComplete();
+    }
+    return;
+  }
+
+  const auto finishGeometryPipeline = [this, camera, onComplete = std::move(onComplete)]() {
+    if (context().constructedGeometry)
+    {
+      context().constructedGeometry->rebuildConstructedGeometryRecipe(camera);
+    }
+    if (context().measurement)
+    {
+      context().measurement->rebuildMeasurementRecipe(camera);
+      if (camera.id == selectedCamera().id)
+      {
+        GeometryOverlay overlay = largeImage()->geometryOverlay();
+        context().measurement->appendMeasurementOverlay(camera, overlay);
+        largeImage()->setGeometryOverlay(overlay);
+      }
+    }
+    if (onComplete)
+    {
+      onComplete();
+    }
+    else if (camera.id == selectedCamera().id && context().updateMeasurementResults)
+    {
+      context().updateMeasurementResults();
+    }
+  };
+
+  const bool machineMode = context().machineRunning != nullptr && *context().machineRunning;
+  if (machineMode)
+  {
+    context().geometry->testConfiguredGeometryLinesAsync(camera, std::move(finishGeometryPipeline));
     return;
   }
 
   context().geometry->testConfiguredGeometryLines(camera);
-  if (context().constructedGeometry)
-  {
-    context().constructedGeometry->rebuildConstructedGeometryRecipe(camera);
-  }
-  if (context().measurement)
-  {
-    context().measurement->rebuildMeasurementRecipe(camera);
-    if (camera.id == selectedCamera().id)
-    {
-      GeometryOverlay overlay = largeImage()->geometryOverlay();
-      context().measurement->appendMeasurementOverlay(camera, overlay);
-      largeImage()->setGeometryOverlay(overlay);
-    }
-  }
-  if (camera.id == selectedCamera().id && context().updateMeasurementResults)
-  {
-    context().updateMeasurementResults();
-  }
+  finishGeometryPipeline();
 }
 
 

@@ -166,6 +166,58 @@ void MeasurementResultsWidget::setAllCameraMeasurements(const QVector<CameraMeas
 {
   m_title->setText("Misure | Tutte le telecamere");
   setCameraColumnVisible(true);
+
+  auto rowKey = [](const CameraMeasurementResultRow& result) {
+    const MeasurementResult& measurement = result.measurement;
+    return QString("%1|%2|%3|%4|%5")
+      .arg(result.cameraId, measurement.type, measurement.sourceAId, measurement.sourceBId, measurement.id);
+  };
+
+  if (m_table->rowCount() == measurements.size() && !measurements.isEmpty())
+  {
+    bool sameRows = true;
+    for (int row = 0; row < measurements.size(); ++row)
+    {
+      const QTableWidgetItem* cameraItem = m_table->item(row, 0);
+      const QTableWidgetItem* nameItem = m_table->item(row, 1);
+      if (!cameraItem || !nameItem)
+      {
+        sameRows = false;
+        break;
+      }
+      const QString expectedKey = rowKey(measurements[row]);
+      const QString actualKey = QString("%1|%2")
+        .arg(cameraItem->text(), nameItem->text());
+      const QString expectedShortKey = QString("%1|%2")
+        .arg(measurements[row].cameraId, measurementName(measurements[row].measurement));
+      if (actualKey != expectedShortKey)
+      {
+        sameRows = false;
+        break;
+      }
+      Q_UNUSED(expectedKey);
+    }
+
+    if (sameRows)
+    {
+      for (int row = 0; row < measurements.size(); ++row)
+      {
+        const CameraMeasurementResultRow& result = measurements[row];
+        const MeasurementResult& measurement = result.measurement;
+        if (QTableWidgetItem* value = m_table->item(row, 5))
+        {
+          value->setText(measurementValue(measurement));
+          value->setForeground(measurementColor(measurement));
+        }
+        if (QTableWidgetItem* scan = m_table->item(row, 6))
+        {
+          scan->setText(scanTime(result.scanElapsedMs));
+        }
+      }
+      return;
+    }
+  }
+
   m_table->setRowCount(measurements.size());
   for (int row = 0; row < measurements.size(); ++row)
   {

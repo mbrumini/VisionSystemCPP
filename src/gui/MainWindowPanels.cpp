@@ -88,11 +88,48 @@ QVector<MeasurementResult> mergedMeasurementRows(const RecipeManager& recipes,
   }
   return rows;
 }
+
+const QVector<MeasurementResult>& measurementsForDisplay(
+  const QString& cameraId,
+  const QVector<MeasurementResult>& live,
+  QHash<QString, QVector<MeasurementResult>>& publishedCache)
+{
+  if (!live.isEmpty())
+  {
+    publishedCache[cameraId] = live;
+    return live;
+  }
+
+  const auto cached = publishedCache.constFind(cameraId);
+  if (cached != publishedCache.constEnd() && !cached->isEmpty())
+  {
+    return cached.value();
+  }
+
+  return live;
+}
 }
 
 void MainWindow::updateControlPanel(const CameraConfig* camera)
 {
+  if (!camera)
+  {
+    if (m_productionOverviewStatsLabel)
+    {
+      refreshProductionOverviewPanel();
+      return;
+    }
+  }
+  else if (m_machineRunning && m_cameraMonitoringStatsLabel && camera->id == m_selectedCameraId)
+  {
+    refreshCameraMonitoringPanel(*camera);
+    return;
+  }
+
   clearToolPanel();
+  m_productionOverviewStatsLabel = nullptr;
+  m_productionOverviewThroughputLabel = nullptr;
+  m_cameraMonitoringStatsLabel = nullptr;
 
   if (!camera)
   {
@@ -135,6 +172,7 @@ void MainWindow::updateControlPanel(const CameraConfig* camera)
     stats->setObjectName("toolPanelNote");
     stats->setWordWrap(true);
     m_toolsLayout->addWidget(stats);
+    m_productionOverviewStatsLabel = stats;
 
     if (m_machineRunning)
     {
@@ -148,6 +186,7 @@ void MainWindow::updateControlPanel(const CameraConfig* camera)
       throughput->setObjectName("toolPanelNote");
       throughput->setWordWrap(true);
       m_toolsLayout->addWidget(throughput);
+      m_productionOverviewThroughputLabel = throughput;
     }
 
     m_toolsLayout->addStretch(1);
@@ -199,6 +238,7 @@ void MainWindow::updateControlPanel(const CameraConfig* camera)
     stats->setObjectName("toolPanelNote");
     stats->setWordWrap(true);
     m_toolsLayout->addWidget(stats);
+    m_cameraMonitoringStatsLabel = stats;
     m_toolsLayout->addStretch(1);
     return;
   }
@@ -228,22 +268,9 @@ void MainWindow::updateMeasurementResults()
         continue;
       }
 
-      const QVector<MeasurementResult>& measurements = runtimeIt->second.geometries().measurements;
-      const PartPose& pose = runtimeIt->second.currentPose();
-      for (CameraTileWidget* tile : m_tiles)
-      {
-        if (tile->camera().id == camera.id)
-        {
-          tile->setResultText(
-            pose.valid
-              ? QString("X %1  Y %2  A %3°")
-                  .arg(pose.origin.x, 0, 'f', 2)
-                  .arg(pose.origin.y, 0, 'f', 2)
-                  .arg(pose.angleRadians * 180.0 / CV_PI, 0, 'f', 2)
-              : QString("In attesa"));
-          break;
-        }
-      }
+      const QVector<MeasurementResult>& liveMeasurements = runtimeIt->second.geometries().measurements;
+      const QVector<MeasurementResult>& measurements =
+        measurementsForDisplay(camera.id, liveMeasurements, m_lastPublishedMeasurements);
       for (const MeasurementResult& measurement : mergedMeasurementRows(m_recipeManager, camera.id, measurements))
       {
         rows.append({
@@ -257,13 +284,102 @@ void MainWindow::updateMeasurementResults()
     return;
   }
 
+  const QVector<MeasurementResult>& liveMeasurements =
+    m_cameraRuntime[m_selectedCameraId].geometries().measurements;
+  const QVector<MeasurementResult>& measurements =
+    measurementsForDisplay(m_selectedCameraId, liveMeasurements, m_lastPublishedMeasurements);
   m_measurementResults->setMeasurements(
     m_selectedCameraId,
     mergedMeasurementRows(
       m_recipeManager,
       m_selectedCameraId,
-      m_cameraRuntime[m_selectedCameraId].geometries().measurements),
+      measurements),
     m_lastSetupScanElapsedMs.value(m_selectedCameraId, -1));
+}
+
+void MainWindow::scheduleMeasurementResultsUpdate()
+{
+  if (!m_machineRunning || !m_selectedCameraId.isEmpty())
+  {
+    updateMeasurementResults();
+    return;
+  }
+
+  if (m_measurementResultsUpdatePending)
+  {
+    return;
+  }
+
+  m_measurementResultsUpdatePending = true;
+  QTimer::singleShot(0, this, [this]() {
+    m_measurementResultsUpdatePending = false;
+    updateMeasurementResults();
+  });
+}
+
+void MainWindow::refreshProductionOverviewPanel()
+{
+  if (!m_productionOverviewStatsLabel)
+  {
+    return;
+  }
+
+  const QVector<CameraConfig> activeCameras = m_config.activeCameras();
+  int busyCount = 0;
+  for (const CameraConfig& activeCamera : activeCameras)
+  {
+    if (m_cameraProcessingBusy.value(activeCamera.id, false))
+    {
+      ++busyCount;
+    }
+  }
+
+  m_productionOverviewStatsLabel->setText(
+    QString("%1: %2\n%3: %4\n%5: %6\n%7: %8")
+      .arg(trText("labels.activeCamerasCount"))
+      .arg(activeCameras.size())
+      .arg(trText("labels.busyCamerasCount"))
+      .arg(busyCount)
+      .arg(trText("labels.readyCamerasCount"))
+      .arg(qMax(0, activeCameras.size() - busyCount))
+      .arg(trText("labels.machineMode"))
+      .arg(m_machineRunning ? "START" : "STOP"));
+
+  if (m_productionOverviewThroughputLabel)
+  {
+    m_productionOverviewThroughputLabel->setText(
+      QString("%1: %2\n%3: %4")
+        .arg(trText("labels.throughputInstant"))
+        .arg(throughputOverviewInstantText())
+        .arg(trText("labels.throughputAverage10s"))
+        .arg(throughputOverviewAverageText()));
+  }
+}
+
+void MainWindow::refreshCameraMonitoringPanel(const CameraConfig& camera)
+{
+  if (!m_cameraMonitoringStatsLabel)
+  {
+    return;
+  }
+
+  const bool busy = m_cameraProcessingBusy.value(camera.id, false);
+  const QString channel = camera.simulatorChannel.isEmpty() ? camera.id : camera.simulatorChannel;
+  const int pendingQueue = camera.type == "simulator"
+    ? SimulatorBridge::instance().queueSize(channel)
+    : 0;
+  m_cameraMonitoringStatsLabel->setText(
+    QString("%1: %2\n%3: %4\n%5: %6 ms\n%7: %8\n%9: %10")
+      .arg(trText("labels.cameraState"))
+      .arg(busy ? "BUSY" : "READY")
+      .arg(trText("labels.pendingFrames"))
+      .arg(m_cameraPendingJobs.value(camera.id, 0) + pendingQueue)
+      .arg(trText("labels.lastScan"))
+      .arg(m_lastSetupScanElapsedMs.value(camera.id, 0))
+      .arg(trText("labels.throughputInstant"))
+      .arg(throughputInstantText(camera.id))
+      .arg(trText("labels.throughputAverage10s"))
+      .arg(throughputAverageText(camera.id)));
 }
 
 void MainWindow::updateCameraStripStatus(const QString& cameraId)
@@ -438,6 +554,9 @@ void MainWindow::clearToolPanel()
 {
   m_setupPanel = nullptr;
   m_setupCameraId.clear();
+  m_productionOverviewStatsLabel = nullptr;
+  m_productionOverviewThroughputLabel = nullptr;
+  m_cameraMonitoringStatsLabel = nullptr;
   while (QLayoutItem* item = m_toolsLayout->takeAt(0))
   {
     if (QWidget* widget = item->widget())

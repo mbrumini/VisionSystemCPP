@@ -96,7 +96,7 @@ void MainWindowGeometryModule::showConfiguredGeometryCircles(const CameraConfig&
   GeometryOverlay overlay;
   largeImage()->clearCircles();
   const PartPose& pose = cameraRuntime()[camera.id].currentPose();
-  const bool usePartCircle = pose.valid && circle.hasCircle;
+  const bool usePartCircle = pose.valid && circle.hasCircle && !circle.anchorInImageSpace;
   if (usePartCircle || circle.hasImageCircle)
   {
     const cv::Point2d center = usePartCircle ? partToImage(pose, circle.partCenter) : circle.imageCenter;
@@ -134,7 +134,7 @@ void MainWindowGeometryModule::testGeometryCircle(const CameraConfig& camera)
     saveGeometryCirclesRecipe(camera);
   }
 
-  const bool usePartCircle = pose.valid && circleConfig.hasCircle;
+  const bool usePartCircle = pose.valid && circleConfig.hasCircle && !circleConfig.anchorInImageSpace;
   if (!usePartCircle && !circleConfig.hasImageCircle)
   {
     showConfiguredGeometryCircles(camera);

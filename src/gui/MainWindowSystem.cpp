@@ -664,9 +664,10 @@ void MainWindow::setDetailedLogEnabled(bool enabled)
   QSettings settings;
   if (!enabled)
   {
-    appendLog(trText("log.detailedLogDisabled"));
+    appendLog(trText("log.detailedLogDisabled"), true);
     m_detailedLogger.setEnabled(false, {});
     settings.setValue("system/detailedLogEnabled", false);
+    syncAsyncMetricsLogging();
     return;
   }
 
@@ -674,12 +675,14 @@ void MainWindow::setDetailedLogEnabled(bool enabled)
   const QString logRoot = QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath("logs");
   if (!m_detailedLogger.setEnabled(true, logRoot, &error))
   {
-    appendLog(error);
+    appendLog(error, true);
     settings.setValue("system/detailedLogEnabled", false);
+    syncAsyncMetricsLogging();
     return;
   }
 
   settings.setValue("system/detailedLogEnabled", true);
+  syncAsyncMetricsLogging();
   appendLog(QString("%1: %2").arg(trText("log.detailedLogEnabled"), m_detailedLogger.filePath()));
 }
 

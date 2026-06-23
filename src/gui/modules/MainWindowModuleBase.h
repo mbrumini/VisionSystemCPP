@@ -37,7 +37,29 @@ protected:
   std::map<QString, CameraRuntime>& cameraRuntime() const { return *m_context.cameraRuntime; }
 
   QString tr(const QString& key) const { return m_context.trText(key); }
-  void log(const QString& message) const { m_context.appendLog(message); }
+  void log(const QString& message) const
+  {
+    if (m_context.isDetailedLogEnabled && !m_context.isDetailedLogEnabled())
+    {
+      return;
+    }
+    if (m_context.appendLog)
+    {
+      m_context.appendLog(message);
+    }
+  }
+  template<typename Producer>
+  void logLazy(Producer&& produce) const
+  {
+    if (m_context.isDetailedLogEnabled && !m_context.isDetailedLogEnabled())
+    {
+      return;
+    }
+    if (m_context.appendLog)
+    {
+      m_context.appendLog(produce());
+    }
+  }
 
 private:
   MainWindowContext& m_context;

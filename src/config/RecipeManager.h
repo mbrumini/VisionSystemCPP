@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QHash>
 #include <QRect>
 #include <QPoint>
 #include <QPointF>
@@ -85,6 +86,7 @@ struct GeometryLineRecipeConfig
   QString id = "line_1";
   QString alias;
   QString coordinateSpace = "part";
+  bool anchorInImageSpace = false;
   QPointF partStart;
   QPointF partEnd;
   QPointF imageStart;
@@ -105,6 +107,7 @@ struct GeometryPointRecipeConfig
   QString id = "point_1";
   QString alias;
   QString coordinateSpace = "part";
+  bool anchorInImageSpace = false;
   QPointF partStart;
   QPointF partEnd;
   QPointF imageStart;
@@ -121,6 +124,7 @@ struct GeometryCircleRecipeConfig
   QString id = "circle_1";
   QString alias;
   QString coordinateSpace = "part";
+  bool anchorInImageSpace = false;
   QPointF partCenter;
   QPointF imageCenter;
   double radius = 0.0;
@@ -141,6 +145,7 @@ struct GeometryArcRecipeConfig
   QString id = "arc_1";
   QString alias;
   QString coordinateSpace = "part";
+  bool anchorInImageSpace = false;
   QPointF partCenter;
   QPointF partStart;
   QPointF partEnd;
@@ -314,6 +319,10 @@ private:
 
   QString cameraRecipePath(const QString& cameraId) const;
   QString cameraImagesPath(const QString& cameraId, const QString& kind) const;
+  void invalidateCameraRecipeCache(const QString& cameraId) const;
+  void clearRecipeCache() const;
 
   QString m_recipeId;
+  mutable QHash<QString, QVector<MeasurementRecipeConfig>> m_measurementsCache;
+  mutable QHash<QString, QVector<ConstructedGeometryRecipeConfig>> m_constructedGeometriesCache;
 };

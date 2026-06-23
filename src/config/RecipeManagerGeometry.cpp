@@ -36,6 +36,7 @@ QVector<GeometryLineRecipeConfig> RecipeManager::loadGeometryLines(const QString
 
     config.enabled = line.value("enabled").toBool(true);
     config.coordinateSpace = line.value("coordinateSpace").toString(GeometryRecipeJson::kPartSpace);
+    config.anchorInImageSpace = line.value("anchorInImageSpace").toBool(false);
     config.partStart = pointFFromJson(line.value("partStart").toObject());
     config.partEnd = pointFFromJson(line.value("partEnd").toObject());
     config.imageStart = pointFFromJson(line.value("imageStart").toObject());
@@ -104,6 +105,10 @@ bool RecipeManager::saveGeometryLines(const QString& cameraId, const QVector<Geo
       config.partEnd,
       config.imageStart,
       config.imageEnd);
+    if (config.anchorInImageSpace)
+    {
+      line["anchorInImageSpace"] = true;
+    }
     line["bandHalfWidth"] = qBound(2, config.bandHalfWidth, 500);
     line["edgeSensitivity"] = qBound(1, config.edgeSensitivity, 255);
     line["edgeCleanupDerivative"] = qBound(0, config.edgeCleanupDerivative, 100);
@@ -170,6 +175,7 @@ QVector<GeometryPointRecipeConfig> RecipeManager::loadGeometryPoints(const QStri
 
     config.enabled = point.value("enabled").toBool(true);
     config.coordinateSpace = point.value("coordinateSpace").toString(GeometryRecipeJson::kPartSpace);
+    config.anchorInImageSpace = point.value("anchorInImageSpace").toBool(false);
     config.partStart = pointFFromJson(point.value("partStart").toObject());
     config.partEnd = pointFFromJson(point.value("partEnd").toObject());
     config.imageStart = pointFFromJson(point.value("imageStart").toObject());
@@ -235,6 +241,10 @@ bool RecipeManager::saveGeometryPoints(const QString& cameraId, const QVector<Ge
       config.partEnd,
       config.imageStart,
       config.imageEnd);
+    if (config.anchorInImageSpace)
+    {
+      point["anchorInImageSpace"] = true;
+    }
     point["edgeSensitivity"] = qBound(1, config.edgeSensitivity, 255);
     point["useSubpixel"] = config.useSubpixel;
     point["transition"] = config.transition == "dark_to_light" ? "dark_to_light" : "light_to_dark";
@@ -297,6 +307,7 @@ QVector<GeometryCircleRecipeConfig> RecipeManager::loadGeometryCircles(const QSt
 
     config.enabled = circle.value("enabled").toBool(true);
     config.coordinateSpace = circle.value("coordinateSpace").toString(GeometryRecipeJson::kPartSpace);
+    config.anchorInImageSpace = circle.value("anchorInImageSpace").toBool(false);
     config.partCenter = pointFFromJson(circle.value("partCenter").toObject());
     config.imageCenter = pointFFromJson(circle.value("imageCenter").toObject());
     if (config.imageCenter.isNull())
@@ -348,6 +359,10 @@ bool RecipeManager::saveGeometryCircles(const QString& cameraId, const QVector<G
     circle["type"] = "edge_circle";
     GeometryRecipeJson::writeCenterCoordinate(
       circle, config.coordinateSpace, config.partCenter, config.imageCenter);
+    if (config.anchorInImageSpace)
+    {
+      circle["anchorInImageSpace"] = true;
+    }
     circle["radius"] = qMax(1.0, config.radius);
     circle["innerBand"] = qBound(1, config.innerBand, 500);
     circle["outerBand"] = qBound(1, config.outerBand, 500);
@@ -394,6 +409,7 @@ QVector<GeometryArcRecipeConfig> RecipeManager::loadGeometryArcs(const QString& 
 
     config.enabled = arc.value("enabled").toBool(true);
     config.coordinateSpace = arc.value("coordinateSpace").toString(GeometryRecipeJson::kPartSpace);
+    config.anchorInImageSpace = arc.value("anchorInImageSpace").toBool(false);
     config.partCenter = pointFFromJson(arc.value("partCenter").toObject());
     config.partStart = pointFFromJson(arc.value("partStart").toObject());
     config.partEnd = pointFFromJson(arc.value("partEnd").toObject());
@@ -461,6 +477,10 @@ bool RecipeManager::saveGeometryArcs(const QString& cameraId, const QVector<Geom
       config.imageCenter,
       config.imageStart,
       config.imageEnd);
+    if (config.anchorInImageSpace)
+    {
+      arc["anchorInImageSpace"] = true;
+    }
     arc["radius"] = qMax(1.0, config.radius);
     arc["startAngleRadians"] = config.startAngleRadians;
     arc["endAngleRadians"] = config.endAngleRadians;
@@ -484,6 +504,12 @@ bool RecipeManager::saveGeometryArcs(const QString& cameraId, const QVector<Geom
 
 QVector<ConstructedGeometryRecipeConfig> RecipeManager::loadConstructedGeometries(const QString& cameraId) const
 {
+  const auto cached = m_constructedGeometriesCache.constFind(cameraId);
+  if (cached != m_constructedGeometriesCache.constEnd())
+  {
+    return cached.value();
+  }
+
   QVector<ConstructedGeometryRecipeConfig> configs;
 
   QJsonObject root;
@@ -514,6 +540,7 @@ QVector<ConstructedGeometryRecipeConfig> RecipeManager::loadConstructedGeometrie
     configs.append(config);
   }
 
+  m_constructedGeometriesCache.insert(cameraId, configs);
   return configs;
 }
 
@@ -558,7 +585,12 @@ bool RecipeManager::saveConstructedGeometries(const QString& cameraId,
   setGeometryArray(geometries, "constructed", constructed);
   writeGeometriesTool(tools, geometries);
   root["tools"] = tools;
-  return saveJsonObject(path, root, errorMessage);
+  const bool saved = saveJsonObject(path, root, errorMessage);
+  if (saved)
+  {
+    invalidateCameraRecipeCache(cameraId);
+  }
+  return saved;
 }
 
 bool RecipeManager::appendConstructedGeometry(const QString& cameraId,

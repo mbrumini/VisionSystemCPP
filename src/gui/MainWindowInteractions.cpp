@@ -8,6 +8,7 @@
 #include "gui/SurfaceLocalizationAdapters.h"
 #include "processing/SurfaceDefectProcessor.h"
 #include "util/AsyncExecutor.h"
+#include "util/CameraAsyncExecutor.h"
 
 #include <QApplication>
 #include <QDateTime>
@@ -32,9 +33,13 @@ void MainWindow::incPendingJobs(const QString& cameraId)
   m_cameraPendingJobs[cameraId] = v;
   m_cameraProcessingBusy[cameraId] = true;
   updateCameraStripStatus(cameraId);
-  if (m_machineRunning && cameraId == m_selectedCameraId)
+  if (m_machineRunning && m_selectedCameraId.isEmpty())
   {
-    updateControlPanel(&m_selectedCamera);
+    refreshProductionOverviewPanel();
+  }
+  else if (m_machineRunning && cameraId == m_selectedCameraId)
+  {
+    refreshCameraMonitoringPanel(m_selectedCamera);
   }
 }
 
@@ -52,12 +57,16 @@ void MainWindow::decPendingJobs(const QString& cameraId)
   {
     notifyProductionPieceCompleted(cameraId);
   }
+  if (m_machineRunning && m_selectedCameraId.isEmpty())
+  {
+    refreshProductionOverviewPanel();
+  }
   else if (cameraId == m_selectedCameraId)
   {
-    updateMeasurementResults();
+    scheduleMeasurementResultsUpdate();
     if (m_machineRunning)
     {
-      updateControlPanel(&m_selectedCamera);
+      refreshCameraMonitoringPanel(m_selectedCamera);
     }
   }
 }
@@ -261,7 +270,9 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
     return;
   }
 
-  appendLog(QString("Pipeline simulatore attende frame: %1").arg(camera.id));
+  appendLogLazy([cameraId = camera.id] {
+    return QString("Pipeline simulatore attende frame: %1").arg(cameraId);
+  });
   CameraRuntime& runtime = m_cameraRuntime[camera.id];
   QString error;
   if (!runtime.running() && !runtime.start(camera, {}, &error))
@@ -275,9 +286,9 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
   }
   runtime.clearCurrentPose(camera.id);
   runtime.clearGeometries();
-  appendLog(QString("Pipeline simulatore acquisito: %1 frame=%2")
-    .arg(camera.id)
-    .arg(runtime.currentSimulatorFrame().frameId));
+  appendLogLazy([cameraId = camera.id, frameId = runtime.currentSimulatorFrame().frameId] {
+    return QString("Pipeline simulatore acquisito: %1 frame=%2").arg(cameraId).arg(frameId);
+  });
   if (camera.id == m_selectedCameraId && !runtime.currentFrame().empty())
   {
     m_selectedPreview = m_imaging.matToPixmap(runtime.currentFrame());
@@ -420,12 +431,16 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
           }
           updateLargePreview();
         }
-        m_setup.refreshSetupGeometryResults(camera);
-        publishSimulatorResult(camera.id);
-        decPendingJobs(camera.id);
-        updateMeasurementResults();
-        QTimer::singleShot(0, this, [this, camera]() {
-          processNextSimulatorFrame(camera);
+        m_setup.refreshSetupGeometryResults(camera, [this, camera, frameId = completedRuntime.currentSimulatorFrame().frameId]() {
+          appendLog(QString("Pipeline simulatore invio risultato: %1 frame=%2")
+            .arg(camera.id)
+            .arg(frameId));
+          publishSimulatorResult(camera.id);
+          decPendingJobs(camera.id);
+          updateMeasurementResults();
+          QTimer::singleShot(0, this, [this, camera]() {
+            processNextSimulatorFrame(camera);
+          });
         });
       });
     return;
@@ -640,15 +655,20 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
   };
 
   incPendingJobs(camera.id);
-  appendLog(QString("Pipeline simulatore job avviato: %1 method=%2 recipe=%3")
-    .arg(camera.id, requestedStrategy, m_recipeManager.recipeId()));
-  AsyncExecutor::runAsyncTask(
+  appendLogLazy([cameraId = camera.id, requestedStrategy, recipeId = m_recipeManager.recipeId()] {
+    return QString("Pipeline simulatore job avviato: %1 method=%2 recipe=%3")
+      .arg(cameraId, requestedStrategy, recipeId);
+  });
+  CameraAsyncExecutor::runAsyncTask(
+    camera.id,
     std::move(job),
     this,
     [this, camera, startedAt](const SurfaceDefectResult& result) {
-      appendLog(QString("Pipeline simulatore job completato: %1 found=%2")
-        .arg(camera.id)
-        .arg(result.localization.found ? "true" : "false"));
+      appendLogLazy([cameraId = camera.id, found = result.localization.found] {
+        return QString("Pipeline simulatore job completato: %1 found=%2")
+          .arg(cameraId)
+          .arg(found ? "true" : "false");
+      });
       CameraRuntime& completedRuntime = m_cameraRuntime[camera.id];
       SimulatorBridge::instance().publishFrameEvent(
         completedRuntime.currentSimulatorFrame(),
@@ -726,17 +746,21 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
         updateLargePreview();
       }
 
-      m_setup.refreshSetupGeometryResults(camera);
+      m_setup.refreshSetupGeometryResults(camera, [this, camera, frameId = completedRuntime.currentSimulatorFrame().frameId]() {
+        appendLog(QString("Pipeline simulatore invio risultato: %1 frame=%2")
+          .arg(camera.id)
+          .arg(frameId));
+        publishSimulatorResult(camera.id);
+        decPendingJobs(camera.id);
+        updateMeasurementResults();
+        QTimer::singleShot(0, this, [this, camera]() {
+          processNextSimulatorFrame(camera);
+        });
+      });
 
-      appendLog(QString("Pipeline simulatore invio risultato: %1 frame=%2")
+      appendLog(QString("Pipeline simulatore geometry avviata: %1 frame=%2")
         .arg(camera.id)
         .arg(completedRuntime.currentSimulatorFrame().frameId));
-      publishSimulatorResult(camera.id);
-      decPendingJobs(camera.id);
-      updateMeasurementResults();
-      QTimer::singleShot(0, this, [this, camera]() {
-        processNextSimulatorFrame(camera);
-      });
     },
     QString("simulator.%1.%2").arg(camera.id, requestedStrategy));
 }
@@ -828,6 +852,19 @@ void MainWindow::showGridView()
 void MainWindow::startMachine()
 {
   m_machineRunning = true;
+  QStringList cameraIds;
+  for (const CameraConfig& camera : m_config.activeCameras())
+  {
+    cameraIds.append(camera.id);
+  }
+  CameraAsyncExecutor::ensurePools(cameraIds);
+  if (m_geometry)
+  {
+    for (const CameraConfig& camera : m_config.activeCameras())
+    {
+      m_geometry->resetRuntimeGeometryForProduction(camera);
+    }
+  }
   const bool keepCurrentTool =
     !m_selectedCameraId.isEmpty() &&
     m_activeDrawingRecipe != MainWindowActiveDrawingRecipe::None;
@@ -878,7 +915,14 @@ void MainWindow::startMachine()
       {
         return;
       }
-      updateControlPanel(m_selectedCameraId.isEmpty() ? nullptr : &m_selectedCamera);
+      if (m_selectedCameraId.isEmpty())
+      {
+        refreshProductionOverviewPanel();
+      }
+      else
+      {
+        refreshCameraMonitoringPanel(m_selectedCamera);
+      }
     });
   }
   m_throughputRefreshTimer->start(1000);
@@ -892,6 +936,8 @@ void MainWindow::stopMachine()
     m_activeDrawingRecipe != MainWindowActiveDrawingRecipe::None;
 
   m_machineRunning = false;
+
+  CameraAsyncExecutor::waitForAll();
 
   const int discardedFrames = SimulatorBridge::instance().discardAllQueuedFrames(
     QStringLiteral("Vision in STOP: frame scartato"));
@@ -911,6 +957,7 @@ void MainWindow::stopMachine()
 
   m_cameraPendingJobs.clear();
   m_cameraProcessingBusy.clear();
+  m_lastPublishedMeasurements.clear();
   m_productionThroughput.clear();
   if (m_throughputRefreshTimer)
   {
@@ -996,10 +1043,13 @@ void MainWindow::selectCamera(const CameraConfig& camera)
   appendLog(trText("log.cameraSelected") + ": " + camera.id);
 }
 
-void MainWindow::appendLog(const QString& message)
+void MainWindow::appendLog(const QString& message, bool alwaysShow)
 {
-  const QString timestamp = QDateTime::currentDateTime().toString("HH:mm:ss");
-  const QString line = QString("[%1] %2").arg(timestamp, message);
+  if (!alwaysShow && !m_detailedLogger.enabled())
+  {
+    return;
+  }
+
   m_detailedLogger.logLine(message);
 
   if (!m_log)
@@ -1007,7 +1057,29 @@ void MainWindow::appendLog(const QString& message)
     return;
   }
 
+  const QString timestamp = QDateTime::currentDateTime().toString("HH:mm:ss");
+  const QString line = QString("[%1] %2").arg(timestamp, message);
   m_log->append(line);
+}
+
+bool MainWindow::isDetailedLogEnabled() const
+{
+  return m_detailedLogger.enabled();
+}
+
+void MainWindow::syncAsyncMetricsLogging()
+{
+  if (!m_detailedLogger.enabled())
+  {
+    AsyncExecutor::setMetricsHandler(nullptr);
+    return;
+  }
+
+  AsyncExecutor::setMetricsHandler([this](const QString& name, qint64 ms) {
+    appendLog(name.isEmpty()
+      ? QString("metric: %1 ms").arg(ms)
+      : QString("metric %1: %2 ms").arg(name).arg(ms));
+  });
 }
 
 void MainWindow::updateLargePreview()

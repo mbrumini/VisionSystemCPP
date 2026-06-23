@@ -65,6 +65,24 @@ void MainWindowGeometryModule::reloadRecipeState()
   }
 }
 
+void MainWindowGeometryModule::resetRuntimeGeometryForProduction(const CameraConfig& camera)
+{
+  m_lineConfigs.remove(camera.id);
+  m_activeLineIndexes.remove(camera.id);
+  m_pointConfigs.remove(camera.id);
+  m_activePointIndexes.remove(camera.id);
+  m_circleConfigs.remove(camera.id);
+  m_activeCircleIndexes.remove(camera.id);
+  m_arcConfigs.remove(camera.id);
+  m_activeArcIndexes.remove(camera.id);
+  m_geometryJobGeneration.remove(camera.id);
+
+  loadGeometryLinesRecipe(camera);
+  loadGeometryPointRecipe(camera);
+  loadGeometryCirclesRecipe(camera);
+  loadGeometryArcsRecipe(camera);
+}
+
 GeometryLineRuntimeConfig& MainWindowGeometryModule::activeGeometryLineConfig(const QString& cameraId)
 {
   QVector<GeometryLineRuntimeConfig>& lines = m_lineConfigs[cameraId];
@@ -158,6 +176,7 @@ void MainWindowGeometryModule::loadGeometryPointRecipe(const CameraConfig& camer
       recipe.partEnd,
       recipe.imageStart,
       recipe.imageEnd);
+    point.anchorInImageSpace = recipe.anchorInImageSpace;
     points.append(point);
   }
 
@@ -209,6 +228,7 @@ void MainWindowGeometryModule::loadGeometryCirclesRecipe(const CameraConfig& cam
       recipe.coordinateSpace,
       recipe.partCenter,
       recipe.imageCenter);
+    circle.anchorInImageSpace = recipe.anchorInImageSpace;
     circles.append(circle);
   }
 
@@ -244,6 +264,7 @@ void MainWindowGeometryModule::saveGeometryPointRecipe(const CameraConfig& camer
     recipe.id = point.id;
     recipe.alias = point.alias;
     recipe.coordinateSpace = coords.coordinateSpace;
+    recipe.anchorInImageSpace = point.anchorInImageSpace;
     recipe.partStart = coords.partStart;
     recipe.partEnd = coords.partEnd;
     recipe.imageStart = coords.imageStart;
@@ -288,6 +309,7 @@ void MainWindowGeometryModule::saveGeometryCirclesRecipe(const CameraConfig& cam
     recipe.id = circle.id;
     recipe.alias = circle.alias;
     recipe.coordinateSpace = coords.coordinateSpace;
+    recipe.anchorInImageSpace = circle.anchorInImageSpace;
     recipe.partCenter = coords.partCenter;
     recipe.imageCenter = coords.imageCenter;
     recipe.radius = circle.radius;
@@ -468,6 +490,7 @@ void MainWindowGeometryModule::loadGeometryLinesRecipe(const CameraConfig& camer
       recipe.partEnd,
       recipe.imageStart,
       recipe.imageEnd);
+    line.anchorInImageSpace = recipe.anchorInImageSpace;
     lines.append(line);
   }
 
@@ -503,6 +526,7 @@ void MainWindowGeometryModule::saveGeometryLinesRecipe(const CameraConfig& camer
     recipe.id = line.id;
     recipe.alias = line.alias;
     recipe.coordinateSpace = coords.coordinateSpace;
+    recipe.anchorInImageSpace = line.anchorInImageSpace;
     recipe.partStart = coords.partStart;
     recipe.partEnd = coords.partEnd;
     recipe.imageStart = coords.imageStart;
@@ -579,6 +603,7 @@ void MainWindowGeometryModule::loadGeometryArcsRecipe(const CameraConfig& camera
       recipe.imageCenter,
       recipe.imageStart,
       recipe.imageEnd);
+    arc.anchorInImageSpace = recipe.anchorInImageSpace;
     arcs.append(arc);
   }
 
@@ -616,6 +641,7 @@ void MainWindowGeometryModule::saveGeometryArcsRecipe(const CameraConfig& camera
     recipe.id = arc.id;
     recipe.alias = arc.alias;
     recipe.coordinateSpace = coords.coordinateSpace;
+    recipe.anchorInImageSpace = arc.anchorInImageSpace;
     recipe.partCenter = coords.partCenter;
     recipe.partStart = coords.partStart;
     recipe.partEnd = coords.partEnd;

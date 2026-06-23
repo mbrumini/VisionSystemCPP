@@ -3,6 +3,7 @@
 #include "gui/geometry/GeometryOverlay.h"
 #include "gui/modules/MainWindowGeometryModule.h"
 #include "measurement/MeasurementGeometryMath.h"
+#include "processing/GeometryMeasurementPipeline.h"
 #include "runtime/CameraRuntime.h"
 
 #include <QColor>
@@ -13,6 +14,15 @@
 
 namespace
 {
+CameraMeasurementCalibration calibrationFromCamera(const CameraConfig& camera)
+{
+  CameraMeasurementCalibration calibration;
+  calibration.enabled = camera.calibration.enabled;
+  calibration.pixelSizeXMm = camera.calibration.pixelSizeXMm;
+  calibration.pixelSizeYMm = camera.calibration.pixelSizeYMm;
+  return calibration;
+}
+
 QPointF toPointF(const cv::Point2d& point)
 {
   return QPointF(point.x, point.y);
@@ -351,103 +361,10 @@ void MainWindowMeasurementModule::saveMeasurementRealSettings(const CameraConfig
 
 void MainWindowMeasurementModule::rebuildMeasurementRecipe(const CameraConfig& camera)
 {
-  GeometrySet& set = cameraRuntime()[camera.id].geometries();
-  set.measurements.clear();
-
-  const QVector<MeasurementRecipeConfig> configs = recipes().loadMeasurements(camera.id);
-  QSet<QString> processedMeasurementKeys;
-  for (const MeasurementRecipeConfig& config : configs)
-  {
-    if (!config.enabled)
-    {
-      continue;
-    }
-    const QString key = measurementKey(config);
-    if (processedMeasurementKeys.contains(key))
-    {
-      continue;
-    }
-    processedMeasurementKeys.insert(key);
-
-    if (config.type == "point_point_distance")
-    {
-      const PointGeometry* pointA = findPointByMetaId(set, config.sourceAId);
-      const PointGeometry* pointB = findPointByMetaId(set, config.sourceBId);
-      double distancePixels = 0.0;
-      if (pointA && pointB && MeasurementGeometryMath::pointPointDistance(*pointA, *pointB, distancePixels))
-      {
-        appendMeasurementResult(set, camera, config, pointA->meta.id, pointB->meta.id, distancePixels);
-      }
-      else
-      {
-        appendFailedMeasurementResult(set, config);
-      }
-      continue;
-    }
-
-    if (config.type == "point_line_distance")
-    {
-      const PointGeometry* point = findPointByMetaId(set, config.sourceAId);
-      const LineGeometry* line = findLineByMetaId(set, config.sourceBId);
-      double distancePixels = 0.0;
-      if (point && line && MeasurementGeometryMath::pointLineDistance(*point, *line, distancePixels))
-      {
-        appendMeasurementResult(set, camera, config, point->meta.id, line->meta.id, distancePixels);
-      }
-      else
-      {
-        appendFailedMeasurementResult(set, config);
-      }
-      continue;
-    }
-
-    if (config.type == "line_line_distance")
-    {
-      const LineGeometry* lineA = findLineByMetaId(set, config.sourceAId);
-      const LineGeometry* lineB = findLineByMetaId(set, config.sourceBId);
-      double distancePixels = 0.0;
-      if (lineA && lineB && MeasurementGeometryMath::parallelLineDistance(*lineA, *lineB, distancePixels))
-      {
-        appendMeasurementResult(set, camera, config, lineA->meta.id, lineB->meta.id, distancePixels);
-      }
-      else
-      {
-        appendFailedMeasurementResult(set, config);
-      }
-      continue;
-    }
-
-    if (config.type == "circle_diameter")
-    {
-      const CircleGeometry* circle = findCircleByMetaId(set, config.sourceAId);
-      double diameterPixels = 0.0;
-      if (circle && MeasurementGeometryMath::circleDiameterPixels(*circle, diameterPixels))
-      {
-        appendMeasurementResult(set, camera, config, circle->meta.id, {}, diameterPixels);
-      }
-      else
-      {
-        appendFailedMeasurementResult(set, config);
-      }
-      continue;
-    }
-
-    if (config.type == "line_line_angle")
-    {
-      const LineGeometry* lineA = findLineByMetaId(set, config.sourceAId);
-      const LineGeometry* lineB = findLineByMetaId(set, config.sourceBId);
-      double angleDegrees = 0.0;
-      if (lineA && lineB && MeasurementGeometryMath::lineLineAngleDegrees(*lineA, *lineB, angleDegrees))
-      {
-        appendMeasurementResult(set, camera, config, lineA->meta.id, lineB->meta.id, angleDegrees);
-      }
-      else
-      {
-        appendFailedMeasurementResult(set, config);
-      }
-      continue;
-    }
-  }
+  rebuildMeasurements(
+    cameraRuntime()[camera.id].geometries(),
+    recipes().loadMeasurements(camera.id),
+    calibrationFromCamera(camera));
 }
 
 void MainWindowMeasurementModule::appendMeasurementOverlay(

@@ -68,13 +68,27 @@ private:
   void showHelp();
   void updateControlPanel(const CameraConfig* camera);
   void updateMeasurementResults();
+  void scheduleMeasurementResultsUpdate();
+  void refreshProductionOverviewPanel();
+  void refreshCameraMonitoringPanel(const CameraConfig& camera);
   void updateCameraStripStatus(const QString& cameraId);
   void deactivateImageDrawingTools();
   void showCameraToolList(const CameraConfig& camera);
   void showLocalizationStrategyList(const CameraConfig& camera);
   void clearToolPanel();
   void addGrabToggleToToolPanel();
-  void appendLog(const QString& message);
+  void appendLog(const QString& message, bool alwaysShow = false);
+  template<typename Producer>
+  void appendLogLazy(Producer&& produce, bool alwaysShow = false)
+  {
+    if (!alwaysShow && !m_detailedLogger.enabled())
+    {
+      return;
+    }
+    appendLog(produce(), alwaysShow);
+  }
+  bool isDetailedLogEnabled() const;
+  void syncAsyncMetricsLogging();
   void setDetailedLogEnabled(bool enabled);
   void setSetupDetailsVisible(bool visible);
   void updateLargePreview();
@@ -136,6 +150,10 @@ private:
   QString m_selectedImagePath;
   QTimer* m_simulationTimer = nullptr;
   QTimer* m_throughputRefreshTimer = nullptr;
+  bool m_measurementResultsUpdatePending = false;
+  QLabel* m_productionOverviewStatsLabel = nullptr;
+  QLabel* m_productionOverviewThroughputLabel = nullptr;
+  QLabel* m_cameraMonitoringStatsLabel = nullptr;
   std::map<QString, CameraRuntime> m_cameraRuntime;
   QHash<QString, LocalizationResult> m_lastLocalizationResults;
   QHash<QString, SurfaceLocalizationReference> m_lastSurfaceLocalizationResults;
@@ -144,6 +162,7 @@ private:
   QHash<QString, int> m_cameraDroppedFrames;
   QHash<QString, int> m_cameraPendingJobs;
   QHash<QString, ProductionThroughputTracker> m_productionThroughput;
+  QHash<QString, QVector<MeasurementResult>> m_lastPublishedMeasurements;
   bool m_machineRunning = false;
   bool m_setupDetailsVisible = false;
 

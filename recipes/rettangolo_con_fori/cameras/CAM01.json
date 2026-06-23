@@ -1,0 +1,252 @@
+{
+    "cameraId": "CAM01",
+    "tools": {
+        "geometries": {
+            "circles": [
+                {
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "circle_1",
+                    "innerBand": 20,
+                    "outerBand": 20,
+                    "partCenter": {
+                        "x": -104.93748318558926,
+                        "y": -55.02960826343795
+                    },
+                    "pickMode": "best",
+                    "radius": 25.49172415128211,
+                    "scanDirection": "normal_positive",
+                    "transition": "dark_to_light",
+                    "type": "edge_circle",
+                    "useSubpixel": true
+                },
+                {
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "circle_2",
+                    "innerBand": 20,
+                    "outerBand": 20,
+                    "partCenter": {
+                        "x": -105.04874356018684,
+                        "y": 54.93603606289082
+                    },
+                    "pickMode": "best",
+                    "radius": 25.476063488962918,
+                    "scanDirection": "normal_positive",
+                    "transition": "dark_to_light",
+                    "type": "edge_circle",
+                    "useSubpixel": true
+                },
+                {
+                    "coordinateSpace": "image",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "circle_3",
+                    "imageCenter": {
+                        "x": 420.06814070541213,
+                        "y": 184.9864384733004
+                    },
+                    "innerBand": 20,
+                    "outerBand": 20,
+                    "pickMode": "best",
+                    "radius": 25.546958556291155,
+                    "scanDirection": "normal_positive",
+                    "transition": "dark_to_light",
+                    "type": "edge_circle",
+                    "useSubpixel": true
+                },
+                {
+                    "coordinateSpace": "image",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "circle_4",
+                    "imageCenter": {
+                        "x": 419.938579498664,
+                        "y": 294.91261117309006
+                    },
+                    "innerBand": 20,
+                    "outerBand": 20,
+                    "pickMode": "best",
+                    "radius": 25.578728862668164,
+                    "scanDirection": "normal_positive",
+                    "transition": "dark_to_light",
+                    "type": "edge_circle",
+                    "useSubpixel": true
+                }
+            ],
+            "constructed": [
+                {
+                    "enabled": true,
+                    "id": "constructed_1",
+                    "sourceAId": "circle_1",
+                    "type": "circle_center"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_2",
+                    "sourceAId": "circle_2",
+                    "type": "circle_center"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_3",
+                    "sourceAId": "circle_3",
+                    "type": "circle_center"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_4",
+                    "sourceAId": "circle_4",
+                    "type": "circle_center"
+                }
+            ],
+            "enabled": true,
+            "lines": [
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "image",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_1",
+                    "imageEnd": {
+                        "x": 475.1807228915663,
+                        "y": 119.51807228915662
+                    },
+                    "imageStart": {
+                        "x": 170.6024096385542,
+                        "y": 117.59036144578313
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "image",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_2",
+                    "imageEnd": {
+                        "x": 165.78313253012047,
+                        "y": 361.4457831325301
+                    },
+                    "imageStart": {
+                        "x": 471.32530120481925,
+                        "y": 360.48192771084337
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                }
+            ]
+        },
+        "measurements": {
+            "enabled": true,
+            "items": [
+                {
+                    "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_1",
+                    "label": {
+                        "custom": true,
+                        "x": 540.9811320754717,
+                        "y": 407.5167785234899
+                    },
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 110.0177065561527,
+                    "sampleValue": 0,
+                    "sourceAId": "circle_1_center",
+                    "sourceBId": "circle_2_center",
+                    "type": "point_point_distance",
+                    "unit": "px"
+                },
+                {
+                    "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_2",
+                    "label": {
+                        "custom": true,
+                        "x": 542.6506024096385,
+                        "y": 434.69879518072287
+                    },
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 241.56860270956759,
+                    "sampleValue": 0,
+                    "sourceAId": "line_1",
+                    "sourceBId": "line_2",
+                    "type": "line_line_distance",
+                    "unit": "px"
+                },
+                {
+                    "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_3",
+                    "label": {
+                        "custom": true,
+                        "x": 544.5783132530121,
+                        "y": 375.90361445783134
+                    },
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 110.0201922635048,
+                    "sampleValue": 0,
+                    "sourceAId": "circle_3_center",
+                    "sourceBId": "circle_4_center",
+                    "type": "point_point_distance",
+                    "unit": "px"
+                }
+            ]
+        },
+        "surfaceLocalization": {
+            "aoes": {
+                "edgePca": {
+                    "id": "edgePca",
+                    "label": "edgePca",
+                    "searchRoi": {
+                        "height": 255,
+                        "width": 377,
+                        "x": 134,
+                        "y": 113
+                    }
+                }
+            },
+            "edge": {
+                "pcaResolveAmbiguity": true
+            },
+            "enabled": true,
+            "method": "edgePca"
+        }
+    }
+}

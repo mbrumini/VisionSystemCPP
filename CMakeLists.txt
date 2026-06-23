@@ -233,6 +233,10 @@ add_executable(VisionSystemCPP
     src/gui/geometry/GeometryMath.h
     src/gui/geometry/GeometryMath.cpp
     src/gui/geometry/GeometryRuntimeConfig.h
+    src/processing/GeometryMeasurementPipeline.h
+    src/processing/GeometryMeasurementPipeline.cpp
+    src/gui/geometry/ConfiguredGeometryDetector.h
+    src/gui/geometry/ConfiguredGeometryDetector.cpp
     src/gui/geometry/BandGeometryEditor.h
     src/gui/geometry/BandGeometryEditor.cpp
     src/gui/geometry/LineGeometryEditor.h
@@ -314,6 +318,8 @@ add_executable(VisionSystemCPP
     src/simulator/SimulatorBridge.cpp
     src/util/DetailedLogger.h
     src/util/DetailedLogger.cpp
+    src/util/CameraAsyncExecutor.h
+    src/util/CameraAsyncExecutor.cpp
     src/util/ProductionThroughputTracker.h
     src/util/ProductionThroughputTracker.cpp
     src/utils/Timer.h

@@ -37,9 +37,18 @@ inline void setDefaultMaxThreadsToHardware()
 }
 
 template<typename F, typename Callback>
-void runAsyncTask(F job, QObject* parent, Callback callback, const QString& taskName = QString())
+void runAsyncTaskOnPool(QThreadPool* pool,
+                        F job,
+                        QObject* parent,
+                        Callback callback,
+                        const QString& taskName = QString())
 {
   using Result = std::invoke_result_t<F>;
+
+  if (!pool)
+  {
+    return;
+  }
 
   const qint64 start = QDateTime::currentMSecsSinceEpoch();
   QPointer<QObject> context(parent);
@@ -56,7 +65,7 @@ void runAsyncTask(F job, QObject* parent, Callback callback, const QString& task
     }
   };
 
-  QThreadPool::globalInstance()->start(QRunnable::create([job = std::move(job), context, finish = std::move(finish)]() mutable {
+  pool->start(QRunnable::create([job = std::move(job), context, finish = std::move(finish)]() mutable {
     if constexpr (std::is_void_v<Result>)
     {
       job();
@@ -78,6 +87,12 @@ void runAsyncTask(F job, QObject* parent, Callback callback, const QString& task
       }
     }
   }));
+}
+
+template<typename F, typename Callback>
+void runAsyncTask(F job, QObject* parent, Callback callback, const QString& taskName = QString())
+{
+  runAsyncTaskOnPool(QThreadPool::globalInstance(), std::move(job), parent, std::move(callback), taskName);
 }
 
 } // namespace AsyncExecutor

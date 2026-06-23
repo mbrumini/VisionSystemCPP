@@ -9,6 +9,12 @@ using namespace RecipeJsonUtils;
 
 QVector<MeasurementRecipeConfig> RecipeManager::loadMeasurements(const QString& cameraId) const
 {
+  const auto cached = m_measurementsCache.constFind(cameraId);
+  if (cached != m_measurementsCache.constEnd())
+  {
+    return cached.value();
+  }
+
   QVector<MeasurementRecipeConfig> configs;
 
   QJsonObject root;
@@ -60,6 +66,7 @@ QVector<MeasurementRecipeConfig> RecipeManager::loadMeasurements(const QString& 
     configs.append(config);
   }
 
+  m_measurementsCache.insert(cameraId, configs);
   return configs;
 }
 
@@ -128,7 +135,12 @@ bool RecipeManager::saveMeasurements(const QString& cameraId, const QVector<Meas
   }
 
   root["tools"] = tools;
-  return saveJsonObject(path, root, errorMessage);
+  const bool saved = saveJsonObject(path, root, errorMessage);
+  if (saved)
+  {
+    invalidateCameraRecipeCache(cameraId);
+  }
+  return saved;
 }
 
 bool RecipeManager::appendMeasurement(const QString& cameraId, const MeasurementRecipeConfig& config, QString* errorMessage) const

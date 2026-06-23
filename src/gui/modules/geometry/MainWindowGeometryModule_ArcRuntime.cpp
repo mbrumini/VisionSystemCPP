@@ -241,7 +241,7 @@ void MainWindowGeometryModule::handleGeometryArcHandleMoved(const CameraConfig& 
 
   GeometryArcRuntimeConfig& arc = activeGeometryArcConfig(camera.id);
   const PartPose& pose = cameraRuntime()[camera.id].currentPose();
-  const bool usePartArc = pose.valid && arc.hasArc;
+  const bool usePartArc = pose.valid && arc.hasArc && !arc.anchorInImageSpace;
   if (!usePartArc && !arc.hasImageArc)
   {
     return;
@@ -312,7 +312,7 @@ void MainWindowGeometryModule::showConfiguredGeometryArcs(const CameraConfig& ca
   GeometryArcRuntimeConfig& arc = activeGeometryArcConfig(camera.id);
   largeImage()->clearCircles();
   const PartPose& pose = cameraRuntime()[camera.id].currentPose();
-  const bool usePartArc = pose.valid && arc.hasArc;
+  const bool usePartArc = pose.valid && arc.hasArc && !arc.anchorInImageSpace;
   const cv::Point2d center = usePartArc ? partToImage(pose, arc.partCenter) : arc.imageCenter;
   const cv::Point2d start = usePartArc ? partToImage(pose, arc.partStart) : arc.imageStart;
   const cv::Point2d end = usePartArc ? partToImage(pose, arc.partEnd) : arc.imageEnd;
@@ -368,7 +368,7 @@ void MainWindowGeometryModule::testGeometryArc(const CameraConfig& camera)
     saveGeometryArcsRecipe(camera);
   }
 
-  const bool usePartArc = pose.valid && arcConfig.hasArc;
+  const bool usePartArc = pose.valid && arcConfig.hasArc && !arcConfig.anchorInImageSpace;
   if (!usePartArc && !arcConfig.hasImageArc)
   {
     showConfiguredGeometryArcs(camera);

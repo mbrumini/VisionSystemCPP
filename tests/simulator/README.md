@@ -62,6 +62,11 @@ La finestra non avvia automaticamente la sequenza. Premere `Start` in
 TestVision. TestVision invia un solo frame e attende il risultato con lo stesso
 `frameId` prima di passare al successivo. `Stop` interrompe la sequenza.
 
+Con **Solo invio immagini (non attendere risultati)** attivo, TestVision invia
+i frame al ritmo configurato senza attendere i `result` di Vision. Utile per
+stressare Vision senza accumulare righe in tabella/log. Da riga di comando:
+`--send-only`.
+
 In Vision, la camera simulata deve avere Grab/Start attivo. Se non e' attivo,
 TestVision resta fermo sul frame corrente con lo stato
 `attendo il risultato di Vision`.

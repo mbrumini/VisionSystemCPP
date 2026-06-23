@@ -9,8 +9,12 @@
 #include <QPointF>
 #include <QVector>
 
+#include <functional>
+
 class CameraConfig;
 class GeometryOverlay;
+struct ConfiguredGeometryDetectOutput;
+struct GeometryPipelineOutput;
 
 class MainWindowGeometryModule : public MainWindowModuleBase
 {
@@ -27,6 +31,7 @@ public:
   explicit MainWindowGeometryModule(MainWindowContext& context);
 
   void reloadRecipeState();
+  void resetRuntimeGeometryForProduction(const CameraConfig& camera);
   DrawingTarget drawingTarget() const { return m_drawingTarget; }
   void setDrawingTarget(DrawingTarget target) { m_drawingTarget = target; }
 
@@ -59,6 +64,7 @@ public:
   void refreshMeasurementOverlay(const CameraConfig& camera);
   void testGeometryLine(const CameraConfig& camera);
   void testConfiguredGeometryLines(const CameraConfig& camera);
+  void testConfiguredGeometryLinesAsync(const CameraConfig& camera, std::function<void()> onComplete = nullptr);
 
   QHash<QString, QString> geometryAliasMap(const QString& cameraId) const;
   QString geometryDisplayLabel(const QString& cameraId, const QString& geometryId) const;
@@ -100,6 +106,8 @@ public:
 
 private:
   void removeMeasurementsForDeletedGeometry(const CameraConfig& camera, const QString& geometryId);
+  void applyConfiguredGeometryDetectionResult(const CameraConfig& camera, const ConfiguredGeometryDetectOutput& result);
+  void applyGeometryPipelineResult(const CameraConfig& camera, const GeometryPipelineOutput& result);
 
   DrawingTarget m_drawingTarget = DrawingTarget::None;
 
@@ -113,4 +121,5 @@ private:
   QHash<QString, int> m_activeCircleIndexes;
   QHash<QString, QVector<GeometryArcRuntimeConfig>> m_arcConfigs;
   QHash<QString, int> m_activeArcIndexes;
+  QHash<QString, quint64> m_geometryJobGeneration;
 };

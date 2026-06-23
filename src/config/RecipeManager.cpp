@@ -286,6 +286,19 @@ QString RecipeManager::recipeId() const
 void RecipeManager::setRecipeId(const QString& recipeId)
 {
   m_recipeId = normalizeRecipeId(recipeId);
+  clearRecipeCache();
+}
+
+void RecipeManager::clearRecipeCache() const
+{
+  m_measurementsCache.clear();
+  m_constructedGeometriesCache.clear();
+}
+
+void RecipeManager::invalidateCameraRecipeCache(const QString& cameraId) const
+{
+  m_measurementsCache.remove(cameraId);
+  m_constructedGeometriesCache.remove(cameraId);
 }
 
 bool RecipeManager::loadLocalizationRoi(const QString& cameraId, QRect& roi) const

@@ -12,18 +12,179 @@
             "calibration": {
                 "enabled": true,
                 "file": "calibrations/CAM01_checkerboard.json",
-                "pixelSizeXMm": 0.12631321368404366,
-                "pixelSizeYMm": 0.12573587254870924,
+                "pixelSizeXMm": 0.12631321,
+                "pixelSizeYMm": 0.12631321,
                 "type": "checkerboard",
-                "updatedAt": "2026-06-17T22:34:06"
+                "updatedAt": "2026-06-20T11:25:00"
             },
-            "deviceId": "usb:0",
             "displayName": "USB Camera 0",
             "enabled": true,
             "exists": true,
             "id": "CAM01",
-            "processingProfile": "profile_cam01",
+            "processingProfile": "bw_dimensional",
+            "simulatorChannel": "CAM01",
             "slot": 1,
+            "type": "simulator"
+        },
+        {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
+            "calibration": {
+                "enabled": true,
+                "file": "calibrations/CAM02_checkerboard.json",
+                "pixelSizeXMm": 0.12631321,
+                "pixelSizeYMm": 0.12631321,
+                "type": "checkerboard",
+                "updatedAt": "2026-06-20T11:25:00"
+            },
+            "displayName": "Camera 2",
+            "enabled": true,
+            "exists": true,
+            "id": "CAM02",
+            "processingProfile": "profile_cam02",
+            "simulatorChannel": "CAM02",
+            "slot": 2,
+            "type": "simulator"
+        },
+        {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
+            "calibration": {
+                "enabled": true,
+                "file": "calibrations/CAM03_checkerboard.json",
+                "pixelSizeXMm": 0.12631321,
+                "pixelSizeYMm": 0.12631321,
+                "type": "checkerboard",
+                "updatedAt": "2026-06-20T11:25:00"
+            },
+            "displayName": "Camera 3",
+            "enabled": true,
+            "exists": true,
+            "id": "CAM03",
+            "processingProfile": "profile_cam03",
+            "simulatorChannel": "CAM03",
+            "slot": 3,
+            "type": "simulator"
+        },
+        {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
+            "calibration": {
+                "enabled": true,
+                "file": "calibrations/CAM04_checkerboard.json",
+                "pixelSizeXMm": 0.12631321,
+                "pixelSizeYMm": 0.12631321,
+                "type": "checkerboard",
+                "updatedAt": "2026-06-20T11:25:00"
+            },
+            "displayName": "Camera 4",
+            "enabled": false,
+            "exists": true,
+            "id": "CAM04",
+            "processingProfile": "profile_cam04",
+            "simulatorChannel": "CAM04",
+            "slot": 4,
+            "type": "simulator"
+        },
+        {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
+            "calibration": {
+                "enabled": true,
+                "file": "calibrations/CAM05_checkerboard.json",
+                "pixelSizeXMm": 0.12631321,
+                "pixelSizeYMm": 0.12631321,
+                "type": "checkerboard",
+                "updatedAt": "2026-06-20T11:25:00"
+            },
+            "displayName": "Camera 5",
+            "enabled": false,
+            "exists": true,
+            "id": "CAM05",
+            "processingProfile": "profile_cam05",
+            "simulatorChannel": "CAM05",
+            "slot": 5,
+            "type": "simulator"
+        },
+        {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
+            "calibration": {
+                "enabled": true,
+                "file": "calibrations/CAM06_checkerboard.json",
+                "pixelSizeXMm": 0.12631321,
+                "pixelSizeYMm": 0.12631321,
+                "type": "checkerboard",
+                "updatedAt": "2026-06-20T11:25:00"
+            },
+            "displayName": "Camera 6",
+            "enabled": false,
+            "exists": true,
+            "id": "CAM06",
+            "processingProfile": "profile_cam06",
+            "simulatorChannel": "CAM06",
+            "slot": 6,
+            "type": "simulator"
+        },
+        {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
+            "calibration": {
+                "enabled": true,
+                "file": "calibrations/CAM07_checkerboard.json",
+                "pixelSizeXMm": 0.12631321,
+                "pixelSizeYMm": 0.12631321,
+                "type": "checkerboard",
+                "updatedAt": "2026-06-20T11:25:00"
+            },
+            "displayName": "Camera 7",
+            "enabled": false,
+            "exists": true,
+            "id": "CAM07",
+            "processingProfile": "profile_cam07",
+            "simulatorChannel": "CAM07",
+            "slot": 7,
+            "type": "simulator"
+        },
+        {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
+            "calibration": {
+                "enabled": true,
+                "file": "calibrations/CAM08_checkerboard.json",
+                "pixelSizeXMm": 0.12631321,
+                "pixelSizeYMm": 0.12631321,
+                "type": "checkerboard",
+                "updatedAt": "2026-06-20T11:25:00"
+            },
+            "deviceId": "usb:0",
+            "displayName": "USB Camera 0",
+            "enabled": false,
+            "exists": true,
+            "id": "CAM08",
+            "processingProfile": "profile_cam08",
+            "slot": 8,
             "trigger": {
                 "cameraLine": "",
                 "ioOutput": "",
@@ -34,274 +195,188 @@
             "usbIndex": 0
         },
         {
-            "calibration": {
-                "enabled": false,
-                "file": "",
-                "pixelSizeXMm": 0,
-                "pixelSizeYMm": 0,
-                "type": "none",
-                "updatedAt": ""
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
             },
-            "displayName": "Camera 2",
-            "enabled": false,
-            "exists": false,
-            "folder": "data/images/cam02",
-            "id": "CAM02",
-            "processingProfile": "profile_cam02",
-            "slot": 2,
-            "type": "file"
-        },
-        {
             "calibration": {
-                "enabled": false,
-                "file": "",
-                "pixelSizeXMm": 0,
-                "pixelSizeYMm": 0,
-                "type": "none",
-                "updatedAt": ""
-            },
-            "displayName": "Camera 3",
-            "enabled": false,
-            "exists": false,
-            "folder": "data/images/cam03",
-            "id": "CAM03",
-            "processingProfile": "profile_cam03",
-            "slot": 3,
-            "type": "file"
-        },
-        {
-            "calibration": {
-                "enabled": false,
-                "file": "",
-                "pixelSizeXMm": 0,
-                "pixelSizeYMm": 0,
-                "type": "none",
-                "updatedAt": ""
-            },
-            "displayName": "Camera 4",
-            "enabled": false,
-            "exists": false,
-            "folder": "data/images/cam04",
-            "id": "CAM04",
-            "processingProfile": "profile_cam04",
-            "slot": 4,
-            "type": "file"
-        },
-        {
-            "calibration": {
-                "enabled": false,
-                "file": "",
-                "pixelSizeXMm": 0,
-                "pixelSizeYMm": 0,
-                "type": "none",
-                "updatedAt": ""
-            },
-            "displayName": "Camera 5",
-            "enabled": false,
-            "exists": false,
-            "folder": "data/images/cam05",
-            "id": "CAM05",
-            "processingProfile": "profile_cam05",
-            "slot": 5,
-            "type": "file"
-        },
-        {
-            "calibration": {
-                "enabled": false,
-                "file": "",
-                "pixelSizeXMm": 0,
-                "pixelSizeYMm": 0,
-                "type": "none",
-                "updatedAt": ""
-            },
-            "displayName": "Camera 6",
-            "enabled": false,
-            "exists": false,
-            "folder": "data/images/cam06",
-            "id": "CAM06",
-            "processingProfile": "profile_cam06",
-            "slot": 6,
-            "type": "file"
-        },
-        {
-            "calibration": {
-                "enabled": false,
-                "file": "",
-                "pixelSizeXMm": 0,
-                "pixelSizeYMm": 0,
-                "type": "none",
-                "updatedAt": ""
-            },
-            "displayName": "Camera 7",
-            "enabled": false,
-            "exists": false,
-            "folder": "data/images/cam07",
-            "id": "CAM07",
-            "processingProfile": "profile_cam07",
-            "slot": 7,
-            "type": "file"
-        },
-        {
-            "calibration": {
-                "enabled": false,
-                "file": "",
-                "pixelSizeXMm": 0,
-                "pixelSizeYMm": 0,
-                "type": "none",
-                "updatedAt": ""
-            },
-            "displayName": "Camera 8",
-            "enabled": false,
-            "exists": false,
-            "folder": "data/images/cam08",
-            "id": "CAM08",
-            "processingProfile": "profile_cam08",
-            "slot": 8,
-            "type": "file"
-        },
-        {
-            "calibration": {
-                "enabled": false,
-                "file": "",
-                "pixelSizeXMm": 0,
-                "pixelSizeYMm": 0,
-                "type": "none",
-                "updatedAt": ""
+                "enabled": true,
+                "file": "calibrations/CAM09_checkerboard.json",
+                "pixelSizeXMm": 0.12631321,
+                "pixelSizeYMm": 0.12631321,
+                "type": "checkerboard",
+                "updatedAt": "2026-06-20T11:25:00"
             },
             "displayName": "Camera 9",
             "enabled": false,
             "exists": false,
-            "folder": "data/images/cam09",
             "id": "CAM09",
             "processingProfile": "profile_cam09",
+            "simulatorChannel": "CAM09",
             "slot": 9,
-            "type": "file"
+            "type": "simulator"
         },
         {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
             "calibration": {
-                "enabled": false,
-                "file": "",
-                "pixelSizeXMm": 0,
-                "pixelSizeYMm": 0,
-                "type": "none",
-                "updatedAt": ""
+                "enabled": true,
+                "file": "calibrations/CAM10_checkerboard.json",
+                "pixelSizeXMm": 0.12631321,
+                "pixelSizeYMm": 0.12631321,
+                "type": "checkerboard",
+                "updatedAt": "2026-06-20T11:25:00"
             },
             "displayName": "Camera 10",
             "enabled": false,
             "exists": false,
-            "folder": "data/images/cam10",
             "id": "CAM10",
             "processingProfile": "profile_cam10",
+            "simulatorChannel": "CAM10",
             "slot": 10,
-            "type": "file"
+            "type": "simulator"
         },
         {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
             "calibration": {
-                "enabled": false,
-                "file": "",
-                "pixelSizeXMm": 0,
-                "pixelSizeYMm": 0,
-                "type": "none",
-                "updatedAt": ""
+                "enabled": true,
+                "file": "calibrations/CAM11_checkerboard.json",
+                "pixelSizeXMm": 0.12631321,
+                "pixelSizeYMm": 0.12631321,
+                "type": "checkerboard",
+                "updatedAt": "2026-06-20T11:25:00"
             },
             "displayName": "Camera 11",
             "enabled": false,
             "exists": false,
-            "folder": "data/images/cam11",
             "id": "CAM11",
             "processingProfile": "profile_cam11",
+            "simulatorChannel": "CAM11",
             "slot": 11,
-            "type": "file"
+            "type": "simulator"
         },
         {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
             "calibration": {
-                "enabled": false,
-                "file": "",
-                "pixelSizeXMm": 0,
-                "pixelSizeYMm": 0,
-                "type": "none",
-                "updatedAt": ""
+                "enabled": true,
+                "file": "calibrations/CAM12_checkerboard.json",
+                "pixelSizeXMm": 0.12631321,
+                "pixelSizeYMm": 0.12631321,
+                "type": "checkerboard",
+                "updatedAt": "2026-06-20T11:25:00"
             },
             "displayName": "Camera 12",
             "enabled": false,
             "exists": false,
-            "folder": "data/images/cam12",
             "id": "CAM12",
             "processingProfile": "profile_cam12",
+            "simulatorChannel": "CAM12",
             "slot": 12,
-            "type": "file"
+            "type": "simulator"
         },
         {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
             "calibration": {
-                "enabled": false,
-                "file": "",
-                "pixelSizeXMm": 0,
-                "pixelSizeYMm": 0,
-                "type": "none",
-                "updatedAt": ""
+                "enabled": true,
+                "file": "calibrations/CAM13_checkerboard.json",
+                "pixelSizeXMm": 0.12631321,
+                "pixelSizeYMm": 0.12631321,
+                "type": "checkerboard",
+                "updatedAt": "2026-06-20T11:25:00"
             },
             "displayName": "Camera 13",
             "enabled": false,
             "exists": false,
-            "folder": "data/images/cam13",
             "id": "CAM13",
             "processingProfile": "profile_cam13",
+            "simulatorChannel": "CAM13",
             "slot": 13,
-            "type": "file"
+            "type": "simulator"
         },
         {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
             "calibration": {
-                "enabled": false,
-                "file": "",
-                "pixelSizeXMm": 0,
-                "pixelSizeYMm": 0,
-                "type": "none",
-                "updatedAt": ""
+                "enabled": true,
+                "file": "calibrations/CAM14_checkerboard.json",
+                "pixelSizeXMm": 0.12631321,
+                "pixelSizeYMm": 0.12631321,
+                "type": "checkerboard",
+                "updatedAt": "2026-06-20T11:25:00"
             },
             "displayName": "Camera 14",
             "enabled": false,
             "exists": false,
-            "folder": "data/images/cam14",
             "id": "CAM14",
             "processingProfile": "profile_cam14",
+            "simulatorChannel": "CAM14",
             "slot": 14,
-            "type": "file"
+            "type": "simulator"
         },
         {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
             "calibration": {
-                "enabled": false,
-                "file": "",
-                "pixelSizeXMm": 0,
-                "pixelSizeYMm": 0,
-                "type": "none",
-                "updatedAt": ""
+                "enabled": true,
+                "file": "calibrations/CAM15_checkerboard.json",
+                "pixelSizeXMm": 0.12631321,
+                "pixelSizeYMm": 0.12631321,
+                "type": "checkerboard",
+                "updatedAt": "2026-06-20T11:25:00"
             },
             "displayName": "Camera 15",
             "enabled": false,
             "exists": false,
-            "folder": "data/images/cam15",
             "id": "CAM15",
             "processingProfile": "profile_cam15",
+            "simulatorChannel": "CAM15",
             "slot": 15,
-            "type": "file"
+            "type": "simulator"
         },
         {
+            "acquisition": {
+                "autoExposure": true,
+                "autoGain": true,
+                "autoWhiteBalance": true
+            },
             "calibration": {
-                "enabled": false,
-                "file": "",
-                "pixelSizeXMm": 0,
-                "pixelSizeYMm": 0,
-                "type": "none",
-                "updatedAt": ""
+                "enabled": true,
+                "file": "calibrations/CAM16_checkerboard.json",
+                "pixelSizeXMm": 0.12631321,
+                "pixelSizeYMm": 0.12631321,
+                "type": "checkerboard",
+                "updatedAt": "2026-06-20T11:25:00"
             },
             "displayName": "Camera 16",
             "enabled": false,
             "exists": false,
-            "folder": "data/images/cam16",
             "id": "CAM16",
             "processingProfile": "profile_cam16",
+            "simulatorChannel": "CAM16",
             "slot": 16,
-            "type": "file"
+            "type": "simulator"
         }
     ],
     "processingProfiles": {
