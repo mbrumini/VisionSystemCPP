@@ -48,7 +48,11 @@ void MainWindow::decPendingJobs(const QString& cameraId)
   m_cameraPendingJobs[cameraId] = v;
   m_cameraProcessingBusy[cameraId] = (v > 0);
   updateCameraStripStatus(cameraId);
-  if (cameraId == m_selectedCameraId)
+  if (m_machineRunning && v == 0)
+  {
+    notifyProductionPieceCompleted(cameraId);
+  }
+  else if (cameraId == m_selectedCameraId)
   {
     updateMeasurementResults();
     if (m_machineRunning)
@@ -159,8 +163,17 @@ void MainWindow::handleSimulatorFrameAvailable(const QString& channel)
 
   if (!m_machineRunning)
   {
-    appendLog(QString("Frame simulatore in attesa di START: %1 channel=%2")
-      .arg(simulatorCamera.id, channel));
+    const int discardedFrames = SimulatorBridge::instance().discardAllQueuedFrames(
+      QStringLiteral("Vision in STOP: premere Start generale"));
+    if (discardedFrames > 0)
+    {
+      appendLog(QString("Simulatore: scartati %1 frame in coda (STOP attivo)").arg(discardedFrames));
+    }
+    else
+    {
+      appendLog(QString("Frame simulatore in attesa di START: %1 channel=%2")
+        .arg(simulatorCamera.id, channel));
+    }
     SimulatorBridge::instance().publishChannelEvent(
       channel,
       "waitingStart",
@@ -278,10 +291,17 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
 
   const SurfaceAnnulusLocalizationConfig localization =
     m_recipeManager.loadSurfaceAnnulusLocalization(camera.id);
+  const QString frameStrategy = runtime.currentSimulatorFrame().strategyId.trimmed();
+  const QString recipeMethod = localization.method;
   const QString requestedStrategy =
-    runtime.currentSimulatorFrame().strategyId.isEmpty()
-      ? localization.method
-      : runtime.currentSimulatorFrame().strategyId;
+    recipeMethod.isEmpty()
+      ? (frameStrategy.isEmpty() ? QStringLiteral("massPca") : frameStrategy)
+      : recipeMethod;
+  if (!frameStrategy.isEmpty() && frameStrategy != requestedStrategy)
+  {
+    appendLog(QString("Pipeline simulatore strategia frame '%1' ignorata, uso ricetta '%2'")
+      .arg(frameStrategy, requestedStrategy));
+  }
   const QString requestedRecipe = runtime.currentSimulatorFrame().recipeId;
   if (!requestedRecipe.isEmpty() && requestedRecipe != m_recipeManager.recipeId())
   {
@@ -476,6 +496,10 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
 
   const cv::Mat input = runtime.currentFrame().clone();
   const QVector<QRect> exclusions = m_recipeManager.loadSurfaceDefectExclusionRects(camera.id);
+  if (requestedStrategy == "massPca")
+  {
+    m_surface.ensureMassPcaReferenceFromSample(camera);
+  }
   const SurfaceDefectSettings thresholdSettings =
     m_recipeManager.loadSurfaceDefectSettings(camera.id);
   const SurfaceTwoCirclesStrategyConfig twoCirclesConfig =
@@ -493,17 +517,8 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
       return;
     }
   }
-  QRect globalAoi;
-  const bool hasGlobalAoi = m_recipeManager.loadGlobalSurfaceAoi(camera.id, globalAoi);
-  cv::Rect searchRect;
-  if (hasGlobalAoi)
-  {
-    searchRect = cv::Rect(globalAoi.x(), globalAoi.y(), globalAoi.width(), globalAoi.height());
-  }
-  else
-  {
-    searchRect = cv::Rect(0, 0, input.cols, input.rows);
-  }
+  // I frame del simulatore ruotano/traslano nel canvas: il ROI ricetta e' fisso in immagine.
+  const cv::Rect searchRect(0, 0, input.cols, input.rows);
 
   const qint64 startedAt = QDateTime::currentMSecsSinceEpoch();
   const bool createDiagnosticImage = (camera.id == m_selectedCameraId);
@@ -516,9 +531,8 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
       SurfaceDefectProcessor processor;
       if (requestedStrategy == "massPca")
       {
-        SurfaceThresholdSettings settings;
-        settings.minValue = thresholdSettings.thresholdMin;
-        settings.maxValue = thresholdSettings.thresholdMax;
+        const SurfaceThresholdSettings settings =
+          SurfaceLocalizationAdapters::thresholdSettingsFromRecipe(thresholdSettings);
         return processor.detectByGrayscaleThreshold(
           input,
           searchRect,
@@ -530,12 +544,14 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
 
       if (requestedStrategy == "edgePca")
       {
+        const bool resolveAmbiguity =
+          localization.pcaResolveAmbiguity || thresholdSettings.pcaResolveAmbiguity;
         return processor.locateByEdgePca(
           input,
           searchRect,
           SurfaceLocalizationAdapters::toCvRects(exclusions),
           localization.edgeSensitivity,
-          localization.pcaResolveAmbiguity,
+          resolveAmbiguity,
           createDiagnosticImage,
           drawContours);
       }
@@ -674,10 +690,9 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
 
       if (camera.id == m_selectedCameraId)
       {
-        const cv::Mat& displayImage =
-          result.diagnosticImage.empty()
-            ? completedRuntime.currentFrame()
-            : result.diagnosticImage;
+        const cv::Mat& displayImage = m_machineRunning
+          ? completedRuntime.currentFrame()
+          : (result.diagnosticImage.empty() ? completedRuntime.currentFrame() : result.diagnosticImage);
         if (!displayImage.empty())
         {
           m_selectedPreview = m_imaging.matToPixmap(displayImage);
@@ -790,6 +805,12 @@ void MainWindow::showGridView()
   m_largeImage->clearGeometryOverlay();
   m_largeImage->hide();
 
+  if (m_measurementResults)
+  {
+    m_measurementResults->show();
+    m_measurementResults->setExpanded(true);
+  }
+
   for (CameraTileWidget* tile : m_tiles)
   {
     tile->setSelected(false);
@@ -848,6 +869,19 @@ void MainWindow::startMachine()
   {
     updateControlPanel(m_selectedCameraId.isEmpty() ? nullptr : &m_selectedCamera);
   }
+  m_productionThroughput.clear();
+  if (!m_throughputRefreshTimer)
+  {
+    m_throughputRefreshTimer = new QTimer(this);
+    connect(m_throughputRefreshTimer, &QTimer::timeout, this, [this]() {
+      if (!m_machineRunning)
+      {
+        return;
+      }
+      updateControlPanel(m_selectedCameraId.isEmpty() ? nullptr : &m_selectedCamera);
+    });
+  }
+  m_throughputRefreshTimer->start(1000);
   appendLog(trText("log.command") + ": " + trText("commands.start"));
 }
 
@@ -856,6 +890,16 @@ void MainWindow::stopMachine()
   const bool keepCurrentTool =
     !m_selectedCameraId.isEmpty() &&
     m_activeDrawingRecipe != MainWindowActiveDrawingRecipe::None;
+
+  m_machineRunning = false;
+
+  const int discardedFrames = SimulatorBridge::instance().discardAllQueuedFrames(
+    QStringLiteral("Vision in STOP: frame scartato"));
+  if (discardedFrames > 0)
+  {
+    appendLog(QString("Simulatore: scartati %1 frame in coda").arg(discardedFrames));
+  }
+
   for (const CameraConfig& camera : m_config.activeCameras())
   {
     auto runtimeIt = m_cameraRuntime.find(camera.id);
@@ -864,7 +908,14 @@ void MainWindow::stopMachine()
       runtimeIt->second.stop();
     }
   }
-  m_machineRunning = false;
+
+  m_cameraPendingJobs.clear();
+  m_cameraProcessingBusy.clear();
+  m_productionThroughput.clear();
+  if (m_throughputRefreshTimer)
+  {
+    m_throughputRefreshTimer->stop();
+  }
   if (m_systemStatus)
   {
     m_systemStatus->setText(QString("%1 | %2 %3")
@@ -974,6 +1025,79 @@ void MainWindow::updateLargePreview()
   }
 
   m_largeImage->setImage(m_selectedPreview);
+}
+
+QString MainWindow::formatPiecesPerMinute(double piecesPerMinute) const
+{
+  if (piecesPerMinute <= 0.0)
+  {
+    return "-";
+  }
+
+  return QString("%1 %2").arg(piecesPerMinute, 0, 'f', 1).arg(trText("labels.piecesPerMinuteUnit"));
+}
+
+QString MainWindow::throughputInstantText(const QString& cameraId) const
+{
+  const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+  return formatPiecesPerMinute(m_productionThroughput.value(cameraId).instantaneousPiecesPerMinute(nowMs));
+}
+
+QString MainWindow::throughputAverageText(const QString& cameraId) const
+{
+  const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+  return formatPiecesPerMinute(
+    m_productionThroughput.value(cameraId).averagePiecesPerMinute(nowMs));
+}
+
+QString MainWindow::throughputOverviewInstantText() const
+{
+  const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+  double sum = 0.0;
+  int count = 0;
+  for (const CameraConfig& camera : m_config.activeCameras())
+  {
+    const double instant = m_productionThroughput.value(camera.id).instantaneousPiecesPerMinute(nowMs);
+    if (instant > 0.0)
+    {
+      sum += instant;
+      ++count;
+    }
+  }
+
+  return formatPiecesPerMinute(count > 0 ? sum / static_cast<double>(count) : 0.0);
+}
+
+QString MainWindow::throughputOverviewAverageText() const
+{
+  const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+  double sum = 0.0;
+  int count = 0;
+  for (const CameraConfig& camera : m_config.activeCameras())
+  {
+    const ProductionThroughputTracker& tracker = m_productionThroughput.value(camera.id);
+    if (!tracker.hasData())
+    {
+      continue;
+    }
+
+    sum += tracker.averagePiecesPerMinute(nowMs);
+    ++count;
+  }
+
+  return formatPiecesPerMinute(count > 0 ? sum / static_cast<double>(count) : 0.0);
+}
+
+void MainWindow::notifyProductionPieceCompleted(const QString& cameraId)
+{
+  if (!m_machineRunning)
+  {
+    return;
+  }
+
+  m_productionThroughput[cameraId].recordPiece(QDateTime::currentMSecsSinceEpoch());
+  updateMeasurementResults();
+  updateControlPanel(m_selectedCameraId.isEmpty() ? nullptr : &m_selectedCamera);
 }
 
 QString MainWindow::trText(const QString& key) const

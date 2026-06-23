@@ -3,6 +3,7 @@
 #include <QRect>
 #include <QPoint>
 #include <QPointF>
+#include <QSize>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -18,6 +19,8 @@ struct SurfaceDefectSettings
   int thresholdMin = 0;
   int thresholdMax = 80;
   bool pcaResolveAmbiguity = false;
+  bool hasReferenceHalfPlane = false;
+  bool referencePositiveHalfPlane = false;
 };
 
 struct SurfaceStrategyFeatureConfig
@@ -81,8 +84,11 @@ struct GeometryLineRecipeConfig
   bool enabled = false;
   QString id = "line_1";
   QString alias;
+  QString coordinateSpace = "part";
   QPointF partStart;
   QPointF partEnd;
+  QPointF imageStart;
+  QPointF imageEnd;
   int bandHalfWidth = 20;
   int edgeSensitivity = 60;
   int edgeCleanupDerivative = 12;
@@ -98,8 +104,11 @@ struct GeometryPointRecipeConfig
   bool enabled = false;
   QString id = "point_1";
   QString alias;
+  QString coordinateSpace = "part";
   QPointF partStart;
   QPointF partEnd;
+  QPointF imageStart;
+  QPointF imageEnd;
   int edgeSensitivity = 60;
   bool useSubpixel = false;
   QString transition = "light_to_dark";
@@ -131,9 +140,13 @@ struct GeometryArcRecipeConfig
   bool enabled = false;
   QString id = "arc_1";
   QString alias;
+  QString coordinateSpace = "part";
   QPointF partCenter;
   QPointF partStart;
   QPointF partEnd;
+  QPointF imageCenter;
+  QPointF imageStart;
+  QPointF imageEnd;
   double radius = 0.0;
   double startAngleRadians = 0.0;
   double endAngleRadians = 0.0;
@@ -219,6 +232,7 @@ public:
   bool saveLocalizationExclusionRects(const QString& cameraId, const QVector<QRect>& rects, QString* errorMessage = nullptr) const;
   bool clearLocalizationExclusionRects(const QString& cameraId, QString* errorMessage = nullptr) const;
   bool loadSurfaceDefectRoi(const QString& cameraId, QRect& roi) const;
+  QRect effectiveSurfaceSearchRect(const QString& cameraId, const QSize& imageSize) const;
   QVector<QPoint> loadSurfaceDefectPolygon(const QString& cameraId) const;
   SurfaceDefectSettings loadSurfaceDefectSettings(const QString& cameraId) const;
   QVector<QRect> loadSurfaceDefectExclusionRects(const QString& cameraId) const;
@@ -228,6 +242,7 @@ public:
   bool clearSurfaceDefectPolygon(const QString& cameraId, QString* errorMessage = nullptr) const;
   bool saveSurfaceDefectThreshold(const QString& cameraId, int minValue, int maxValue, QString* errorMessage = nullptr) const;
   bool saveSurfaceDefectPcaResolveAmbiguity(const QString& cameraId, bool resolve, QString* errorMessage = nullptr) const;
+  bool saveSurfaceDefectAxisReference(const QString& cameraId, bool positiveHalfPlane, QString* errorMessage = nullptr) const;
   bool addSurfaceDefectExclusionRect(const QString& cameraId, const QRect& rect, QString* errorMessage = nullptr) const;
   bool saveSurfaceDefectExclusionRects(const QString& cameraId, const QVector<QRect>& rects, QString* errorMessage = nullptr) const;
   bool clearSurfaceDefectExclusionRects(const QString& cameraId, QString* errorMessage = nullptr) const;

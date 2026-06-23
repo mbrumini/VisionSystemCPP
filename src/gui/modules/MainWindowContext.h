@@ -102,6 +102,7 @@ struct MainWindowContext
   std::function<void()> loadConfiguration;
   std::function<void(const QString&)> incPendingJobs;
   std::function<void(const QString&)> decPendingJobs;
+  std::function<void(const QString&)> notifyProductionPieceCompleted;
   std::function<void(const QString&)> publishSimulatorResult;
   std::function<void(const QString&)> appendLog;
   std::function<void()> updateLargePreview;

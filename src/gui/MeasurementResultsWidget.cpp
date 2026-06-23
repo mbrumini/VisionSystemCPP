@@ -1,8 +1,9 @@
 #include "gui/MeasurementResultsWidget.h"
 
+#include <QAbstractItemView>
 #include <QHeaderView>
 #include <QLabel>
-#include <QAbstractItemView>
+#include <QSizePolicy>
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QVBoxLayout>
@@ -11,6 +12,10 @@ namespace
 {
 QString measurementValue(const MeasurementResult& measurement)
 {
+  if (!measurement.valid)
+  {
+    return "N/D";
+  }
   if (measurement.hasRealValue)
   {
     return QString("%1 %2").arg(measurement.valueReal, 0, 'f', 3).arg(measurement.unit);
@@ -52,6 +57,10 @@ QString toleranceValue(const MeasurementResult& measurement, bool upper)
 
 QColor measurementColor(const MeasurementResult& measurement)
 {
+  if (!measurement.valid)
+  {
+    return QColor("#9aa4ad");
+  }
   if (measurement.judgement == "OK")
   {
     return QColor("#35c46a");
@@ -70,7 +79,14 @@ QTableWidgetItem* valueItem(const MeasurementResult& measurement)
   QFont font = item->font();
   font.setBold(true);
   item->setFont(font);
-  item->setToolTip(measurement.judgement.isEmpty() ? "Tolleranza non valutata" : measurement.judgement);
+  if (!measurement.valid)
+  {
+    item->setToolTip("Misura non disponibile");
+  }
+  else
+  {
+    item->setToolTip(measurement.judgement.isEmpty() ? "Tolleranza non valutata" : measurement.judgement);
+  }
   return item;
 }
 
@@ -84,6 +100,7 @@ MeasurementResultsWidget::MeasurementResultsWidget(QWidget* parent)
   : QFrame(parent)
 {
   setObjectName("measurementResults");
+  setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
   auto* layout = new QVBoxLayout(this);
   layout->setContentsMargins(10, 6, 10, 8);
   layout->setSpacing(5);
@@ -109,9 +126,8 @@ MeasurementResultsWidget::MeasurementResultsWidget(QWidget* parent)
   m_table->setSelectionBehavior(QAbstractItemView::SelectRows);
   m_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
   m_table->setAlternatingRowColors(true);
-  m_table->setMinimumHeight(110);
-  m_table->setMaximumHeight(165);
-  layout->addWidget(m_table);
+  layout->addWidget(m_table, 1);
+  setExpanded(true);
 }
 
 void MeasurementResultsWidget::setTitle(const QString& title)
@@ -163,6 +179,30 @@ void MeasurementResultsWidget::setAllCameraMeasurements(const QVector<CameraMeas
     m_table->setItem(row, 4, new QTableWidgetItem(toleranceValue(measurement, true)));
     m_table->setItem(row, 5, valueItem(measurement));
     m_table->setItem(row, 6, new QTableWidgetItem(scanTime(result.scanElapsedMs)));
+  }
+}
+
+void MeasurementResultsWidget::setExpanded(bool expanded)
+{
+  m_expanded = expanded;
+  if (!m_table)
+  {
+    return;
+  }
+
+  if (expanded)
+  {
+    m_table->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    m_table->setMinimumHeight(160);
+    m_table->setMaximumHeight(QWIDGETSIZE_MAX);
+    m_table->verticalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+  }
+  else
+  {
+    m_table->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    m_table->setMinimumHeight(110);
+    m_table->setMaximumHeight(165);
+    m_table->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
   }
 }
 

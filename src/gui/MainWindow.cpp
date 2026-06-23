@@ -292,5 +292,8 @@ void MainWindow::bindModules()
   m_ctx.loadConfiguration = [this]() { loadConfiguration(); };
   m_ctx.incPendingJobs = [this](const QString& cameraId) { incPendingJobs(cameraId); };
   m_ctx.decPendingJobs = [this](const QString& cameraId) { decPendingJobs(cameraId); };
+  m_ctx.notifyProductionPieceCompleted = [this](const QString& cameraId) {
+    notifyProductionPieceCompleted(cameraId);
+  };
   m_ctx.publishSimulatorResult = [this](const QString& cameraId) { publishSimulatorResult(cameraId); };
 }

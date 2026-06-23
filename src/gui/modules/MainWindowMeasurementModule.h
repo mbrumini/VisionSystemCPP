@@ -23,7 +23,7 @@ public:
   void showMeasurementRealValuesPanel(const CameraConfig& camera);
   void rebuildMeasurementRecipe(const CameraConfig& camera);
   void removeMeasurement(const CameraConfig& camera, const QString& measurementId);
-  void appendMeasurementOverlay(const CameraConfig& camera, GeometryOverlay& overlay) const;
+  void appendMeasurementOverlay(const CameraConfig& camera, GeometryOverlay& overlay, bool compact = false) const;
   void setMeasurementLabelPosition(const CameraConfig& camera, const QString& measurementKey, const QPointF& imagePoint);
 
 private:

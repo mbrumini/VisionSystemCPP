@@ -237,6 +237,12 @@ void MainWindowSetupModule::advanceCameraFrame(const CameraConfig& camera)
       {
         context().updateMeasurementResults();
       }
+      if (context().machineRunning && *context().machineRunning &&
+          context().cameraPendingJobs->value(effectiveCamera.id, 0) == 0 &&
+          context().notifyProductionPieceCompleted)
+      {
+        context().notifyProductionPieceCompleted(effectiveCamera.id);
+      }
       log(QString("pipeline frame end: %1 frame=%2 elapsedMs=%3 pendingJobs=%4")
             .arg(effectiveCamera.id)
             .arg(runtimePtr->frameIndex())

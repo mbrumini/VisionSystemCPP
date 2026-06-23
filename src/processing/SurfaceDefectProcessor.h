@@ -10,6 +10,13 @@ struct SurfaceThresholdSettings
   int minValue = 0;
   int maxValue = 80;
   bool resolveAmbiguity = false;
+  bool hasReferenceHalfPlane = false;
+  bool referencePositiveHalfPlane = false;
+
+  bool hasReferenceHalfPlaneSign() const
+  {
+    return hasReferenceHalfPlane;
+  }
 };
 
 struct SurfaceBlob
@@ -35,6 +42,8 @@ struct SurfaceLocalizationReference
   cv::Point2d xAxisEnd;
   cv::Point2d yAxisStart;
   cv::Point2d yAxisEnd;
+  bool hasAxisReference = false;
+  bool referencePositiveHalfPlane = false;
 };
 
 struct SurfaceDefectResult

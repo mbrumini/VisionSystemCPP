@@ -41,4 +41,18 @@ SurfaceTwoCirclesStrategyConfig toProcessorStrategy(const SurfaceLocalizationStr
 
   return result;
 }
+
+SurfaceThresholdSettings thresholdSettingsFromRecipe(const SurfaceDefectSettings& recipeSettings)
+{
+  SurfaceThresholdSettings settings;
+  settings.minValue = recipeSettings.thresholdMin;
+  settings.maxValue = recipeSettings.thresholdMax;
+  settings.resolveAmbiguity = recipeSettings.pcaResolveAmbiguity;
+  if (recipeSettings.hasReferenceHalfPlane)
+  {
+    settings.hasReferenceHalfPlane = true;
+    settings.referencePositiveHalfPlane = recipeSettings.referencePositiveHalfPlane;
+  }
+  return settings;
+}
 }

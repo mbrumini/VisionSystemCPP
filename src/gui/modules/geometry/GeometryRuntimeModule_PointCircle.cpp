@@ -410,25 +410,30 @@ void MainWindowGeometryModule::appendCurrentPartPoseOverlay(const CameraConfig& 
     return;
   }
 
-  GeometryDiagnosticDrawing::appendCyanPointCross(overlay, pose.origin);
+  const bool compact = context().machineRunning != nullptr && *context().machineRunning;
+  GeometryDiagnosticDrawing::appendCyanPointCross(overlay, pose.origin, compact);
 
-  const double armLength = 80.0;
+  const double armLength = compact ? 42.0 : 80.0;
+  const int axisWidth = compact ? 2 : 4;
   const cv::Point2d xEnd = pose.origin + pose.xAxis * armLength;
   const cv::Point2d yEnd = pose.origin + pose.yAxis * armLength;
   overlay.lines.append({
     QPointF(pose.origin.x, pose.origin.y),
     QPointF(xEnd.x, xEnd.y),
     QColor(255, 0, 0),
-    4
+    axisWidth
   });
   overlay.lines.append({
     QPointF(pose.origin.x, pose.origin.y),
     QPointF(yEnd.x, yEnd.y),
     QColor(255, 0, 255),
-    4
+    axisWidth
   });
-  overlay.points.append({QPointF(xEnd.x, xEnd.y), "X", QColor(255, 0, 0)});
-  overlay.points.append({QPointF(yEnd.x, yEnd.y), "Y", QColor(255, 0, 255)});
+  if (!compact)
+  {
+    overlay.points.append({QPointF(xEnd.x, xEnd.y), "X", QColor(255, 0, 0)});
+    overlay.points.append({QPointF(yEnd.x, yEnd.y), "Y", QColor(255, 0, 255)});
+  }
 }
 
 void MainWindowGeometryModule::testGeometryPoint(const CameraConfig& camera)
@@ -445,6 +450,7 @@ void MainWindowGeometryModule::testGeometryPoint(const CameraConfig& camera)
     pointConfig.partStart = imageToPart(pose, pointConfig.imageStart);
     pointConfig.partEnd = imageToPart(pose, pointConfig.imageEnd);
     pointConfig.hasGuide = true;
+    saveGeometryPointRecipe(camera);
   }
 
   const bool usePartGuide = pose.valid && pointConfig.hasGuide;

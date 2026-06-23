@@ -6,6 +6,7 @@
 #include "config/RecipeJsonUtils.h"
 
 #include "gui/geometry/GeometryDiagnosticDrawing.h"
+#include "gui/geometry/GeometryRecipePersistence.h"
 #include "processing/geometry/EdgePointDetector.h"
 #include "util/AsyncExecutor.h"
 
@@ -24,72 +25,7 @@
 #include <memory>
 
 using AsyncExecutor::runAsyncTask;
-
-namespace
-{
-QString scanDirectionToRecipe(EdgeLineScanDirection direction)
-{
-  return direction == EdgeLineScanDirection::NormalNegative ? "normal_negative" : "normal_positive";
-}
-
-EdgeLineScanDirection scanDirectionFromRecipe(const QString& value)
-{
-  return value == "normal_negative" ? EdgeLineScanDirection::NormalNegative : EdgeLineScanDirection::NormalPositive;
-}
-
-QString transitionToRecipe(EdgeLineTransition transition)
-{
-  return transition == EdgeLineTransition::DarkToLight ? "dark_to_light" : "light_to_dark";
-}
-
-EdgeLineTransition transitionFromRecipe(const QString& value)
-{
-  return value == "dark_to_light" ? EdgeLineTransition::DarkToLight : EdgeLineTransition::LightToDark;
-}
-
-QString pickModeToRecipe(EdgeLinePickMode mode)
-{
-  if (mode == EdgeLinePickMode::Last)
-  {
-    return "last";
-  }
-
-  if (mode == EdgeLinePickMode::Best)
-  {
-    return "best";
-  }
-
-  return "first";
-}
-
-EdgeLinePickMode pickModeFromRecipe(const QString& value)
-{
-  if (value == "last")
-  {
-    return EdgeLinePickMode::Last;
-  }
-
-  if (value == "best")
-  {
-    return EdgeLinePickMode::Best;
-  }
-
-  return EdgeLinePickMode::First;
-}
-
-template<typename Config>
-QString nextGeometryId(const QString& prefix, const QVector<Config>& configs)
-{
-  QStringList existingIds;
-  existingIds.reserve(configs.size());
-  for (const Config& config : configs)
-  {
-    existingIds.append(config.id);
-  }
-  return RecipeJsonUtils::nextPrefixedId(prefix, existingIds);
-}
-
-}
+using namespace GeometryRecipePersistence;
 
 MainWindowGeometryModule::MainWindowGeometryModule(MainWindowContext& context)
   : MainWindowModuleBase(context)
@@ -206,13 +142,22 @@ void MainWindowGeometryModule::loadGeometryPointRecipe(const CameraConfig& camer
     point.enabled = recipe.enabled;
     point.id = RecipeJsonUtils::ensureUniquePrefixedId("point", recipe.id, usedIds);
     point.alias = recipe.alias;
-    point.partStart = cv::Point2d(recipe.partStart.x(), recipe.partStart.y());
-    point.partEnd = cv::Point2d(recipe.partEnd.x(), recipe.partEnd.y());
     point.edgeSensitivity = recipe.edgeSensitivity;
     point.useSubpixel = recipe.useSubpixel;
     point.transition = transitionFromRecipe(recipe.transition);
     point.pickMode = pickModeFromRecipe(recipe.pickMode);
-    point.hasGuide = true;
+    applySegmentGuideRuntime(
+      &point.hasGuide,
+      &point.hasImageGuide,
+      &point.partStart,
+      &point.partEnd,
+      &point.imageStart,
+      &point.imageEnd,
+      recipe.coordinateSpace,
+      recipe.partStart,
+      recipe.partEnd,
+      recipe.imageStart,
+      recipe.imageEnd);
     points.append(point);
   }
 
@@ -256,16 +201,14 @@ void MainWindowGeometryModule::loadGeometryCirclesRecipe(const CameraConfig& cam
     circle.scanDirection = scanDirectionFromRecipe(recipe.scanDirection);
     circle.transition = transitionFromRecipe(recipe.transition);
     circle.pickMode = pickModeFromRecipe(recipe.pickMode);
-    if (recipe.coordinateSpace == "image")
-    {
-      circle.imageCenter = cv::Point2d(recipe.imageCenter.x(), recipe.imageCenter.y());
-      circle.hasImageCircle = true;
-    }
-    else
-    {
-      circle.partCenter = cv::Point2d(recipe.partCenter.x(), recipe.partCenter.y());
-      circle.hasCircle = true;
-    }
+    applyCenterGuideRuntime(
+      &circle.hasCircle,
+      &circle.hasImageCircle,
+      &circle.partCenter,
+      &circle.imageCenter,
+      recipe.coordinateSpace,
+      recipe.partCenter,
+      recipe.imageCenter);
     circles.append(circle);
   }
 
@@ -283,22 +226,38 @@ void MainWindowGeometryModule::saveGeometryPointRecipe(const CameraConfig& camer
   QVector<GeometryPointRecipeConfig> recipeList;
   for (const GeometryPointRuntimeConfig& point : m_pointConfigs[camera.id])
   {
-    if (!point.hasGuide)
+    if (!point.hasGuide && !point.hasImageGuide)
     {
       continue;
     }
+
+    const SegmentGuideRecipeCoords coords = segmentGuideFromRuntime(
+      point.hasGuide,
+      point.partStart,
+      point.partEnd,
+      point.hasImageGuide,
+      point.imageStart,
+      point.imageEnd);
 
     GeometryPointRecipeConfig recipe;
     recipe.enabled = point.enabled;
     recipe.id = point.id;
     recipe.alias = point.alias;
-    recipe.partStart = QPointF(point.partStart.x, point.partStart.y);
-    recipe.partEnd = QPointF(point.partEnd.x, point.partEnd.y);
+    recipe.coordinateSpace = coords.coordinateSpace;
+    recipe.partStart = coords.partStart;
+    recipe.partEnd = coords.partEnd;
+    recipe.imageStart = coords.imageStart;
+    recipe.imageEnd = coords.imageEnd;
     recipe.edgeSensitivity = point.edgeSensitivity;
     recipe.useSubpixel = point.useSubpixel;
     recipe.transition = transitionToRecipe(point.transition);
     recipe.pickMode = pickModeToRecipe(point.pickMode);
     recipeList.append(recipe);
+  }
+
+  if (recipeList.isEmpty())
+  {
+    return;
   }
 
   QString error;
@@ -318,20 +277,19 @@ void MainWindowGeometryModule::saveGeometryCirclesRecipe(const CameraConfig& cam
       continue;
     }
 
+    const CenterGuideRecipeCoords coords = centerGuideFromRuntime(
+      circle.hasCircle,
+      circle.partCenter,
+      circle.hasImageCircle,
+      circle.imageCenter);
+
     GeometryCircleRecipeConfig recipe;
     recipe.enabled = circle.enabled;
     recipe.id = circle.id;
     recipe.alias = circle.alias;
-    if (circle.hasCircle)
-    {
-      recipe.coordinateSpace = "part";
-      recipe.partCenter = QPointF(circle.partCenter.x, circle.partCenter.y);
-    }
-    else
-    {
-      recipe.coordinateSpace = "image";
-      recipe.imageCenter = QPointF(circle.imageCenter.x, circle.imageCenter.y);
-    }
+    recipe.coordinateSpace = coords.coordinateSpace;
+    recipe.partCenter = coords.partCenter;
+    recipe.imageCenter = coords.imageCenter;
     recipe.radius = circle.radius;
     recipe.innerBand = circle.innerBand;
     recipe.outerBand = circle.outerBand;
@@ -498,7 +456,18 @@ void MainWindowGeometryModule::loadGeometryLinesRecipe(const CameraConfig& camer
     line.scanDirection = scanDirectionFromRecipe(recipe.scanDirection);
     line.transition = transitionFromRecipe(recipe.transition);
     line.pickMode = pickModeFromRecipe(recipe.pickMode);
-    line.hasLine = true;
+    applySegmentGuideRuntime(
+      &line.hasLine,
+      &line.hasImageLine,
+      &line.partStart,
+      &line.partEnd,
+      &line.imageStart,
+      &line.imageEnd,
+      recipe.coordinateSpace,
+      recipe.partStart,
+      recipe.partEnd,
+      recipe.imageStart,
+      recipe.imageEnd);
     lines.append(line);
   }
 
@@ -516,17 +485,28 @@ void MainWindowGeometryModule::saveGeometryLinesRecipe(const CameraConfig& camer
   QVector<GeometryLineRecipeConfig> recipeList;
   for (const GeometryLineRuntimeConfig& line : m_lineConfigs[camera.id])
   {
-    if (!line.hasLine)
+    if (!line.hasLine && !line.hasImageLine)
     {
       continue;
     }
+
+    const SegmentGuideRecipeCoords coords = segmentGuideFromRuntime(
+      line.hasLine,
+      line.partStart,
+      line.partEnd,
+      line.hasImageLine,
+      line.imageStart,
+      line.imageEnd);
 
     GeometryLineRecipeConfig recipe;
     recipe.enabled = line.enabled;
     recipe.id = line.id;
     recipe.alias = line.alias;
-    recipe.partStart = QPointF(line.partStart.x, line.partStart.y);
-    recipe.partEnd = QPointF(line.partEnd.x, line.partEnd.y);
+    recipe.coordinateSpace = coords.coordinateSpace;
+    recipe.partStart = coords.partStart;
+    recipe.partEnd = coords.partEnd;
+    recipe.imageStart = coords.imageStart;
+    recipe.imageEnd = coords.imageEnd;
     recipe.bandHalfWidth = line.bandHalfWidth;
     recipe.edgeSensitivity = line.edgeSensitivity;
     recipe.edgeCleanupDerivative = line.edgeCleanupDerivative;
@@ -538,8 +518,132 @@ void MainWindowGeometryModule::saveGeometryLinesRecipe(const CameraConfig& camer
     recipeList.append(recipe);
   }
 
+  if (recipeList.isEmpty())
+  {
+    return;
+  }
+
   QString error;
   if (!recipes().saveGeometryLines(camera.id, recipeList, &error))
+  {
+    log(error);
+  }
+}
+
+void MainWindowGeometryModule::loadGeometryArcsRecipe(const CameraConfig& camera)
+{
+  QVector<GeometryArcRuntimeConfig>& arcs = m_arcConfigs[camera.id];
+  if (!arcs.isEmpty())
+  {
+    return;
+  }
+
+  const QVector<GeometryArcRecipeConfig> arcRecipes = recipes().loadGeometryArcs(camera.id);
+  QStringList usedIds;
+  for (const GeometryArcRecipeConfig& recipe : arcRecipes)
+  {
+    if (!recipe.enabled)
+    {
+      continue;
+    }
+
+    GeometryArcRuntimeConfig arc;
+    arc.enabled = recipe.enabled;
+    arc.id = RecipeJsonUtils::ensureUniquePrefixedId("arc", recipe.id, usedIds);
+    arc.alias = recipe.alias;
+    arc.radius = recipe.radius;
+    arc.startAngleRadians = recipe.startAngleRadians;
+    arc.endAngleRadians = recipe.endAngleRadians;
+    arc.innerBand = recipe.innerBand;
+    arc.outerBand = recipe.outerBand;
+    arc.edgeSensitivity = recipe.edgeSensitivity;
+    arc.edgeCleanupDerivative = recipe.edgeCleanupDerivative;
+    arc.edgeStatisticalFilter = recipe.edgeStatisticalFilter;
+    arc.useSubpixel = recipe.useSubpixel;
+    arc.scanDirection = scanDirectionFromRecipe(recipe.scanDirection);
+    arc.transition = transitionFromRecipe(recipe.transition);
+    arc.pickMode = pickModeFromRecipe(recipe.pickMode);
+    applyArcGuideRuntime(
+      &arc.hasArc,
+      &arc.hasImageArc,
+      &arc.partCenter,
+      &arc.partStart,
+      &arc.partEnd,
+      &arc.imageCenter,
+      &arc.imageStart,
+      &arc.imageEnd,
+      recipe.coordinateSpace,
+      recipe.partCenter,
+      recipe.partStart,
+      recipe.partEnd,
+      recipe.imageCenter,
+      recipe.imageStart,
+      recipe.imageEnd);
+    arcs.append(arc);
+  }
+
+  if (arcs.isEmpty())
+  {
+    GeometryArcRuntimeConfig arc;
+    arc.id = "arc_1";
+    arcs.append(arc);
+  }
+  m_activeArcIndexes[camera.id] = qBound(0, m_activeArcIndexes.value(camera.id, 0), arcs.size() - 1);
+}
+
+void MainWindowGeometryModule::saveGeometryArcsRecipe(const CameraConfig& camera)
+{
+  QVector<GeometryArcRecipeConfig> recipeList;
+  for (const GeometryArcRuntimeConfig& arc : m_arcConfigs[camera.id])
+  {
+    if (!arc.hasArc && !arc.hasImageArc)
+    {
+      continue;
+    }
+
+    const ArcGuideRecipeCoords coords = arcGuideFromRuntime(
+      arc.hasArc,
+      arc.partCenter,
+      arc.partStart,
+      arc.partEnd,
+      arc.hasImageArc,
+      arc.imageCenter,
+      arc.imageStart,
+      arc.imageEnd);
+
+    GeometryArcRecipeConfig recipe;
+    recipe.enabled = arc.enabled;
+    recipe.id = arc.id;
+    recipe.alias = arc.alias;
+    recipe.coordinateSpace = coords.coordinateSpace;
+    recipe.partCenter = coords.partCenter;
+    recipe.partStart = coords.partStart;
+    recipe.partEnd = coords.partEnd;
+    recipe.imageCenter = coords.imageCenter;
+    recipe.imageStart = coords.imageStart;
+    recipe.imageEnd = coords.imageEnd;
+    recipe.radius = arc.radius;
+    recipe.startAngleRadians = arc.startAngleRadians;
+    recipe.endAngleRadians = arc.endAngleRadians;
+    recipe.innerBand = arc.innerBand;
+    recipe.outerBand = arc.outerBand;
+    recipe.edgeSensitivity = arc.edgeSensitivity;
+    recipe.edgeCleanupDerivative = arc.edgeCleanupDerivative;
+    recipe.edgeStatisticalFilter = arc.edgeStatisticalFilter;
+    recipe.useSubpixel = arc.useSubpixel;
+    recipe.scanDirection = scanDirectionToRecipe(arc.scanDirection);
+    recipe.transition = transitionToRecipe(arc.transition);
+    recipe.pickMode = pickModeToRecipe(arc.pickMode);
+    recipeList.append(recipe);
+  }
+
+  if (recipeList.isEmpty())
+  {
+    return;
+  }
+
+  QString error;
+  if (!recipes().saveGeometryArcs(camera.id, recipeList, &error))
   {
     log(error);
   }

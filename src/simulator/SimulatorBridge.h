@@ -24,6 +24,7 @@ public:
 
   bool takeFrame(const QString& channel, SimulatorFrame& frame);
   int queueSize(const QString& channel) const;
+  int discardAllQueuedFrames(const QString& reason = QStringLiteral("Vision in STOP"));
   void publishResult(const SimulatorFrameMetadata& metadata, const QJsonObject& result);
   void publishFrameEvent(
     const SimulatorFrameMetadata& metadata,

@@ -533,3 +533,61 @@ int SimulatorBridge::queueSize(const QString& channel) const
   }
   return it->size();
 }
+
+int SimulatorBridge::discardAllQueuedFrames(const QString& reason)
+{
+  std::vector<std::pair<std::shared_ptr<ClientConnection>, QJsonObject>> droppedResults;
+
+  {
+    std::lock_guard lock(m_mutex);
+    for (auto channelIt = m_framesByChannel.begin(); channelIt != m_framesByChannel.end(); ++channelIt)
+    {
+      QQueue<SimulatorFrame>& queue = channelIt.value();
+      while (!queue.isEmpty())
+      {
+        const SimulatorFrame dropped = queue.dequeue();
+        const QString droppedKey = frameKey(dropped.metadata);
+        std::shared_ptr<ClientConnection> droppedClient = m_frameClients.take(droppedKey);
+        if (!droppedClient)
+        {
+          continue;
+        }
+
+        QJsonObject result;
+        result["type"] = "result";
+        result["protocolVersion"] = kProtocolVersion;
+        result["scenarioId"] = dropped.metadata.scenarioId;
+        result["cameraId"] = dropped.metadata.cameraId;
+        result["channel"] = dropped.metadata.channel;
+        result["slot"] = dropped.metadata.slot;
+        result["frameId"] = dropped.metadata.frameId;
+
+        QJsonObject poseObject;
+        poseObject["valid"] = false;
+        poseObject["x"] = 0.0;
+        poseObject["y"] = 0.0;
+        poseObject["angleDeg"] = 0.0;
+        poseObject["score"] = 0.0;
+        poseObject["method"] = "queue_discarded";
+        result["pose"] = poseObject;
+        result["processingMs"] = 0.0;
+
+        QJsonArray errors;
+        errors.append(reason.isEmpty() ? QStringLiteral("Frame scartato") : reason);
+        result["errors"] = errors;
+
+        droppedResults.emplace_back(std::move(droppedClient), std::move(result));
+      }
+    }
+    m_framesByChannel.clear();
+  }
+
+  for (const auto& dropped : droppedResults)
+  {
+    std::thread([this, client = dropped.first, result = dropped.second]() {
+      sendMessage(client, result);
+    }).detach();
+  }
+
+  return static_cast<int>(droppedResults.size());
+}

@@ -7,6 +7,7 @@
 #include <QJsonObject>
 #include <QPolygon>
 
+
 #include "RecipeJsonUtils.h"
 
 using namespace RecipeJsonUtils;
@@ -39,6 +40,47 @@ bool RecipeManager::loadSurfaceDefectRoi(const QString& cameraId, QRect& roi) co
 
   roi = rectFromJson(searchRoi);
   return roi.isValid();
+}
+
+QRect RecipeManager::effectiveSurfaceSearchRect(const QString& cameraId, const QSize& imageSize) const
+{
+  const QRect imageBounds(0, 0, imageSize.width(), imageSize.height());
+  QRect searchArea = imageBounds;
+
+  QRect recipeRoi;
+  if (loadSurfaceDefectRoi(cameraId, recipeRoi))
+  {
+    searchArea = recipeRoi.normalized().intersected(imageBounds);
+  }
+  else
+  {
+    const QVector<QPoint> polygon = loadSurfaceDefectPolygon(cameraId);
+    if (polygon.size() >= 3)
+    {
+      searchArea = QPolygon(polygon).boundingRect().normalized().intersected(imageBounds);
+    }
+  }
+
+  QRect globalAoi;
+  if (loadGlobalSurfaceAoi(cameraId, globalAoi))
+  {
+    const QRect normalizedGlobal = globalAoi.normalized().intersected(imageBounds);
+    if (loadSurfaceDefectRoi(cameraId, recipeRoi) || loadSurfaceDefectPolygon(cameraId).size() >= 3)
+    {
+      searchArea = searchArea.intersected(normalizedGlobal);
+    }
+    else
+    {
+      searchArea = normalizedGlobal;
+    }
+  }
+
+  if (!searchArea.isValid())
+  {
+    return imageBounds;
+  }
+
+  return searchArea;
 }
 
 QVector<QPoint> RecipeManager::loadSurfaceDefectPolygon(const QString& cameraId) const
@@ -94,6 +136,11 @@ SurfaceDefectSettings RecipeManager::loadSurfaceDefectSettings(const QString& ca
   settings.thresholdMin = threshold.value("min").toInt(settings.thresholdMin);
   settings.thresholdMax = threshold.value("max").toInt(settings.thresholdMax);
   settings.pcaResolveAmbiguity = threshold.value("pcaResolveAmbiguity").toBool(settings.pcaResolveAmbiguity);
+  if (threshold.contains("referencePositiveHalfPlane"))
+  {
+    settings.hasReferenceHalfPlane = true;
+    settings.referencePositiveHalfPlane = threshold.value("referencePositiveHalfPlane").toBool();
+  }
   return settings;
 }
 
@@ -382,6 +429,28 @@ bool RecipeManager::saveSurfaceDefectPcaResolveAmbiguity(const QString& cameraId
 
   QJsonObject threshold = surfaceLocalization.value("threshold").toObject();
   threshold["pcaResolveAmbiguity"] = resolve;
+  surfaceLocalization["threshold"] = threshold;
+  tools["surfaceLocalization"] = surfaceLocalization;
+  root["tools"] = tools;
+
+  return saveJsonObject(path, root, errorMessage);
+}
+
+bool RecipeManager::saveSurfaceDefectAxisReference(const QString& cameraId, bool positiveHalfPlane, QString* errorMessage) const
+{
+  const QString path = cameraRecipePath(cameraId);
+  QJsonObject root;
+  loadJsonObject(path, root);
+
+  root["cameraId"] = cameraId;
+
+  QJsonObject tools = root.value("tools").toObject();
+  QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
+  surfaceLocalization["enabled"] = true;
+
+  QJsonObject threshold = surfaceLocalization.value("threshold").toObject();
+  threshold.remove("referenceAngleDegrees");
+  threshold["referencePositiveHalfPlane"] = positiveHalfPlane;
   surfaceLocalization["threshold"] = threshold;
   tools["surfaceLocalization"] = surfaceLocalization;
   root["tools"] = tools;

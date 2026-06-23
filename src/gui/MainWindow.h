@@ -25,6 +25,7 @@
 #include "processing/SurfaceDefectProcessor.h"
 #include "runtime/CameraRuntime.h"
 #include "util/DetailedLogger.h"
+#include "util/ProductionThroughputTracker.h"
 
 #include <QGridLayout>
 #include <QHash>
@@ -84,6 +85,12 @@ private:
   void handleSimulatorFrameAvailable(const QString& channel);
   void handleSimulatorSampleAvailable(const SimulatorFrame& frame);
   void processNextSimulatorFrame(const CameraConfig& camera);
+  void notifyProductionPieceCompleted(const QString& cameraId);
+  QString formatPiecesPerMinute(double piecesPerMinute) const;
+  QString throughputInstantText(const QString& cameraId) const;
+  QString throughputAverageText(const QString& cameraId) const;
+  QString throughputOverviewInstantText() const;
+  QString throughputOverviewAverageText() const;
   QString trText(const QString& key) const;
 
   AppConfig m_config;
@@ -128,6 +135,7 @@ private:
   QPixmap m_selectedPreview;
   QString m_selectedImagePath;
   QTimer* m_simulationTimer = nullptr;
+  QTimer* m_throughputRefreshTimer = nullptr;
   std::map<QString, CameraRuntime> m_cameraRuntime;
   QHash<QString, LocalizationResult> m_lastLocalizationResults;
   QHash<QString, SurfaceLocalizationReference> m_lastSurfaceLocalizationResults;
@@ -135,6 +143,7 @@ private:
   QHash<QString, bool> m_cameraProcessingBusy;
   QHash<QString, int> m_cameraDroppedFrames;
   QHash<QString, int> m_cameraPendingJobs;
+  QHash<QString, ProductionThroughputTracker> m_productionThroughput;
   bool m_machineRunning = false;
   bool m_setupDetailsVisible = false;
 

@@ -27,6 +27,7 @@ public:
                        const QVector<MeasurementResult>& measurements,
                        qint64 scanElapsedMs = -1);
   void setAllCameraMeasurements(const QVector<CameraMeasurementResultRow>& measurements);
+  void setExpanded(bool expanded);
 
 private:
   void setCameraColumnVisible(bool visible);
@@ -36,4 +37,5 @@ private:
   QTableWidget* m_table = nullptr;
   bool m_cameraColumnVisible = false;
   bool m_showScanTime = false;
+  bool m_expanded = true;
 };

@@ -48,6 +48,8 @@ add_executable(VisionSystemCPP
     src/config/RecipeDeletion.cpp
     src/config/RecipeManagerAI.cpp
     src/config/RecipeManagerGeometry.cpp
+    src/config/GeometryRecipeJson.h
+    src/config/GeometryRecipeJson.cpp
     src/config/RecipeManagerMeasurement.cpp
     src/config/RecipeManagerSurfaceDefect.cpp
     src/config/RecipeManagerSurfaceLocalization.cpp
@@ -226,6 +228,8 @@ add_executable(VisionSystemCPP
     src/gui/geometry/GeometryDisplayNames.cpp
     src/gui/geometry/GeometryDiagnosticDrawing.h
     src/gui/geometry/GeometryDiagnosticDrawing.cpp
+    src/gui/geometry/GeometryRecipePersistence.h
+    src/gui/geometry/GeometryRecipePersistence.cpp
     src/gui/geometry/GeometryMath.h
     src/gui/geometry/GeometryMath.cpp
     src/gui/geometry/GeometryRuntimeConfig.h
@@ -310,6 +314,8 @@ add_executable(VisionSystemCPP
     src/simulator/SimulatorBridge.cpp
     src/util/DetailedLogger.h
     src/util/DetailedLogger.cpp
+    src/util/ProductionThroughputTracker.h
+    src/util/ProductionThroughputTracker.cpp
     src/utils/Timer.h
     resources/icons.qrc
 )

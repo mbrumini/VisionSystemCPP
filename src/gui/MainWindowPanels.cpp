@@ -15,6 +15,70 @@
 #include <QSet>
 #include <QVBoxLayout>
 
+namespace
+{
+QString measurementResultKey(const QString& type, const QString& sourceAId, const QString& sourceBId)
+{
+  return QString("%1|%2|%3").arg(type, sourceAId, sourceBId);
+}
+
+MeasurementResult failedMeasurementRow(const MeasurementRecipeConfig& config)
+{
+  MeasurementResult result;
+  result.id = config.id;
+  result.alias = config.alias;
+  result.type = config.type;
+  result.sourceAId = config.sourceAId;
+  result.sourceBId = config.sourceBId;
+  result.valid = false;
+  result.judgement = "N/D";
+  result.unit = config.unit.isEmpty() ? "px" : config.unit;
+  if (config.type == "line_line_angle")
+  {
+    result.unit = "deg";
+  }
+  result.nominal = config.nominal;
+  result.min = config.min;
+  result.max = config.max;
+  result.hasNominal = config.hasNominal;
+  result.hasMin = config.hasMin;
+  result.hasMax = config.hasMax;
+  return result;
+}
+
+const MeasurementResult* findRuntimeMeasurement(const QVector<MeasurementResult>& measurements,
+                                                const MeasurementRecipeConfig& config)
+{
+  const QString key = measurementResultKey(config.type, config.sourceAId, config.sourceBId);
+  for (const MeasurementResult& measurement : measurements)
+  {
+    if (measurementResultKey(measurement.type, measurement.sourceAId, measurement.sourceBId) == key)
+    {
+      return &measurement;
+    }
+  }
+  return nullptr;
+}
+
+QVector<MeasurementResult> mergedMeasurementRows(const RecipeManager& recipes,
+                                                 const QString& cameraId,
+                                                 const QVector<MeasurementResult>& runtimeMeasurements)
+{
+  QVector<MeasurementResult> rows;
+  for (const MeasurementRecipeConfig& config : recipes.loadMeasurements(cameraId))
+  {
+    if (!config.enabled)
+    {
+      continue;
+    }
+
+    const MeasurementResult* runtime = findRuntimeMeasurement(runtimeMeasurements, config);
+    rows.append(runtime ? *runtime : failedMeasurementRow(config));
+  }
+  return rows;
+}
+}
+
 void MainWindow::updateControlPanel(const CameraConfig* camera)
 {
   clearToolPanel();
@@ -24,6 +88,7 @@ void MainWindow::updateControlPanel(const CameraConfig* camera)
     if (m_measurementResults)
     {
       m_measurementResults->show();
+      m_measurementResults->setExpanded(true);
     }
     m_cameraDetails->setText(trText("labels.productionOverviewDetails"));
     if (m_toolIconBar)
@@ -60,6 +125,20 @@ void MainWindow::updateControlPanel(const CameraConfig* camera)
     stats->setWordWrap(true);
     m_toolsLayout->addWidget(stats);
 
+    if (m_machineRunning)
+    {
+      auto* throughput = new QLabel(
+        QString("%1: %2\n%3: %4")
+          .arg(trText("labels.throughputInstant"))
+          .arg(throughputOverviewInstantText())
+          .arg(trText("labels.throughputAverage10s"))
+          .arg(throughputOverviewAverageText()),
+        m_toolsContainer);
+      throughput->setObjectName("toolPanelNote");
+      throughput->setWordWrap(true);
+      m_toolsLayout->addWidget(throughput);
+    }
+
     m_toolsLayout->addStretch(1);
     return;
   }
@@ -71,7 +150,7 @@ void MainWindow::updateControlPanel(const CameraConfig* camera)
 
   if (m_measurementResults)
   {
-    m_measurementResults->setVisible(m_machineRunning);
+    m_measurementResults->setVisible(false);
   }
 
   if (m_machineRunning)
@@ -94,13 +173,17 @@ void MainWindow::updateControlPanel(const CameraConfig* camera)
       ? SimulatorBridge::instance().queueSize(channel)
       : 0;
     auto* stats = new QLabel(
-      QString("%1: %2\n%3: %4\n%5: %6 ms")
+      QString("%1: %2\n%3: %4\n%5: %6 ms\n%7: %8\n%9: %10")
         .arg(trText("labels.cameraState"))
         .arg(busy ? "BUSY" : "READY")
         .arg(trText("labels.pendingFrames"))
         .arg(m_cameraPendingJobs.value(camera->id, 0) + pendingQueue)
         .arg(trText("labels.lastScan"))
-        .arg(m_lastSetupScanElapsedMs.value(camera->id, 0)),
+        .arg(m_lastSetupScanElapsedMs.value(camera->id, 0))
+        .arg(trText("labels.throughputInstant"))
+        .arg(throughputInstantText(camera->id))
+        .arg(trText("labels.throughputAverage10s"))
+        .arg(throughputAverageText(camera->id)),
       m_toolsContainer);
     stats->setObjectName("toolPanelNote");
     stats->setWordWrap(true);
@@ -150,7 +233,7 @@ void MainWindow::updateMeasurementResults()
           break;
         }
       }
-      for (const MeasurementResult& measurement : measurements)
+      for (const MeasurementResult& measurement : mergedMeasurementRows(m_recipeManager, camera.id, measurements))
       {
         rows.append({
           camera.id,
@@ -165,7 +248,10 @@ void MainWindow::updateMeasurementResults()
 
   m_measurementResults->setMeasurements(
     m_selectedCameraId,
-    m_cameraRuntime[m_selectedCameraId].geometries().measurements,
+    mergedMeasurementRows(
+      m_recipeManager,
+      m_selectedCameraId,
+      m_cameraRuntime[m_selectedCameraId].geometries().measurements),
     m_lastSetupScanElapsedMs.value(m_selectedCameraId, -1));
 }
 

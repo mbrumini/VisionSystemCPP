@@ -4,8 +4,8 @@
 
 #include <opencv2/imgproc.hpp>
 
-#include <algorithm>
 #include <cmath>
+#include <limits>
 
 inline cv::Rect clampSurfaceRect(const cv::Rect& rect, const cv::Size& imageSize)
 {
@@ -170,6 +170,250 @@ inline cv::Point2d surfaceMaskCentroid(
   }
 
   return cv::Point2d(sumX / count, sumY / count);
+}
+
+inline cv::Point2d surfaceGeometricCenterFromContour(const std::vector<cv::Point>& contour)
+{
+  if (contour.size() < 3)
+  {
+    const cv::Rect bounds = cv::boundingRect(contour);
+    return cv::Point2d(
+      bounds.x + bounds.width / 2.0,
+      bounds.y + bounds.height / 2.0);
+  }
+
+  std::vector<cv::Point> hull;
+  cv::convexHull(contour, hull);
+  if (hull.size() < 3)
+  {
+    const cv::Rect bounds = cv::boundingRect(contour);
+    return cv::Point2d(
+      bounds.x + bounds.width / 2.0,
+      bounds.y + bounds.height / 2.0);
+  }
+
+  return cv::minAreaRect(hull).center;
+}
+
+inline cv::Point2d surfaceLongAxisFromContour(const std::vector<cv::Point>& contour)
+{
+  if (contour.size() < 3)
+  {
+    return cv::Point2d(1.0, 0.0);
+  }
+
+  const cv::RotatedRect fitted = cv::minAreaRect(contour);
+  cv::Point2f box[4];
+  fitted.points(box);
+  auto edgeVector = [&](int from, int to) {
+    return cv::Point2d(box[to].x - box[from].x, box[to].y - box[from].y);
+  };
+
+  const cv::Point2d edge0 = edgeVector(0, 1);
+  const cv::Point2d edge1 = edgeVector(1, 2);
+  const double length0 = std::hypot(edge0.x, edge0.y);
+  const double length1 = std::hypot(edge1.x, edge1.y);
+  cv::Point2d longEdge = length0 >= length1 ? edge0 : edge1;
+  const double length = std::hypot(longEdge.x, longEdge.y);
+  if (length <= 1e-6)
+  {
+    return cv::Point2d(1.0, 0.0);
+  }
+
+  return cv::Point2d(longEdge.x / length, longEdge.y / length);
+}
+
+inline cv::Point2d orientAxisTowardMassAsymmetry(
+  const cv::Point2d& geometricCenter,
+  cv::Point2d axisDirection,
+  const cv::Mat& mask,
+  const cv::Point2d& maskOrigin,
+  const cv::Rect& referenceBounds)
+{
+  if (axisDirection.x == 0.0 && axisDirection.y == 0.0)
+  {
+    return axisDirection;
+  }
+
+  const double axisLength = std::hypot(axisDirection.x, axisDirection.y);
+  axisDirection.x /= axisLength;
+  axisDirection.y /= axisLength;
+
+  const cv::Point2d massCenter = surfaceMaskCentroid(mask, maskOrigin);
+  const cv::Point2d offset(massCenter.x - geometricCenter.x, massCenter.y - geometricCenter.y);
+  const double minOffset =
+    0.03 * std::max(20.0, std::hypot(referenceBounds.width, referenceBounds.height));
+  const double projection = offset.x * axisDirection.x + offset.y * axisDirection.y;
+  if (std::hypot(offset.x, offset.y) >= minOffset && std::abs(projection) >= minOffset * 0.25)
+  {
+    if (projection < 0.0)
+    {
+      axisDirection = -axisDirection;
+    }
+  }
+
+  return axisDirection;
+}
+
+struct HalfPlaneMassResult
+{
+  cv::Point2d axis;
+  double positiveMass = 0.0;
+  double negativeMass = 0.0;
+
+  bool ambiguous(double ratioThreshold = 0.08) const
+  {
+    const double total = positiveMass + negativeMass;
+    return total <= 0.0 || std::abs(positiveMass - negativeMass) / total < ratioThreshold;
+  }
+};
+
+inline HalfPlaneMassResult measureHalfPlaneMass(
+  const cv::Point2d& center,
+  cv::Point2d axisDirection,
+  const cv::Mat& mask,
+  const cv::Point2d& maskOrigin)
+{
+  HalfPlaneMassResult result;
+  result.axis = axisDirection;
+
+  if (axisDirection.x == 0.0 && axisDirection.y == 0.0)
+  {
+    return result;
+  }
+
+  const double axisLength = std::hypot(axisDirection.x, axisDirection.y);
+  axisDirection.x /= axisLength;
+  axisDirection.y /= axisLength;
+  result.axis = axisDirection;
+
+  for (int row = 0; row < mask.rows; ++row)
+  {
+    const uchar* rowPtr = mask.ptr<uchar>(row);
+    for (int col = 0; col < mask.cols; ++col)
+    {
+      if (rowPtr[col] == 0)
+      {
+        continue;
+      }
+
+      const double projection =
+        (maskOrigin.x + col - center.x) * axisDirection.x +
+        (maskOrigin.y + row - center.y) * axisDirection.y;
+      if (projection > 0.0)
+      {
+        result.positiveMass += 1.0;
+      }
+      else if (projection < 0.0)
+      {
+        result.negativeMass += 1.0;
+      }
+    }
+  }
+
+  return result;
+}
+
+inline HalfPlaneMassResult orientAxisByHalfPlaneMass(
+  const cv::Point2d& center,
+  cv::Point2d axisDirection,
+  const cv::Mat& mask,
+  const cv::Point2d& maskOrigin)
+{
+  HalfPlaneMassResult result = measureHalfPlaneMass(center, axisDirection, mask, maskOrigin);
+  axisDirection = result.axis;
+
+  if (result.negativeMass > result.positiveMass)
+  {
+    axisDirection = -axisDirection;
+  }
+
+  result.axis = axisDirection;
+  return result;
+}
+
+inline cv::Point2d orientAxisToReferenceHalfPlane(
+  const cv::Point2d& center,
+  cv::Point2d axisDirection,
+  const cv::Mat& mask,
+  const cv::Point2d& maskOrigin,
+  bool referencePositiveHalfPlane)
+{
+  if (axisDirection.x == 0.0 && axisDirection.y == 0.0)
+  {
+    return axisDirection;
+  }
+
+  const HalfPlaneMassResult halfPlane = measureHalfPlaneMass(
+    center,
+    axisDirection,
+    mask,
+    maskOrigin);
+  const bool positiveHalfPlane = halfPlane.positiveMass > halfPlane.negativeMass;
+  if (positiveHalfPlane != referencePositiveHalfPlane)
+  {
+    axisDirection = -axisDirection;
+  }
+
+  return axisDirection;
+}
+
+inline cv::Point2d resolveSurfacePcaInternalAmbiguity(
+  const cv::Point2d& center,
+  cv::Point2d xDirection,
+  const std::vector<std::vector<cv::Point>>& contours,
+  const cv::Rect& referenceBounds,
+  double mainContourArea,
+  int* selectedInternalContourIndex = nullptr)
+{
+  if (selectedInternalContourIndex != nullptr)
+  {
+    *selectedInternalContourIndex = -1;
+  }
+
+  const double minOffset =
+    0.05 * std::max(20.0, std::hypot(referenceBounds.width, referenceBounds.height));
+
+  auto orientToward = [&](const cv::Point2d& target) {
+    const cv::Point2d offset = target - center;
+    const double projection = offset.x * xDirection.x + offset.y * xDirection.y;
+    if (projection < 0.0)
+    {
+      xDirection = -xDirection;
+    }
+  };
+
+  int bestInternalIndex = -1;
+  double bestInternalDistance = 0.0;
+  for (int i = 0; i < static_cast<int>(contours.size()); ++i)
+  {
+    const double area = std::abs(cv::contourArea(contours[i]));
+    if (area >= 0.8 * mainContourArea || area <= 8.0)
+    {
+      continue;
+    }
+
+    const cv::Point2d internalCenter = surfaceContourCentroid(contours[i]);
+    const double distance = std::hypot(internalCenter.x - center.x, internalCenter.y - center.y);
+    if (distance < minOffset || distance <= bestInternalDistance)
+    {
+      continue;
+    }
+
+    bestInternalIndex = i;
+    bestInternalDistance = distance;
+  }
+
+  if (bestInternalIndex >= 0)
+  {
+    orientToward(surfaceContourCentroid(contours[bestInternalIndex]));
+    if (selectedInternalContourIndex != nullptr)
+    {
+      *selectedInternalContourIndex = bestInternalIndex;
+    }
+  }
+
+  return xDirection;
 }
 
 inline cv::Point2d resolveSurfacePcaAxisDirection(

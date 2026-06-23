@@ -14,4 +14,5 @@ namespace SurfaceLocalizationAdapters
 {
 std::vector<cv::Rect> toCvRects(const QVector<QRect>& rects);
 SurfaceTwoCirclesStrategyConfig toProcessorStrategy(const SurfaceLocalizationStrategyConfig& recipeConfig);
+SurfaceThresholdSettings thresholdSettingsFromRecipe(const SurfaceDefectSettings& recipeSettings);
 }

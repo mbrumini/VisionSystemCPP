@@ -209,11 +209,13 @@ void MainWindowGeometryModule::testGeometryLine(const CameraConfig& camera)
 
   GeometryLineRuntimeConfig& lineConfig = activeGeometryLineConfig(camera.id);
   const PartPose& pose = cameraRuntime()[camera.id].currentPose();
+  bool promotedToPart = false;
   if (pose.valid && !lineConfig.hasLine && lineConfig.hasImageLine)
   {
     lineConfig.partStart = imageToPart(pose, lineConfig.imageStart);
     lineConfig.partEnd = imageToPart(pose, lineConfig.imageEnd);
     lineConfig.hasLine = true;
+    promotedToPart = true;
   }
 
   const bool usePartLine = pose.valid && lineConfig.hasLine;
@@ -221,6 +223,11 @@ void MainWindowGeometryModule::testGeometryLine(const CameraConfig& camera)
   {
     log(tr("log.geometryLineRoiMissing") + ": " + camera.id);
     return;
+  }
+
+  if (promotedToPart)
+  {
+    saveGeometryLinesRecipe(camera);
   }
 
   const cv::Point2d imageStart = usePartLine ? partToImage(pose, lineConfig.partStart) : lineConfig.imageStart;

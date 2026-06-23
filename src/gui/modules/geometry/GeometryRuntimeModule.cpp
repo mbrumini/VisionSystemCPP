@@ -146,6 +146,11 @@ void MainWindowGeometryModule::showRuntimeGeometryOverlay(const CameraConfig& ca
   }
 
   const GeometrySet& geometries = cameraRuntime()[camera.id].geometries();
+  const bool compact = context().machineRunning != nullptr && *context().machineRunning;
+  const int lineWidth = compact ? 2 : 6;
+  const int circleWidth = compact ? 2 : 7;
+  const int arcWidth = compact ? 2 : 7;
+
   GeometryOverlay overlay;
   for (const LineGeometry& line : geometries.lines)
   {
@@ -153,20 +158,40 @@ void MainWindowGeometryModule::showRuntimeGeometryOverlay(const CameraConfig& ca
       QPointF(line.start.x, line.start.y),
       QPointF(line.end.x, line.end.y),
       QColor("#35c46a"),
-      6
+      lineWidth
+    });
+  }
+  for (const ConstructedLineGeometry& constructed : geometries.constructedLines)
+  {
+    overlay.lines.append({
+      QPointF(constructed.line.start.x, constructed.line.start.y),
+      QPointF(constructed.line.end.x, constructed.line.end.y),
+      QColor("#7fd9ff"),
+      lineWidth
     });
   }
   for (const PointGeometry& point : geometries.points)
   {
-    GeometryDiagnosticDrawing::appendOrangePointCross(overlay, point.point);
+    GeometryDiagnosticDrawing::appendOrangePointCross(overlay, point.point, compact);
+  }
+  for (const ConstructedPointGeometry& constructed : geometries.constructedPoints)
+  {
+    GeometryDiagnosticDrawing::appendOrangePointCross(overlay, constructed.point.point, compact);
   }
   for (const CircleGeometry& circle : geometries.circles)
   {
-    appendGeometryCirclePolyline(overlay, circle.center, circle.radius, QColor("#00d2ff"), 7);
+    appendGeometryCirclePolyline(overlay, circle.center, circle.radius, QColor("#00d2ff"), circleWidth);
   }
   for (const ArcGeometry& arc : geometries.arcs)
   {
-    appendGeometryArcPolyline(overlay, arc.center, arc.radius, arc.startAngleRadians, arc.endAngleRadians, QColor("#ff4fd8"), 7);
+    appendGeometryArcPolyline(
+      overlay,
+      arc.center,
+      arc.radius,
+      arc.startAngleRadians,
+      arc.endAngleRadians,
+      QColor("#ff4fd8"),
+      arcWidth);
   }
   appendCurrentPartPoseOverlay(camera, overlay);
   if (context().constructedGeometry)
@@ -176,7 +201,7 @@ void MainWindowGeometryModule::showRuntimeGeometryOverlay(const CameraConfig& ca
   if (context().measurement)
   {
     context().measurement->rebuildMeasurementRecipe(camera);
-    context().measurement->appendMeasurementOverlay(camera, overlay);
+    context().measurement->appendMeasurementOverlay(camera, overlay, compact);
   }
   largeImage()->setGeometryOverlay(overlay);
 }

@@ -30,6 +30,11 @@ double normalizedSetupArcAngle(double angle)
   }
   return angle;
 }
+
+bool isMachineRunMode(const MainWindowContext& context)
+{
+  return context.machineRunning != nullptr && *context.machineRunning;
+}
 }
 
 void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& camera)
@@ -348,6 +353,13 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
   }
 
   const bool updateView = camera.id == selectedCameraId();
+  const bool runMode = isMachineRunMode(context());
+  if (updateView && runMode)
+  {
+    showRuntimeGeometryOverlay(camera);
+    return;
+  }
+
   if (updateView)
   {
     selectedPreview() = context().imaging->matToPixmap(diagnostic);

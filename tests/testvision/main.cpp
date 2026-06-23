@@ -905,6 +905,7 @@ private:
     connect(m_recipeCombo, &QComboBox::currentTextChanged, this, [this](const QString& text) {
       m_expectedRecipeId = text.trimmed();
       updateScenarioLabel();
+      syncStrategyFromRecipe();
     });
     connect(m_cameraCombo, &QComboBox::currentIndexChanged, this, [this]() {
       if (!m_cameraTargets)
@@ -1950,6 +1951,40 @@ private:
     }
   }
 
+  void syncStrategyFromRecipe()
+  {
+    if (!m_strategyCombo || !m_recipeCombo || !m_cameraCombo)
+    {
+      return;
+    }
+
+    const QString recipeId = m_recipeCombo->currentText().trimmed();
+    const QString cameraId = m_cameraCombo->currentData().toString();
+    if (recipeId.isEmpty() || cameraId.isEmpty() || cameraId == "SELECTED")
+    {
+      return;
+    }
+
+    const QDir recipesDirectory(QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath("recipes"));
+    const QString cameraPath = recipesDirectory.filePath(recipeId + "/cameras/" + cameraId + ".json");
+    QFile cameraFile(cameraPath);
+    if (!cameraFile.open(QIODevice::ReadOnly))
+    {
+      return;
+    }
+
+    const QJsonObject root = QJsonDocument::fromJson(cameraFile.readAll()).object();
+    const QString method = root.value("tools").toObject()
+      .value("surfaceLocalization").toObject()
+      .value("method").toString();
+    const int strategyIndex = m_strategyCombo->findData(method);
+    if (strategyIndex >= 0 && m_strategyCombo->currentIndex() != strategyIndex)
+    {
+      m_strategyCombo->setCurrentIndex(strategyIndex);
+      appendLog("Strategia allineata alla ricetta: " + method);
+    }
+  }
+
   void startTest()
   {
     if (!m_isCampaignWorker)
@@ -1983,6 +2018,7 @@ private:
       QMessageBox::warning(this, "TestVision", error);
       return;
     }
+    syncStrategyFromRecipe();
     closePipe();
     m_currentIndex = -1;
     m_currentFrameId = 0;

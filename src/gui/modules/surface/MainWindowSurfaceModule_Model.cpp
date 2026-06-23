@@ -97,11 +97,9 @@ bool MainWindowSurfaceModule::localizePoseOnSample(const CameraConfig& camera)
   }
   else if (annulus.method == "massPca")
   {
-    SurfaceDefectSettings recipeSettings = recipes().loadSurfaceDefectSettings(camera.id);
-    SurfaceThresholdSettings thresholdSettings;
-    thresholdSettings.minValue = recipeSettings.thresholdMin;
-    thresholdSettings.maxValue = recipeSettings.thresholdMax;
-    thresholdSettings.resolveAmbiguity = recipeSettings.pcaResolveAmbiguity;
+    ensureMassPcaReferenceFromSample(camera);
+    const SurfaceDefectSettings recipeSettings = recipes().loadSurfaceDefectSettings(camera.id);
+    const SurfaceThresholdSettings thresholdSettings = thresholdSettingsFromRecipe(recipeSettings);
     result = processor.detectByGrayscaleThreshold(
       input,
       searchRect,
@@ -128,6 +126,48 @@ bool MainWindowSurfaceModule::localizePoseOnSample(const CameraConfig& camera)
   context().lastSurfaceLocalizationResults->insert(camera.id, result.localization);
   cameraRuntime()[camera.id].setCurrentPose(context().imaging->partPoseFromSurfaceReference(camera, result.localization));
   return true;
+}
+
+bool MainWindowSurfaceModule::ensureMassPcaReferenceFromSample(const CameraConfig& camera)
+{
+  const SurfaceDefectSettings recipeSettings = recipes().loadSurfaceDefectSettings(camera.id);
+  if (recipeSettings.hasReferenceHalfPlane)
+  {
+    return true;
+  }
+
+  QString imageError;
+  const cv::Mat input = context().imaging->sampleInputImage(camera, &imageError);
+  if (input.empty())
+  {
+    return false;
+  }
+
+  SurfaceThresholdSettings thresholdSettings;
+  thresholdSettings.minValue = recipeSettings.thresholdMin;
+  thresholdSettings.maxValue = recipeSettings.thresholdMax;
+
+  const QVector<QRect> exclusionRects = recipes().loadSurfaceDefectExclusionRects(camera.id);
+  SurfaceDefectProcessor processor;
+  const cv::Rect searchRect(0, 0, input.cols, input.rows);
+  const SurfaceDefectResult result = processor.detectByGrayscaleThreshold(
+    input,
+    searchRect,
+    toCvRects(exclusionRects),
+    thresholdSettings,
+    false,
+    false);
+
+  if (!result.localization.found)
+  {
+    return false;
+  }
+
+  QString error;
+  return recipes().saveSurfaceDefectAxisReference(
+    camera.id,
+    result.localization.referencePositiveHalfPlane,
+    &error);
 }
 
 void MainWindowSurfaceModule::showSamplePoseOverlay(const CameraConfig& camera)

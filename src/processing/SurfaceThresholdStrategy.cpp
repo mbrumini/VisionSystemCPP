@@ -17,6 +17,236 @@ std::vector<cv::Point> localPolygon(const std::vector<cv::Point>& polygon, const
   }
   return result;
 }
+
+struct ThresholdMaskAnalysis
+{
+  cv::Point2d center;
+  std::vector<cv::Point> pcaContour;
+  cv::Rect boundingRect;
+  cv::Mat componentMask;
+  double pixelArea = 0.0;
+  bool valid = false;
+};
+
+ThresholdMaskAnalysis analyzeLargestComponent(const cv::Mat& mask, const cv::Rect& roi)
+{
+  ThresholdMaskAnalysis analysis;
+
+  cv::Mat labels;
+  cv::Mat stats;
+  cv::Mat centroids;
+  const int componentCount =
+    cv::connectedComponentsWithStats(mask, labels, stats, centroids, 8, CV_32S);
+
+  int bestLabel = -1;
+  int bestPixelArea = 0;
+  for (int label = 1; label < componentCount; ++label)
+  {
+    const int pixelArea = stats.at<int>(label, cv::CC_STAT_AREA);
+    if (pixelArea > bestPixelArea)
+    {
+      bestPixelArea = pixelArea;
+      bestLabel = label;
+    }
+  }
+
+  if (bestLabel < 0 || bestPixelArea <= 0)
+  {
+    return analysis;
+  }
+
+  analysis.pixelArea = static_cast<double>(bestPixelArea);
+  analysis.boundingRect = cv::Rect(
+    stats.at<int>(bestLabel, cv::CC_STAT_LEFT) + roi.x,
+    stats.at<int>(bestLabel, cv::CC_STAT_TOP) + roi.y,
+    stats.at<int>(bestLabel, cv::CC_STAT_WIDTH),
+    stats.at<int>(bestLabel, cv::CC_STAT_HEIGHT));
+
+  cv::Mat componentMask;
+  cv::compare(labels, bestLabel, componentMask, cv::CMP_EQ);
+  analysis.componentMask = componentMask;
+
+  std::vector<std::vector<cv::Point>> componentContours;
+  cv::findContours(componentMask.clone(), componentContours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+
+  double bestProfileArea = 0.0;
+  for (const std::vector<cv::Point>& contour : componentContours)
+  {
+    if (contour.size() < 8)
+    {
+      continue;
+    }
+
+    std::vector<cv::Point> hull;
+    cv::convexHull(contour, hull);
+    const double profileArea = hull.size() >= 3 ? cv::contourArea(hull) : cv::contourArea(contour);
+    if (profileArea <= bestProfileArea)
+    {
+      continue;
+    }
+
+    bestProfileArea = profileArea;
+    analysis.pcaContour.clear();
+    analysis.pcaContour.reserve(contour.size());
+    for (const cv::Point& point : contour)
+    {
+      analysis.pcaContour.emplace_back(point.x + roi.x, point.y + roi.y);
+    }
+  }
+
+  if (analysis.pcaContour.size() >= 3)
+  {
+    analysis.center = surfaceGeometricCenterFromContour(analysis.pcaContour);
+  }
+  else
+  {
+    const cv::Moments componentMoments = cv::moments(componentMask, true);
+    if (componentMoments.m00 <= 0.0)
+    {
+      return analysis;
+    }
+
+    analysis.center = cv::Point2d(
+      componentMoments.m10 / componentMoments.m00 + roi.x,
+      componentMoments.m01 / componentMoments.m00 + roi.y);
+  }
+
+  analysis.valid = analysis.pcaContour.size() >= 5;
+  return analysis;
+}
+
+void applyThresholdLocalization(
+  SurfaceDefectResult& result,
+  const cv::Mat& mask,
+  const cv::Rect& roi,
+  const SurfaceThresholdSettings& settings,
+  bool createDiagnosticImage,
+  bool drawContours)
+{
+  const ThresholdMaskAnalysis analysis = analyzeLargestComponent(mask, roi);
+  if (!analysis.valid)
+  {
+    return;
+  }
+
+  SurfaceBlob mainBlob;
+  mainBlob.area = analysis.pixelArea;
+  mainBlob.center = analysis.center;
+  mainBlob.boundingRect = analysis.boundingRect;
+  mainBlob.contour = analysis.pcaContour;
+  result.totalArea = analysis.pixelArea;
+  result.blobs = {mainBlob};
+
+  if (createDiagnosticImage)
+  {
+    drawSurfaceBlobs(result.diagnosticImage, result.blobs, drawContours);
+  }
+
+  result.localization.found = true;
+  result.localization.method = "threshold_geometric_mass_pca";
+  result.localization.center = mainBlob.center;
+  result.localization.radius = mainBlob.area > 0.0 ? std::sqrt(mainBlob.area / CV_PI) : 0.0;
+  result.localization.score = 1.0;
+  result.localization.inputPoints = static_cast<int>(mainBlob.contour.size());
+  result.localization.usedPoints = result.localization.inputPoints;
+
+  cv::Point2d xDirection = surfaceLongAxisFromContour(mainBlob.contour);
+  const cv::Point2d maskOrigin(roi.x, roi.y);
+  int selectedInternalContourIndex = -1;
+
+  if (settings.hasReferenceHalfPlaneSign())
+  {
+    xDirection = orientAxisToReferenceHalfPlane(
+      mainBlob.center,
+      xDirection,
+      analysis.componentMask,
+      maskOrigin,
+      settings.referencePositiveHalfPlane);
+  }
+  else
+  {
+    const HalfPlaneMassResult halfPlane = orientAxisByHalfPlaneMass(
+      mainBlob.center,
+      xDirection,
+      analysis.componentMask,
+      maskOrigin);
+    xDirection = halfPlane.axis;
+
+    if (settings.resolveAmbiguity)
+    {
+      xDirection = orientAxisTowardMassAsymmetry(
+        mainBlob.center,
+        xDirection,
+        analysis.componentMask,
+        maskOrigin,
+        mainBlob.boundingRect);
+    }
+
+    std::vector<std::vector<cv::Point>> imageContours;
+    cv::findContours(analysis.componentMask.clone(), imageContours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
+    for (std::vector<cv::Point>& contour : imageContours)
+    {
+      for (cv::Point& point : contour)
+      {
+        point.x += roi.x;
+        point.y += roi.y;
+      }
+    }
+
+    if (settings.resolveAmbiguity && halfPlane.ambiguous())
+    {
+      xDirection = resolveSurfacePcaInternalAmbiguity(
+        mainBlob.center,
+        xDirection,
+        imageContours,
+        mainBlob.boundingRect,
+        mainBlob.area,
+        &selectedInternalContourIndex);
+    }
+
+    if (createDiagnosticImage && drawContours && selectedInternalContourIndex >= 0)
+    {
+      cv::drawContours(
+        result.diagnosticImage,
+        imageContours,
+        selectedInternalContourIndex,
+        cv::Scalar(0, 165, 255),
+        2);
+    }
+  }
+
+  const HalfPlaneMassResult finalHalfPlane = measureHalfPlaneMass(
+    mainBlob.center,
+    xDirection,
+    analysis.componentMask,
+    maskOrigin);
+  result.localization.hasAxisReference = true;
+  result.localization.referencePositiveHalfPlane =
+    finalHalfPlane.positiveMass > finalHalfPlane.negativeMass;
+
+  const double angle = std::atan2(xDirection.y, xDirection.x);
+
+  const cv::Point2d xDir(std::cos(angle), std::sin(angle));
+  const cv::Point2d yDir(-xDir.y, xDir.x);
+  const cv::Rect bounding = mainBlob.boundingRect;
+  const double axisLength = std::max(20.0, 0.55 * std::max(bounding.width, bounding.height));
+  result.localization.angleRadians = angle;
+  result.localization.xAxisStart = mainBlob.center - xDir * axisLength;
+  result.localization.xAxisEnd = mainBlob.center + xDir * axisLength;
+  result.localization.yAxisStart = mainBlob.center - yDir * axisLength;
+  result.localization.yAxisEnd = mainBlob.center + yDir * axisLength;
+
+  if (createDiagnosticImage)
+  {
+    drawStyledAxes(
+      result.diagnosticImage,
+      mainBlob.center,
+      result.localization.xAxisStart,
+      result.localization.xAxisEnd,
+      result.localization.yAxisStart,
+      result.localization.yAxisEnd);
+  }
+}
 }
 
 SurfaceDefectResult SurfaceThresholdStrategy::detectInRoi(
@@ -76,10 +306,7 @@ SurfaceDefectResult SurfaceThresholdStrategy::detectInRoi(
   }
 
   cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
-  cv::morphologyEx(mask, mask, cv::MORPH_OPEN, kernel);
-
-  std::vector<std::vector<cv::Point>> contours;
-  cv::findContours(mask, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
+  cv::morphologyEx(mask, mask, cv::MORPH_CLOSE, kernel);
 
   if (createDiagnosticImage)
   {
@@ -93,136 +320,7 @@ SurfaceDefectResult SurfaceThresholdStrategy::detectInRoi(
     }
   }
 
-  // cv::rectangle(result.diagnosticImage, roi, cv::Scalar(0, 255, 255), 2);
-
-  // Determine if there is at least one significant contour that does not span the entire ROI
-  bool hasSmallSignificantContour = false;
-  for (const auto& c : contours)
-  {
-    const double area = cv::contourArea(c);
-    if (area > 100.0)
-    {
-      const cv::Rect bounding = cv::boundingRect(c);
-      if (bounding.width <= 0.95 * roi.width || bounding.height <= 0.95 * roi.height)
-      {
-        hasSmallSignificantContour = true;
-        break;
-      }
-    }
-  }
-
-  for (std::vector<cv::Point>& contour : contours)
-  {
-    const double area = cv::contourArea(contour);
-
-    if (area <= 0.0)
-    {
-      continue;
-    }
-
-    if (hasSmallSignificantContour)
-    {
-      const cv::Rect bounding = cv::boundingRect(contour);
-      if (bounding.width > 0.95 * roi.width && bounding.height > 0.95 * roi.height)
-      {
-        continue;
-      }
-    }
-
-    for (cv::Point& point : contour)
-    {
-      point.x += roi.x;
-      point.y += roi.y;
-    }
-
-    const cv::Moments moments = cv::moments(contour);
-    SurfaceBlob blob;
-    blob.area = area;
-    blob.center = moments.m00 == 0.0 ? cv::Point2d() : cv::Point2d(moments.m10 / moments.m00, moments.m01 / moments.m00);
-    blob.boundingRect = cv::boundingRect(contour);
-    blob.contour = contour;
-    result.totalArea += area;
-    result.blobs.push_back(blob);
-  }
-
-  sortSurfaceBlobsByArea(result);
-  if (createDiagnosticImage)
-  {
-    drawSurfaceBlobs(result.diagnosticImage, result.blobs, drawContours);
-  }
-  if (!result.blobs.empty())
-  {
-    const SurfaceBlob& mainBlob = result.blobs.front();
-    result.localization.found = true;
-    result.localization.method = "threshold_blob_mass_pca";
-    result.localization.center = mainBlob.center;
-    result.localization.radius = mainBlob.area > 0.0 ? std::sqrt(mainBlob.area / CV_PI) : 0.0;
-    result.localization.score = 1.0;
-    result.localization.inputPoints = static_cast<int>(mainBlob.contour.size());
-    result.localization.usedPoints = result.localization.inputPoints;
-
-    if (mainBlob.contour.size() >= 5)
-    {
-      cv::Mat data(static_cast<int>(mainBlob.contour.size()), 2, CV_64F);
-      for (int i = 0; i < static_cast<int>(mainBlob.contour.size()); ++i)
-      {
-        data.at<double>(i, 0) = mainBlob.contour[i].x;
-        data.at<double>(i, 1) = mainBlob.contour[i].y;
-      }
-
-      const cv::PCA pca(data, cv::Mat(), cv::PCA::DATA_AS_ROW);
-      cv::Point2d xDirection(pca.eigenvectors.at<double>(0, 0), pca.eigenvectors.at<double>(0, 1));
-
-      std::vector<std::vector<cv::Point>> imageContours;
-      cv::findContours(mask.clone(), imageContours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
-      for (std::vector<cv::Point>& contour : imageContours)
-      {
-        for (cv::Point& point : contour)
-        {
-          point.x += roi.x;
-          point.y += roi.y;
-        }
-      }
-
-      int selectedInternalContourIndex = -1;
-      xDirection = resolveSurfacePcaAxisDirection(
-        mainBlob.center,
-        xDirection,
-        mask,
-        cv::Point2d(roi.x, roi.y),
-        mainBlob.boundingRect,
-        settings.resolveAmbiguity,
-        &imageContours,
-        mainBlob.area,
-        &selectedInternalContourIndex);
-      const double angle = std::atan2(xDirection.y, xDirection.x);
-
-      if (createDiagnosticImage && drawContours && selectedInternalContourIndex >= 0)
-      {
-        cv::drawContours(
-          result.diagnosticImage,
-          imageContours,
-          selectedInternalContourIndex,
-          cv::Scalar(0, 165, 255),
-          2);
-      }
-
-      const cv::Point2d xDir(std::cos(angle), std::sin(angle));
-      const cv::Point2d yDir(-xDir.y, xDir.x);
-      const cv::Rect bounding = mainBlob.boundingRect;
-      const double axisLength = std::max(20.0, 0.55 * std::max(bounding.width, bounding.height));
-      result.localization.angleRadians = angle;
-      result.localization.xAxisStart = mainBlob.center - xDir * axisLength;
-      result.localization.xAxisEnd = mainBlob.center + xDir * axisLength;
-      result.localization.yAxisStart = mainBlob.center - yDir * axisLength;
-      result.localization.yAxisEnd = mainBlob.center + yDir * axisLength;
-
-      if (createDiagnosticImage)
-      {
-        drawStyledAxes(result.diagnosticImage, mainBlob.center, result.localization.xAxisStart, result.localization.xAxisEnd, result.localization.yAxisStart, result.localization.yAxisEnd);
-      }
-    }
-  }
+  applyThresholdLocalization(result, mask, roi, settings, createDiagnosticImage, drawContours);
 
   result.processed = true;
   return result;
@@ -289,10 +387,7 @@ SurfaceDefectResult SurfaceThresholdStrategy::detectInPolygon(
   }
 
   cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
-  cv::morphologyEx(mask, mask, cv::MORPH_OPEN, kernel);
-
-  std::vector<std::vector<cv::Point>> contours;
-  cv::findContours(mask, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
+  cv::morphologyEx(mask, mask, cv::MORPH_CLOSE, kernel);
 
   if (createDiagnosticImage)
   {
@@ -306,131 +401,10 @@ SurfaceDefectResult SurfaceThresholdStrategy::detectInPolygon(
     }
   }
 
-  // cv::polylines(result.diagnosticImage, std::vector<std::vector<cv::Point>>{searchPolygon}, true, cv::Scalar(0, 255, 255), 2);
-
-  // Determine if there is at least one significant contour that does not span the entire ROI
-  bool hasSmallSignificantContour = false;
-  for (const auto& c : contours)
+  applyThresholdLocalization(result, mask, roi, settings, createDiagnosticImage, drawContours);
+  if (result.localization.found)
   {
-    const double area = cv::contourArea(c);
-    if (area > 100.0)
-    {
-      const cv::Rect bounding = cv::boundingRect(c);
-      if (bounding.width <= 0.95 * roi.width || bounding.height <= 0.95 * roi.height)
-      {
-        hasSmallSignificantContour = true;
-        break;
-      }
-    }
-  }
-
-  for (std::vector<cv::Point>& contour : contours)
-  {
-    const double area = cv::contourArea(contour);
-    if (area <= 0.0)
-    {
-      continue;
-    }
-
-    if (hasSmallSignificantContour)
-    {
-      const cv::Rect bounding = cv::boundingRect(contour);
-      if (bounding.width > 0.95 * roi.width && bounding.height > 0.95 * roi.height)
-      {
-        continue;
-      }
-    }
-
-    for (cv::Point& point : contour)
-    {
-      point.x += roi.x;
-      point.y += roi.y;
-    }
-
-    const cv::Moments moments = cv::moments(contour);
-    SurfaceBlob blob;
-    blob.area = area;
-    blob.center = moments.m00 == 0.0 ? cv::Point2d() : cv::Point2d(moments.m10 / moments.m00, moments.m01 / moments.m00);
-    blob.boundingRect = cv::boundingRect(contour);
-    blob.contour = contour;
-    result.totalArea += area;
-    result.blobs.push_back(blob);
-  }
-
-  sortSurfaceBlobsByArea(result);
-  if (createDiagnosticImage)
-  {
-    drawSurfaceBlobs(result.diagnosticImage, result.blobs, drawContours);
-  }
-  if (!result.blobs.empty())
-  {
-    const SurfaceBlob& mainBlob = result.blobs.front();
-    result.localization.found = true;
     result.localization.method = "threshold_polygon_mass_pca";
-    result.localization.center = mainBlob.center;
-    result.localization.radius = mainBlob.area > 0.0 ? std::sqrt(mainBlob.area / CV_PI) : 0.0;
-    result.localization.score = 1.0;
-    result.localization.inputPoints = static_cast<int>(mainBlob.contour.size());
-    result.localization.usedPoints = result.localization.inputPoints;
-
-    if (mainBlob.contour.size() >= 5)
-    {
-      cv::Mat data(static_cast<int>(mainBlob.contour.size()), 2, CV_64F);
-      for (int i = 0; i < static_cast<int>(mainBlob.contour.size()); ++i)
-      {
-        data.at<double>(i, 0) = mainBlob.contour[i].x;
-        data.at<double>(i, 1) = mainBlob.contour[i].y;
-      }
-      const cv::PCA pca(data, cv::Mat(), cv::PCA::DATA_AS_ROW);
-      cv::Point2d xDirection(pca.eigenvectors.at<double>(0, 0), pca.eigenvectors.at<double>(0, 1));
-
-      std::vector<std::vector<cv::Point>> imageContours;
-      cv::findContours(mask.clone(), imageContours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
-      for (std::vector<cv::Point>& contour : imageContours)
-      {
-        for (cv::Point& point : contour)
-        {
-          point.x += roi.x;
-          point.y += roi.y;
-        }
-      }
-
-      int selectedInternalContourIndex = -1;
-      xDirection = resolveSurfacePcaAxisDirection(
-        mainBlob.center,
-        xDirection,
-        mask,
-        cv::Point2d(roi.x, roi.y),
-        mainBlob.boundingRect,
-        settings.resolveAmbiguity,
-        &imageContours,
-        mainBlob.area,
-        &selectedInternalContourIndex);
-      const double angle = std::atan2(xDirection.y, xDirection.x);
-
-      if (createDiagnosticImage && drawContours && selectedInternalContourIndex >= 0)
-      {
-        cv::drawContours(
-          result.diagnosticImage,
-          imageContours,
-          selectedInternalContourIndex,
-          cv::Scalar(0, 165, 255),
-          2);
-      }
-
-      const cv::Point2d xDir(std::cos(angle), std::sin(angle));
-      const cv::Point2d yDir(-xDir.y, xDir.x);
-      const double axisLength = std::max(20.0, 0.55 * std::max(mainBlob.boundingRect.width, mainBlob.boundingRect.height));
-      result.localization.angleRadians = angle;
-      result.localization.xAxisStart = mainBlob.center - xDir * axisLength;
-      result.localization.xAxisEnd = mainBlob.center + xDir * axisLength;
-      result.localization.yAxisStart = mainBlob.center - yDir * axisLength;
-      result.localization.yAxisEnd = mainBlob.center + yDir * axisLength;
-      if (createDiagnosticImage)
-      {
-        drawStyledAxes(result.diagnosticImage, mainBlob.center, result.localization.xAxisStart, result.localization.xAxisEnd, result.localization.yAxisStart, result.localization.yAxisEnd);
-      }
-    }
   }
 
   result.processed = true;

@@ -165,6 +165,32 @@ void appendMeasurementResult(GeometrySet& set,
   set.measurements.append(result);
 }
 
+void appendFailedMeasurementResult(GeometrySet& set, const MeasurementRecipeConfig& config)
+{
+  MeasurementResult result;
+  result.id = config.id;
+  result.alias = config.alias;
+  result.type = config.type;
+  result.sourceAId = config.sourceAId;
+  result.sourceBId = config.sourceBId;
+  result.valid = false;
+  result.judgement = "N/D";
+  result.labelPoint = config.labelPoint;
+  result.hasLabelPoint = config.hasLabelPoint;
+  result.unit = config.unit.isEmpty() ? "px" : config.unit;
+  if (config.type == "line_line_angle")
+  {
+    result.unit = "deg";
+  }
+  result.nominal = config.nominal;
+  result.min = config.min;
+  result.max = config.max;
+  result.hasNominal = config.hasNominal;
+  result.hasMin = config.hasMin;
+  result.hasMax = config.hasMax;
+  set.measurements.append(result);
+}
+
 QString measurementLabel(const MeasurementResult& measurement, const QString& unit)
 {
   const QString name = measurement.alias.trimmed();
@@ -201,7 +227,8 @@ QColor measurementLabelColor(const MeasurementResult& measurement)
 
 GeometryOverlayDimension measurementDimension(const QPointF& start,
                                               const QPointF& end,
-                                              const MeasurementResult& measurement)
+                                              const MeasurementResult& measurement,
+                                              int width = 3)
 {
   GeometryOverlayDimension dimension;
   dimension.imageStart = start;
@@ -209,7 +236,7 @@ GeometryOverlayDimension measurementDimension(const QPointF& start,
   dimension.label = measurementLabel(measurement, "px");
   dimension.color = QColor("#ff8a00");
   dimension.labelColor = measurementLabelColor(measurement);
-  dimension.width = 3;
+  dimension.width = width;
   dimension.id = measurementKey(measurement.type, measurement.sourceAId, measurement.sourceBId);
   dimension.labelPoint = measurement.labelPoint;
   dimension.hasLabelPoint = measurement.hasLabelPoint;
@@ -333,6 +360,10 @@ void MainWindowMeasurementModule::rebuildMeasurementRecipe(const CameraConfig& c
       {
         appendMeasurementResult(set, camera, config, pointA->meta.id, pointB->meta.id, distancePixels);
       }
+      else
+      {
+        appendFailedMeasurementResult(set, config);
+      }
       continue;
     }
 
@@ -344,6 +375,10 @@ void MainWindowMeasurementModule::rebuildMeasurementRecipe(const CameraConfig& c
       if (point && line && MeasurementGeometryMath::pointLineDistance(*point, *line, distancePixels))
       {
         appendMeasurementResult(set, camera, config, point->meta.id, line->meta.id, distancePixels);
+      }
+      else
+      {
+        appendFailedMeasurementResult(set, config);
       }
       continue;
     }
@@ -357,6 +392,10 @@ void MainWindowMeasurementModule::rebuildMeasurementRecipe(const CameraConfig& c
       {
         appendMeasurementResult(set, camera, config, lineA->meta.id, lineB->meta.id, distancePixels);
       }
+      else
+      {
+        appendFailedMeasurementResult(set, config);
+      }
       continue;
     }
 
@@ -367,6 +406,10 @@ void MainWindowMeasurementModule::rebuildMeasurementRecipe(const CameraConfig& c
       if (circle && MeasurementGeometryMath::circleDiameterPixels(*circle, diameterPixels))
       {
         appendMeasurementResult(set, camera, config, circle->meta.id, {}, diameterPixels);
+      }
+      else
+      {
+        appendFailedMeasurementResult(set, config);
       }
       continue;
     }
@@ -380,14 +423,24 @@ void MainWindowMeasurementModule::rebuildMeasurementRecipe(const CameraConfig& c
       {
         appendMeasurementResult(set, camera, config, lineA->meta.id, lineB->meta.id, angleDegrees);
       }
+      else
+      {
+        appendFailedMeasurementResult(set, config);
+      }
       continue;
     }
   }
 }
 
-void MainWindowMeasurementModule::appendMeasurementOverlay(const CameraConfig& camera, GeometryOverlay& overlay) const
+void MainWindowMeasurementModule::appendMeasurementOverlay(
+  const CameraConfig& camera,
+  GeometryOverlay& overlay,
+  bool compact) const
 {
   const GeometrySet& set = cameraRuntime()[camera.id].geometries();
+  const int dimWidth = compact ? 2 : 3;
+  const int angleWidth = compact ? 2 : 3;
+  const double angleArmLength = compact ? 40.0 : 0.0;
 
   for (const MeasurementResult& measurement : set.measurements)
   {
@@ -405,9 +458,13 @@ void MainWindowMeasurementModule::appendMeasurementOverlay(const CameraConfig& c
         continue;
       }
 
-      overlay.dimensions.append(measurementDimension(toPointF(pointA->point), toPointF(pointB->point), measurement));
-      overlay.points.append({toPointF(pointA->point), "A", QColor("#35c46a")});
-      overlay.points.append({toPointF(pointB->point), "B", QColor("#35c46a")});
+      overlay.dimensions.append(
+        measurementDimension(toPointF(pointA->point), toPointF(pointB->point), measurement, dimWidth));
+      if (!compact)
+      {
+        overlay.points.append({toPointF(pointA->point), "A", QColor("#35c46a")});
+        overlay.points.append({toPointF(pointB->point), "B", QColor("#35c46a")});
+      }
       continue;
     }
 
@@ -422,9 +479,13 @@ void MainWindowMeasurementModule::appendMeasurementOverlay(const CameraConfig& c
         continue;
       }
 
-      overlay.dimensions.append(measurementDimension(toPointF(point->point), toPointF(projectedPoint.point), measurement));
-      overlay.points.append({toPointF(point->point), "P", QColor("#35c46a")});
-      overlay.points.append({toPointF(projectedPoint.point), "H", QColor("#ff8a00")});
+      overlay.dimensions.append(
+        measurementDimension(toPointF(point->point), toPointF(projectedPoint.point), measurement, dimWidth));
+      if (!compact)
+      {
+        overlay.points.append({toPointF(point->point), "P", QColor("#35c46a")});
+        overlay.points.append({toPointF(projectedPoint.point), "H", QColor("#ff8a00")});
+      }
       continue;
     }
 
@@ -440,9 +501,13 @@ void MainWindowMeasurementModule::appendMeasurementOverlay(const CameraConfig& c
         continue;
       }
 
-      overlay.dimensions.append(measurementDimension(toPointF(pointOnA.point), toPointF(pointOnB.point), measurement));
-      overlay.points.append({toPointF(pointOnA.point), "A", QColor("#ff8a00")});
-      overlay.points.append({toPointF(pointOnB.point), "H", QColor("#ff8a00")});
+      overlay.dimensions.append(
+        measurementDimension(toPointF(pointOnA.point), toPointF(pointOnB.point), measurement, dimWidth));
+      if (!compact)
+      {
+        overlay.points.append({toPointF(pointOnA.point), "A", QColor("#ff8a00")});
+        overlay.points.append({toPointF(pointOnB.point), "H", QColor("#ff8a00")});
+      }
       continue;
     }
 
@@ -458,9 +523,12 @@ void MainWindowMeasurementModule::appendMeasurementOverlay(const CameraConfig& c
       const cv::Point2d right(circle->center.x + circle->radius, circle->center.y);
       const cv::Point2d top(circle->center.x, circle->center.y - circle->radius);
       const cv::Point2d bottom(circle->center.x, circle->center.y + circle->radius);
-      overlay.lines.append({toPointF(top), toPointF(bottom), QColor("#35c46a"), 2});
-      overlay.dimensions.append(measurementDimension(toPointF(left), toPointF(right), measurement));
-      overlay.points.append({toPointF(circle->center), "C", QColor("#35c46a")});
+      overlay.lines.append({toPointF(top), toPointF(bottom), QColor("#35c46a"), dimWidth});
+      overlay.dimensions.append(measurementDimension(toPointF(left), toPointF(right), measurement, dimWidth));
+      if (!compact)
+      {
+        overlay.points.append({toPointF(circle->center), "C", QColor("#35c46a")});
+      }
       continue;
     }
 
@@ -486,18 +554,23 @@ void MainWindowMeasurementModule::appendMeasurementOverlay(const CameraConfig& c
         directionB *= -1.0;
       }
 
-      const double armLength = std::min(90.0, std::max(35.0, std::min(lineLength(*lineA), lineLength(*lineB)) * 0.35));
+      const double armLength = angleArmLength > 0.0
+        ? angleArmLength
+        : std::min(90.0, std::max(35.0, std::min(lineLength(*lineA), lineLength(*lineB)) * 0.35));
       GeometryOverlayAngle angleOverlay{
         toPointF(center),
         toPointF(center + directionA * armLength),
         toPointF(center + directionB * armLength),
         measurementLabel(measurement, "deg"),
         QColor("#ff8a00"),
-        3
+        angleWidth
       };
       angleOverlay.labelColor = measurementLabelColor(measurement);
       overlay.angles.append(angleOverlay);
-      overlay.points.append({toPointF(center), "V", QColor("#ff8a00")});
+      if (!compact)
+      {
+        overlay.points.append({toPointF(center), "V", QColor("#ff8a00")});
+      }
       continue;
     }
   }

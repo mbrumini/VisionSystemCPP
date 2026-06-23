@@ -1,5 +1,6 @@
 #include "RecipeManager.h"
 
+#include "GeometryRecipeJson.h"
 #include "RecipeJsonUtils.h"
 
 #include <QJsonArray>
@@ -33,9 +34,17 @@ QVector<GeometryLineRecipeConfig> RecipeManager::loadGeometryLines(const QString
       continue;
     }
 
-    config.enabled = line.value("enabled").toBool(false);
+    config.enabled = line.value("enabled").toBool(true);
+    config.coordinateSpace = line.value("coordinateSpace").toString(GeometryRecipeJson::kPartSpace);
     config.partStart = pointFFromJson(line.value("partStart").toObject());
     config.partEnd = pointFFromJson(line.value("partEnd").toObject());
+    config.imageStart = pointFFromJson(line.value("imageStart").toObject());
+    config.imageEnd = pointFFromJson(line.value("imageEnd").toObject());
+    if (!GeometryRecipeJson::segmentRecipeValid(
+          config.coordinateSpace, config.partStart, config.partEnd, config.imageStart, config.imageEnd))
+    {
+      continue;
+    }
     config.bandHalfWidth = line.value("bandHalfWidth").toInt(config.bandHalfWidth);
     config.edgeSensitivity = line.value("edgeSensitivity").toInt(config.edgeSensitivity);
     config.edgeCleanupDerivative = line.value("edgeCleanupDerivative").toInt(config.edgeCleanupDerivative);
@@ -88,9 +97,13 @@ bool RecipeManager::saveGeometryLines(const QString& cameraId, const QVector<Geo
       line["alias"] = config.alias.trimmed();
     }
     line["type"] = "edge_line";
-    line["coordinateSpace"] = "part";
-    line["partStart"] = pointFToJson(config.partStart);
-    line["partEnd"] = pointFToJson(config.partEnd);
+    GeometryRecipeJson::writeSegmentCoordinates(
+      line,
+      config.coordinateSpace,
+      config.partStart,
+      config.partEnd,
+      config.imageStart,
+      config.imageEnd);
     line["bandHalfWidth"] = qBound(2, config.bandHalfWidth, 500);
     line["edgeSensitivity"] = qBound(1, config.edgeSensitivity, 255);
     line["edgeCleanupDerivative"] = qBound(0, config.edgeCleanupDerivative, 100);
@@ -155,9 +168,17 @@ QVector<GeometryPointRecipeConfig> RecipeManager::loadGeometryPoints(const QStri
       continue;
     }
 
-    config.enabled = point.value("enabled").toBool(false);
+    config.enabled = point.value("enabled").toBool(true);
+    config.coordinateSpace = point.value("coordinateSpace").toString(GeometryRecipeJson::kPartSpace);
     config.partStart = pointFFromJson(point.value("partStart").toObject());
     config.partEnd = pointFFromJson(point.value("partEnd").toObject());
+    config.imageStart = pointFFromJson(point.value("imageStart").toObject());
+    config.imageEnd = pointFFromJson(point.value("imageEnd").toObject());
+    if (!GeometryRecipeJson::segmentRecipeValid(
+          config.coordinateSpace, config.partStart, config.partEnd, config.imageStart, config.imageEnd))
+    {
+      continue;
+    }
     config.edgeSensitivity = point.value("edgeSensitivity").toInt(config.edgeSensitivity);
     config.useSubpixel = point.value("useSubpixel").toBool(config.useSubpixel);
     config.transition = point.value("transition").toString(config.transition);
@@ -207,9 +228,13 @@ bool RecipeManager::saveGeometryPoints(const QString& cameraId, const QVector<Ge
       point["alias"] = config.alias.trimmed();
     }
     point["type"] = "edge_point";
-    point["coordinateSpace"] = "part";
-    point["partStart"] = pointFToJson(config.partStart);
-    point["partEnd"] = pointFToJson(config.partEnd);
+    GeometryRecipeJson::writeSegmentCoordinates(
+      point,
+      config.coordinateSpace,
+      config.partStart,
+      config.partEnd,
+      config.imageStart,
+      config.imageEnd);
     point["edgeSensitivity"] = qBound(1, config.edgeSensitivity, 255);
     point["useSubpixel"] = config.useSubpixel;
     point["transition"] = config.transition == "dark_to_light" ? "dark_to_light" : "light_to_dark";
@@ -270,13 +295,17 @@ QVector<GeometryCircleRecipeConfig> RecipeManager::loadGeometryCircles(const QSt
       continue;
     }
 
-    config.enabled = circle.value("enabled").toBool(false);
-    config.coordinateSpace = circle.value("coordinateSpace").toString("part");
+    config.enabled = circle.value("enabled").toBool(true);
+    config.coordinateSpace = circle.value("coordinateSpace").toString(GeometryRecipeJson::kPartSpace);
     config.partCenter = pointFFromJson(circle.value("partCenter").toObject());
     config.imageCenter = pointFFromJson(circle.value("imageCenter").toObject());
-    if (config.coordinateSpace == "image" && config.imageCenter.isNull())
+    if (config.imageCenter.isNull())
     {
       config.imageCenter = pointFFromJson(circle.value("center").toObject());
+    }
+    if (!GeometryRecipeJson::centerRecipeValid(config.coordinateSpace, config.partCenter, config.imageCenter))
+    {
+      continue;
     }
     config.radius = circle.value("radius").toDouble(config.radius);
     config.innerBand = circle.value("innerBand").toInt(config.innerBand);
@@ -317,15 +346,8 @@ bool RecipeManager::saveGeometryCircles(const QString& cameraId, const QVector<G
       circle["alias"] = config.alias.trimmed();
     }
     circle["type"] = "edge_circle";
-    circle["coordinateSpace"] = config.coordinateSpace == "image" ? "image" : "part";
-    if (config.coordinateSpace == "image")
-    {
-      circle["imageCenter"] = pointFToJson(config.imageCenter);
-    }
-    else
-    {
-      circle["partCenter"] = pointFToJson(config.partCenter);
-    }
+    GeometryRecipeJson::writeCenterCoordinate(
+      circle, config.coordinateSpace, config.partCenter, config.imageCenter);
     circle["radius"] = qMax(1.0, config.radius);
     circle["innerBand"] = qBound(1, config.innerBand, 500);
     circle["outerBand"] = qBound(1, config.outerBand, 500);
@@ -370,10 +392,25 @@ QVector<GeometryArcRecipeConfig> RecipeManager::loadGeometryArcs(const QString& 
       continue;
     }
 
-    config.enabled = arc.value("enabled").toBool(false);
+    config.enabled = arc.value("enabled").toBool(true);
+    config.coordinateSpace = arc.value("coordinateSpace").toString(GeometryRecipeJson::kPartSpace);
     config.partCenter = pointFFromJson(arc.value("partCenter").toObject());
     config.partStart = pointFFromJson(arc.value("partStart").toObject());
     config.partEnd = pointFFromJson(arc.value("partEnd").toObject());
+    config.imageCenter = pointFFromJson(arc.value("imageCenter").toObject());
+    config.imageStart = pointFFromJson(arc.value("imageStart").toObject());
+    config.imageEnd = pointFFromJson(arc.value("imageEnd").toObject());
+    if (!GeometryRecipeJson::arcRecipeValid(
+          config.coordinateSpace,
+          config.partCenter,
+          config.partStart,
+          config.partEnd,
+          config.imageCenter,
+          config.imageStart,
+          config.imageEnd))
+    {
+      continue;
+    }
     config.radius = arc.value("radius").toDouble(config.radius);
     config.startAngleRadians = arc.value("startAngleRadians").toDouble(config.startAngleRadians);
     config.endAngleRadians = arc.value("endAngleRadians").toDouble(config.endAngleRadians);
@@ -415,10 +452,15 @@ bool RecipeManager::saveGeometryArcs(const QString& cameraId, const QVector<Geom
       arc["alias"] = config.alias.trimmed();
     }
     arc["type"] = "edge_arc";
-    arc["coordinateSpace"] = "part";
-    arc["partCenter"] = pointFToJson(config.partCenter);
-    arc["partStart"] = pointFToJson(config.partStart);
-    arc["partEnd"] = pointFToJson(config.partEnd);
+    GeometryRecipeJson::writeArcCoordinates(
+      arc,
+      config.coordinateSpace,
+      config.partCenter,
+      config.partStart,
+      config.partEnd,
+      config.imageCenter,
+      config.imageStart,
+      config.imageEnd);
     arc["radius"] = qMax(1.0, config.radius);
     arc["startAngleRadians"] = config.startAngleRadians;
     arc["endAngleRadians"] = config.endAngleRadians;
