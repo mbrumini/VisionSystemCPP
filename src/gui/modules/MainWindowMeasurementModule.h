@@ -34,10 +34,11 @@ private:
   void createCircleDiameter(const CameraConfig& camera, const QString& circleId);
   void createLineLineAngle(const CameraConfig& camera, const QString& lineAId, const QString& lineBId);
   void saveMeasurementRealSettings(const CameraConfig& camera, const MeasurementRecipeConfig& config);
-  void saveMeasurementRecipeAction(const CameraConfig& camera,
+  bool saveMeasurementRecipeAction(const CameraConfig& camera,
                                    const QString& type,
                                    const QString& sourceAId,
                                    const QString& sourceBId = {},
                                    double samplePixels = 0.0);
+  void finalizeMeasurementCreate(const CameraConfig& camera, const QString& successLog);
   QHash<QString, QString> geometryAliasesForCamera(const CameraConfig& camera) const;
 };

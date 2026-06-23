@@ -50,14 +50,25 @@ const MeasurementResult* findRuntimeMeasurement(const QVector<MeasurementResult>
                                                 const MeasurementRecipeConfig& config)
 {
   const QString key = measurementResultKey(config.type, config.sourceAId, config.sourceBId);
+  const MeasurementResult* fallback = nullptr;
   for (const MeasurementResult& measurement : measurements)
   {
-    if (measurementResultKey(measurement.type, measurement.sourceAId, measurement.sourceBId) == key)
+    if (measurementResultKey(measurement.type, measurement.sourceAId, measurement.sourceBId) != key)
+    {
+      continue;
+    }
+
+    if (measurement.valid)
     {
       return &measurement;
     }
+
+    if (!fallback)
+    {
+      fallback = &measurement;
+    }
   }
-  return nullptr;
+  return fallback;
 }
 
 QVector<MeasurementResult> mergedMeasurementRows(const RecipeManager& recipes,

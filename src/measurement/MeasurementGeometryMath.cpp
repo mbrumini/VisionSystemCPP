@@ -92,7 +92,7 @@ bool parallelLineDistance(const LineGeometry& lineA,
     return false;
   }
 
-  if (std::abs(cross(directionA, directionB)) > 0.001)
+  if (std::abs(cross(directionA, directionB)) > 0.02)
   {
     return false;
   }

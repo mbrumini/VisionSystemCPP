@@ -1,6 +1,7 @@
 #include "gui/modules/MainWindowMeasurementModule.h"
 
 #include "gui/geometry/GeometryOverlay.h"
+#include "gui/modules/MainWindowGeometryModule.h"
 #include "measurement/MeasurementGeometryMath.h"
 #include "runtime/CameraRuntime.h"
 
@@ -244,7 +245,7 @@ GeometryOverlayDimension measurementDimension(const QPointF& start,
 }
 }
 
-void MainWindowMeasurementModule::saveMeasurementRecipeAction(const CameraConfig& camera,
+bool MainWindowMeasurementModule::saveMeasurementRecipeAction(const CameraConfig& camera,
                                                               const QString& type,
                                                               const QString& sourceAId,
                                                               const QString& sourceBId,
@@ -262,7 +263,24 @@ void MainWindowMeasurementModule::saveMeasurementRecipeAction(const CameraConfig
   if (!recipes().appendMeasurement(camera.id, config, &error))
   {
     log(QString("%1: %2").arg(tr("log.measurementRecipeSaveFailed"), error));
+    return false;
   }
+  return true;
+}
+
+void MainWindowMeasurementModule::finalizeMeasurementCreate(const CameraConfig& camera, const QString& successLog)
+{
+  rebuildMeasurementRecipe(camera);
+  if (context().geometry)
+  {
+    context().geometry->refreshMeasurementOverlay(camera);
+  }
+  if (context().updateMeasurementResults)
+  {
+    context().updateMeasurementResults();
+  }
+  log(successLog);
+  showMeasurementPanel(camera);
 }
 
 void MainWindowMeasurementModule::setMeasurementLabelPosition(const CameraConfig& camera,

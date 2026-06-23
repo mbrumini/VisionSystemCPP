@@ -38,6 +38,14 @@ void addSources(QComboBox* combo, const QVector<ConstructedGeometryCircleSource>
   }
 }
 
+void applySecondarySourceDefault(QComboBox* secondaryCombo, int sourceCount)
+{
+  if (sourceCount >= 2)
+  {
+    secondaryCombo->setCurrentIndex(1);
+  }
+}
+
 QVBoxLayout* createMeasurementPage(QWidget* panel, const QString& titleText)
 {
   auto* layout = new QVBoxLayout(panel);
@@ -74,6 +82,7 @@ void MainWindowMeasurementModule::showPointPointDistancePanel(const CameraConfig
   auto* pointBCombo = new QComboBox(form);
   addSources(pointACombo, pointSources);
   addSources(pointBCombo, pointSources);
+  applySecondarySourceDefault(pointBCombo, pointSources.size());
 
   formLayout->addWidget(new QLabel(tr("labels.sourcePointA"), form), 0, 0);
   formLayout->addWidget(pointACombo, 0, 1);
@@ -162,6 +171,7 @@ void MainWindowMeasurementModule::showLineLineDistancePanel(const CameraConfig& 
   auto* lineBCombo = new QComboBox(form);
   addSources(lineACombo, lineSources);
   addSources(lineBCombo, lineSources);
+  applySecondarySourceDefault(lineBCombo, lineSources.size());
 
   formLayout->addWidget(new QLabel(tr("labels.sourceLineA"), form), 0, 0);
   formLayout->addWidget(lineACombo, 0, 1);
@@ -245,6 +255,7 @@ void MainWindowMeasurementModule::showLineLineAnglePanel(const CameraConfig& cam
   auto* lineBCombo = new QComboBox(form);
   addSources(lineACombo, lineSources);
   addSources(lineBCombo, lineSources);
+  applySecondarySourceDefault(lineBCombo, lineSources.size());
 
   formLayout->addWidget(new QLabel(tr("labels.sourceLineA"), form), 0, 0);
   formLayout->addWidget(lineACombo, 0, 1);

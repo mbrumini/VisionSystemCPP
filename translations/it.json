@@ -367,6 +367,7 @@
     "constructedProjectionCreated": "Proiezione punto creata",
     "constructedRecipeSaveFailed": "Salvataggio geometria calcolata fallito",
     "measurementPointPointMissing": "Misura punto-punto non disponibile: scegli 2 punti distinti trovati",
+    "measurementSameSourceSelected": "Misura non disponibile: scegli due sorgenti diverse",
     "measurementPointPointInvalid": "Misura punto-punto non disponibile: punti non validi",
     "measurementPointPointCreated": "Distanza punto-punto creata",
     "measurementPointLineMissing": "Misura punto-linea non disponibile: scegli un punto e una linea trovati",

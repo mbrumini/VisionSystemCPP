@@ -367,6 +367,7 @@
     "constructedProjectionCreated": "Point projection created",
     "constructedRecipeSaveFailed": "Constructed geometry save failed",
     "measurementPointPointMissing": "Point-point measurement unavailable: choose 2 distinct found points",
+    "measurementSameSourceSelected": "Measurement unavailable: choose two different sources",
     "measurementPointPointInvalid": "Point-point measurement unavailable: invalid points",
     "measurementPointPointCreated": "Point-point distance created",
     "measurementPointLineMissing": "Point-line measurement unavailable: choose a found point and line",
