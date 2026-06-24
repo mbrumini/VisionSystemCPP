@@ -15,7 +15,7 @@ $hello = $reader.ReadLine()
 $writer.WriteLine('{"type":"ping","protocolVersion":1}')
 $pong = $reader.ReadLine()
 
-$pngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+$bmpBase64 = "Qk06AAAAAAAAADYAAAAoAAAAAQAAAAEAAAABABgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8PDwAA=="
 $frame = @{
   type = "frame"
   protocolVersion = 1
@@ -25,8 +25,8 @@ $frame = @{
   slot = 1
   frameId = 1
   timestamp = [DateTimeOffset]::Now.ToString("o")
-  imageFormat = "png"
-  imageBase64 = $pngBase64
+  imageFormat = "bmp"
+  imageBase64 = $bmpBase64
 } | ConvertTo-Json -Compress
 $writer.WriteLine($frame)
 $accepted = $reader.ReadLine()

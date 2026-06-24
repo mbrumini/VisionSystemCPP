@@ -5,6 +5,7 @@
 #include "gui/modules/MainWindowContext.h"
 
 #include "gui/geometry/GeometryDiagnosticDrawing.h"
+#include "gui/geometry/GeometryGuideRuntime.h"
 #include "gui/geometry/GeometryMath.h"
 #include "gui/geometry/GeometryOverlayPrimitives.h"
 #include "processing/geometry/EdgeCircleDetector.h"
@@ -97,14 +98,38 @@ void MainWindowGeometryModule::showConfiguredGeometryCircles(const CameraConfig&
   GeometryOverlay overlay;
   largeImage()->clearCircles();
   const PartPose& pose = cameraRuntime()[camera.id].currentPose();
-  const bool usePartCircle = pose.valid && circle.hasCircle && !circle.anchorInImageSpace;
+  cv::Size imageSize;
+  const cv::Mat& frame = cameraRuntime()[camera.id].currentFrame();
+  if (!frame.empty())
+  {
+    imageSize = frame.size();
+  }
+  QVector<GeometryCircleRuntimeConfig> circles = {circle};
+  QVector<GeometryLineRuntimeConfig> lines;
+  QVector<GeometryPointRuntimeConfig> points;
+  QVector<GeometryArcRuntimeConfig> arcs;
+  GeometryGuideRuntime::syncPartGuidesFromImage(pose, lines, points, circles, arcs);
+  circle = circles.first();
+
+  const QSize referenceSize = guideReferenceSize(camera.id);
+  const bool usePartCircle = GeometryGuideRuntime::shouldUsePartGuide(
+    pose.valid,
+    circle.hasCircle,
+    circle.hasImageCircle,
+    circle.anchorInImageSpace,
+    referenceSize,
+    imageSize);
   if (usePartCircle || circle.hasImageCircle)
   {
-    const cv::Point2d center = usePartCircle ? partToImage(pose, circle.partCenter) : circle.imageCenter;
-    const double innerRadius = std::max(1.0, circle.radius - circle.innerBand);
-    const double outerRadius = circle.radius + circle.outerBand;
+    const cv::Point2d center = GeometryGuideRuntime::resolveImagePoint(
+      pose, usePartCircle, circle.partCenter, circle.imageCenter, referenceSize, imageSize);
+    const double guideRadius = usePartCircle
+      ? circle.radius
+      : GeometryGuideRuntime::mapImageGuideRadius(circle.radius, referenceSize, imageSize);
+    const double innerRadius = std::max(1.0, guideRadius - circle.innerBand);
+    const double outerRadius = guideRadius + circle.outerBand;
     appendGeometryCirclePolyline(overlay, center, innerRadius, QColor(0, 210, 255, 90), 1);
-    appendGeometryCirclePolyline(overlay, center, circle.radius, QColor("#00d2ff"), 5);
+    appendGeometryCirclePolyline(overlay, center, guideRadius, QColor("#00d2ff"), 5);
     appendGeometryCirclePolyline(overlay, center, outerRadius, QColor(0, 210, 255, 90), 1);
     appendGeometryCircleSearchBandGuides(
       overlay,
@@ -128,21 +153,17 @@ void MainWindowGeometryModule::testGeometryCircle(const CameraConfig& camera)
 
   GeometryCircleRuntimeConfig& circleConfig = activeGeometryCircleConfig(camera.id);
   const PartPose& pose = cameraRuntime()[camera.id].currentPose();
-  if (pose.valid && !circleConfig.hasCircle && circleConfig.hasImageCircle && !circleConfig.anchorInImageSpace)
+  if (!pose.valid && context().surface)
   {
-    circleConfig.partCenter = imageToPart(pose, circleConfig.imageCenter);
-    circleConfig.hasCircle = true;
-    circleConfig.anchorInImageSpace = false;
-    saveGeometryCirclesRecipe(camera);
+    context().surface->localizePoseOnSample(camera);
   }
-
-  const bool usePartCircle = pose.valid && circleConfig.hasCircle && !circleConfig.anchorInImageSpace;
-  if (!usePartCircle && !circleConfig.hasImageCircle)
-  {
-    showConfiguredGeometryCircles(camera);
-    log(tr("log.geometryCircleMissing") + ": " + camera.id);
-    return;
-  }
+  const PartPose& resolvedPose = cameraRuntime()[camera.id].currentPose();
+  QVector<GeometryCircleRuntimeConfig> circles = {circleConfig};
+  QVector<GeometryLineRuntimeConfig> lines;
+  QVector<GeometryPointRuntimeConfig> points;
+  QVector<GeometryArcRuntimeConfig> arcs;
+  GeometryGuideRuntime::syncPartGuidesFromImage(resolvedPose, lines, points, circles, arcs);
+  circleConfig = circles.first();
 
   QString imageError;
   const cv::Mat input = context().imaging->currentInputImage(camera, &imageError);
@@ -152,12 +173,31 @@ void MainWindowGeometryModule::testGeometryCircle(const CameraConfig& camera)
     return;
   }
 
-  const cv::Point2d guideCenter = usePartCircle ? partToImage(pose, circleConfig.partCenter) : circleConfig.imageCenter;
+  const QSize referenceSize = guideReferenceSize(camera.id);
+  const bool usePartCircle = GeometryGuideRuntime::shouldUsePartGuide(
+    resolvedPose.valid,
+    circleConfig.hasCircle,
+    circleConfig.hasImageCircle,
+    circleConfig.anchorInImageSpace,
+    referenceSize,
+    input.size());
+  if (!usePartCircle && !circleConfig.hasImageCircle)
+  {
+    showConfiguredGeometryCircles(camera);
+    log(tr("log.geometryCircleMissing") + ": " + camera.id);
+    return;
+  }
+
+  const cv::Point2d guideCenter = GeometryGuideRuntime::resolveImagePoint(
+    resolvedPose, usePartCircle, circleConfig.partCenter, circleConfig.imageCenter, referenceSize, input.size());
+  const double guideRadius = usePartCircle
+    ? circleConfig.radius
+    : GeometryGuideRuntime::mapImageGuideRadius(circleConfig.radius, referenceSize, input.size());
   EdgeCircleDetectorConfig config;
   config.id = circleConfig.id;
   config.label = circleConfig.alias.trimmed().isEmpty() ? circleConfig.id : circleConfig.alias.trimmed();
   config.guideCenter = guideCenter;
-  config.guideRadius = circleConfig.radius;
+  config.guideRadius = guideRadius;
   config.innerBand = circleConfig.innerBand;
   config.outerBand = circleConfig.outerBand;
   config.edgeSensitivity = circleConfig.edgeSensitivity;
@@ -173,7 +213,7 @@ void MainWindowGeometryModule::testGeometryCircle(const CameraConfig& camera)
         .arg(circleConfig.id)
         .arg(guideCenter.x, 0, 'f', 1)
         .arg(guideCenter.y, 0, 'f', 1)
-        .arg(circleConfig.radius, 0, 'f', 1)
+        .arg(guideRadius, 0, 'f', 1)
         .arg(circleConfig.innerBand)
         .arg(circleConfig.outerBand)
         .arg(circleConfig.edgeSensitivity)
@@ -222,9 +262,9 @@ void MainWindowGeometryModule::testGeometryCircle(const CameraConfig& camera)
               .arg(result.circle.center.y, 0, 'f', 1)
               .arg(result.circle.radius, 0, 'f', 1));
 
-  if (pose.valid)
+  if (resolvedPose.valid)
   {
-    circleConfig.partCenter = imageToPart(pose, result.circle.center);
+    circleConfig.partCenter = imageToPart(resolvedPose, result.circle.center);
     circleConfig.hasCircle = true;
   }
   else
@@ -319,6 +359,13 @@ GeometryOverlay MainWindowGeometryModule::configuredGeometryPointsOverlay(const 
   const PartPose& pose = cameraRuntime().at(camera.id).currentPose();
   const QVector<GeometryPointRuntimeConfig> points = m_pointConfigs.value(camera.id);
   const int activeIndex = m_activePointIndexes.value(camera.id, 0);
+  cv::Size imageSize;
+  const cv::Mat& frame = cameraRuntime().at(camera.id).currentFrame();
+  if (!frame.empty())
+  {
+    imageSize = frame.size();
+  }
+  const QSize referenceSize = guideReferenceSize(camera.id);
 
   for (int i = 0; i < points.size(); ++i)
   {
@@ -328,14 +375,22 @@ GeometryOverlay MainWindowGeometryModule::configuredGeometryPointsOverlay(const 
     }
 
     const GeometryPointRuntimeConfig& point = points[i];
-    const bool usePartGuide = pose.valid && point.hasGuide;
+    const bool usePartGuide = GeometryGuideRuntime::shouldUsePartGuide(
+      pose.valid,
+      point.hasGuide,
+      point.hasImageGuide,
+      point.anchorInImageSpace,
+      referenceSize,
+      imageSize);
     if (!usePartGuide && !point.hasImageGuide)
     {
       continue;
     }
 
-    const cv::Point2d imageStart = usePartGuide ? partToImage(pose, point.partStart) : point.imageStart;
-    const cv::Point2d imageEnd = usePartGuide ? partToImage(pose, point.partEnd) : point.imageEnd;
+    const cv::Point2d imageStart = GeometryGuideRuntime::resolveImagePoint(
+      pose, usePartGuide, point.partStart, point.imageStart, referenceSize, imageSize);
+    const cv::Point2d imageEnd = GeometryGuideRuntime::resolveImagePoint(
+      pose, usePartGuide, point.partEnd, point.imageEnd, referenceSize, imageSize);
     const QPointF start(imageStart.x, imageStart.y);
     const QPointF end(imageEnd.x, imageEnd.y);
     const QPointF center = (start + end) * 0.5;
@@ -447,23 +502,18 @@ void MainWindowGeometryModule::testGeometryPoint(const CameraConfig& camera)
 
   GeometryPointRuntimeConfig& pointConfig = activeGeometryPointConfig(camera.id);
   const PartPose& pose = cameraRuntime()[camera.id].currentPose();
-  if (pose.valid && !pointConfig.hasGuide && pointConfig.hasImageGuide)
+  if (!pose.valid && context().surface)
   {
-    pointConfig.partStart = imageToPart(pose, pointConfig.imageStart);
-    pointConfig.partEnd = imageToPart(pose, pointConfig.imageEnd);
-    pointConfig.hasGuide = true;
-    saveGeometryPointRecipe(camera);
+    context().surface->localizePoseOnSample(camera);
   }
+  const PartPose& resolvedPose = cameraRuntime()[camera.id].currentPose();
+  QVector<GeometryPointRuntimeConfig> points = {pointConfig};
+  QVector<GeometryLineRuntimeConfig> lines;
+  QVector<GeometryCircleRuntimeConfig> circles;
+  QVector<GeometryArcRuntimeConfig> arcs;
+  GeometryGuideRuntime::syncPartGuidesFromImage(resolvedPose, lines, points, circles, arcs);
+  pointConfig = points.first();
 
-  const bool usePartGuide = pose.valid && pointConfig.hasGuide;
-  if (!usePartGuide && !pointConfig.hasImageGuide)
-  {
-    updateGeometryPointOverlay(camera);
-    return;
-  }
-
-  const cv::Point2d imageStart = usePartGuide ? partToImage(pose, pointConfig.partStart) : pointConfig.imageStart;
-  const cv::Point2d imageEnd = usePartGuide ? partToImage(pose, pointConfig.partEnd) : pointConfig.imageEnd;
   QString imageError;
   const cv::Mat input = context().imaging->currentInputImage(camera, &imageError);
   if (input.empty())
@@ -471,6 +521,25 @@ void MainWindowGeometryModule::testGeometryPoint(const CameraConfig& camera)
     log(imageError);
     return;
   }
+
+  const QSize referenceSize = guideReferenceSize(camera.id);
+  const bool usePartGuide = GeometryGuideRuntime::shouldUsePartGuide(
+    resolvedPose.valid,
+    pointConfig.hasGuide,
+    pointConfig.hasImageGuide,
+    pointConfig.anchorInImageSpace,
+    referenceSize,
+    input.size());
+  if (!usePartGuide && !pointConfig.hasImageGuide)
+  {
+    updateGeometryPointOverlay(camera);
+    return;
+  }
+
+  const cv::Point2d imageStart = GeometryGuideRuntime::resolveImagePoint(
+    resolvedPose, usePartGuide, pointConfig.partStart, pointConfig.imageStart, referenceSize, input.size());
+  const cv::Point2d imageEnd = GeometryGuideRuntime::resolveImagePoint(
+    resolvedPose, usePartGuide, pointConfig.partEnd, pointConfig.imageEnd, referenceSize, input.size());
 
   EdgePointDetectorConfig config;
   config.id = pointConfig.id;

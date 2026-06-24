@@ -239,6 +239,8 @@ add_executable(VisionSystemCPP
     src/processing/GeometryMeasurementPipeline.cpp
     src/gui/geometry/ConfiguredGeometryDetector.h
     src/gui/geometry/ConfiguredGeometryDetector.cpp
+    src/gui/geometry/GeometryGuideRuntime.h
+    src/gui/geometry/GeometryGuideRuntime.cpp
     src/gui/geometry/BandGeometryEditor.h
     src/gui/geometry/BandGeometryEditor.cpp
     src/gui/geometry/LineGeometryEditor.h
@@ -318,6 +320,8 @@ add_executable(VisionSystemCPP
     src/simulator/SimulatorProtocol.h
     src/simulator/SimulatorBridge.h
     src/simulator/SimulatorBridge.cpp
+    src/simulator/SimulatorProtocol.h
+    src/simulator/SimulatorProtocol.cpp
     src/util/DetailedLogger.h
     src/util/DetailedLogger.cpp
     src/util/CameraAsyncExecutor.h
@@ -342,6 +346,8 @@ add_executable(VisionSystemTestVision
     tests/testvision/TestVisionArtifacts.cpp
     tests/testvision/TestVisionExecutionProfile.h
     tests/testvision/TestVisionExecutionProfile.cpp
+    src/simulator/SimulatorProtocol.h
+    src/simulator/SimulatorProtocol.cpp
 )
 
 target_link_libraries(VisionSystemTestVision PRIVATE

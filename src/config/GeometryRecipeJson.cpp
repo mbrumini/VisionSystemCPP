@@ -81,13 +81,14 @@ void writeCenterCoordinate(QJsonObject& object,
                            const QPointF& imageCenter)
 {
   object["coordinateSpace"] = normalizedCoordinateSpace(coordinateSpace);
-  if (isImageSpace(coordinateSpace))
+  if (!imageCenter.isNull())
   {
     object["imageCenter"] = RecipeJsonUtils::pointFToJson(imageCenter);
-    return;
   }
-
-  object["partCenter"] = RecipeJsonUtils::pointFToJson(partCenter);
+  if (!partCenter.isNull())
+  {
+    object["partCenter"] = RecipeJsonUtils::pointFToJson(partCenter);
+  }
 }
 
 void writeArcCoordinates(QJsonObject& object,

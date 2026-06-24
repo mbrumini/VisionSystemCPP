@@ -30,6 +30,7 @@ private:
   void updateItemLabel(int row);
   QJsonObject formItem() const;
   void setFormItem(const QJsonObject& item);
+  void syncResolutionCombo();
 
   QLineEdit* m_name = nullptr;
   QSpinBox* m_cycles = nullptr;
@@ -39,6 +40,9 @@ private:
   QComboBox* m_recipe = nullptr;
   QComboBox* m_strategy = nullptr;
   QComboBox* m_shape = nullptr;
+  QComboBox* m_resolution = nullptr;
+  QSpinBox* m_canvasWidth = nullptr;
+  QSpinBox* m_canvasHeight = nullptr;
   QSpinBox* m_passes = nullptr;
   QSpinBox* m_intervalMs = nullptr;
   QDoubleSpinBox* m_xMin = nullptr;
@@ -50,6 +54,8 @@ private:
   QDoubleSpinBox* m_angleMin = nullptr;
   QDoubleSpinBox* m_angleMax = nullptr;
   QDoubleSpinBox* m_angleStep = nullptr;
+  QDoubleSpinBox* m_pixelSize = nullptr;
+  QCheckBox* m_sendOnly = nullptr;
   QDoubleSpinBox* m_centerMean = nullptr;
   QDoubleSpinBox* m_centerMax = nullptr;
   QDoubleSpinBox* m_angleMean = nullptr;

@@ -1,11 +1,13 @@
 #include "gui/modules/MainWindowGeometryModule.h"
 #include "gui/modules/MainWindowCameraProfile.h"
 #include "gui/modules/MainWindowImagingModule.h"
+#include "gui/modules/MainWindowSurfaceModule.h"
 #include "gui/modules/MainWindowContext.h"
 
 #include "gui/geometry/ArcGuideMath.h"
 #include "gui/geometry/ConfiguredGeometryDetector.h"
 #include "gui/geometry/GeometryDiagnosticDrawing.h"
+#include "gui/geometry/GeometryGuideRuntime.h"
 #include "gui/geometry/GeometryOverlayPrimitives.h"
 #include "processing/GeometryMeasurementPipeline.h"
 #include "util/CameraAsyncExecutor.h"
@@ -30,60 +32,7 @@ void applyGeometryPromotions(const PartPose& pose,
                              QVector<GeometryCircleRuntimeConfig>& circles,
                              QVector<GeometryArcRuntimeConfig>& arcs)
 {
-  if (!pose.valid)
-  {
-    return;
-  }
-
-  for (GeometryLineRuntimeConfig& line : lines)
-  {
-    if (line.anchorInImageSpace || !line.hasImageLine || line.hasLine)
-    {
-      continue;
-    }
-    line.partStart = imageToPart(pose, line.imageStart);
-    line.partEnd = imageToPart(pose, line.imageEnd);
-    line.hasLine = true;
-  }
-
-  for (GeometryPointRuntimeConfig& point : points)
-  {
-    if (point.anchorInImageSpace || !point.hasImageGuide || point.hasGuide)
-    {
-      continue;
-    }
-    point.partStart = imageToPart(pose, point.imageStart);
-    point.partEnd = imageToPart(pose, point.imageEnd);
-    point.hasGuide = true;
-  }
-
-  for (GeometryCircleRuntimeConfig& circle : circles)
-  {
-    if (circle.anchorInImageSpace || !circle.hasImageCircle || circle.hasCircle)
-    {
-      continue;
-    }
-    circle.partCenter = imageToPart(pose, circle.imageCenter);
-    circle.hasCircle = true;
-    circle.anchorInImageSpace = false;
-  }
-
-  for (GeometryArcRuntimeConfig& arc : arcs)
-  {
-    if (arc.anchorInImageSpace || !arc.hasImageArc || arc.hasArc)
-    {
-      continue;
-    }
-    arc.partCenter = imageToPart(pose, arc.imageCenter);
-    arc.partStart = imageToPart(pose, arc.imageStart);
-    arc.partEnd = imageToPart(pose, arc.imageEnd);
-    if (arc.hasImageThrough)
-    {
-      arc.partThrough = imageToPart(pose, arc.imageThrough);
-    }
-    arc.hasArc = true;
-    ArcGuideMath::syncArcPartAngles(arc);
-  }
+  GeometryGuideRuntime::syncPartGuidesFromImage(pose, lines, points, circles, arcs);
 }
 
 ConfiguredGeometryDetectInput buildConfiguredGeometryInput(const CameraConfig& camera,
@@ -94,6 +43,7 @@ ConfiguredGeometryDetectInput buildConfiguredGeometryInput(const CameraConfig& c
                                                            const QVector<GeometryPointRuntimeConfig>& points,
                                                            const QVector<GeometryCircleRuntimeConfig>& circles,
                                                            const QVector<GeometryArcRuntimeConfig>& arcs,
+                                                           const QSize& guideReferenceSize,
                                                            bool buildDiagnostic,
                                                            bool buildGuideOverlay)
 {
@@ -108,6 +58,7 @@ ConfiguredGeometryDetectInput buildConfiguredGeometryInput(const CameraConfig& c
   detectInput.points = points;
   detectInput.circles = circles;
   detectInput.arcs = arcs;
+  detectInput.guideReferenceSize = guideReferenceSize;
   return detectInput;
 }
 }
@@ -142,6 +93,10 @@ void MainWindowGeometryModule::testConfiguredGeometryLinesAsync(const CameraConf
   loadGeometryPointRecipe(camera);
   loadGeometryCirclesRecipe(camera);
   loadGeometryArcsRecipe(camera);
+  if (!cameraRuntime()[camera.id].currentPose().valid && context().surface)
+  {
+    context().surface->localizePoseOnSample(camera);
+  }
 
   const PartPose& pose = cameraRuntime()[camera.id].currentPose();
   QString imageError;
@@ -173,6 +128,7 @@ void MainWindowGeometryModule::testConfiguredGeometryLinesAsync(const CameraConf
     points,
     circles,
     arcs,
+    guideReferenceSize(camera.id),
     false,
     false);
   pipelineInput.constructedConfigs = recipes().loadConstructedGeometries(camera.id);
@@ -208,6 +164,10 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
 {
   loadGeometryLinesRecipe(camera);
   QVector<GeometryLineRuntimeConfig>& lines = m_lineConfigs[camera.id];
+  if (!cameraRuntime()[camera.id].currentPose().valid && context().surface)
+  {
+    context().surface->localizePoseOnSample(camera);
+  }
   const PartPose& pose = cameraRuntime()[camera.id].currentPose();
   QString imageError;
   const cv::Mat input = context().imaging->currentInputImage(camera, &imageError);
@@ -236,6 +196,7 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
     points,
     circles,
     arcs,
+    guideReferenceSize(camera.id),
     !runMode,
     !runMode && updateView);
   const ConfiguredGeometryDetectOutput result = detectConfiguredGeometries(detectInput);
@@ -262,18 +223,33 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
       m_drawingTarget == DrawingTarget::Line)
   {
     GeometryLineRuntimeConfig& activeLine = activeGeometryLineConfig(camera.id);
-    if (pose.valid && !activeLine.hasLine && activeLine.hasImageLine)
-    {
-      activeLine.partStart = imageToPart(pose, activeLine.imageStart);
-      activeLine.partEnd = imageToPart(pose, activeLine.imageEnd);
-      activeLine.hasLine = true;
-    }
+    QVector<GeometryLineRuntimeConfig> lines = {activeLine};
+    QVector<GeometryPointRuntimeConfig> points;
+    QVector<GeometryCircleRuntimeConfig> circles;
+    QVector<GeometryArcRuntimeConfig> arcs;
+    GeometryGuideRuntime::syncPartGuidesFromImage(pose, lines, points, circles, arcs);
+    activeLine = lines.first();
 
-    const bool usePartLine = pose.valid && activeLine.hasLine && !activeLine.anchorInImageSpace;
+    const QSize referenceSize = guideReferenceSize(camera.id);
+    cv::Size imageSize;
+    const cv::Mat& frame = cameraRuntime()[camera.id].currentFrame();
+    if (!frame.empty())
+    {
+      imageSize = frame.size();
+    }
+    const bool usePartLine = GeometryGuideRuntime::shouldUsePartGuide(
+      pose.valid,
+      activeLine.hasLine,
+      activeLine.hasImageLine,
+      activeLine.anchorInImageSpace,
+      referenceSize,
+      imageSize);
     if (usePartLine || activeLine.hasImageLine)
     {
-      const cv::Point2d imageStart = usePartLine ? partToImage(pose, activeLine.partStart) : activeLine.imageStart;
-      const cv::Point2d imageEnd = usePartLine ? partToImage(pose, activeLine.partEnd) : activeLine.imageEnd;
+      const cv::Point2d imageStart = GeometryGuideRuntime::resolveImagePoint(
+        pose, usePartLine, activeLine.partStart, activeLine.imageStart, referenceSize, imageSize);
+      const cv::Point2d imageEnd = GeometryGuideRuntime::resolveImagePoint(
+        pose, usePartLine, activeLine.partEnd, activeLine.imageEnd, referenceSize, imageSize);
       m_lineMouseControllers[camera.id].setLine(
         QPointF(imageStart.x, imageStart.y),
         QPointF(imageEnd.x, imageEnd.y),

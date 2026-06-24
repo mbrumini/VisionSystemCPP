@@ -2,6 +2,7 @@
 
 #include "gui/geometry/ArcGuideMath.h"
 #include "gui/geometry/GeometryDiagnosticDrawing.h"
+#include "gui/geometry/GeometryGuideRuntime.h"
 #include "gui/geometry/GeometryOverlayPrimitives.h"
 #include "processing/geometry/EdgeCircleDetector.h"
 #include "processing/geometry/EdgeLineDetector.h"
@@ -54,6 +55,8 @@ ConfiguredGeometryDetectOutput detectConfiguredGeometries(const ConfiguredGeomet
 
   const cv::Mat& image = input.image;
   const PartPose& pose = input.pose;
+  const cv::Size imageSize = image.size();
+  const QSize referenceSize = input.guideReferenceSize;
 
   for (const GeometryLineRuntimeConfig& line : input.lines)
   {
@@ -62,14 +65,22 @@ ConfiguredGeometryDetectOutput detectConfiguredGeometries(const ConfiguredGeomet
       continue;
     }
 
-    const bool usePartLine = pose.valid && line.hasLine && !line.anchorInImageSpace;
+    const bool usePartLine = GeometryGuideRuntime::shouldUsePartGuide(
+      pose.valid,
+      line.hasLine,
+      line.hasImageLine,
+      line.anchorInImageSpace,
+      referenceSize,
+      imageSize);
     if (!usePartLine && !line.hasImageLine)
     {
       continue;
     }
 
-    const cv::Point2d imageStart = usePartLine ? partToImage(pose, line.partStart) : line.imageStart;
-    const cv::Point2d imageEnd = usePartLine ? partToImage(pose, line.partEnd) : line.imageEnd;
+    const cv::Point2d imageStart = GeometryGuideRuntime::resolveImagePoint(
+      pose, usePartLine, line.partStart, line.imageStart, referenceSize, imageSize);
+    const cv::Point2d imageEnd = GeometryGuideRuntime::resolveImagePoint(
+      pose, usePartLine, line.partEnd, line.imageEnd, referenceSize, imageSize);
 
     EdgeLineDetectorConfig config;
     config.id = line.id;
@@ -116,13 +127,27 @@ ConfiguredGeometryDetectOutput detectConfiguredGeometries(const ConfiguredGeomet
 
   for (const GeometryPointRuntimeConfig& point : input.points)
   {
-    if (!point.enabled || point.anchorInImageSpace || !point.hasGuide || !pose.valid)
+    if (!point.enabled || point.anchorInImageSpace || !point.hasImageGuide)
     {
       continue;
     }
 
-    const cv::Point2d imageStart = partToImage(pose, point.partStart);
-    const cv::Point2d imageEnd = partToImage(pose, point.partEnd);
+    const bool usePartGuide = GeometryGuideRuntime::shouldUsePartGuide(
+      pose.valid,
+      point.hasGuide,
+      point.hasImageGuide,
+      point.anchorInImageSpace,
+      referenceSize,
+      imageSize);
+    if (!usePartGuide && !point.hasImageGuide)
+    {
+      continue;
+    }
+
+    const cv::Point2d imageStart = GeometryGuideRuntime::resolveImagePoint(
+      pose, usePartGuide, point.partStart, point.imageStart, referenceSize, imageSize);
+    const cv::Point2d imageEnd = GeometryGuideRuntime::resolveImagePoint(
+      pose, usePartGuide, point.partEnd, point.imageEnd, referenceSize, imageSize);
 
     EdgePointDetectorConfig config;
     config.id = point.id;
@@ -159,15 +184,32 @@ ConfiguredGeometryDetectOutput detectConfiguredGeometries(const ConfiguredGeomet
       continue;
     }
 
-    const bool usePartCircle = pose.valid && circle.hasCircle && !circle.anchorInImageSpace;
+    const bool usePartCircle = GeometryGuideRuntime::shouldUsePartGuide(
+      pose.valid,
+      circle.hasCircle,
+      circle.hasImageCircle,
+      circle.anchorInImageSpace,
+      referenceSize,
+      imageSize);
     if (!usePartCircle && !circle.hasImageCircle)
     {
       continue;
     }
 
-    const cv::Point2d guideCenter = usePartCircle ? partToImage(pose, circle.partCenter) : circle.imageCenter;
-    const int guideRadius = static_cast<int>(std::round(circle.radius));
-    if (guideRadius <= 0)
+    cv::Point2d guideCenter = GeometryGuideRuntime::resolveImagePoint(
+      pose, usePartCircle, circle.partCenter, circle.imageCenter, referenceSize, imageSize);
+    double guideRadius = circle.radius;
+    if (!usePartCircle && referenceSize.isValid() && referenceSize.width() > 0 && referenceSize.height() > 0 &&
+        imageSize.width > 0 && imageSize.height > 0 &&
+        (referenceSize.width() != imageSize.width || referenceSize.height() != imageSize.height))
+    {
+      const double scale = 0.5 *
+                           (static_cast<double>(imageSize.width) / static_cast<double>(referenceSize.width()) +
+                            static_cast<double>(imageSize.height) / static_cast<double>(referenceSize.height()));
+      guideRadius = circle.radius * scale;
+    }
+    const int guideRadiusInt = static_cast<int>(std::round(guideRadius));
+    if (guideRadiusInt <= 0)
     {
       continue;
     }
@@ -175,17 +217,17 @@ ConfiguredGeometryDetectOutput detectConfiguredGeometries(const ConfiguredGeomet
     if (input.buildGuideOverlay)
     {
       appendGeometryCirclePolyline(
-        output.guideOverlay, guideCenter, std::max(1.0, circle.radius - circle.innerBand), QColor(0, 210, 255, 90), 1);
-      appendGeometryCirclePolyline(output.guideOverlay, guideCenter, circle.radius, QColor(0, 210, 255, 170), 2);
+        output.guideOverlay, guideCenter, std::max(1.0, guideRadius - circle.innerBand), QColor(0, 210, 255, 90), 1);
+      appendGeometryCirclePolyline(output.guideOverlay, guideCenter, guideRadius, QColor(0, 210, 255, 170), 2);
       appendGeometryCirclePolyline(
-        output.guideOverlay, guideCenter, circle.radius + circle.outerBand, QColor(0, 210, 255, 90), 1);
+        output.guideOverlay, guideCenter, guideRadius + circle.outerBand, QColor(0, 210, 255, 90), 1);
     }
 
     EdgeCircleDetectorConfig config;
     config.id = circle.id;
     config.label = circle.alias.trimmed().isEmpty() ? circle.id : circle.alias.trimmed();
     config.guideCenter = guideCenter;
-    config.guideRadius = circle.radius;
+    config.guideRadius = guideRadius;
     config.innerBand = circle.innerBand;
     config.outerBand = circle.outerBand;
     config.edgeSensitivity = circle.edgeSensitivity;
@@ -228,7 +270,7 @@ ConfiguredGeometryDetectOutput detectConfiguredGeometries(const ConfiguredGeomet
     }
 
     ResolvedArcGuide guide;
-    if (!ArcGuideMath::resolveArcGuide(arc, pose, guide))
+    if (!ArcGuideMath::resolveArcGuide(arc, pose, guide, referenceSize, imageSize))
     {
       continue;
     }

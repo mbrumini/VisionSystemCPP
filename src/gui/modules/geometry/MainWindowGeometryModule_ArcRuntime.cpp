@@ -7,6 +7,7 @@
 #include "config/RecipeJsonUtils.h"
 
 #include "gui/geometry/ArcGuideMath.h"
+#include "gui/geometry/GeometryGuideRuntime.h"
 #include "gui/geometry/GeometryOverlayPrimitives.h"
 
 #include "processing/geometry/EdgeCircleDetector.h"
@@ -321,8 +322,20 @@ void MainWindowGeometryModule::showConfiguredGeometryArcs(const CameraConfig& ca
   GeometryArcRuntimeConfig& arc = activeGeometryArcConfig(camera.id);
   largeImage()->clearCircles();
   const PartPose& pose = cameraRuntime()[camera.id].currentPose();
+  cv::Size imageSize;
+  const cv::Mat& frame = cameraRuntime()[camera.id].currentFrame();
+  if (!frame.empty())
+  {
+    imageSize = frame.size();
+  }
+  QVector<GeometryLineRuntimeConfig> lines;
+  QVector<GeometryPointRuntimeConfig> points;
+  QVector<GeometryCircleRuntimeConfig> circles;
+  QVector<GeometryArcRuntimeConfig> arcs = {arc};
+  GeometryGuideRuntime::syncPartGuidesFromImage(pose, lines, points, circles, arcs);
+  arc = arcs.first();
   ResolvedArcGuide guide;
-  if (!resolveArcGuide(arc, pose, guide))
+  if (!resolveArcGuide(arc, pose, guide, guideReferenceSize(camera.id), imageSize))
   {
     GeometryOverlay overlay;
     appendCurrentPartPoseOverlay(camera, overlay);
@@ -365,33 +378,31 @@ void MainWindowGeometryModule::testGeometryArc(const CameraConfig& camera)
 
   GeometryArcRuntimeConfig& arcConfig = activeGeometryArcConfig(camera.id);
   const PartPose& pose = cameraRuntime()[camera.id].currentPose();
-  if (pose.valid && !arcConfig.hasArc && arcConfig.hasImageArc && !arcConfig.anchorInImageSpace)
+  if (!pose.valid && context().surface)
   {
-    arcConfig.partCenter = imageToPart(pose, arcConfig.imageCenter);
-    arcConfig.partStart = imageToPart(pose, arcConfig.imageStart);
-    arcConfig.partEnd = imageToPart(pose, arcConfig.imageEnd);
-    if (arcConfig.hasImageThrough)
-    {
-      arcConfig.partThrough = imageToPart(pose, arcConfig.imageThrough);
-    }
-    arcConfig.hasArc = true;
-    syncArcPartAngles(arcConfig);
-    saveGeometryArcsRecipe(camera);
+    context().surface->localizePoseOnSample(camera);
   }
-
-  ResolvedArcGuide guide;
-  if (!resolveArcGuide(arcConfig, pose, guide))
-  {
-    showConfiguredGeometryArcs(camera);
-    log(tr("log.geometryArcMissing") + ": " + camera.id);
-    return;
-  }
+  const PartPose& resolvedPose = cameraRuntime()[camera.id].currentPose();
+  QVector<GeometryLineRuntimeConfig> lines;
+  QVector<GeometryPointRuntimeConfig> points;
+  QVector<GeometryCircleRuntimeConfig> circles;
+  QVector<GeometryArcRuntimeConfig> arcs = {arcConfig};
+  GeometryGuideRuntime::syncPartGuidesFromImage(resolvedPose, lines, points, circles, arcs);
+  arcConfig = arcs.first();
 
   QString imageError;
   const cv::Mat input = context().imaging->currentInputImage(camera, &imageError);
   if (input.empty())
   {
     log(imageError);
+    return;
+  }
+
+  ResolvedArcGuide guide;
+  if (!resolveArcGuide(arcConfig, resolvedPose, guide, guideReferenceSize(camera.id), input.size()))
+  {
+    showConfiguredGeometryArcs(camera);
+    log(tr("log.geometryArcMissing") + ": " + camera.id);
     return;
   }
 

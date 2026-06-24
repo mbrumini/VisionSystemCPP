@@ -8,6 +8,7 @@
 #include "geometry/PointGeometry.h"
 #include "runtime/PartPose.h"
 
+#include <QSize>
 #include <QVector>
 
 #include <opencv2/core.hpp>
@@ -19,6 +20,7 @@ struct ConfiguredGeometryDetectInput
   bool useSubpixelDimensional = false;
   bool buildDiagnostic = false;
   bool buildGuideOverlay = false;
+  QSize guideReferenceSize;
   QVector<GeometryLineRuntimeConfig> lines;
   QVector<GeometryPointRuntimeConfig> points;
   QVector<GeometryCircleRuntimeConfig> circles;

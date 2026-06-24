@@ -22,5 +22,9 @@ cv::Point2d pointOnArc(const cv::Point2d& center, double radius, double angle);
 double arcMidAngle(double startAngle, double endAngle);
 void syncArcPartAngles(GeometryArcRuntimeConfig& arc);
 double partFrameAngleToImage(const PartPose& pose, double partAngleRadians);
-bool resolveArcGuide(const GeometryArcRuntimeConfig& arc, const PartPose& pose, ResolvedArcGuide& guide);
+bool resolveArcGuide(const GeometryArcRuntimeConfig& arc,
+                     const PartPose& pose,
+                     ResolvedArcGuide& guide,
+                     const QSize& referenceSize = {},
+                     const cv::Size& imageSize = {});
 }

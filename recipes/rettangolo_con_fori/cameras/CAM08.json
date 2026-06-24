@@ -1,0 +1,122 @@
+{
+    "cameraId": "CAM08",
+    "tools": {
+        "geometries": {
+            "arcs": [
+                {
+                    "coordinateSpace": "image",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "endAngleRadians": 4.324333385479405,
+                    "id": "arc_2",
+                    "imageCenter": {
+                        "x": 214.75806451612902,
+                        "y": 295.8709677419355
+                    },
+                    "imageEnd": {
+                        "x": 205,
+                        "y": 272
+                    },
+                    "imageStart": {
+                        "x": 228,
+                        "y": 318
+                    },
+                    "imageThrough": {
+                        "x": 191.69219494158298,
+                        "y": 307.4039025292085
+                    },
+                    "innerBand": 20,
+                    "outerBand": 20,
+                    "partEndAngleRadians": 0,
+                    "partStartAngleRadians": 0,
+                    "pickMode": "first",
+                    "radius": 25.788426164414552,
+                    "scanDirection": "normal_positive",
+                    "startAngleRadians": 1.0315567036985689,
+                    "transition": "dark_to_light",
+                    "type": "edge_arc",
+                    "useSubpixel": true
+                }
+            ],
+            "circles": [
+                {
+                    "coordinateSpace": "image",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "circle_1",
+                    "imageCenter": {
+                        "x": 420.0118684411972,
+                        "y": 184.9804685211073
+                    },
+                    "innerBand": 20,
+                    "outerBand": 20,
+                    "pickMode": "first",
+                    "radius": 25.071107377561102,
+                    "scanDirection": "normal_positive",
+                    "transition": "dark_to_light",
+                    "type": "edge_circle",
+                    "useSubpixel": true
+                }
+            ],
+            "constructed": [
+                {
+                    "enabled": true,
+                    "id": "constructed_1",
+                    "sourceAId": "arc_2",
+                    "type": "circle_center"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_3",
+                    "sourceAId": "circle_1",
+                    "type": "circle_center"
+                }
+            ],
+            "enabled": true
+        },
+        "measurements": {
+            "enabled": true,
+            "items": [
+                {
+                    "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_1",
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 232.7579206863393,
+                    "sampleValue": 0,
+                    "sourceAId": "arc_2_center",
+                    "sourceBId": "circle_1_center",
+                    "type": "point_point_distance",
+                    "unit": "px"
+                }
+            ]
+        },
+        "surfaceLocalization": {
+            "aoes": {
+                "edgePca": {
+                    "id": "edgePca",
+                    "label": "edgePca",
+                    "searchRoi": {
+                        "height": 256,
+                        "width": 373,
+                        "x": 134,
+                        "y": 112
+                    }
+                }
+            },
+            "enabled": true,
+            "exclusionRects": [
+            ],
+            "method": "edgePca"
+        }
+    }
+}

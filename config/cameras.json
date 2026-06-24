@@ -12,8 +12,8 @@
             "calibration": {
                 "enabled": true,
                 "file": "calibrations/CAM01_checkerboard.json",
-                "pixelSizeXMm": 0.12631321,
-                "pixelSizeYMm": 0.12631321,
+                "pixelSizeXMm": 0.046,
+                "pixelSizeYMm": 0.046,
                 "type": "checkerboard",
                 "updatedAt": "2026-06-20T11:25:00"
             },
@@ -41,7 +41,7 @@
                 "updatedAt": "2026-06-20T11:25:00"
             },
             "displayName": "Camera 2",
-            "enabled": true,
+            "enabled": false,
             "exists": true,
             "id": "CAM02",
             "processingProfile": "profile_cam02",
@@ -64,7 +64,7 @@
                 "updatedAt": "2026-06-20T11:25:00"
             },
             "displayName": "Camera 3",
-            "enabled": true,
+            "enabled": false,
             "exists": true,
             "id": "CAM03",
             "processingProfile": "profile_cam03",
@@ -87,7 +87,7 @@
                 "updatedAt": "2026-06-20T11:25:00"
             },
             "displayName": "Camera 4",
-            "enabled": true,
+            "enabled": false,
             "exists": true,
             "id": "CAM04",
             "processingProfile": "profile_cam04",
@@ -178,21 +178,14 @@
                 "type": "checkerboard",
                 "updatedAt": "2026-06-20T11:25:00"
             },
-            "deviceId": "usb:0",
             "displayName": "USB Camera 0",
             "enabled": false,
             "exists": true,
             "id": "CAM08",
             "processingProfile": "profile_cam08",
+            "simulatorChannel": "CAM08",
             "slot": 8,
-            "trigger": {
-                "cameraLine": "",
-                "ioOutput": "",
-                "mode": "software",
-                "source": "usbCamera"
-            },
-            "type": "usb",
-            "usbIndex": 0
+            "type": "simulator"
         },
         {
             "acquisition": {

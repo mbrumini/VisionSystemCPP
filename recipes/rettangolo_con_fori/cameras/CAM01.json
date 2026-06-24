@@ -10,14 +10,18 @@
                     "edgeStatisticalFilter": 0,
                     "enabled": true,
                     "id": "circle_1",
+                    "imageCenter": {
+                        "x": 1060.1163724508144,
+                        "y": 484.9841281143968
+                    },
                     "innerBand": 20,
                     "outerBand": 20,
                     "partCenter": {
-                        "x": -104.93748318558926,
-                        "y": -55.02960826343795
+                        "x": 100.02126006587923,
+                        "y": -55.002757234366015
                     },
-                    "pickMode": "best",
-                    "radius": 25.49172415128211,
+                    "pickMode": "first",
+                    "radius": 24.486005700553587,
                     "scanDirection": "normal_positive",
                     "transition": "dark_to_light",
                     "type": "edge_circle",
@@ -30,54 +34,66 @@
                     "edgeStatisticalFilter": 0,
                     "enabled": true,
                     "id": "circle_2",
+                    "imageCenter": {
+                        "x": 1060.0589788211873,
+                        "y": 594.8787449893688
+                    },
                     "innerBand": 20,
                     "outerBand": 20,
                     "partCenter": {
-                        "x": -105.04874356018684,
-                        "y": 54.93603606289082
+                        "x": 100.05897882118734,
+                        "y": 54.87874498936878
                     },
-                    "pickMode": "best",
-                    "radius": 25.476063488962918,
+                    "pickMode": "first",
+                    "radius": 24.45515017591769,
                     "scanDirection": "normal_positive",
                     "transition": "dark_to_light",
                     "type": "edge_circle",
                     "useSubpixel": true
                 },
                 {
-                    "coordinateSpace": "image",
+                    "coordinateSpace": "part",
                     "edgeCleanupDerivative": 12,
                     "edgeSensitivity": 60,
                     "edgeStatisticalFilter": 0,
                     "enabled": true,
                     "id": "circle_3",
                     "imageCenter": {
-                        "x": 420.06814070541213,
-                        "y": 184.9864384733004
+                        "x": 855.0846284502015,
+                        "y": 484.9813507966449
                     },
                     "innerBand": 20,
                     "outerBand": 20,
-                    "pickMode": "best",
-                    "radius": 25.546958556291155,
+                    "partCenter": {
+                        "x": -104.91537154979846,
+                        "y": -55.018649203355096
+                    },
+                    "pickMode": "first",
+                    "radius": 24.446517449671777,
                     "scanDirection": "normal_positive",
                     "transition": "dark_to_light",
                     "type": "edge_circle",
                     "useSubpixel": true
                 },
                 {
-                    "coordinateSpace": "image",
+                    "coordinateSpace": "part",
                     "edgeCleanupDerivative": 12,
                     "edgeSensitivity": 60,
                     "edgeStatisticalFilter": 0,
                     "enabled": true,
                     "id": "circle_4",
                     "imageCenter": {
-                        "x": 419.938579498664,
-                        "y": 294.91261117309006
+                        "x": 855.0846284501943,
+                        "y": 594.9813507966478
                     },
                     "innerBand": 20,
                     "outerBand": 20,
-                    "pickMode": "best",
-                    "radius": 25.578728862668164,
+                    "partCenter": {
+                        "x": -104.91537154980574,
+                        "y": 54.9813507966478
+                    },
+                    "pickMode": "first",
+                    "radius": 24.446517449650347,
                     "scanDirection": "normal_positive",
                     "transition": "dark_to_light",
                     "type": "edge_circle",
@@ -111,6 +127,10 @@
                 }
             ],
             "enabled": true,
+            "guideReferenceSize": {
+                "height": 1080,
+                "width": 1920
+            },
             "lines": [
                 {
                     "bandHalfWidth": 20,
@@ -189,28 +209,6 @@
                     "hasMin": false,
                     "hasNominal": false,
                     "hasSampleScale": false,
-                    "id": "measurement_2",
-                    "label": {
-                        "custom": true,
-                        "x": 542.6506024096385,
-                        "y": 434.69879518072287
-                    },
-                    "max": 0,
-                    "min": 0,
-                    "nominal": 0,
-                    "samplePixels": 241.56860270956759,
-                    "sampleValue": 0,
-                    "sourceAId": "line_1",
-                    "sourceBId": "line_2",
-                    "type": "line_line_distance",
-                    "unit": "px"
-                },
-                {
-                    "enabled": true,
-                    "hasMax": false,
-                    "hasMin": false,
-                    "hasNominal": false,
-                    "hasSampleScale": false,
                     "id": "measurement_3",
                     "label": {
                         "custom": true,
@@ -235,10 +233,10 @@
                     "id": "edgePca",
                     "label": "edgePca",
                     "searchRoi": {
-                        "height": 255,
-                        "width": 377,
-                        "x": 134,
-                        "y": 113
+                        "height": 260,
+                        "width": 375,
+                        "x": 773,
+                        "y": 412
                     }
                 }
             },

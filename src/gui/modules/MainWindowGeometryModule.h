@@ -7,6 +7,7 @@
 #include <QHash>
 #include <QPoint>
 #include <QPointF>
+#include <QSize>
 #include <QVector>
 
 #include <functional>
@@ -32,6 +33,8 @@ public:
 
   void reloadRecipeState();
   void resetRuntimeGeometryForProduction(const CameraConfig& camera);
+  QSize guideReferenceSize(const QString& cameraId) const;
+  void updateGuideReferenceSize(const CameraConfig& camera);
   DrawingTarget drawingTarget() const { return m_drawingTarget; }
   void setDrawingTarget(DrawingTarget target) { m_drawingTarget = target; }
 
@@ -121,5 +124,6 @@ private:
   QHash<QString, int> m_activeCircleIndexes;
   QHash<QString, QVector<GeometryArcRuntimeConfig>> m_arcConfigs;
   QHash<QString, int> m_activeArcIndexes;
+  QHash<QString, QSize> m_guideReferenceSizes;
   QHash<QString, quint64> m_geometryJobGeneration;
 };

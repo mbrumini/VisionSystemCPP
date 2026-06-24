@@ -635,3 +635,48 @@ bool RecipeManager::appendConstructedGeometry(const QString& cameraId,
   configs.append(saved);
   return saveConstructedGeometries(cameraId, configs, errorMessage);
 }
+
+bool RecipeManager::loadGeometryGuideReferenceSize(const QString& cameraId, QSize& size) const
+{
+  QJsonObject root;
+  if (!loadJsonObject(cameraRecipePath(cameraId), root))
+  {
+    return false;
+  }
+
+  const QJsonObject reference = root.value("tools").toObject()
+    .value("geometries").toObject()
+    .value("guideReferenceSize").toObject();
+  if (reference.isEmpty())
+  {
+    return false;
+  }
+
+  size = QSize(reference.value("width").toInt(), reference.value("height").toInt());
+  return size.isValid() && size.width() > 0 && size.height() > 0;
+}
+
+bool RecipeManager::saveGeometryGuideReferenceSize(const QString& cameraId,
+                                                   const QSize& size,
+                                                   QString* errorMessage) const
+{
+  if (!size.isValid() || size.width() <= 0 || size.height() <= 0)
+  {
+    return false;
+  }
+
+  const QString path = cameraRecipePath(cameraId);
+  QJsonObject root;
+  loadJsonObject(path, root);
+  root["cameraId"] = cameraId;
+
+  QJsonObject tools = root.value("tools").toObject();
+  QJsonObject geometries = tools.value("geometries").toObject();
+  geometries["guideReferenceSize"] = QJsonObject{
+    {"width", size.width()},
+    {"height", size.height()}
+  };
+  writeGeometriesTool(tools, geometries);
+  root["tools"] = tools;
+  return saveJsonObject(path, root, errorMessage);
+}

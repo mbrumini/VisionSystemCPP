@@ -1,8 +1,10 @@
 #include "gui/modules/MainWindowGeometryModule.h"
 #include "gui/modules/MainWindowCameraProfile.h"
 #include "gui/modules/MainWindowImagingModule.h"
+#include "gui/modules/MainWindowSurfaceModule.h"
 #include "gui/modules/MainWindowContext.h"
 
+#include "gui/geometry/GeometryGuideRuntime.h"
 #include "gui/geometry/GeometryOverlayPrimitives.h"
 
 #include "processing/geometry/EdgeLineDetector.h"
@@ -118,6 +120,13 @@ GeometryOverlay MainWindowGeometryModule::configuredGeometryLinesOverlay(const C
   const PartPose& pose = cameraRuntime().at(camera.id).currentPose();
   const QVector<GeometryLineRuntimeConfig> lines = m_lineConfigs.value(camera.id);
   const int activeIndex = m_activeLineIndexes.value(camera.id, 0);
+  cv::Size imageSize;
+  const cv::Mat& frame = cameraRuntime().at(camera.id).currentFrame();
+  if (!frame.empty())
+  {
+    imageSize = frame.size();
+  }
+  const QSize referenceSize = guideReferenceSize(camera.id);
 
   for (int i = 0; i < lines.size(); ++i)
   {
@@ -127,14 +136,22 @@ GeometryOverlay MainWindowGeometryModule::configuredGeometryLinesOverlay(const C
     }
 
     const GeometryLineRuntimeConfig& line = lines[i];
-    const bool usePartLine = pose.valid && line.hasLine && !line.anchorInImageSpace;
+    const bool usePartLine = GeometryGuideRuntime::shouldUsePartGuide(
+      pose.valid,
+      line.hasLine,
+      line.hasImageLine,
+      line.anchorInImageSpace,
+      referenceSize,
+      imageSize);
     if (!usePartLine && !line.hasImageLine)
     {
       continue;
     }
 
-    const cv::Point2d imageStart = usePartLine ? partToImage(pose, line.partStart) : line.imageStart;
-    const cv::Point2d imageEnd = usePartLine ? partToImage(pose, line.partEnd) : line.imageEnd;
+    const cv::Point2d imageStart = GeometryGuideRuntime::resolveImagePoint(
+      pose, usePartLine, line.partStart, line.imageStart, referenceSize, imageSize);
+    const cv::Point2d imageEnd = GeometryGuideRuntime::resolveImagePoint(
+      pose, usePartLine, line.partEnd, line.imageEnd, referenceSize, imageSize);
     const QPointF start(imageStart.x, imageStart.y);
     const QPointF end(imageEnd.x, imageEnd.y);
     const QPointF center = (start + end) * 0.5;
@@ -209,29 +226,18 @@ void MainWindowGeometryModule::testGeometryLine(const CameraConfig& camera)
 
   GeometryLineRuntimeConfig& lineConfig = activeGeometryLineConfig(camera.id);
   const PartPose& pose = cameraRuntime()[camera.id].currentPose();
-  bool promotedToPart = false;
-  if (pose.valid && !lineConfig.hasLine && lineConfig.hasImageLine)
+  if (!pose.valid && context().surface)
   {
-    lineConfig.partStart = imageToPart(pose, lineConfig.imageStart);
-    lineConfig.partEnd = imageToPart(pose, lineConfig.imageEnd);
-    lineConfig.hasLine = true;
-    promotedToPart = true;
+    context().surface->localizePoseOnSample(camera);
   }
+  const PartPose& resolvedPose = cameraRuntime()[camera.id].currentPose();
+  QVector<GeometryLineRuntimeConfig> lines = {lineConfig};
+  QVector<GeometryPointRuntimeConfig> points;
+  QVector<GeometryCircleRuntimeConfig> circles;
+  QVector<GeometryArcRuntimeConfig> arcs;
+  GeometryGuideRuntime::syncPartGuidesFromImage(resolvedPose, lines, points, circles, arcs);
+  lineConfig = lines.first();
 
-  const bool usePartLine = pose.valid && lineConfig.hasLine && !lineConfig.anchorInImageSpace;
-  if (!usePartLine && !lineConfig.hasImageLine)
-  {
-    log(tr("log.geometryLineRoiMissing") + ": " + camera.id);
-    return;
-  }
-
-  if (promotedToPart)
-  {
-    saveGeometryLinesRecipe(camera);
-  }
-
-  const cv::Point2d imageStart = usePartLine ? partToImage(pose, lineConfig.partStart) : lineConfig.imageStart;
-  const cv::Point2d imageEnd = usePartLine ? partToImage(pose, lineConfig.partEnd) : lineConfig.imageEnd;
   QString imageError;
   const cv::Mat input = context().imaging->currentInputImage(camera, &imageError);
   if (input.empty())
@@ -239,6 +245,25 @@ void MainWindowGeometryModule::testGeometryLine(const CameraConfig& camera)
     log(imageError);
     return;
   }
+
+  const QSize referenceSize = guideReferenceSize(camera.id);
+  const bool usePartLine = GeometryGuideRuntime::shouldUsePartGuide(
+    resolvedPose.valid,
+    lineConfig.hasLine,
+    lineConfig.hasImageLine,
+    lineConfig.anchorInImageSpace,
+    referenceSize,
+    input.size());
+  if (!usePartLine && !lineConfig.hasImageLine)
+  {
+    log(tr("log.geometryLineRoiMissing") + ": " + camera.id);
+    return;
+  }
+
+  const cv::Point2d imageStart = GeometryGuideRuntime::resolveImagePoint(
+    resolvedPose, usePartLine, lineConfig.partStart, lineConfig.imageStart, referenceSize, input.size());
+  const cv::Point2d imageEnd = GeometryGuideRuntime::resolveImagePoint(
+    resolvedPose, usePartLine, lineConfig.partEnd, lineConfig.imageEnd, referenceSize, input.size());
 
   EdgeLineDetectorConfig config;
   config.id = lineConfig.id;

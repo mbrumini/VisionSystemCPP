@@ -1,39 +1,62 @@
 {
-    "protocolVersion": 1,
-    "name": "cross_rotation_cam01",
-    "recipeId": "test_cross_template",
-    "strategyId": "edgePca",
     "cameraId": "CAM01",
-    "slot": 1,
-    "channel": "CAM01",
     "canvas": {
-        "width": 640,
-        "height": 480,
-        "background": 240
+        "background": 240,
+        "height": 1080,
+        "width": 1920
+    },
+    "channel": "CAM01",
+    "executionProfile": {
+        "angleMaxDeg": 360,
+        "angleMinDeg": 0,
+        "angleStepDeg": 1.25,
+        "cameraId": "CAM08",
+        "canvasBackground": 240,
+        "canvasHeight": 1080,
+        "canvasWidth": 1920,
+        "frameDeliveryMode": "sendOnly",
+        "intervalMs": 100,
+        "passes": 2,
+        "pixelSizeMm": 0.0654,
+        "recipeId": "rettangolo_hr",
+        "sendOnly": true,
+        "shapeId": "plate",
+        "strategyId": "edgePca",
+        "xMaxMm": 1,
+        "xMinMm": -1,
+        "xStepMm": 0.2,
+        "yMaxMm": 1,
+        "yMinMm": -1,
+        "yStepMm": 0.2
     },
     "master": {
-        "file": "../assets/cross_asymmetric/master.png",
-        "centerX": 320.0,
-        "centerY": 240.0
+        "centerX": 320,
+        "centerY": 240,
+        "file": "../assets/cross_asymmetric/master.png"
     },
+    "name": "cross_rotation_cam01",
+    "output": "../reports/cross_rotation_cam01.json",
+    "protocolVersion": 1,
+    "recipeId": "test_cross_template",
     "sequence": {
         "anglesDeg": [
-            0.0,
-            15.0,
-            30.0,
-            45.0
+            0,
+            15,
+            30,
+            45
         ],
-        "translationX": 0.0,
-        "translationY": 0.0,
-        "repetitions": 2
+        "repetitions": 2,
+        "translationX": 0,
+        "translationY": 0
     },
+    "slot": 1,
+    "strategyId": "edgePca",
     "timeouts": {
         "connectMs": 5000,
         "resultMs": 5000
     },
     "tolerances": {
-        "centerPx": 2.0,
-        "angleDeg": 2.0
-    },
-    "output": "../reports/cross_rotation_cam01.json"
+        "angleDeg": 2,
+        "centerPx": 2
+    }
 }

@@ -1,0 +1,26 @@
+{
+    "executionProfile": {
+        "angleMaxDeg": 360,
+        "angleMinDeg": 0,
+        "angleStepDeg": 10,
+        "cameraId": "CAM04",
+        "canvasBackground": 240,
+        "canvasHeight": 1080,
+        "canvasWidth": 1920,
+        "frameDeliveryMode": "sendOnly",
+        "intervalMs": 100,
+        "passes": 2,
+        "pixelSizeMm": 0.0654,
+        "recipeId": "rettangolo_con_fori",
+        "sendOnly": true,
+        "shapeId": "plate",
+        "strategyId": "edgePca",
+        "xMaxMm": 10,
+        "xMinMm": -10,
+        "xStepMm": 1,
+        "yMaxMm": 10,
+        "yMinMm": -10,
+        "yStepMm": 1
+    },
+    "name": "test rettangolo con fori 4 tc 19201680"
+}

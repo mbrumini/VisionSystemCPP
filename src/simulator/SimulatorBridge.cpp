@@ -14,7 +14,7 @@
 
 namespace
 {
-constexpr int kProtocolVersion = 1;
+constexpr int kProtocolVersion = SimulatorProtocol::kVersion;
 constexpr int kMaximumQueuedFramesPerChannel = 32;
 const QString kServerName = QStringLiteral("VisionSystemSimulator");
 const wchar_t* kPipePath = L"\\\\.\\pipe\\VisionSystemSimulator";
@@ -376,18 +376,18 @@ void SimulatorBridge::processMessage(
     return;
   }
 
-  const QByteArray imageBytes = QByteArray::fromBase64(encodedImage);
-  const std::vector<uchar> bytes(imageBytes.begin(), imageBytes.end());
-  cv::Mat image = cv::imdecode(bytes, cv::IMREAD_COLOR);
-  if (image.empty())
+  const SimulatorProtocol::DecodeImageResult decoded = SimulatorProtocol::decodeImageFromBase64(encodedImage);
+  if (!decoded.ok)
   {
     sendMessage(client, {
       {"type", "error"},
-      {"code", "invalid_image"},
-      {"message", "Immagine base64 non decodificabile"}
+      {"code", decoded.errorCode},
+      {"message", decoded.errorMessage}
     });
     return;
   }
+
+  const cv::Mat& image = decoded.image;
 
   SimulatorFrame frame;
   frame.metadata.protocolVersion = protocolVersion;

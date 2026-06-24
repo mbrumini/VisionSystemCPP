@@ -1,4 +1,5 @@
 #include "gui/geometry/ArcGuideMath.h"
+#include "gui/geometry/GeometryGuideRuntime.h"
 
 #include <algorithm>
 #include <cmath>
@@ -53,25 +54,43 @@ double partFrameAngleToImage(const PartPose& pose, double partAngleRadians)
   return normalizedAngle(std::atan2(direction.y, direction.x));
 }
 
-bool resolveArcGuide(const GeometryArcRuntimeConfig& arc, const PartPose& pose, ResolvedArcGuide& guide)
+bool resolveArcGuide(const GeometryArcRuntimeConfig& arc,
+                     const PartPose& pose,
+                     ResolvedArcGuide& guide,
+                     const QSize& referenceSize,
+                     const cv::Size& imageSize)
 {
-  const bool usePartArc = pose.valid && arc.hasArc && !arc.anchorInImageSpace;
+  const bool usePartArc = GeometryGuideRuntime::shouldUsePartGuide(
+    pose.valid,
+    arc.hasArc,
+    arc.hasImageArc,
+    arc.anchorInImageSpace,
+    referenceSize,
+    imageSize);
   if (!usePartArc && !arc.hasImageArc)
   {
     return false;
   }
 
-  guide.radius = std::max(1.0, arc.radius);
-
   if (usePartArc)
   {
+    guide.radius = std::max(1.0, arc.radius);
     guide.center = partToImage(pose, arc.partCenter);
     guide.startAngle = partFrameAngleToImage(pose, arc.partStartAngleRadians);
     guide.endAngle = partFrameAngleToImage(pose, arc.partEndAngleRadians);
   }
   else
   {
-    guide.center = arc.imageCenter;
+    double scale = 1.0;
+    if (referenceSize.isValid() && referenceSize.width() > 0 && referenceSize.height() > 0 &&
+        imageSize.width > 0 && imageSize.height > 0)
+    {
+      scale = 0.5 *
+              (static_cast<double>(imageSize.width) / static_cast<double>(referenceSize.width()) +
+               static_cast<double>(imageSize.height) / static_cast<double>(referenceSize.height()));
+    }
+    guide.radius = std::max(1.0, arc.radius * scale);
+    guide.center = GeometryGuideRuntime::mapImageGuidePoint(arc.imageCenter, referenceSize, imageSize);
     guide.startAngle = arc.startAngleRadians;
     guide.endAngle = arc.endAngleRadians;
   }

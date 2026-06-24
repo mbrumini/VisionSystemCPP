@@ -1,0 +1,26 @@
+{
+    "executionProfile": {
+        "angleMaxDeg": 360,
+        "angleMinDeg": 0,
+        "angleStepDeg": 12.5,
+        "cameraId": "CAM01",
+        "canvasBackground": 240,
+        "canvasHeight": 1080,
+        "canvasWidth": 1920,
+        "frameDeliveryMode": "sendOnly",
+        "intervalMs": 75,
+        "passes": 2,
+        "pixelSizeMm": 0.0654,
+        "recipeId": "rettangolo_hr",
+        "sendOnly": true,
+        "shapeId": "plate",
+        "strategyId": "edgePca",
+        "xMaxMm": 10,
+        "xMinMm": -10,
+        "xStepMm": 1,
+        "yMaxMm": 10,
+        "yMinMm": -10,
+        "yStepMm": 1
+    },
+    "name": "profilo_test HR"
+}

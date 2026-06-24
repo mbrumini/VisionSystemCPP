@@ -58,6 +58,22 @@ QVBoxLayout* createMeasurementPage(QWidget* panel, const QString& titleText)
 
   return layout;
 }
+
+void appendMeasurementHint(QWidget* panel, QVBoxLayout* layout, const QString& text)
+{
+  auto* hint = new QLabel(text, panel);
+  hint->setWordWrap(true);
+  hint->setObjectName("toolPanelHint");
+  layout->addWidget(hint);
+}
+
+QPushButton* createSaveMeasurementButton(QWidget* panel, const QString& label)
+{
+  auto* saveButton = new QPushButton(label, panel);
+  saveButton->setObjectName("primaryActionButton");
+  saveButton->setMinimumHeight(44);
+  return saveButton;
+}
 }
 
 void MainWindowMeasurementModule::showPointPointDistancePanel(const CameraConfig& camera)
@@ -90,8 +106,18 @@ void MainWindowMeasurementModule::showPointPointDistancePanel(const CameraConfig
   formLayout->addWidget(pointBCombo, 1, 1);
   layout->addWidget(form);
 
+  if (pointSources.isEmpty())
+  {
+    const GeometrySet& geometrySet = cameraRuntime()[camera.id].geometries();
+    const bool hasLines = !geometrySet.lines.isEmpty() || !geometrySet.constructedLines.isEmpty();
+    appendMeasurementHint(
+      panel,
+      layout,
+      hasLines ? tr("hints.measurementNoPointSourcesUseLines") : tr("hints.measurementNoPointSources"));
+  }
+
   const auto refreshPanel = [this, camera]() { showPointPointDistancePanel(camera); };
-  auto* saveButton = createTouchIconButton("save", tr("actions.saveMeasurement"), panel);
+  auto* saveButton = createSaveMeasurementButton(panel, tr("actions.saveMeasurement"));
   saveButton->setEnabled(pointSources.size() >= 2);
   QObject::connect(saveButton, &QPushButton::clicked, window(), [this, camera, pointACombo, pointBCombo, refreshPanel]() {
     createPointPointDistance(camera, pointACombo->currentData().toString(), pointBCombo->currentData().toString());
@@ -139,7 +165,7 @@ void MainWindowMeasurementModule::showPointLineDistancePanel(const CameraConfig&
   layout->addWidget(form);
 
   const auto refreshPanel = [this, camera]() { showPointLineDistancePanel(camera); };
-  auto* saveButton = createTouchIconButton("save", tr("actions.saveMeasurement"), panel);
+  auto* saveButton = createSaveMeasurementButton(panel, tr("actions.saveMeasurement"));
   saveButton->setEnabled(!pointSources.isEmpty() && !lineSources.isEmpty());
   QObject::connect(saveButton, &QPushButton::clicked, window(), [this, camera, pointCombo, lineCombo, refreshPanel]() {
     createPointLineDistance(camera, pointCombo->currentData().toString(), lineCombo->currentData().toString());
@@ -185,8 +211,13 @@ void MainWindowMeasurementModule::showLineLineDistancePanel(const CameraConfig& 
   formLayout->addWidget(lineBCombo, 1, 1);
   layout->addWidget(form);
 
+  if (lineSources.size() < 2)
+  {
+    appendMeasurementHint(panel, layout, tr("hints.measurementNoLineSources"));
+  }
+
   const auto refreshPanel = [this, camera]() { showLineLineDistancePanel(camera); };
-  auto* saveButton = createTouchIconButton("save", tr("actions.saveMeasurement"), panel);
+  auto* saveButton = createSaveMeasurementButton(panel, tr("actions.saveMeasurement"));
   saveButton->setEnabled(lineSources.size() >= 2);
   QObject::connect(saveButton, &QPushButton::clicked, window(), [this, camera, lineACombo, lineBCombo, refreshPanel]() {
     createLineLineDistance(camera, lineACombo->currentData().toString(), lineBCombo->currentData().toString());
@@ -229,7 +260,7 @@ void MainWindowMeasurementModule::showCircleDiameterPanel(const CameraConfig& ca
   layout->addWidget(form);
 
   const auto refreshPanel = [this, camera]() { showCircleDiameterPanel(camera); };
-  auto* saveButton = createTouchIconButton("save", tr("actions.saveMeasurement"), panel);
+  auto* saveButton = createSaveMeasurementButton(panel, tr("actions.saveMeasurement"));
   saveButton->setEnabled(!circleSources.isEmpty());
   QObject::connect(saveButton, &QPushButton::clicked, window(), [this, camera, circleCombo, refreshPanel]() {
     createCircleDiameter(camera, circleCombo->currentData().toString());
@@ -276,7 +307,7 @@ void MainWindowMeasurementModule::showLineLineAnglePanel(const CameraConfig& cam
   layout->addWidget(form);
 
   const auto refreshPanel = [this, camera]() { showLineLineAnglePanel(camera); };
-  auto* saveButton = createTouchIconButton("save", tr("actions.saveMeasurement"), panel);
+  auto* saveButton = createSaveMeasurementButton(panel, tr("actions.saveMeasurement"));
   saveButton->setEnabled(lineSources.size() >= 2);
   QObject::connect(saveButton, &QPushButton::clicked, window(), [this, camera, lineACombo, lineBCombo, refreshPanel]() {
     createLineLineAngle(camera, lineACombo->currentData().toString(), lineBCombo->currentData().toString());

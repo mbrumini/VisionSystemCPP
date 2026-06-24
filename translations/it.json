@@ -390,6 +390,8 @@
     "noRecipes": "Nessuna ricetta disponibile.",
     "cannotDeleteLastRecipe": "Impossibile eliminare l'ultima ricetta disponibile.",
     "confirmDeleteRecipe": "Eliminare definitivamente la ricetta \"%1\"?",
+    "confirmDuplicateRecipeDetail": "Verrà creata una copia completa della ricetta corrente: campioni, localizzazione, guide edge, misure e tolleranze.\n\nSe serve una risoluzione telecamera diversa, usa Nuova ricetta e configura tutto da zero.\n\nDopo la duplicazione, cambiare risoluzione senza salvare di nuovo campione e guide causa geometrie spostate.",
+    "duplicateRecipeReferenceSizes": "Risoluzione di riferimento per telecamera nella ricetta sorgente:",
     "helpPlaceholder": "Manuale HELP\n\nQuesta finestra e' pronta per mostrare i file di aiuto.\n\nProssimo passo:\n- creare piccoli file di testo in docs/help/it/\n- descrivere comandi, setup, controlli telecamere, edge, misure e tolleranze\n- usare questi contenuti come base per il manuale e per l'assistente locale."
   },
   "help": {
@@ -575,5 +577,10 @@
     "captureUnknown": "Cattura incerti",
     "openDatasetFolder": "Apri cartella dataset",
     "placeholder": "Placeholder"
+  },
+  "hints": {
+    "measurementNoPointSources": "Nessun punto disponibile. Crea punti edge, geometria costruita (centri, intersezioni) o cerchi/archi rilevati.",
+    "measurementNoPointSourcesUseLines": "Nessun punto su questa camera. Hai solo linee: usa Distanza linea-linea oppure aggiungi punti/geometria costruita.",
+    "measurementNoLineSources": "Servono almeno due linee rilevate o costruite per questa misura."
   }
 }

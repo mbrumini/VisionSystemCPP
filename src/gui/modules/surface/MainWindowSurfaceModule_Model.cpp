@@ -33,6 +33,17 @@ cv::Rect toCvRect(const QRect& rect)
   return cv::Rect(rect.x(), rect.y(), rect.width(), rect.height());
 }
 
+std::vector<cv::Point> toCvPoints(const QVector<QPoint>& points)
+{
+  std::vector<cv::Point> result;
+  result.reserve(static_cast<size_t>(points.size()));
+  for (const QPoint& point : points)
+  {
+    result.emplace_back(point.x(), point.y());
+  }
+  return result;
+}
+
 cv::Rect sampleSearchRect(const CameraConfig& camera, const cv::Mat& input, const RecipeManager& recipes)
 {
   QRect globalAoi;
@@ -76,7 +87,11 @@ bool MainWindowSurfaceModule::localizePoseOnSample(const CameraConfig& camera)
 
   const SurfaceAnnulusLocalizationConfig annulus = recipes().loadSurfaceAnnulusLocalization(camera.id);
   const QVector<QRect> exclusionRects = recipes().loadSurfaceDefectExclusionRects(camera.id);
-  const cv::Rect searchRect = sampleSearchRect(camera, input, recipes());
+  const QVector<QPoint> searchPolygon = recipes().loadSurfaceDefectPolygon(camera.id);
+  const bool hasPolygon = searchPolygon.size() >= 3;
+  const QRect effectiveRoi = recipes().effectiveSurfaceSearchRect(camera.id, QSize(input.cols, input.rows));
+  const cv::Rect searchRect = toCvRect(effectiveRoi);
+  const std::vector<cv::Point> cvSearchPolygon = toCvPoints(searchPolygon);
   SurfaceDefectProcessor processor;
   SurfaceDefectResult result;
 
@@ -87,13 +102,26 @@ bool MainWindowSurfaceModule::localizePoseOnSample(const CameraConfig& camera)
 
   if (annulus.method == "edgePca")
   {
-    result = processor.locateByEdgePca(
-      input,
-      searchRect,
-      toCvRects(exclusionRects),
-      annulus.edgeSensitivity,
-      annulus.pcaResolveAmbiguity,
-      false);
+    if (hasPolygon)
+    {
+      result = processor.locateByEdgePca(
+        input,
+        cvSearchPolygon,
+        toCvRects(exclusionRects),
+        annulus.edgeSensitivity,
+        annulus.pcaResolveAmbiguity,
+        false);
+    }
+    else
+    {
+      result = processor.locateByEdgePca(
+        input,
+        searchRect,
+        toCvRects(exclusionRects),
+        annulus.edgeSensitivity,
+        annulus.pcaResolveAmbiguity,
+        false);
+    }
   }
   else if (annulus.method == "massPca")
   {

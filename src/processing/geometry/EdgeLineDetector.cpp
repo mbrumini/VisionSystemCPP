@@ -10,6 +10,8 @@
 
 namespace
 {
+constexpr double kEpsilon = 0.000001;
+
 cv::Rect bandBoundingRect(const cv::Point2d& start, const cv::Point2d& end, double halfWidth, const cv::Size& imageSize)
 {
   const cv::Point2d direction = end - start;
@@ -62,11 +64,19 @@ bool pointInsideImage(const cv::Mat& image, const cv::Point2d& point)
   return point.x >= 0.0 && point.y >= 0.0 && point.x < image.cols && point.y < image.rows;
 }
 
-int sampledGray(const cv::Mat& gray, const cv::Point2d& point)
+double sampledGray(const cv::Mat& gray, const cv::Point2d& point)
 {
-  const int x = std::clamp(static_cast<int>(std::round(point.x)), 0, gray.cols - 1);
-  const int y = std::clamp(static_cast<int>(std::round(point.y)), 0, gray.rows - 1);
-  return static_cast<int>(gray.at<uchar>(y, x));
+  const double x = std::clamp(point.x, 0.0, static_cast<double>(gray.cols - 1));
+  const double y = std::clamp(point.y, 0.0, static_cast<double>(gray.rows - 1));
+  const int x0 = static_cast<int>(std::floor(x));
+  const int y0 = static_cast<int>(std::floor(y));
+  const int x1 = std::min(x0 + 1, gray.cols - 1);
+  const int y1 = std::min(y0 + 1, gray.rows - 1);
+  const double tx = x - static_cast<double>(x0);
+  const double ty = y - static_cast<double>(y0);
+  const double top = gray.at<uchar>(y0, x0) * (1.0 - tx) + gray.at<uchar>(y0, x1) * tx;
+  const double bottom = gray.at<uchar>(y1, x0) * (1.0 - tx) + gray.at<uchar>(y1, x1) * tx;
+  return top * (1.0 - ty) + bottom * ty;
 }
 
 std::vector<cv::Point2d> scanLineEdges(
@@ -104,7 +114,7 @@ std::vector<cv::Point2d> scanLineEdges(
       continue;
     }
 
-    int previousValue = sampledGray(gray, previousPoint);
+    double previousValue = sampledGray(gray, previousPoint);
     for (int offset = -halfWidth + 1; offset <= halfWidth; ++offset)
     {
       const cv::Point2d currentPoint = base + normal * offset;
@@ -113,26 +123,22 @@ std::vector<cv::Point2d> scanLineEdges(
         continue;
       }
 
-      const int currentValue = sampledGray(gray, currentPoint);
-      const int delta = currentValue - previousValue;
+      const double currentValue = sampledGray(gray, currentPoint);
+      const double delta = currentValue - previousValue;
       const bool matchesTransition =
         (config.transition == EdgeLineTransition::DarkToLight && delta >= gradientThreshold) ||
         (config.transition == EdgeLineTransition::LightToDark && delta <= -gradientThreshold);
       if (matchesTransition)
       {
         cv::Point2d candidate = currentPoint;
-        if (config.useSubpixel && currentValue != previousValue)
+        if (config.useSubpixel && std::abs(delta) > kEpsilon)
         {
-          const double target = (static_cast<double>(previousValue) + static_cast<double>(currentValue)) * 0.5;
-          const double t = std::clamp(
-            (target - static_cast<double>(previousValue)) /
-              (static_cast<double>(currentValue) - static_cast<double>(previousValue)),
-            0.0,
-            1.0);
+          const double target = (previousValue + currentValue) * 0.5;
+          const double t = std::clamp((target - previousValue) / delta, 0.0, 1.0);
           candidate = previousPoint + (currentPoint - previousPoint) * t;
         }
 
-        const int strength = std::abs(delta);
+        const double strength = std::abs(delta);
         if (config.pickMode == EdgeLinePickMode::First)
         {
           points.push_back(candidate);
@@ -198,12 +204,23 @@ void drawScanDiagnostics(cv::Mat& image, const EdgeLineDetectorConfig& config)
     0.25);
 }
 
-LineGeometry fitLineGeometry(const std::vector<cv::Point2d>& points, const QString& id, const QString& label)
+LineGeometry fitLineGeometry(
+  const std::vector<cv::Point2d>& points,
+  const QString& id,
+  const QString& label,
+  const cv::Point2d& guideStart,
+  const cv::Point2d& guideEnd)
 {
   cv::Vec4f fit;
   cv::fitLine(points, fit, cv::DIST_L2, 0.0, 0.01, 0.01);
 
-  const cv::Point2d direction(fit[0], fit[1]);
+  cv::Point2d direction(fit[0], fit[1]);
+  const cv::Point2d guideAxis = guideEnd - guideStart;
+  const double guideLength = std::hypot(guideAxis.x, guideAxis.y);
+  if (guideLength > kEpsilon && direction.dot(guideAxis) < 0.0)
+  {
+    direction *= -1.0;
+  }
   const cv::Point2d center(fit[2], fit[3]);
   double minProjection = 0.0;
   double maxProjection = 0.0;
@@ -298,7 +315,7 @@ EdgeLineDetectorResult EdgeLineDetector::detect(const cv::Mat& input, const Edge
     return result;
   }
 
-  result.line = fitLineGeometry(result.edgePoints, config.id, config.label);
+  result.line = fitLineGeometry(result.edgePoints, config.id, config.label, config.guideStart, config.guideEnd);
   result.line.meta.score = static_cast<double>(result.edgePoints.size());
   result.found = true;
 

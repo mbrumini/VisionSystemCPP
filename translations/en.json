@@ -390,6 +390,8 @@
     "noRecipes": "No recipes available.",
     "cannotDeleteLastRecipe": "Cannot delete the last available recipe.",
     "confirmDeleteRecipe": "Permanently delete recipe \"%1\"?",
+    "confirmDuplicateRecipeDetail": "This creates a full copy of the current recipe: sample images, localization, edge guides, measurements and tolerances.\n\nIf you need a different camera resolution, use New recipe and configure setup from scratch.\n\nAfter duplicating, changing resolution without re-saving the sample and guides will cause misaligned geometries.",
+    "duplicateRecipeReferenceSizes": "Reference resolution per camera in the source recipe:",
     "helpPlaceholder": "HELP manual\n\nThis window is ready to show help files.\n\nNext step:\n- create small text files in docs/help/en/\n- document commands, setup, camera controls, edge detection, measurements and tolerances\n- use these contents as the base manual and local assistant knowledge."
   },
   "help": {
@@ -575,5 +577,10 @@
     "captureUnknown": "Capture unknown",
     "openDatasetFolder": "Open dataset folder",
     "placeholder": "Placeholder"
+  },
+  "hints": {
+    "measurementNoPointSources": "No points available. Create edge points, constructed geometry (centers, intersections), or detected circles/arcs.",
+    "measurementNoPointSourcesUseLines": "No points on this camera. You only have lines: use line-line distance or add points/constructed geometry.",
+    "measurementNoLineSources": "At least two detected or constructed lines are required for this measurement."
   }
 }

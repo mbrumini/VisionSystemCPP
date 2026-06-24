@@ -44,6 +44,33 @@ LineGeometryMouseController& MainWindowGeometryModule::pointMouseController(cons
   return m_pointMouseControllers[cameraId];
 }
 
+QSize MainWindowGeometryModule::guideReferenceSize(const QString& cameraId) const
+{
+  return m_guideReferenceSizes.value(cameraId);
+}
+
+void MainWindowGeometryModule::updateGuideReferenceSize(const CameraConfig& camera)
+{
+  QString imageError;
+  cv::Mat input = context().imaging->currentInputImage(camera, &imageError);
+  if (input.empty())
+  {
+    input = context().imaging->sampleInputImage(camera, &imageError);
+  }
+  if (input.empty())
+  {
+    return;
+  }
+
+  const QSize size(input.cols, input.rows);
+  m_guideReferenceSizes[camera.id] = size;
+  QString error;
+  if (!recipes().saveGeometryGuideReferenceSize(camera.id, size, &error))
+  {
+    log(error);
+  }
+}
+
 void MainWindowGeometryModule::reloadRecipeState()
 {
   m_lineConfigs.clear();
@@ -56,10 +83,28 @@ void MainWindowGeometryModule::reloadRecipeState()
   m_activeArcIndexes.clear();
   m_lineMouseControllers.clear();
   m_pointMouseControllers.clear();
+  m_guideReferenceSizes.clear();
   m_drawingTarget = DrawingTarget::None;
 
   for (const CameraConfig& camera : config().activeCameras())
   {
+    QSize referenceSize;
+    if (recipes().loadGeometryGuideReferenceSize(camera.id, referenceSize))
+    {
+      m_guideReferenceSizes[camera.id] = referenceSize;
+    }
+    else
+    {
+      QString imageError;
+      cv::Mat sample = context().imaging->sampleInputImage(camera, &imageError);
+      if (!sample.empty())
+      {
+        referenceSize = QSize(sample.cols, sample.rows);
+        m_guideReferenceSizes[camera.id] = referenceSize;
+        QString error;
+        recipes().saveGeometryGuideReferenceSize(camera.id, referenceSize, &error);
+      }
+    }
     loadGeometryLinesRecipe(camera);
     loadGeometryPointRecipe(camera);
     loadGeometryCirclesRecipe(camera);
@@ -288,7 +333,9 @@ void MainWindowGeometryModule::saveGeometryPointRecipe(const CameraConfig& camer
   if (!recipes().saveGeometryPoints(camera.id, recipeList, &error))
   {
     log(error);
+    return;
   }
+  updateGuideReferenceSize(camera);
 }
 
 void MainWindowGeometryModule::saveGeometryCirclesRecipe(const CameraConfig& camera)
@@ -337,7 +384,9 @@ void MainWindowGeometryModule::saveGeometryCirclesRecipe(const CameraConfig& cam
   if (!recipes().saveGeometryCircles(camera.id, recipeList, &error))
   {
     log(error);
+    return;
   }
+  updateGuideReferenceSize(camera);
 }
 
 void MainWindowGeometryModule::addGeometryPoint(const CameraConfig& camera)
@@ -554,7 +603,9 @@ void MainWindowGeometryModule::saveGeometryLinesRecipe(const CameraConfig& camer
   if (!recipes().saveGeometryLines(camera.id, recipeList, &error))
   {
     log(error);
+    return;
   }
+  updateGuideReferenceSize(camera);
 }
 
 void MainWindowGeometryModule::loadGeometryArcsRecipe(const CameraConfig& camera)
@@ -694,5 +745,7 @@ void MainWindowGeometryModule::saveGeometryArcsRecipe(const CameraConfig& camera
   if (!recipes().saveGeometryArcs(camera.id, recipeList, &error))
   {
     log(error);
+    return;
   }
+  updateGuideReferenceSize(camera);
 }

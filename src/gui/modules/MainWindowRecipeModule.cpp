@@ -4,6 +4,7 @@
 #include "gui/modules/MainWindowCameraProfile.h"
 #include "gui/modules/MainWindowGeometryModule.h"
 #include "gui/modules/MainWindowSetupModule.h"
+#include "runtime/CameraRuntime.h"
 
 #include <QFileDialog>
 #include <QInputDialog>
@@ -71,6 +72,34 @@ void MainWindowRecipeModule::createRecipe()
 
 void MainWindowRecipeModule::duplicateRecipe()
 {
+  QStringList resolutionLines;
+  for (const CameraConfig& camera : config().activeCameras())
+  {
+    QSize referenceSize;
+    if (recipes().loadGeometryGuideReferenceSize(camera.id, referenceSize))
+    {
+      resolutionLines.append(
+        QString("%1: %2 x %3").arg(camera.id).arg(referenceSize.width()).arg(referenceSize.height()));
+    }
+  }
+
+  QString message = tr("messages.confirmDuplicateRecipeDetail");
+  if (!resolutionLines.isEmpty())
+  {
+    message += "\n\n" + tr("messages.duplicateRecipeReferenceSizes") + "\n" + resolutionLines.join("\n");
+  }
+
+  const auto answer = QMessageBox::question(
+    window(),
+    tr("menu.duplicateRecipe"),
+    message,
+    QMessageBox::Yes | QMessageBox::No,
+    QMessageBox::No);
+  if (answer != QMessageBox::Yes)
+  {
+    return;
+  }
+
   bool ok = false;
   const QString recipeName = QInputDialog::getText(
     window(),
@@ -156,6 +185,10 @@ void MainWindowRecipeModule::ensureRecipeCameraFolders()
 void MainWindowRecipeModule::setActiveRecipe(const QString& recipeId)
 {
   recipes().setRecipeId(recipeId);
+  for (const CameraConfig& camera : config().activeCameras())
+  {
+    cameraRuntime()[camera.id].clearCurrentPose(camera.id);
+  }
   if (context().geometry)
   {
     context().geometry->reloadRecipeState();

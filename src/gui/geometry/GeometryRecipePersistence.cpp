@@ -121,12 +121,14 @@ CenterGuideRecipeCoords centerGuideFromRuntime(bool hasPartGuide,
     coords.coordinateSpace = GeometryRecipeJson::kPartSpace;
     coords.partCenter = toQPointF(partCenter);
   }
-  else
+  if (hasImageGuide)
   {
-    coords.coordinateSpace = GeometryRecipeJson::kImageSpace;
+    if (!hasPartGuide)
+    {
+      coords.coordinateSpace = GeometryRecipeJson::kImageSpace;
+    }
     coords.imageCenter = toQPointF(imageCenter);
   }
-  Q_UNUSED(hasImageGuide);
   return coords;
 }
 
@@ -138,17 +140,34 @@ void applyCenterGuideRuntime(bool* hasPartGuide,
                              const QPointF& partCenterRecipe,
                              const QPointF& imageCenterRecipe)
 {
-  if (GeometryRecipeJson::isImageSpace(coordinateSpace))
+  const bool hasImageCoords = !imageCenterRecipe.isNull();
+  const bool hasPartCoords = !partCenterRecipe.isNull();
+
+  if (hasImageCoords || GeometryRecipeJson::isImageSpace(coordinateSpace))
   {
-    *hasPartGuide = false;
     *hasImageGuide = true;
-    *imageCenter = cv::Point2d(imageCenterRecipe.x(), imageCenterRecipe.y());
-    return;
+    if (!imageCenterRecipe.isNull())
+    {
+      *imageCenter = cv::Point2d(imageCenterRecipe.x(), imageCenterRecipe.y());
+    }
+  }
+  else
+  {
+    *hasImageGuide = false;
   }
 
-  *hasPartGuide = true;
-  *hasImageGuide = false;
-  *partCenter = cv::Point2d(partCenterRecipe.x(), partCenterRecipe.y());
+  if (hasPartCoords || !GeometryRecipeJson::isImageSpace(coordinateSpace))
+  {
+    *hasPartGuide = true;
+    if (!partCenterRecipe.isNull())
+    {
+      *partCenter = cv::Point2d(partCenterRecipe.x(), partCenterRecipe.y());
+    }
+  }
+  else
+  {
+    *hasPartGuide = false;
+  }
 }
 
 ArcGuideRecipeCoords arcGuideFromRuntime(bool hasPartGuide,

@@ -1,6 +1,7 @@
 #include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QDir>
 #include <QDoubleSpinBox>
@@ -10,6 +11,7 @@
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
+#include <QHash>
 #include <QHeaderView>
 #include <QImage>
 #include <QJsonArray>
@@ -48,6 +50,8 @@
 
 #include "TestVisionArtifacts.h"
 #include "CampaignEditorDialog.h"
+#include "TestVisionExecutionProfile.h"
+#include "simulator/SimulatorProtocol.h"
 
 namespace
 {
@@ -70,6 +74,23 @@ struct SentFrameInfo
   double expectedAngle = 0.0;
 };
 
+struct TestMeasurementReading
+{
+  QString id;
+  QString type;
+  QString unit;
+  bool valid = false;
+  double valuePixels = 0.0;
+  double valueReal = 0.0;
+  bool hasRealValue = false;
+  double expectedBaselinePixels = 0.0;
+  double expectedRecipePixels = 0.0;
+  bool hasExpectedBaseline = false;
+  bool hasExpectedRecipe = false;
+  double baselineErrorPixels = 0.0;
+  double recipeErrorPixels = 0.0;
+};
+
 struct TestResult
 {
   TestPose pose;
@@ -84,6 +105,7 @@ struct TestResult
   double centerError = 0.0;
   double angleError = 0.0;
   double processingMs = 0.0;
+  QVector<TestMeasurementReading> measurements;
 };
 
 QJsonObject loadJson(const QString& path, QString* error)
@@ -201,16 +223,6 @@ cv::Mat transformImage(const cv::Mat& master, double angle, double txPx, double 
   return output;
 }
 
-QByteArray jpegBase64(const cv::Mat& image)
-{
-  std::vector<uchar> bytes;
-  std::vector<int> params = {cv::IMWRITE_JPEG_QUALITY, 85};
-  cv::imencode(".jpg", image, bytes, params);
-  return QByteArray(
-    reinterpret_cast<const char*>(bytes.data()),
-    static_cast<qsizetype>(bytes.size())).toBase64();
-}
-
 QPixmap matToPixmap(const cv::Mat& image)
 {
   cv::Mat rgb;
@@ -263,6 +275,154 @@ QVector<double> steppedValues(double minimum, double maximum, double step)
     }
   }
   return result;
+}
+
+QString resolveRecipesRoot()
+{
+  const QString fromExe =
+    QDir(QCoreApplication::applicationDirPath()).absoluteFilePath("../../recipes");
+  if (QDir(fromExe).exists())
+  {
+    return QDir(fromExe).canonicalPath();
+  }
+
+  const QString fromCwd = QDir::current().absoluteFilePath("recipes");
+  if (QDir(fromCwd).exists())
+  {
+    return QDir(fromCwd).canonicalPath();
+  }
+
+  return fromExe;
+}
+
+QHash<QString, double> loadRecipeMeasurementNominals(const QString& recipeId, const QString& cameraId)
+{
+  QHash<QString, double> nominals;
+  if (recipeId.trimmed().isEmpty() || cameraId.trimmed().isEmpty())
+  {
+    return nominals;
+  }
+
+  const QString path = QDir(resolveRecipesRoot()).filePath(
+    QString("%1/cameras/%2.json").arg(recipeId, cameraId));
+  QJsonObject root;
+  QString error;
+  root = loadJson(path, &error);
+  if (root.isEmpty())
+  {
+    return nominals;
+  }
+
+  const QJsonArray items = root.value("tools").toObject()
+                             .value("measurements").toObject()
+                             .value("items").toArray();
+  for (const QJsonValue& value : items)
+  {
+    const QJsonObject item = value.toObject();
+    const QString id = item.value("id").toString();
+    const double samplePixels = item.value("samplePixels").toDouble(0.0);
+    if (!id.isEmpty() && samplePixels > 0.0)
+    {
+      nominals.insert(id, samplePixels);
+    }
+  }
+  return nominals;
+}
+
+QVector<TestMeasurementReading> parseMeasurementReadings(const QJsonArray& measurements)
+{
+  QVector<TestMeasurementReading> readings;
+  for (const QJsonValue& value : measurements)
+  {
+    const QJsonObject item = value.toObject();
+    TestMeasurementReading reading;
+    reading.id = item.value("id").toString();
+    reading.type = item.value("type").toString();
+    reading.unit = item.value("unit").toString("px");
+    reading.valid = item.value("valid").toBool();
+    reading.valuePixels = item.value("valuePixels").toDouble();
+    reading.hasRealValue = item.value("hasRealValue").toBool();
+    reading.valueReal = item.value("valueReal").toDouble();
+    if (!reading.id.isEmpty())
+    {
+      readings.append(reading);
+    }
+  }
+  return readings;
+}
+
+void applyMeasurementExpectations(
+  QVector<TestMeasurementReading>& readings,
+  const QHash<QString, double>& baselinePixels,
+  const QHash<QString, double>& recipeNominals,
+  bool captureBaseline)
+{
+  for (TestMeasurementReading& reading : readings)
+  {
+    if (!reading.valid)
+    {
+      continue;
+    }
+
+    if (recipeNominals.contains(reading.id))
+    {
+      reading.expectedRecipePixels = recipeNominals.value(reading.id);
+      reading.hasExpectedRecipe = true;
+      reading.recipeErrorPixels =
+        std::abs(reading.valuePixels - reading.expectedRecipePixels);
+    }
+
+    if (captureBaseline)
+    {
+      reading.expectedBaselinePixels = reading.valuePixels;
+      reading.hasExpectedBaseline = true;
+      reading.baselineErrorPixels = 0.0;
+      continue;
+    }
+
+    if (baselinePixels.contains(reading.id))
+    {
+      reading.expectedBaselinePixels = baselinePixels.value(reading.id);
+      reading.hasExpectedBaseline = true;
+      reading.baselineErrorPixels =
+        std::abs(reading.valuePixels - reading.expectedBaselinePixels);
+    }
+  }
+}
+
+double pearsonCorrelation(const QVector<double>& xs, const QVector<double>& ys)
+{
+  if (xs.size() != ys.size() || xs.size() < 2)
+  {
+    return 0.0;
+  }
+
+  double sumX = 0.0;
+  double sumY = 0.0;
+  for (int i = 0; i < xs.size(); ++i)
+  {
+    sumX += xs[i];
+    sumY += ys[i];
+  }
+  const double meanX = sumX / xs.size();
+  const double meanY = sumY / ys.size();
+
+  double numerator = 0.0;
+  double denomX = 0.0;
+  double denomY = 0.0;
+  for (int i = 0; i < xs.size(); ++i)
+  {
+    const double dx = xs[i] - meanX;
+    const double dy = ys[i] - meanY;
+    numerator += dx * dy;
+    denomX += dx * dx;
+    denomY += dy * dy;
+  }
+  if (denomX <= 0.0 || denomY <= 0.0)
+  {
+    return 0.0;
+  }
+  return numerator / std::sqrt(denomX * denomY);
 }
 }
 
@@ -480,6 +640,148 @@ private:
   QVector<TestResult> m_results;
 };
 
+class MeasurementStabilityPlotWidget : public QWidget
+{
+public:
+  explicit MeasurementStabilityPlotWidget(QWidget* parent = nullptr) : QWidget(parent)
+  {
+    setMinimumHeight(230);
+  }
+
+  void setResults(const QVector<TestResult>& results)
+  {
+    m_results = results;
+    update();
+  }
+
+protected:
+  void paintEvent(QPaintEvent*) override
+  {
+    QPainter painter(this);
+    painter.fillRect(rect(), QColor("#111820"));
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setPen(QColor("#e8edf2"));
+    painter.drawText(
+      QRect(12, 8, width() - 24, 24),
+      Qt::AlignLeft,
+      "Angolo atteso → errore misura (px)");
+    const QRectF area(52, 38, width() - 70, height() - 72);
+    painter.setPen(QColor("#596572"));
+    painter.drawRect(area);
+
+    struct Point
+    {
+      double angle = 0.0;
+      double error = 0.0;
+      QString id;
+      int pass = 1;
+    };
+    QVector<Point> points;
+    for (const TestResult& result : m_results)
+    {
+      if (!result.valid)
+      {
+        continue;
+      }
+      for (const TestMeasurementReading& reading : result.measurements)
+      {
+        if (!reading.valid || !reading.hasExpectedBaseline)
+        {
+          continue;
+        }
+        points.append({
+          result.expectedAngle,
+          reading.baselineErrorPixels,
+          reading.id,
+          result.pose.pass
+        });
+      }
+    }
+    if (points.isEmpty())
+    {
+      painter.drawText(area, Qt::AlignCenter, "Nessuna misura valida");
+      return;
+    }
+
+    double minX = points.first().angle;
+    double maxX = minX;
+    double maxY = 0.001;
+    for (const Point& point : points)
+    {
+      minX = std::min(minX, point.angle);
+      maxX = std::max(maxX, point.angle);
+      maxY = std::max(maxY, point.error);
+    }
+    if (std::abs(maxX - minX) < 0.001)
+    {
+      maxX = minX + 1.0;
+    }
+
+    auto mapPoint = [&](double x, double y) {
+      return QPointF(
+        area.left() + (x - minX) / (maxX - minX) * area.width(),
+        area.bottom() - y / maxY * area.height());
+    };
+
+    const QVector<QColor> colors = {
+      QColor("#4da3ff"), QColor("#40c980"), QColor("#ffad42"),
+      QColor("#d576ff"), QColor("#ff667a")
+    };
+    QMap<QString, int> colorById;
+    int colorIndex = 0;
+    QMap<int, QVector<Point>> byPass;
+    for (const Point& point : points)
+    {
+      if (!colorById.contains(point.id))
+      {
+        colorById.insert(point.id, colorIndex++);
+      }
+      byPass[point.pass].append(point);
+    }
+
+    for (auto passIt = byPass.cbegin(); passIt != byPass.cend(); ++passIt)
+    {
+      QMap<QString, QVector<Point>> grouped;
+      for (const Point& point : passIt.value())
+      {
+        grouped[point.id].append(point);
+      }
+      for (auto groupIt = grouped.cbegin(); groupIt != grouped.cend(); ++groupIt)
+      {
+        const QColor color = colors[colorById.value(groupIt.key()) % colors.size()];
+        painter.setPen(QPen(color, 2));
+        QPointF previous;
+        bool hasPrevious = false;
+        QVector<Point> sorted = groupIt.value();
+        std::sort(sorted.begin(), sorted.end(), [](const Point& a, const Point& b) {
+          return a.angle < b.angle;
+        });
+        for (const Point& point : sorted)
+        {
+          const QPointF current = mapPoint(point.angle, point.error);
+          if (hasPrevious)
+          {
+            painter.drawLine(previous, current);
+          }
+          painter.setBrush(color);
+          painter.drawEllipse(current, 4, 4);
+          previous = current;
+          hasPrevious = true;
+        }
+      }
+    }
+
+    painter.setPen(QColor("#aab4be"));
+    painter.drawText(8, area.top() + 12, QString::number(maxY, 'f', 3));
+    painter.drawText(8, area.bottom(), "0");
+    painter.drawText(area.left(), height() - 12, QString::number(minX, 'f', 1) + "°");
+    painter.drawText(area.right() - 45, height() - 12, QString::number(maxX, 'f', 1) + "°");
+  }
+
+private:
+  QVector<TestResult> m_results;
+};
+
 class TestVisionWindow : public QMainWindow
 {
 public:
@@ -554,6 +856,11 @@ public:
     m_campaign = campaign;
     m_campaignItems = items;
     m_campaignCycles = qMax(1, campaign.value("cycles").toInt(1));
+    if (campaign.contains("executionProfile"))
+    {
+      applyExecutionProfile(testVisionExecutionProfileFromJson(
+        campaign.value("executionProfile").toObject()));
+    }
     m_startCampaignButton->setEnabled(true);
     appendLog(QString("Campagna caricata: %1 | prove=%2 | cicli=%3 | multicamera=%4")
       .arg(campaign.value("name").toString(QFileInfo(path).completeBaseName()))
@@ -664,6 +971,22 @@ private:
     m_angleMax = doubleSpin(45.0, -360.0, 360.0, 5.0);
     m_angleStep = doubleSpin(15.0, 0.001, 360.0, 5.0);
     m_pixelSize = doubleSpin(0.0654, 0.000001, 1000.0, 0.001, 6);
+    m_resolutionCombo = new QComboBox(configPanel);
+    m_resolutionCombo->addItem("640 × 480", QVariant::fromValue(QSize(640, 480)));
+    m_resolutionCombo->addItem("1280 × 720", QVariant::fromValue(QSize(1280, 720)));
+    m_resolutionCombo->addItem("1920 × 1080", QVariant::fromValue(QSize(1920, 1080)));
+    m_resolutionCombo->addItem("2048 × 1536", QVariant::fromValue(QSize(2048, 1536)));
+    m_resolutionCombo->addItem("Personalizzata", QVariant::fromValue(QSize(-1, -1)));
+    m_canvasWidthSpin = new QSpinBox(configPanel);
+    m_canvasWidthSpin->setRange(64, 8192);
+    m_canvasWidthSpin->setSingleStep(16);
+    m_canvasWidthSpin->setValue(640);
+    m_canvasHeightSpin = new QSpinBox(configPanel);
+    m_canvasHeightSpin->setRange(64, 8192);
+    m_canvasHeightSpin->setSingleStep(16);
+    m_canvasHeightSpin->setValue(480);
+    m_canvasSizeLabel = new QLabel(configPanel);
+    m_canvasSizeLabel->setWordWrap(true);
     m_shapeCombo = new QComboBox(configPanel);
     m_shapeCombo->addItem("Croce asimmetrica", "cross");
     m_shapeCombo->addItem("Rettangolo asimmetrico", "rectangle");
@@ -723,6 +1046,10 @@ private:
     m_intervalMs->setValue(200);
     form->addRow("Target telecamera", m_cameraCombo);
     form->addRow("Shape campione", m_shapeCombo);
+    form->addRow("Risoluzione immagine", m_resolutionCombo);
+    form->addRow("Larghezza (px)", m_canvasWidthSpin);
+    form->addRow("Altezza (px)", m_canvasHeightSpin);
+    form->addRow("", m_canvasSizeLabel);
     form->addRow("Strategia da testare", m_strategyCombo);
     form->addRow("Ricetta Vision", m_recipeCombo);
     form->addRow("X minimo (mm)", m_xMin);
@@ -739,9 +1066,19 @@ private:
     form->addRow("Intervallo frame (ms)", m_intervalMs);
     m_sendOnlyCheck = new QCheckBox("Solo invio immagini (non attendere risultati)", configPanel);
     m_sendOnlyCheck->setToolTip(
-      "Invia i frame al ritmo configurato senza aspettare la risposta di Vision.");
+      "Modalità raffica: invia i frame al ritmo configurato senza attendere risultati "
+      "né aggiornare tabelle e report.");
     form->addRow(m_sendOnlyCheck);
     configLayout->addLayout(form);
+
+    auto* profileButtons = new QHBoxLayout();
+    auto* saveScenarioProfileButton = new QPushButton("Salva impostazioni nello scenario", configPanel);
+    auto* saveProfileButton = new QPushButton("Salva profilo...", configPanel);
+    auto* loadProfileButton = new QPushButton("Carica profilo...", configPanel);
+    profileButtons->addWidget(saveScenarioProfileButton);
+    profileButtons->addWidget(saveProfileButton);
+    profileButtons->addWidget(loadProfileButton);
+    configLayout->addLayout(profileButtons);
 
     m_totalLabel = new QLabel(configPanel);
     m_totalLabel->setWordWrap(true);
@@ -836,7 +1173,30 @@ private:
     analysisLayout->addWidget(plots);
     m_repeatabilityPlot = new RepeatabilityPlotWidget(analysis);
     analysisLayout->addWidget(m_repeatabilityPlot);
-    tabs->addTab(analysis, "Analisi");
+    tabs->addTab(analysis, "Analisi posa");
+
+    auto* measurementAnalysis = new QWidget(tabs);
+    auto* measurementLayout = new QVBoxLayout(measurementAnalysis);
+    m_measurementSummaryLabel = new QLabel(
+      "Le misure su un corpo rigido devono restare costanti con rotazione/traslazione. "
+      "Confronto vs frame zero (baseline) e vs samplePixels in ricetta.",
+      measurementAnalysis);
+    m_measurementSummaryLabel->setWordWrap(true);
+    measurementLayout->addWidget(m_measurementSummaryLabel);
+    m_measurementTable = new QTableWidget(measurementAnalysis);
+    m_measurementTable->setColumnCount(13);
+    m_measurementTable->setHorizontalHeaderLabels({
+      "Posa", "Giro", "Angolo°", "Misura", "Tipo",
+      "Valore px", "Baseline px", "Δ baseline px",
+      "Ricetta px", "Δ ricetta px",
+      "Err. centro", "Err. angolo", "ms"
+    });
+    m_measurementTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    m_measurementTable->setAlternatingRowColors(true);
+    measurementLayout->addWidget(m_measurementTable, 1);
+    m_measurementPlot = new MeasurementStabilityPlotWidget(measurementAnalysis);
+    measurementLayout->addWidget(m_measurementPlot);
+    tabs->addTab(measurementAnalysis, "Analisi misure");
 
     auto* multiAnalysis = new QWidget(tabs);
     auto* multiAnalysisLayout = new QVBoxLayout(multiAnalysis);
@@ -923,7 +1283,25 @@ private:
     connect(m_loadCampaignButton, &QPushButton::clicked, this, [this]() { loadCampaign(); });
     connect(m_editCampaignButton, &QPushButton::clicked, this, [this]() { editCampaign(); });
     connect(m_startCampaignButton, &QPushButton::clicked, this, [this]() { startCampaign(); });
+    connect(saveScenarioProfileButton, &QPushButton::clicked, this, [this]() {
+      saveExecutionProfileToScenario();
+    });
+    connect(saveProfileButton, &QPushButton::clicked, this, [this]() {
+      saveExecutionProfileToFile();
+    });
+    connect(loadProfileButton, &QPushButton::clicked, this, [this]() {
+      loadExecutionProfileFromFile();
+    });
     connect(m_shapeCombo, &QComboBox::currentIndexChanged, this, [this]() { updateMasterShape(); });
+    connect(m_resolutionCombo, &QComboBox::currentIndexChanged, this, [this]() {
+      applySelectedResolutionPreset();
+    });
+    connect(m_canvasWidthSpin, &QSpinBox::valueChanged, this, [this](int) {
+      onCanvasSpinboxChanged();
+    });
+    connect(m_canvasHeightSpin, &QSpinBox::valueChanged, this, [this](int) {
+      onCanvasSpinboxChanged();
+    });
     connect(m_recipeCombo, &QComboBox::currentTextChanged, this, [this](const QString& text) {
       m_expectedRecipeId = text.trimmed();
       updateScenarioLabel();
@@ -979,14 +1357,166 @@ private:
     connect(&m_sendTimer, &QTimer::timeout, this, [this]() { sendNextFrame(); });
   }
 
+  TestVisionExecutionProfile currentExecutionProfile() const
+  {
+    TestVisionExecutionProfile profile;
+    if (!m_shapeCombo)
+    {
+      return profile;
+    }
+
+    profile.shapeId = m_shapeCombo->currentData().toString();
+    profile.strategyId = m_strategyCombo->currentData().toString();
+    profile.recipeId = m_recipeCombo->currentText().trimmed();
+    profile.cameraId = m_cameraCombo->currentData().toString();
+    if (profile.cameraId == "SELECTED")
+    {
+      profile.cameraId = m_scenario.value("cameraId").toString();
+    }
+    profile.pixelSizeMm = m_pixelSize->value();
+    profile.passes = m_passes->value();
+    profile.intervalMs = m_intervalMs->value();
+    profile.xMinMm = m_xMin->value();
+    profile.xMaxMm = m_xMax->value();
+    profile.xStepMm = m_xStep->value();
+    profile.yMinMm = m_yMin->value();
+    profile.yMaxMm = m_yMax->value();
+    profile.yStepMm = m_yStep->value();
+    profile.angleMinDeg = m_angleMin->value();
+    profile.angleMaxDeg = m_angleMax->value();
+    profile.angleStepDeg = m_angleStep->value();
+    profile.canvasWidth = m_canvasWidthSpin->value();
+    profile.canvasHeight = m_canvasHeightSpin->value();
+    profile.canvasBackground = m_canvasBackground;
+    profile.frameDeliveryMode = m_sendOnlyCheck && m_sendOnlyCheck->isChecked()
+      ? TestVisionFrameDeliveryMode::SendOnly
+      : TestVisionFrameDeliveryMode::CollectResults;
+    return profile;
+  }
+
+  void applyExecutionProfile(const TestVisionExecutionProfile& profile)
+  {
+    if (!m_shapeCombo)
+    {
+      return;
+    }
+
+    const int shapeIndex = m_shapeCombo->findData(profile.shapeId);
+    if (shapeIndex >= 0)
+    {
+      m_shapeCombo->setCurrentIndex(shapeIndex);
+    }
+    if (!profile.strategyId.isEmpty())
+    {
+      const int strategyIndex = m_strategyCombo->findData(profile.strategyId);
+      if (strategyIndex >= 0)
+      {
+        m_strategyCombo->setCurrentIndex(strategyIndex);
+      }
+    }
+    if (!profile.recipeId.isEmpty())
+    {
+      const int recipeIndex = m_recipeCombo->findText(profile.recipeId);
+      if (recipeIndex >= 0)
+      {
+        m_recipeCombo->setCurrentIndex(recipeIndex);
+      }
+    }
+    if (!profile.cameraId.isEmpty())
+    {
+      const int cameraIndex = m_cameraCombo->findData(profile.cameraId);
+      if (cameraIndex >= 0)
+      {
+        m_cameraCombo->setCurrentIndex(cameraIndex);
+      }
+      selectBroadcastCamera(profile.cameraId);
+    }
+
+    m_pixelSize->setValue(profile.pixelSizeMm);
+    m_xMin->setValue(profile.xMinMm);
+    m_xMax->setValue(profile.xMaxMm);
+    m_xStep->setValue(profile.xStepMm);
+    m_yMin->setValue(profile.yMinMm);
+    m_yMax->setValue(profile.yMaxMm);
+    m_yStep->setValue(profile.yStepMm);
+    m_angleMin->setValue(profile.angleMinDeg);
+    m_angleMax->setValue(profile.angleMaxDeg);
+    m_angleStep->setValue(profile.angleStepDeg);
+    m_passes->setValue(qMax(1, profile.passes));
+    m_intervalMs->setValue(qMax(0, profile.intervalMs));
+    setCanvasSize(profile.canvasWidth, profile.canvasHeight, profile.canvasBackground);
+    setSendOnlyMode(profile.frameDeliveryMode == TestVisionFrameDeliveryMode::SendOnly);
+    updateMasterShape();
+    updatePlanCount();
+  }
+
+  void saveExecutionProfileToScenario()
+  {
+    QString error;
+    if (!testVisionSaveScenarioExecutionProfile(
+          m_scenarioPath, currentExecutionProfile(), &error))
+    {
+      QMessageBox::warning(this, "TestVision", error);
+      return;
+    }
+
+    m_scenario = loadJson(m_scenarioPath, &error);
+    appendLog("Impostazioni salvate nello scenario: " + QDir::toNativeSeparators(m_scenarioPath));
+    m_stateLabel->setText("Impostazioni salvate nello scenario");
+  }
+
+  void saveExecutionProfileToFile()
+  {
+    const QString path = QFileDialog::getSaveFileName(
+      this,
+      "Salva profilo TestVision",
+      QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath("tests/profiles/profilo_test.json"),
+      "Profili JSON (*.json)");
+    if (path.isEmpty())
+    {
+      return;
+    }
+
+    QString error;
+    if (!testVisionSaveExecutionProfileFile(path, currentExecutionProfile(), &error))
+    {
+      QMessageBox::warning(this, "TestVision", error);
+      return;
+    }
+
+    appendLog("Profilo salvato: " + QDir::toNativeSeparators(path));
+    m_stateLabel->setText("Profilo salvato");
+  }
+
+  void loadExecutionProfileFromFile()
+  {
+    const QString path = QFileDialog::getOpenFileName(
+      this,
+      "Carica profilo TestVision",
+      QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath("tests/profiles"),
+      "Profili JSON (*.json)");
+    if (path.isEmpty())
+    {
+      return;
+    }
+
+    TestVisionExecutionProfile profile;
+    QString error;
+    if (!testVisionLoadExecutionProfileFile(path, &profile, &error))
+    {
+      QMessageBox::warning(this, "TestVision", error);
+      return;
+    }
+
+    applyExecutionProfile(profile);
+    appendLog("Profilo caricato: " + QDir::toNativeSeparators(path));
+    m_stateLabel->setText("Profilo caricato");
+  }
+
   bool loadScenario(QString* error)
   {
     m_scenario = loadJson(m_scenarioPath, error);
     if (m_scenario.isEmpty()) return false;
-    const QJsonObject canvas = m_scenario.value("canvas").toObject();
-    m_canvasWidth = canvas.value("width").toInt(640);
-    m_canvasHeight = canvas.value("height").toInt(480);
-    m_canvasBackground = canvas.value("background").toInt(240);
     const QDir projectRoot = QFileInfo(m_scenarioPath).dir();
     QDir recipesDirectory(projectRoot.absoluteFilePath("../../recipes"));
     const QFileInfoList recipeDirectories =
@@ -1021,6 +1551,7 @@ private:
       m_cameraCombo->setCurrentIndex(0);
     }
     selectBroadcastCamera(cameraId);
+    applyExecutionProfile(testVisionExecutionProfileFromScenario(m_scenario));
     updateMasterShape();
     const QDir scenarioDir = QFileInfo(m_scenarioPath).dir();
     const QString masterPath = scenarioDir.absoluteFilePath(
@@ -1036,6 +1567,97 @@ private:
       m_preview->size(), Qt::KeepAspectRatio, Qt::FastTransformation));
     updatePlanCount();
     return true;
+  }
+
+  void setCanvasSize(int width, int height, int background = -1)
+  {
+    if (!m_canvasWidthSpin || !m_canvasHeightSpin)
+    {
+      return;
+    }
+
+    m_syncingResolution = true;
+    m_canvasWidth = qMax(1, width);
+    m_canvasHeight = qMax(1, height);
+    if (background >= 0)
+    {
+      m_canvasBackground = background;
+    }
+    m_canvasWidthSpin->setValue(m_canvasWidth);
+    m_canvasHeightSpin->setValue(m_canvasHeight);
+    syncResolutionComboFromCanvas();
+    updateCanvasSizeLabel();
+    m_syncingResolution = false;
+  }
+
+  void syncResolutionComboFromCanvas()
+  {
+    if (!m_resolutionCombo)
+    {
+      return;
+    }
+
+    const QSize current(m_canvasWidth, m_canvasHeight);
+    for (int index = 0; index < m_resolutionCombo->count() - 1; ++index)
+    {
+      if (m_resolutionCombo->itemData(index).toSize() == current)
+      {
+        m_resolutionCombo->setCurrentIndex(index);
+        return;
+      }
+    }
+
+    m_resolutionCombo->setCurrentIndex(m_resolutionCombo->count() - 1);
+  }
+
+  void applySelectedResolutionPreset()
+  {
+    if (!m_resolutionCombo || m_syncingResolution)
+    {
+      return;
+    }
+
+    const QSize preset = m_resolutionCombo->currentData().toSize();
+    if (preset.width() > 0 && preset.height() > 0)
+    {
+      setCanvasSize(preset.width(), preset.height());
+      updateMasterShape();
+    }
+  }
+
+  void onCanvasSpinboxChanged()
+  {
+    if (!m_canvasWidthSpin || !m_canvasHeightSpin || m_syncingResolution)
+    {
+      return;
+    }
+
+    m_canvasWidth = m_canvasWidthSpin->value();
+    m_canvasHeight = m_canvasHeightSpin->value();
+    m_syncingResolution = true;
+    syncResolutionComboFromCanvas();
+    updateCanvasSizeLabel();
+    m_syncingResolution = false;
+    updateMasterShape();
+  }
+
+  void updateCanvasSizeLabel()
+  {
+    if (!m_canvasSizeLabel)
+    {
+      return;
+    }
+
+    const QString warning = testVisionCanvasSizeWarning(m_canvasWidth, m_canvasHeight);
+    if (testVisionCanvasFitsProtocol(m_canvasWidth, m_canvasHeight))
+    {
+      m_canvasSizeLabel->setStyleSheet({});
+    }
+    else
+    {
+      m_canvasSizeLabel->setStyleSheet("color:#ff8a65;");
+    }
+    m_canvasSizeLabel->setText(warning);
   }
 
   void updateMasterShape()
@@ -1140,8 +1762,8 @@ private:
     sample["shapeId"] = m_shapeCombo->currentData().toString();
     sample["strategyId"] = m_strategyCombo->currentData().toString();
     sample["recipeId"] = m_expectedRecipeId;
-    sample["imageFormat"] = "jpg";
-    sample["imageBase64"] = QString::fromLatin1(jpegBase64(m_master));
+    sample["imageFormat"] = SimulatorProtocol::kPreferredImageFormat;
+    sample["imageBase64"] = SimulatorProtocol::encodeImageBase64(m_master);
     QByteArray payload = QJsonDocument(sample).toJson(QJsonDocument::Compact);
     payload.append('\n');
     DWORD written = 0;
@@ -1290,6 +1912,8 @@ private:
       QMessageBox::warning(this, "Campagna TestVision", "Aggiungi almeno una prova.");
       return;
     }
+    QJsonObject campaignToSave = campaign;
+    campaignToSave["executionProfile"] = testVisionExecutionProfileToJson(currentExecutionProfile());
     QString suggestedPath = m_campaignPath;
     if (suggestedPath.isEmpty())
     {
@@ -1313,9 +1937,9 @@ private:
       QMessageBox::warning(this, "Campagna TestVision", "Impossibile salvare " + path);
       return;
     }
-    file.write(QJsonDocument(campaign).toJson(QJsonDocument::Indented));
+    file.write(QJsonDocument(campaignToSave).toJson(QJsonDocument::Indented));
     m_campaignPath = path;
-    m_campaign = campaign;
+    m_campaign = campaignToSave;
     m_campaignItems = campaign.value("items").toArray();
     m_campaignCycles = qMax(1, campaign.value("cycles").toInt(1));
     m_startCampaignButton->setEnabled(true);
@@ -1363,6 +1987,23 @@ private:
     m_angleStep->setValue(item.value("angleStepDeg").toDouble(m_angleStep->value()));
     m_passes->setValue(qMax(1, item.value("passes").toInt(m_passes->value())));
     m_intervalMs->setValue(qMax(0, item.value("intervalMs").toInt(m_intervalMs->value())));
+    if (item.contains("pixelSizeMm"))
+    {
+      m_pixelSize->setValue(item.value("pixelSizeMm").toDouble(m_pixelSize->value()));
+    }
+    if (item.contains("canvasWidth") || item.contains("canvasHeight"))
+    {
+      setCanvasSize(
+        item.value("canvasWidth").toInt(m_canvasWidth),
+        item.value("canvasHeight").toInt(m_canvasHeight),
+        item.value("canvasBackground").toInt(m_canvasBackground));
+    }
+    if (item.contains("frameDeliveryMode") || item.contains("sendOnly"))
+    {
+      const TestVisionExecutionProfile profile =
+        testVisionExecutionProfileFromJson(item, currentExecutionProfile());
+      setSendOnlyMode(profile.frameDeliveryMode == TestVisionFrameDeliveryMode::SendOnly);
+    }
     updateMasterShape();
   }
 
@@ -1733,6 +2374,9 @@ private:
       {"recipeId", m_recipeCombo->currentText().trimmed()},
       {"strategyId", strategyId},
       {"shapeId", m_shapeCombo->currentData().toString()},
+      {"canvasWidth", m_canvasWidthSpin->value()},
+      {"canvasHeight", m_canvasHeightSpin->value()},
+      {"canvasBackground", m_canvasBackground},
       {"passes", m_passes->value()},
       {"intervalMs", m_intervalMs->value()},
       {"xMinMm", m_xMin->value()},
@@ -2064,6 +2708,10 @@ private:
     m_hasBaseline = false;
     m_baselineResult = {};
     m_baselinePose = {};
+    m_baselineMeasurementPixels.clear();
+    m_recipeMeasurementNominals = loadRecipeMeasurementNominals(
+      m_recipeCombo->currentText().trimmed(),
+      m_cameraCombo->currentData().toString());
     refreshAnalysis();
     m_startButton->setEnabled(false);
     m_stopButton->setEnabled(true);
@@ -2279,9 +2927,8 @@ private:
 
     if (m_hasBaseline)
     {
-      const QJsonObject canvas = m_scenario.value("canvas").toObject();
-      const double rotationCenterX = canvas.value("width").toDouble(640.0) * 0.5;
-      const double rotationCenterY = canvas.value("height").toDouble(480.0) * 0.5;
+      const double rotationCenterX = (m_canvasWidth - 1) * 0.5;
+      const double rotationCenterY = (m_canvasHeight - 1) * 0.5;
       const double deltaAngle =
         m_currentPose.angleDeg - m_baselinePose.angleDeg;
       const double radians = -deltaAngle * CV_PI / 180.0;
@@ -2340,8 +2987,8 @@ private:
     frame["strategyId"] = m_strategyCombo->currentData().toString();
     frame["recipeId"] = m_expectedRecipeId;
     frame["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODateWithMs);
-    frame["imageFormat"] = "jpg";
-    frame["imageBase64"] = QString::fromLatin1(jpegBase64(m_currentImage));
+    frame["imageFormat"] = SimulatorProtocol::kPreferredImageFormat;
+    frame["imageBase64"] = SimulatorProtocol::encodeImageBase64(m_currentImage);
     m_lastProcessingError.clear();
     m_abortCurrentCampaignItem = false;
 
@@ -2437,6 +3084,24 @@ private:
     result.actualX = pose.value("x").toDouble();
     result.actualY = pose.value("y").toDouble();
     result.actualAngle = pose.value("angleDeg").toDouble();
+    result.measurements = parseMeasurementReadings(message.value("measurements").toArray());
+
+    const bool captureBaseline = !m_hasBaseline && result.valid;
+    applyMeasurementExpectations(
+      result.measurements,
+      m_baselineMeasurementPixels,
+      m_recipeMeasurementNominals,
+      captureBaseline);
+    if (captureBaseline)
+    {
+      for (const TestMeasurementReading& reading : result.measurements)
+      {
+        if (reading.valid)
+        {
+          m_baselineMeasurementPixels.insert(reading.id, reading.valuePixels);
+        }
+      }
+    }
 
     if (!m_hasBaseline && result.valid)
     {
@@ -2490,7 +3155,134 @@ private:
     }
     m_lastProcessingError.clear();
     appendResultRow(result);
+    refreshMeasurementAnalysis();
     refreshAnalysis();
+  }
+
+  void refreshMeasurementAnalysis()
+  {
+    if (!m_measurementTable)
+    {
+      return;
+    }
+
+    m_measurementTable->setRowCount(0);
+    if (m_results.isEmpty())
+    {
+      if (m_measurementSummaryLabel)
+      {
+        m_measurementSummaryLabel->setText("Nessun dato misura");
+      }
+      if (m_measurementPlot)
+      {
+        m_measurementPlot->setResults({});
+      }
+      return;
+    }
+
+    double maxBaselineError = 0.0;
+    double maxRecipeError = 0.0;
+    double sumBaselineError = 0.0;
+    int baselineCount = 0;
+    QVector<double> centerErrors;
+    QVector<double> measurementErrors;
+    QHash<QString, double> maxErrorById;
+
+    for (const TestResult& result : m_results)
+    {
+      for (const TestMeasurementReading& reading : result.measurements)
+      {
+        const int row = m_measurementTable->rowCount();
+        m_measurementTable->insertRow(row);
+        QStringList values = {
+          QString::number(result.pose.poseIndex),
+          QString::number(result.pose.pass),
+          QString::number(result.expectedAngle, 'f', 2),
+          reading.id,
+          reading.type,
+          QString::number(reading.valuePixels, 'f', 3),
+          reading.hasExpectedBaseline
+            ? QString::number(reading.expectedBaselinePixels, 'f', 3)
+            : "-",
+          reading.hasExpectedBaseline
+            ? QString::number(reading.baselineErrorPixels, 'f', 3)
+            : "-",
+          reading.hasExpectedRecipe
+            ? QString::number(reading.expectedRecipePixels, 'f', 3)
+            : "-",
+          reading.hasExpectedRecipe
+            ? QString::number(reading.recipeErrorPixels, 'f', 3)
+            : "-",
+          QString::number(result.centerError, 'f', 3),
+          QString::number(result.angleError, 'f', 3),
+          QString::number(result.processingMs, 'f', 1)
+        };
+        for (int column = 0; column < values.size(); ++column)
+        {
+          auto* item = new QTableWidgetItem(values[column]);
+          if (!result.valid || !reading.valid)
+          {
+            item->setBackground(QColor("#7a2633"));
+          }
+          m_measurementTable->setItem(row, column, item);
+        }
+
+        if (result.valid && reading.valid && reading.hasExpectedBaseline)
+        {
+          sumBaselineError += reading.baselineErrorPixels;
+          ++baselineCount;
+          maxBaselineError = std::max(maxBaselineError, reading.baselineErrorPixels);
+          centerErrors.append(result.centerError);
+          measurementErrors.append(reading.baselineErrorPixels);
+          maxErrorById[reading.id] =
+            std::max(maxErrorById.value(reading.id, 0.0), reading.baselineErrorPixels);
+        }
+        if (reading.valid && reading.hasExpectedRecipe)
+        {
+          maxRecipeError = std::max(maxRecipeError, reading.recipeErrorPixels);
+        }
+      }
+    }
+
+    const double correlation = pearsonCorrelation(centerErrors, measurementErrors);
+    QString summary =
+      QString("Misure analizzate: %1 righe | Δ baseline medio/max: %2 / %3 px")
+        .arg(baselineCount)
+        .arg(baselineCount > 0 ? sumBaselineError / baselineCount : 0.0, 0, 'f', 3)
+        .arg(maxBaselineError, 0, 'f', 3);
+    if (!m_recipeMeasurementNominals.isEmpty())
+    {
+      summary += QString(" | Δ ricetta max: %1 px").arg(maxRecipeError, 0, 'f', 3);
+    }
+    if (baselineCount >= 2)
+    {
+      summary += QString(" | Correlazione err. centro ↔ err. misura: %1")
+                   .arg(correlation, 0, 'f', 3);
+      if (std::abs(correlation) > 0.6)
+      {
+        summary += " (la misura segue l'errore di posa: verificare localizzazione/edge)";
+      }
+      else if (maxBaselineError > 1.0)
+      {
+        summary += " (drift misura non spiegato solo dalla posa: verificare geometrie)";
+      }
+      else
+      {
+        summary += " (misure stabili rispetto al pezzo)";
+      }
+    }
+    for (auto it = maxErrorById.cbegin(); it != maxErrorById.cend(); ++it)
+    {
+      summary += QString(" | %1 max Δ=%2 px").arg(it.key()).arg(it.value(), 0, 'f', 3);
+    }
+    if (m_measurementSummaryLabel)
+    {
+      m_measurementSummaryLabel->setText(summary);
+    }
+    if (m_measurementPlot)
+    {
+      m_measurementPlot->setResults(m_results);
+    }
   }
 
   void appendResultRow(const TestResult& result)
@@ -2533,6 +3325,7 @@ private:
       m_anglePlot->setResults({});
       m_centerPlot->setResults({});
       m_repeatabilityPlot->setResults({});
+      refreshMeasurementAnalysis();
       return;
     }
 
@@ -2594,6 +3387,7 @@ private:
     m_anglePlot->setResults(m_results);
     m_centerPlot->setResults(m_results);
     m_repeatabilityPlot->setResults(m_results);
+    refreshMeasurementAnalysis();
   }
 
   void finishTest()
@@ -2626,6 +3420,21 @@ private:
       item["angleErrorDeg"] = result.angleError;
       item["processingMs"] = result.processingMs;
       item["valid"] = result.valid;
+      QJsonArray measurements;
+      for (const TestMeasurementReading& reading : result.measurements)
+      {
+        QJsonObject measurement;
+        measurement["id"] = reading.id;
+        measurement["type"] = reading.type;
+        measurement["valid"] = reading.valid;
+        measurement["valuePixels"] = reading.valuePixels;
+        measurement["baselineErrorPixels"] = reading.baselineErrorPixels;
+        measurement["recipeErrorPixels"] = reading.recipeErrorPixels;
+        measurement["expectedBaselinePixels"] = reading.expectedBaselinePixels;
+        measurement["expectedRecipePixels"] = reading.expectedRecipePixels;
+        measurements.append(measurement);
+      }
+      item["measurements"] = measurements;
       frames.append(item);
     }
     QJsonObject report;
@@ -2636,6 +3445,12 @@ private:
     report["strategyId"] = m_strategyCombo->currentData().toString();
     report["recipeId"] = m_recipeCombo->currentText().trimmed();
     report["cameraId"] = m_cameraCombo->currentData().toString();
+    QJsonObject recipeNominals;
+    for (auto it = m_recipeMeasurementNominals.cbegin(); it != m_recipeMeasurementNominals.cend(); ++it)
+    {
+      recipeNominals[it.key()] = it.value();
+    }
+    report["recipeMeasurementNominalsPx"] = recipeNominals;
     report["frames"] = frames;
     const QDir scenarioDir = QFileInfo(m_scenarioPath).dir();
     const QString path = scenarioDir.absoluteFilePath(m_scenario.value("output").toString());
@@ -2670,6 +3485,8 @@ private:
   bool m_hasBaseline = false;
   TestPose m_baselinePose;
   TestResult m_baselineResult;
+  QHash<QString, double> m_baselineMeasurementPixels;
+  QHash<QString, double> m_recipeMeasurementNominals;
 
   QLabel* m_preview = nullptr;
   QLabel* m_scenarioLabel = nullptr;
@@ -2683,6 +3500,9 @@ private:
   QPushButton* m_startButton = nullptr;
   QPushButton* m_stopButton = nullptr;
   QTableWidget* m_table = nullptr;
+  QTableWidget* m_measurementTable = nullptr;
+  QLabel* m_measurementSummaryLabel = nullptr;
+  MeasurementStabilityPlotWidget* m_measurementPlot = nullptr;
   PlotWidget* m_anglePlot = nullptr;
   PlotWidget* m_centerPlot = nullptr;
   RepeatabilityPlotWidget* m_repeatabilityPlot = nullptr;
@@ -2698,6 +3518,10 @@ private:
   QDoubleSpinBox* m_pixelSize = nullptr;
   QSpinBox* m_passes = nullptr;
   QSpinBox* m_intervalMs = nullptr;
+  QComboBox* m_resolutionCombo = nullptr;
+  QSpinBox* m_canvasWidthSpin = nullptr;
+  QSpinBox* m_canvasHeightSpin = nullptr;
+  QLabel* m_canvasSizeLabel = nullptr;
   QComboBox* m_shapeCombo = nullptr;
   QComboBox* m_strategyCombo = nullptr;
   QComboBox* m_recipeCombo = nullptr;
@@ -2723,6 +3547,7 @@ private:
   int m_canvasWidth = 640;
   int m_canvasHeight = 480;
   int m_canvasBackground = 240;
+  bool m_syncingResolution = false;
   bool m_pendingSample = false;
   bool m_sendOnlyMode = false;
   QString m_expectedRecipeId;

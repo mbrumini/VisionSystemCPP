@@ -3,19 +3,36 @@
 #include "geometry/GeometrySet.h"
 #include "gui/geometry/GeometryDisplayNames.h"
 
+#include <QHash>
+
+#include "geometry/ArcGeometry.h"
+#include "geometry/CircleGeometry.h"
+
 namespace
 {
+thread_local QVector<PointGeometry> g_syntheticMeasurePoints;
+
 QString pointSourceId(const QString& prefix, int index, const PointGeometry& point)
 {
   return QString("%1:%2:%3").arg(prefix).arg(index).arg(point.meta.id);
+}
+
+PointGeometry centerAsPoint(const GeometryMeta& meta, const cv::Point2d& center)
+{
+  PointGeometry point;
+  point.point = center;
+  point.meta = meta;
+  point.meta.valid = true;
+  return point;
 }
 }
 
 QVector<ConstructedGeometryPointSource> constructedGeometryPointSources(const GeometrySet& set,
                                                                         const QHash<QString, QString>& aliases)
 {
+  g_syntheticMeasurePoints.clear();
   QVector<ConstructedGeometryPointSource> sources;
-  sources.reserve(set.points.size() + set.constructedPoints.size());
+  sources.reserve(set.points.size() + set.constructedPoints.size() + set.circles.size() + set.arcs.size());
 
   for (int i = 0; i < set.points.size(); ++i)
   {
@@ -33,6 +50,30 @@ QVector<ConstructedGeometryPointSource> constructedGeometryPointSources(const Ge
     ConstructedGeometryPointSource source;
     source.id = pointSourceId("constructed", i, point);
     source.label = GeometryDisplayNames::pointSourceLabel("C", i, point, aliases);
+    source.point = &point;
+    sources.append(source);
+  }
+
+  for (int i = 0; i < set.circles.size(); ++i)
+  {
+    const CircleGeometry& circle = set.circles[i];
+    g_syntheticMeasurePoints.append(centerAsPoint(circle.meta, circle.center));
+    const PointGeometry& point = g_syntheticMeasurePoints.last();
+    ConstructedGeometryPointSource source;
+    source.id = pointSourceId("circle", i, point);
+    source.label = GeometryDisplayNames::pointSourceLabel("O", i, point, aliases);
+    source.point = &point;
+    sources.append(source);
+  }
+
+  for (int i = 0; i < set.arcs.size(); ++i)
+  {
+    const ArcGeometry& arc = set.arcs[i];
+    g_syntheticMeasurePoints.append(centerAsPoint(arc.meta, arc.center));
+    const PointGeometry& point = g_syntheticMeasurePoints.last();
+    ConstructedGeometryPointSource source;
+    source.id = pointSourceId("arc", i, point);
+    source.label = GeometryDisplayNames::pointSourceLabel("A", i, point, aliases);
     source.point = &point;
     sources.append(source);
   }

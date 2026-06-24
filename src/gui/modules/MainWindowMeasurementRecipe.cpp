@@ -90,6 +90,27 @@ const PointGeometry* findPointByMetaId(const GeometrySet& set, const QString& id
       return &point.point;
     }
   }
+  static thread_local PointGeometry circleCenterPoint;
+  for (const CircleGeometry& circle : set.circles)
+  {
+    if (circle.meta.id == id)
+    {
+      circleCenterPoint.point = circle.center;
+      circleCenterPoint.meta = circle.meta;
+      circleCenterPoint.meta.valid = true;
+      return &circleCenterPoint;
+    }
+  }
+  for (const ArcGeometry& arc : set.arcs)
+  {
+    if (arc.meta.id == id)
+    {
+      circleCenterPoint.point = arc.center;
+      circleCenterPoint.meta = arc.meta;
+      circleCenterPoint.meta.valid = true;
+      return &circleCenterPoint;
+    }
+  }
   return nullptr;
 }
 

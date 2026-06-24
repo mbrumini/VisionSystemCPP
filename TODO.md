@@ -9,7 +9,7 @@ Vedi anche `PROMEMORIA_DOMANI.md` per la checklist del giorno.
 - [ ] Verificare geometrie in spazio pezzo su rotazione (cerchi, linee; no `anchorInImageSpace` su feature del pezzo).
 - [ ] Tarare edge per camera critica: banda, sensibilita', subpixel, filtri; correlare errore pose vs variazione misura su piu' angoli.
 - [ ] Profilare colli di bottiglia residui: clone immagini, matToPixmap in griglia, log con dettaglio spento.
-- [ ] TestVision (fase successiva): tabella misura x angolo (°), parse `measurements[]` dal JSON simulatore, export report correlazione.
+- [x] TestVision: tabella misura x angolo (°), parse `measurements[]` dal JSON simulatore, export report correlazione.
 - [ ] NON integrare ancora tool verticali (filettature, ruote dentate, DIN 471-472) finche' la base non e' stabile a 16 camere.
 
 ## PRIORITA CORRENTE - Localizzazione AI tramite segmentazione
@@ -62,7 +62,7 @@ Vedi anche `PROMEMORIA_DOMANI.md` per la checklist del giorno.
 - [x] TestVision: salvare il report parziale anche quando il test viene fermato manualmente.
 - [x] TestVision: conservare uno storico timestampato dei report mantenendo anche il file `latest` configurato dallo scenario, per confrontare prima/dopo una modifica.
 - [x] TestVision: generare immagini AI persistenti direttamente nella cartella raw di localizzazione della ricetta/camera selezionata, con ground truth e manifest JSON versionato, senza cancellare le sessioni precedenti.
-- [ ] TestVision: aggiungere tabella misure per angolo (°) e correlazione pose ↔ errore misura (parse `measurements[]` gia' inviato dal simulatore).
+- [x] TestVision: aggiungere tabella misure per angolo (°) e correlazione pose ↔ errore misura (parse `measurements[]` gia' inviato dal simulatore).
 - [ ] TestVision: aggiungere confronto automatico tra due report storici con regressioni/miglioramenti su precisione, stabilita' e tempi.
 - [x] TestVision: aggiungere `Localizzazione AI YOLO` tra le strategie selezionabili.
 - [x] Collegare `aiYolo` alla pipeline simulata end-to-end, mantenendo associazione richiesta/frame e restituendo posa, confidenza e tempi a TestVision.

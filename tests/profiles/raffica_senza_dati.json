@@ -1,0 +1,20 @@
+{
+  "name": "raffica_senza_dati",
+  "executionProfile": {
+    "shapeId": "cross",
+    "pixelSizeMm": 0.0654,
+    "passes": 1,
+    "intervalMs": 0,
+    "frameDeliveryMode": "sendOnly",
+    "sendOnly": true,
+    "xMinMm": 0.0,
+    "xMaxMm": 0.0,
+    "xStepMm": 1.0,
+    "yMinMm": 0.0,
+    "yMaxMm": 0.0,
+    "yStepMm": 1.0,
+    "angleMinDeg": 0.0,
+    "angleMaxDeg": 0.0,
+    "angleStepDeg": 15.0
+  }
+}

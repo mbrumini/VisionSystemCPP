@@ -26,6 +26,30 @@ bool normalizedDirection(const LineGeometry& line, cv::Point2d& direction, doubl
   return true;
 }
 
+cv::Point2d lineSegmentMidpoint(const LineGeometry& line)
+{
+  return (line.start + line.end) * 0.5;
+}
+
+bool alignedParallelDirection(const cv::Point2d& directionA, cv::Point2d& directionB)
+{
+  if (directionB.dot(directionA) < 0.0)
+  {
+    directionB *= -1.0;
+  }
+
+  cv::Point2d average = directionA + directionB;
+  const double averageLength = std::sqrt(average.dot(average));
+  if (averageLength < kEpsilon)
+  {
+    return false;
+  }
+
+  average *= 1.0 / averageLength;
+  directionB = average;
+  return true;
+}
+
 void fillMeasurementPoint(PointGeometry& point,
                           const cv::Point2d& imagePoint,
                           const QString& id,
@@ -97,9 +121,18 @@ bool parallelLineDistance(const LineGeometry& lineA,
     return false;
   }
 
-  const cv::Point2d normal(-directionB.y, directionB.x);
-  const double signedDistance = (lineA.start - lineB.start).dot(normal);
-  const cv::Point2d footOnB = lineA.start - normal * signedDistance;
+  cv::Point2d sharedDirection = directionB;
+  if (!alignedParallelDirection(directionA, sharedDirection))
+  {
+    return false;
+  }
+
+  const cv::Point2d normal(-sharedDirection.y, sharedDirection.x);
+  const cv::Point2d anchorOnA = lineSegmentMidpoint(lineA);
+  const cv::Point2d midpointB = lineSegmentMidpoint(lineB);
+  const double signedDistance = (midpointB - anchorOnA).dot(normal);
+  const double tOnB = (anchorOnA - midpointB).dot(sharedDirection);
+  const cv::Point2d footOnB = midpointB + sharedDirection * tOnB;
   distancePixels = std::abs(signedDistance);
 
   const double score = std::min(lineA.meta.score, lineB.meta.score);
@@ -107,7 +140,7 @@ bool parallelLineDistance(const LineGeometry& lineA,
   if (pointOnLineA)
   {
     fillMeasurementPoint(*pointOnLineA,
-                         lineA.start,
+                         anchorOnA,
                          QString("%1_distance_anchor_%2").arg(lineA.meta.id, lineB.meta.id),
                          "measurement_line_line_anchor",
                          score,

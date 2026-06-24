@@ -1,0 +1,23 @@
+{
+    "executionProfile": {
+        "angleMaxDeg": 360,
+        "angleMinDeg": 0,
+        "angleStepDeg": 1.25,
+        "cameraId": "CAM08",
+        "frameDeliveryMode": "sendOnly",
+        "intervalMs": 100,
+        "passes": 2,
+        "pixelSizeMm": 0.0654,
+        "recipeId": "rettangolo_con_fori",
+        "sendOnly": true,
+        "shapeId": "plate",
+        "strategyId": "edgePca",
+        "xMaxMm": 1,
+        "xMinMm": -1,
+        "xStepMm": 0.2,
+        "yMaxMm": 1,
+        "yMinMm": -1,
+        "yStepMm": 0.2
+    },
+    "name": "8 tc"
+}

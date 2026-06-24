@@ -67,11 +67,11 @@ public:
   void acquireSurfaceModel(const CameraConfig& camera);
   bool restoreSurfaceModelPoseFromSample(const CameraConfig& camera);
   bool ensureMassPcaReferenceFromSample(const CameraConfig& camera);
+  bool localizePoseOnSample(const CameraConfig& camera);
   void testSurfaceShapeModel(const CameraConfig& camera);
   void testSurfaceTemplateModel(const CameraConfig& camera);
 
 private:
-  bool localizePoseOnSample(const CameraConfig& camera);
   void showSamplePoseOverlay(const CameraConfig& camera);
 
   void showCircleAnnulusLocalizationPanel(const CameraConfig& camera);

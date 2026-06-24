@@ -3,6 +3,7 @@
 #include "gui/modules/MainWindowConstructedGeometryModule.h"
 #include "gui/modules/MainWindowGeometryModule.h"
 #include "gui/modules/MainWindowSetupModule.h"
+#include "gui/modules/MainWindowSurfaceModule.h"
 #include "gui/modules/geometry/GeometryPanelNavigation.h"
 #include "gui/TouchIconButton.h"
 
@@ -82,6 +83,14 @@ void MainWindowMeasurementModule::refreshMeasurementSources(const CameraConfig& 
   if (context().setup)
   {
     context().setup->refreshPoseForCurrentFrame(camera);
+  }
+  if (context().surface)
+  {
+    const PartPose& pose = cameraRuntime()[camera.id].currentPose();
+    if (!pose.valid)
+    {
+      context().surface->localizePoseOnSample(camera);
+    }
   }
   if (context().geometry)
   {
