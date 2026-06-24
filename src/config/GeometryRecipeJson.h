@@ -47,7 +47,9 @@ void writeArcCoordinates(QJsonObject& object,
                          const QPointF& partCenter,
                          const QPointF& partStart,
                          const QPointF& partEnd,
+                         const QPointF& partThrough,
                          const QPointF& imageCenter,
                          const QPointF& imageStart,
-                         const QPointF& imageEnd);
+                         const QPointF& imageEnd,
+                         const QPointF& imageThrough);
 }

@@ -95,21 +95,51 @@ void writeArcCoordinates(QJsonObject& object,
                          const QPointF& partCenter,
                          const QPointF& partStart,
                          const QPointF& partEnd,
+                         const QPointF& partThrough,
                          const QPointF& imageCenter,
                          const QPointF& imageStart,
-                         const QPointF& imageEnd)
+                         const QPointF& imageEnd,
+                         const QPointF& imageThrough)
 {
   object["coordinateSpace"] = normalizedCoordinateSpace(coordinateSpace);
-  if (isImageSpace(coordinateSpace))
+  if (!imageCenter.isNull() || !imageStart.isNull() || !imageEnd.isNull())
   {
-    object["imageCenter"] = RecipeJsonUtils::pointFToJson(imageCenter);
-    object["imageStart"] = RecipeJsonUtils::pointFToJson(imageStart);
-    object["imageEnd"] = RecipeJsonUtils::pointFToJson(imageEnd);
-    return;
+    if (!imageCenter.isNull())
+    {
+      object["imageCenter"] = RecipeJsonUtils::pointFToJson(imageCenter);
+    }
+    if (!imageStart.isNull())
+    {
+      object["imageStart"] = RecipeJsonUtils::pointFToJson(imageStart);
+    }
+    if (!imageEnd.isNull())
+    {
+      object["imageEnd"] = RecipeJsonUtils::pointFToJson(imageEnd);
+    }
+    if (!imageThrough.isNull())
+    {
+      object["imageThrough"] = RecipeJsonUtils::pointFToJson(imageThrough);
+    }
   }
 
-  object["partCenter"] = RecipeJsonUtils::pointFToJson(partCenter);
-  object["partStart"] = RecipeJsonUtils::pointFToJson(partStart);
-  object["partEnd"] = RecipeJsonUtils::pointFToJson(partEnd);
+  if (!partCenter.isNull() || !partStart.isNull() || !partEnd.isNull())
+  {
+    if (!partCenter.isNull())
+    {
+      object["partCenter"] = RecipeJsonUtils::pointFToJson(partCenter);
+    }
+    if (!partStart.isNull())
+    {
+      object["partStart"] = RecipeJsonUtils::pointFToJson(partStart);
+    }
+    if (!partEnd.isNull())
+    {
+      object["partEnd"] = RecipeJsonUtils::pointFToJson(partEnd);
+    }
+    if (!partThrough.isNull())
+    {
+      object["partThrough"] = RecipeJsonUtils::pointFToJson(partThrough);
+    }
+  }
 }
 }

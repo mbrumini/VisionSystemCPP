@@ -76,12 +76,16 @@ struct GeometryArcRuntimeConfig
   cv::Point2d imageCenter;
   cv::Point2d imageStart;
   cv::Point2d imageEnd;
+  cv::Point2d imageThrough;
   cv::Point2d partCenter;
   cv::Point2d partStart;
   cv::Point2d partEnd;
+  cv::Point2d partThrough;
   double radius = 0.0;
   double startAngleRadians = 0.0;
   double endAngleRadians = 0.0;
+  double partStartAngleRadians = 0.0;
+  double partEndAngleRadians = 0.0;
   int innerBand = 20;
   int outerBand = 20;
   int edgeSensitivity = 60;
@@ -92,6 +96,7 @@ struct GeometryArcRuntimeConfig
   EdgeLineTransition transition = EdgeLineTransition::LightToDark;
   EdgeLinePickMode pickMode = EdgeLinePickMode::First;
   bool anchorInImageSpace = false;
+  bool hasImageThrough = false;
   bool hasImageArc = false;
   bool hasArc = false;
 };

@@ -5,6 +5,8 @@
 #include <QHash>
 #include <QPointF>
 
+#include <functional>
+
 class CameraConfig;
 class GeometryOverlay;
 struct MeasurementRecipeConfig;
@@ -40,5 +42,9 @@ private:
                                    const QString& sourceBId = {},
                                    double samplePixels = 0.0);
   void finalizeMeasurementCreate(const CameraConfig& camera, const QString& successLog);
+  void appendMeasurementListControls(QWidget* panel,
+                                     QVBoxLayout* layout,
+                                     const CameraConfig& camera,
+                                     const std::function<void()>& refreshPanel);
   QHash<QString, QString> geometryAliasesForCamera(const CameraConfig& camera) const;
 };

@@ -416,6 +416,8 @@ QVector<GeometryArcRecipeConfig> RecipeManager::loadGeometryArcs(const QString& 
     config.imageCenter = pointFFromJson(arc.value("imageCenter").toObject());
     config.imageStart = pointFFromJson(arc.value("imageStart").toObject());
     config.imageEnd = pointFFromJson(arc.value("imageEnd").toObject());
+    config.imageThrough = pointFFromJson(arc.value("imageThrough").toObject());
+    config.partThrough = pointFFromJson(arc.value("partThrough").toObject());
     if (!GeometryRecipeJson::arcRecipeValid(
           config.coordinateSpace,
           config.partCenter,
@@ -430,6 +432,8 @@ QVector<GeometryArcRecipeConfig> RecipeManager::loadGeometryArcs(const QString& 
     config.radius = arc.value("radius").toDouble(config.radius);
     config.startAngleRadians = arc.value("startAngleRadians").toDouble(config.startAngleRadians);
     config.endAngleRadians = arc.value("endAngleRadians").toDouble(config.endAngleRadians);
+    config.partStartAngleRadians = arc.value("partStartAngleRadians").toDouble(config.partStartAngleRadians);
+    config.partEndAngleRadians = arc.value("partEndAngleRadians").toDouble(config.partEndAngleRadians);
     config.innerBand = arc.value("innerBand").toInt(config.innerBand);
     config.outerBand = arc.value("outerBand").toInt(config.outerBand);
     config.edgeSensitivity = arc.value("edgeSensitivity").toInt(config.edgeSensitivity);
@@ -474,9 +478,11 @@ bool RecipeManager::saveGeometryArcs(const QString& cameraId, const QVector<Geom
       config.partCenter,
       config.partStart,
       config.partEnd,
+      config.partThrough,
       config.imageCenter,
       config.imageStart,
-      config.imageEnd);
+      config.imageEnd,
+      config.imageThrough);
     if (config.anchorInImageSpace)
     {
       arc["anchorInImageSpace"] = true;
@@ -484,6 +490,8 @@ bool RecipeManager::saveGeometryArcs(const QString& cameraId, const QVector<Geom
     arc["radius"] = qMax(1.0, config.radius);
     arc["startAngleRadians"] = config.startAngleRadians;
     arc["endAngleRadians"] = config.endAngleRadians;
+    arc["partStartAngleRadians"] = config.partStartAngleRadians;
+    arc["partEndAngleRadians"] = config.partEndAngleRadians;
     arc["innerBand"] = qBound(1, config.innerBand, 500);
     arc["outerBand"] = qBound(1, config.outerBand, 500);
     arc["edgeSensitivity"] = qBound(1, config.edgeSensitivity, 255);

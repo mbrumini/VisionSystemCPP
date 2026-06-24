@@ -155,10 +155,14 @@ ArcGuideRecipeCoords arcGuideFromRuntime(bool hasPartGuide,
                                          const cv::Point2d& partCenter,
                                          const cv::Point2d& partStart,
                                          const cv::Point2d& partEnd,
+                                         bool hasPartThrough,
+                                         const cv::Point2d& partThrough,
                                          bool hasImageGuide,
                                          const cv::Point2d& imageCenter,
                                          const cv::Point2d& imageStart,
-                                         const cv::Point2d& imageEnd)
+                                         const cv::Point2d& imageEnd,
+                                         bool hasImageThrough,
+                                         const cv::Point2d& imageThrough)
 {
   ArcGuideRecipeCoords coords;
   if (hasPartGuide)
@@ -167,15 +171,25 @@ ArcGuideRecipeCoords arcGuideFromRuntime(bool hasPartGuide,
     coords.partCenter = toQPointF(partCenter);
     coords.partStart = toQPointF(partStart);
     coords.partEnd = toQPointF(partEnd);
+    if (hasPartThrough)
+    {
+      coords.partThrough = toQPointF(partThrough);
+    }
   }
-  else
+  if (hasImageGuide)
   {
-    coords.coordinateSpace = GeometryRecipeJson::kImageSpace;
+    if (!hasPartGuide)
+    {
+      coords.coordinateSpace = GeometryRecipeJson::kImageSpace;
+    }
     coords.imageCenter = toQPointF(imageCenter);
     coords.imageStart = toQPointF(imageStart);
     coords.imageEnd = toQPointF(imageEnd);
+    if (hasImageThrough)
+    {
+      coords.imageThrough = toQPointF(imageThrough);
+    }
   }
-  Q_UNUSED(hasImageGuide);
   return coords;
 }
 
@@ -184,31 +198,74 @@ void applyArcGuideRuntime(bool* hasPartGuide,
                           cv::Point2d* partCenter,
                           cv::Point2d* partStart,
                           cv::Point2d* partEnd,
+                          cv::Point2d* partThrough,
                           cv::Point2d* imageCenter,
                           cv::Point2d* imageStart,
                           cv::Point2d* imageEnd,
+                          cv::Point2d* imageThrough,
                           const QString& coordinateSpace,
                           const QPointF& partCenterRecipe,
                           const QPointF& partStartRecipe,
                           const QPointF& partEndRecipe,
+                          const QPointF& partThroughRecipe,
                           const QPointF& imageCenterRecipe,
                           const QPointF& imageStartRecipe,
-                          const QPointF& imageEndRecipe)
+                          const QPointF& imageEndRecipe,
+                          const QPointF& imageThroughRecipe)
 {
-  if (GeometryRecipeJson::isImageSpace(coordinateSpace))
+  const bool hasImageCoords =
+    !imageCenterRecipe.isNull() || !imageStartRecipe.isNull() || !imageEndRecipe.isNull();
+  const bool hasPartCoords =
+    !partCenterRecipe.isNull() || !partStartRecipe.isNull() || !partEndRecipe.isNull();
+
+  if (hasImageCoords || GeometryRecipeJson::isImageSpace(coordinateSpace))
   {
-    *hasPartGuide = false;
     *hasImageGuide = true;
-    *imageCenter = cv::Point2d(imageCenterRecipe.x(), imageCenterRecipe.y());
-    *imageStart = cv::Point2d(imageStartRecipe.x(), imageStartRecipe.y());
-    *imageEnd = cv::Point2d(imageEndRecipe.x(), imageEndRecipe.y());
-    return;
+    if (!imageCenterRecipe.isNull())
+    {
+      *imageCenter = cv::Point2d(imageCenterRecipe.x(), imageCenterRecipe.y());
+    }
+    if (!imageStartRecipe.isNull())
+    {
+      *imageStart = cv::Point2d(imageStartRecipe.x(), imageStartRecipe.y());
+    }
+    if (!imageEndRecipe.isNull())
+    {
+      *imageEnd = cv::Point2d(imageEndRecipe.x(), imageEndRecipe.y());
+    }
+    if (!imageThroughRecipe.isNull())
+    {
+      *imageThrough = cv::Point2d(imageThroughRecipe.x(), imageThroughRecipe.y());
+    }
+  }
+  else
+  {
+    *hasImageGuide = false;
   }
 
-  *hasPartGuide = true;
-  *hasImageGuide = false;
-  *partCenter = cv::Point2d(partCenterRecipe.x(), partCenterRecipe.y());
-  *partStart = cv::Point2d(partStartRecipe.x(), partStartRecipe.y());
-  *partEnd = cv::Point2d(partEndRecipe.x(), partEndRecipe.y());
+  if (hasPartCoords || !GeometryRecipeJson::isImageSpace(coordinateSpace))
+  {
+    *hasPartGuide = true;
+    if (!partCenterRecipe.isNull())
+    {
+      *partCenter = cv::Point2d(partCenterRecipe.x(), partCenterRecipe.y());
+    }
+    if (!partStartRecipe.isNull())
+    {
+      *partStart = cv::Point2d(partStartRecipe.x(), partStartRecipe.y());
+    }
+    if (!partEndRecipe.isNull())
+    {
+      *partEnd = cv::Point2d(partEndRecipe.x(), partEndRecipe.y());
+    }
+    if (!partThroughRecipe.isNull())
+    {
+      *partThrough = cv::Point2d(partThroughRecipe.x(), partThroughRecipe.y());
+    }
+  }
+  else
+  {
+    *hasPartGuide = false;
+  }
 }
 }

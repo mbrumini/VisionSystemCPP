@@ -3,6 +3,7 @@
 #include "gui/modules/MainWindowImagingModule.h"
 #include "gui/modules/MainWindowContext.h"
 
+#include "gui/geometry/ArcGuideMath.h"
 #include "gui/geometry/ConfiguredGeometryDetector.h"
 #include "gui/geometry/GeometryDiagnosticDrawing.h"
 #include "gui/geometry/GeometryOverlayPrimitives.h"
@@ -76,7 +77,12 @@ void applyGeometryPromotions(const PartPose& pose,
     arc.partCenter = imageToPart(pose, arc.imageCenter);
     arc.partStart = imageToPart(pose, arc.imageStart);
     arc.partEnd = imageToPart(pose, arc.imageEnd);
+    if (arc.hasImageThrough)
+    {
+      arc.partThrough = imageToPart(pose, arc.imageThrough);
+    }
     arc.hasArc = true;
+    ArcGuideMath::syncArcPartAngles(arc);
   }
 }
 

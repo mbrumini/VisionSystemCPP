@@ -229,6 +229,8 @@ add_executable(VisionSystemCPP
     src/gui/geometry/GeometryDiagnosticDrawing.h
     src/gui/geometry/GeometryDiagnosticDrawing.cpp
     src/gui/geometry/GeometryRecipePersistence.h
+    src/gui/geometry/ArcGuideMath.h
+    src/gui/geometry/ArcGuideMath.cpp
     src/gui/geometry/GeometryRecipePersistence.cpp
     src/gui/geometry/GeometryMath.h
     src/gui/geometry/GeometryMath.cpp
@@ -338,6 +340,8 @@ add_executable(VisionSystemTestVision
     tests/testvision/CampaignEditorDialog.cpp
     tests/testvision/TestVisionArtifacts.h
     tests/testvision/TestVisionArtifacts.cpp
+    tests/testvision/TestVisionExecutionProfile.h
+    tests/testvision/TestVisionExecutionProfile.cpp
 )
 
 target_link_libraries(VisionSystemTestVision PRIVATE

@@ -152,9 +152,13 @@ struct GeometryArcRecipeConfig
   QPointF imageCenter;
   QPointF imageStart;
   QPointF imageEnd;
+  QPointF imageThrough;
+  QPointF partThrough;
   double radius = 0.0;
   double startAngleRadians = 0.0;
   double endAngleRadians = 0.0;
+  double partStartAngleRadians = 0.0;
+  double partEndAngleRadians = 0.0;
   int innerBand = 20;
   int outerBand = 20;
   int edgeSensitivity = 60;

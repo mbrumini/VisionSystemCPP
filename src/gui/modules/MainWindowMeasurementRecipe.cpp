@@ -281,16 +281,15 @@ bool MainWindowMeasurementModule::saveMeasurementRecipeAction(const CameraConfig
 void MainWindowMeasurementModule::finalizeMeasurementCreate(const CameraConfig& camera, const QString& successLog)
 {
   rebuildMeasurementRecipe(camera);
-  if (context().geometry)
+  if (context().geometry && camera.id == selectedCameraId())
   {
-    context().geometry->refreshMeasurementOverlay(camera);
+    context().geometry->showRuntimeGeometryOverlay(camera);
   }
   if (context().updateMeasurementResults)
   {
     context().updateMeasurementResults();
   }
   log(successLog);
-  showMeasurementPanel(camera);
 }
 
 void MainWindowMeasurementModule::setMeasurementLabelPosition(const CameraConfig& camera,

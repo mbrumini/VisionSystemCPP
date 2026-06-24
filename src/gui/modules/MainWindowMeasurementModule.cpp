@@ -17,6 +17,8 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 
+#include <functional>
+
 namespace
 {
 QString measurementItemLabel(const MeasurementRecipeConfig& config)
@@ -64,9 +66,9 @@ void MainWindowMeasurementModule::removeMeasurement(const CameraConfig& camera, 
   }
 
   rebuildMeasurementRecipe(camera);
-  if (context().geometry)
+  if (context().geometry && camera.id == selectedCameraId())
   {
-    context().geometry->refreshMeasurementOverlay(camera);
+    context().geometry->showRuntimeGeometryOverlay(camera);
   }
   if (context().updateMeasurementResults)
   {
@@ -94,6 +96,10 @@ void MainWindowMeasurementModule::refreshMeasurementSources(const CameraConfig& 
     context().geometry->syncRuntimeGeometryLabels(camera);
   }
   rebuildMeasurementRecipe(camera);
+  if (context().geometry && camera.id == selectedCameraId())
+  {
+    context().geometry->showRuntimeGeometryOverlay(camera);
+  }
 }
 
 QHash<QString, QString> MainWindowMeasurementModule::geometryAliasesForCamera(const CameraConfig& camera) const
@@ -104,6 +110,39 @@ QHash<QString, QString> MainWindowMeasurementModule::geometryAliasesForCamera(co
   }
 
   return context().geometry->geometryAliasMap(camera.id);
+}
+
+void MainWindowMeasurementModule::appendMeasurementListControls(QWidget* panel,
+                                                                  QVBoxLayout* layout,
+                                                                  const CameraConfig& camera,
+                                                                  const std::function<void()>& refreshPanel)
+{
+  const QVector<MeasurementRecipeConfig> measurements = recipes().loadMeasurements(camera.id);
+  if (measurements.isEmpty())
+  {
+    return;
+  }
+
+  auto* listRow = new QWidget(panel);
+  auto* listLayout = new QHBoxLayout(listRow);
+  listLayout->setContentsMargins(0, 0, 0, 0);
+  listLayout->setSpacing(6);
+
+  auto* measureCombo = new QComboBox(listRow);
+  for (const MeasurementRecipeConfig& config : measurements)
+  {
+    measureCombo->addItem(measurementItemLabel(config), config.id);
+  }
+
+  auto* deleteButton = createTouchIconButton("delete", tr("actions.deleteMeasurement"), listRow);
+  QObject::connect(deleteButton, &QPushButton::clicked, window(), [this, camera, measureCombo, refreshPanel]() {
+    removeMeasurement(camera, measureCombo->currentData().toString());
+    refreshPanel();
+  });
+
+  listLayout->addWidget(measureCombo, 1);
+  listLayout->addWidget(deleteButton);
+  layout->addWidget(listRow);
 }
 
 void MainWindowMeasurementModule::showMeasurementPanel(const CameraConfig& camera)
@@ -124,26 +163,7 @@ void MainWindowMeasurementModule::showMeasurementPanel(const CameraConfig& camer
   const QVector<MeasurementRecipeConfig> measurements = recipes().loadMeasurements(camera.id);
   if (!measurements.isEmpty())
   {
-    auto* listRow = new QWidget(panel);
-    auto* listLayout = new QHBoxLayout(listRow);
-    listLayout->setContentsMargins(0, 0, 0, 0);
-    listLayout->setSpacing(6);
-
-    auto* measureCombo = new QComboBox(listRow);
-    for (const MeasurementRecipeConfig& config : measurements)
-    {
-      measureCombo->addItem(measurementItemLabel(config), config.id);
-    }
-
-    auto* deleteButton = createTouchIconButton("delete", tr("actions.deleteMeasurement"), listRow);
-    QObject::connect(deleteButton, &QPushButton::clicked, window(), [this, camera, measureCombo]() {
-      removeMeasurement(camera, measureCombo->currentData().toString());
-      showMeasurementPanel(camera);
-    });
-
-    listLayout->addWidget(measureCombo, 1);
-    listLayout->addWidget(deleteButton);
-    layout->addWidget(listRow);
+    appendMeasurementListControls(panel, layout, camera, [this, camera]() { showMeasurementPanel(camera); });
   }
 
   auto* buttonGrid = new QWidget(panel);

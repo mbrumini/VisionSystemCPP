@@ -45,9 +45,11 @@ struct ArcGuideRecipeCoords
   QPointF partCenter;
   QPointF partStart;
   QPointF partEnd;
+  QPointF partThrough;
   QPointF imageCenter;
   QPointF imageStart;
   QPointF imageEnd;
+  QPointF imageThrough;
 };
 
 SegmentGuideRecipeCoords segmentGuideFromRuntime(bool hasPartGuide,
@@ -86,26 +88,34 @@ ArcGuideRecipeCoords arcGuideFromRuntime(bool hasPartGuide,
                                          const cv::Point2d& partCenter,
                                          const cv::Point2d& partStart,
                                          const cv::Point2d& partEnd,
+                                         bool hasPartThrough,
+                                         const cv::Point2d& partThrough,
                                          bool hasImageGuide,
                                          const cv::Point2d& imageCenter,
                                          const cv::Point2d& imageStart,
-                                         const cv::Point2d& imageEnd);
+                                         const cv::Point2d& imageEnd,
+                                         bool hasImageThrough,
+                                         const cv::Point2d& imageThrough);
 
 void applyArcGuideRuntime(bool* hasPartGuide,
                           bool* hasImageGuide,
                           cv::Point2d* partCenter,
                           cv::Point2d* partStart,
                           cv::Point2d* partEnd,
+                          cv::Point2d* partThrough,
                           cv::Point2d* imageCenter,
                           cv::Point2d* imageStart,
                           cv::Point2d* imageEnd,
+                          cv::Point2d* imageThrough,
                           const QString& coordinateSpace,
                           const QPointF& partCenterRecipe,
                           const QPointF& partStartRecipe,
                           const QPointF& partEndRecipe,
+                          const QPointF& partThroughRecipe,
                           const QPointF& imageCenterRecipe,
                           const QPointF& imageStartRecipe,
-                          const QPointF& imageEndRecipe);
+                          const QPointF& imageEndRecipe,
+                          const QPointF& imageThroughRecipe);
 }
 
 template<typename Config>

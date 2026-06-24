@@ -1,5 +1,6 @@
 #include "gui/geometry/ConfiguredGeometryDetector.h"
 
+#include "gui/geometry/ArcGuideMath.h"
 #include "gui/geometry/GeometryDiagnosticDrawing.h"
 #include "gui/geometry/GeometryOverlayPrimitives.h"
 #include "processing/geometry/EdgeCircleDetector.h"
@@ -226,23 +227,16 @@ ConfiguredGeometryDetectOutput detectConfiguredGeometries(const ConfiguredGeomet
       continue;
     }
 
-    const bool usePartArc = pose.valid && arc.hasArc && !arc.anchorInImageSpace;
-    if (!usePartArc && !arc.hasImageArc)
+    ResolvedArcGuide guide;
+    if (!ArcGuideMath::resolveArcGuide(arc, pose, guide))
     {
       continue;
     }
 
-    const cv::Point2d guideCenter = usePartArc ? partToImage(pose, arc.partCenter) : arc.imageCenter;
-    const cv::Point2d guideStart = usePartArc ? partToImage(pose, arc.partStart) : arc.imageStart;
-    const cv::Point2d guideEnd = usePartArc ? partToImage(pose, arc.partEnd) : arc.imageEnd;
-    const double guideRadius = std::hypot(guideStart.x - guideCenter.x, guideStart.y - guideCenter.y);
-    if (guideRadius <= 1.0)
-    {
-      continue;
-    }
-
-    const double guideStartAngle = normalizedSetupArcAngle(std::atan2(guideStart.y - guideCenter.y, guideStart.x - guideCenter.x));
-    const double guideEndAngle = normalizedSetupArcAngle(std::atan2(guideEnd.y - guideCenter.y, guideEnd.x - guideCenter.x));
+    const cv::Point2d guideCenter = guide.center;
+    const double guideRadius = guide.radius;
+    const double guideStartAngle = normalizedSetupArcAngle(guide.startAngle);
+    const double guideEndAngle = normalizedSetupArcAngle(guide.endAngle);
     if (input.buildGuideOverlay)
     {
       appendGeometryArcPolyline(

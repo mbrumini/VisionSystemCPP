@@ -7,6 +7,7 @@
 #include "config/RecipeJsonUtils.h"
 
 #include "gui/geometry/GeometryDiagnosticDrawing.h"
+#include "gui/geometry/ArcGuideMath.h"
 #include "gui/geometry/GeometryRecipePersistence.h"
 #include "processing/geometry/EdgePointDetector.h"
 #include "util/AsyncExecutor.h"
@@ -595,16 +596,27 @@ void MainWindowGeometryModule::loadGeometryArcsRecipe(const CameraConfig& camera
       &arc.partCenter,
       &arc.partStart,
       &arc.partEnd,
+      &arc.partThrough,
       &arc.imageCenter,
       &arc.imageStart,
       &arc.imageEnd,
+      &arc.imageThrough,
       recipe.coordinateSpace,
       recipe.partCenter,
       recipe.partStart,
       recipe.partEnd,
+      recipe.partThrough,
       recipe.imageCenter,
       recipe.imageStart,
-      recipe.imageEnd);
+      recipe.imageEnd,
+      recipe.imageThrough);
+    arc.hasImageThrough = !recipe.imageThrough.isNull();
+    if (arc.hasArc)
+    {
+      arc.partStartAngleRadians = recipe.partStartAngleRadians;
+      arc.partEndAngleRadians = recipe.partEndAngleRadians;
+      ArcGuideMath::syncArcPartAngles(arc);
+    }
     arc.anchorInImageSpace = recipe.anchorInImageSpace;
     arcs.append(arc);
   }
@@ -633,10 +645,14 @@ void MainWindowGeometryModule::saveGeometryArcsRecipe(const CameraConfig& camera
       arc.partCenter,
       arc.partStart,
       arc.partEnd,
+      arc.hasImageThrough && arc.hasArc,
+      arc.partThrough,
       arc.hasImageArc,
       arc.imageCenter,
       arc.imageStart,
-      arc.imageEnd);
+      arc.imageEnd,
+      arc.hasImageThrough,
+      arc.imageThrough);
 
     GeometryArcRecipeConfig recipe;
     recipe.enabled = arc.enabled;
@@ -647,12 +663,16 @@ void MainWindowGeometryModule::saveGeometryArcsRecipe(const CameraConfig& camera
     recipe.partCenter = coords.partCenter;
     recipe.partStart = coords.partStart;
     recipe.partEnd = coords.partEnd;
+    recipe.partThrough = coords.partThrough;
     recipe.imageCenter = coords.imageCenter;
     recipe.imageStart = coords.imageStart;
     recipe.imageEnd = coords.imageEnd;
+    recipe.imageThrough = coords.imageThrough;
     recipe.radius = arc.radius;
     recipe.startAngleRadians = arc.startAngleRadians;
     recipe.endAngleRadians = arc.endAngleRadians;
+    recipe.partStartAngleRadians = arc.partStartAngleRadians;
+    recipe.partEndAngleRadians = arc.partEndAngleRadians;
     recipe.innerBand = arc.innerBand;
     recipe.outerBand = arc.outerBand;
     recipe.edgeSensitivity = arc.edgeSensitivity;
