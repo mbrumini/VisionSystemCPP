@@ -34,6 +34,7 @@ class MainWindowSetupModule;
 class MainWindowCameraConfigModule;
 class MainWindowConstructedGeometryModule;
 class MainWindowMeasurementModule;
+class MainWindowThreadModule;
 
 enum class MainWindowActiveDrawingRecipe
 {
@@ -42,7 +43,8 @@ enum class MainWindowActiveDrawingRecipe
   SurfaceDefects,
   AiLocalization,
   Geometry,
-  GlobalAoi
+  GlobalAoi,
+  ThreadInspection
 };
 
 struct MainWindowContext
@@ -96,6 +98,7 @@ struct MainWindowContext
   MainWindowCameraConfigModule* cameraConfig = nullptr;
   MainWindowConstructedGeometryModule* constructedGeometry = nullptr;
   MainWindowMeasurementModule* measurement = nullptr;
+  MainWindowThreadModule* thread = nullptr;
 
   std::function<QString(const QString&)> trText;
   std::function<void(const CameraConfig&)> showLocalizationStrategyList;
@@ -108,8 +111,11 @@ struct MainWindowContext
   std::function<bool()> isDetailedLogEnabled;
   std::function<void()> updateLargePreview;
   std::function<void()> updateMeasurementResults;
+  std::function<void(const QString&)> updateMeasurementStatistics;
+  std::function<void()> resetMeasurementStatistics;
   std::function<void(const CameraConfig&)> reloadCameraReferenceImage;
   std::function<void(const CameraConfig*)> updateControlPanel;
+  std::function<void(const CameraConfig&)> syncThreadExtractionRoiOverlay;
   std::function<void()> clearToolPanel;
   std::function<void()> deactivateImageDrawingTools;
   std::function<void(const CameraConfig&)> showCameraToolList;

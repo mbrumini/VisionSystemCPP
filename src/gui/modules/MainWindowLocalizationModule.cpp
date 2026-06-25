@@ -118,6 +118,7 @@ void MainWindowLocalizationModule::testLocalization(const CameraConfig& camera)
       }
 
       cameraRuntime()[camera.id].setCurrentPose(context().imaging->partPoseFromLocalizationResult(camera, result));
+      syncThreadExtractionRoiOverlay(camera);
       if (context().setup)
       {
         context().setup->refreshSetupGeometryResults(camera);

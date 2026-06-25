@@ -4,6 +4,7 @@
 
 #include <QHash>
 #include <QPointF>
+#include <QString>
 
 #include <functional>
 
@@ -47,4 +48,9 @@ private:
                                      const CameraConfig& camera,
                                      const std::function<void()>& refreshPanel);
   QHash<QString, QString> geometryAliasesForCamera(const CameraConfig& camera) const;
+  void showMeasurementListDialog(const CameraConfig& camera);
+  void showMeasurementToleranceDialog(const CameraConfig& camera, const QString& measurementId);
+  QString selectedMeasurementKey(const QString& cameraId) const;
+
+  QHash<QString, QString> m_selectedMeasurementKeys;
 };

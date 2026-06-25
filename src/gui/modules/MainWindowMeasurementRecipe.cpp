@@ -396,6 +396,7 @@ void MainWindowMeasurementModule::appendMeasurementOverlay(
   const int dimWidth = compact ? 2 : 3;
   const int angleWidth = compact ? 2 : 3;
   const double angleArmLength = compact ? 40.0 : 0.0;
+  const QString selectedKey = selectedMeasurementKey(camera.id);
 
   for (const MeasurementResult& measurement : set.measurements)
   {
@@ -403,6 +404,13 @@ void MainWindowMeasurementModule::appendMeasurementOverlay(
     {
       continue;
     }
+    const bool selectedOnly = !selectedKey.isEmpty();
+    if (selectedOnly && measurementKey(measurement.type, measurement.sourceAId, measurement.sourceBId) != selectedKey)
+    {
+      continue;
+    }
+    const int selectedDimWidth = selectedOnly ? std::max(dimWidth + 3, 6) : dimWidth;
+    const int selectedAngleWidth = selectedOnly ? std::max(angleWidth + 3, 6) : angleWidth;
 
     if (measurement.type == "point_point_distance")
     {
@@ -414,8 +422,8 @@ void MainWindowMeasurementModule::appendMeasurementOverlay(
       }
 
       overlay.dimensions.append(
-        measurementDimension(toPointF(pointA->point), toPointF(pointB->point), measurement, dimWidth));
-      if (!compact)
+        measurementDimension(toPointF(pointA->point), toPointF(pointB->point), measurement, selectedDimWidth));
+      if (!compact || selectedOnly)
       {
         overlay.points.append({toPointF(pointA->point), "A", QColor("#35c46a")});
         overlay.points.append({toPointF(pointB->point), "B", QColor("#35c46a")});
@@ -435,8 +443,8 @@ void MainWindowMeasurementModule::appendMeasurementOverlay(
       }
 
       overlay.dimensions.append(
-        measurementDimension(toPointF(point->point), toPointF(projectedPoint.point), measurement, dimWidth));
-      if (!compact)
+        measurementDimension(toPointF(point->point), toPointF(projectedPoint.point), measurement, selectedDimWidth));
+      if (!compact || selectedOnly)
       {
         overlay.points.append({toPointF(point->point), "P", QColor("#35c46a")});
         overlay.points.append({toPointF(projectedPoint.point), "H", QColor("#ff8a00")});
@@ -457,8 +465,8 @@ void MainWindowMeasurementModule::appendMeasurementOverlay(
       }
 
       overlay.dimensions.append(
-        measurementDimension(toPointF(pointOnA.point), toPointF(pointOnB.point), measurement, dimWidth));
-      if (!compact)
+        measurementDimension(toPointF(pointOnA.point), toPointF(pointOnB.point), measurement, selectedDimWidth));
+      if (!compact || selectedOnly)
       {
         overlay.points.append({toPointF(pointOnA.point), "A", QColor("#ff8a00")});
         overlay.points.append({toPointF(pointOnB.point), "H", QColor("#ff8a00")});
@@ -478,9 +486,9 @@ void MainWindowMeasurementModule::appendMeasurementOverlay(
       const cv::Point2d right(circle->center.x + circle->radius, circle->center.y);
       const cv::Point2d top(circle->center.x, circle->center.y - circle->radius);
       const cv::Point2d bottom(circle->center.x, circle->center.y + circle->radius);
-      overlay.lines.append({toPointF(top), toPointF(bottom), QColor("#35c46a"), dimWidth});
-      overlay.dimensions.append(measurementDimension(toPointF(left), toPointF(right), measurement, dimWidth));
-      if (!compact)
+      overlay.lines.append({toPointF(top), toPointF(bottom), QColor("#35c46a"), selectedDimWidth});
+      overlay.dimensions.append(measurementDimension(toPointF(left), toPointF(right), measurement, selectedDimWidth));
+      if (!compact || selectedOnly)
       {
         overlay.points.append({toPointF(circle->center), "C", QColor("#35c46a")});
       }
@@ -518,11 +526,11 @@ void MainWindowMeasurementModule::appendMeasurementOverlay(
         toPointF(center + directionB * armLength),
         measurementLabel(measurement, "deg"),
         QColor("#ff8a00"),
-        angleWidth
+        selectedAngleWidth
       };
       angleOverlay.labelColor = measurementLabelColor(measurement);
       overlay.angles.append(angleOverlay);
-      if (!compact)
+      if (!compact || selectedOnly)
       {
         overlay.points.append({toPointF(center), "V", QColor("#ff8a00")});
       }

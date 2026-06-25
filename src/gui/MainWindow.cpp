@@ -30,6 +30,7 @@ MainWindow::MainWindow(QWidget* parent)
   , m_cameraConfig(m_ctx)
   , m_constructedGeometry(m_ctx)
   , m_measurement(m_ctx)
+  , m_thread(m_ctx)
   , m_setup(m_ctx)
 {
   m_recipeManager.setRecipeId(RecipeManager::loadActiveRecipeId());
@@ -174,6 +175,7 @@ void MainWindow::loadConfiguration()
   }
 
   m_tiles.clear();
+  resetMeasurementStatistics();
   const QVector<CameraConfig> cameras = m_config.activeCameras();
   m_recipes.ensureRecipeCameraFolders();
   if (m_cameraStrip)
@@ -262,12 +264,21 @@ void MainWindow::bindModules()
   m_ctx.cameraConfig = &m_cameraConfig;
   m_ctx.constructedGeometry = &m_constructedGeometry;
   m_ctx.measurement = &m_measurement;
+  m_ctx.thread = &m_thread;
+
+  m_ctx.syncThreadExtractionRoiOverlay = [this](const CameraConfig& camera) {
+    m_thread.syncExtractionRoiOverlay(camera);
+  };
 
   m_ctx.trText = [this](const QString& key) { return trText(key); };
   m_ctx.isDetailedLogEnabled = [this]() { return isDetailedLogEnabled(); };
   m_ctx.appendLog = [this](const QString& message) { appendLog(message); };
   m_ctx.updateLargePreview = [this]() { updateLargePreview(); };
   m_ctx.updateMeasurementResults = [this]() { scheduleMeasurementResultsUpdate(); };
+  m_ctx.updateMeasurementStatistics = [this](const QString& cameraId) {
+    updateMeasurementStatistics(cameraId, true);
+  };
+  m_ctx.resetMeasurementStatistics = [this]() { resetMeasurementStatistics(); };
   m_ctx.reloadCameraReferenceImage = [this](const CameraConfig& camera) { m_imaging.reloadCameraReferenceImage(camera); };
   m_ctx.updateControlPanel = [this](const CameraConfig* camera) { updateControlPanel(camera); };
   m_ctx.clearToolPanel = [this]() { clearToolPanel(); };

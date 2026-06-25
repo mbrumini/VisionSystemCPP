@@ -4,81 +4,6 @@
         "geometries": {
             "circles": [
                 {
-                    "alias": "alto sx",
-                    "coordinateSpace": "part",
-                    "edgeCleanupDerivative": 3,
-                    "edgeSensitivity": 60,
-                    "edgeStatisticalFilter": 2,
-                    "enabled": true,
-                    "id": "circle_1",
-                    "imageCenter": {
-                        "x": 855,
-                        "y": 485
-                    },
-                    "innerBand": 20,
-                    "outerBand": 20,
-                    "partCenter": {
-                        "x": -104.97775144244997,
-                        "y": -55.02283689807075
-                    },
-                    "pickMode": "first",
-                    "radius": 24.498933926311253,
-                    "scanDirection": "normal_positive",
-                    "transition": "dark_to_light",
-                    "type": "edge_circle",
-                    "useSubpixel": true
-                },
-                {
-                    "alias": "basso sx",
-                    "coordinateSpace": "part",
-                    "edgeCleanupDerivative": 6,
-                    "edgeSensitivity": 60,
-                    "edgeStatisticalFilter": 2,
-                    "enabled": true,
-                    "id": "circle_2",
-                    "imageCenter": {
-                        "x": 855,
-                        "y": 595
-                    },
-                    "innerBand": 20,
-                    "outerBand": 20,
-                    "partCenter": {
-                        "x": -104.9777514424427,
-                        "y": 54.977163101927545
-                    },
-                    "pickMode": "first",
-                    "radius": 24.49893392629462,
-                    "scanDirection": "normal_positive",
-                    "transition": "dark_to_light",
-                    "type": "edge_circle",
-                    "useSubpixel": true
-                },
-                {
-                    "alias": "alto dx",
-                    "coordinateSpace": "part",
-                    "edgeCleanupDerivative": 6,
-                    "edgeSensitivity": 60,
-                    "edgeStatisticalFilter": 2,
-                    "enabled": true,
-                    "id": "circle_3",
-                    "imageCenter": {
-                        "x": 1061,
-                        "y": 486
-                    },
-                    "innerBand": 20,
-                    "outerBand": 20,
-                    "partCenter": {
-                        "x": 100.02371431295387,
-                        "y": -55.03738060476229
-                    },
-                    "pickMode": "first",
-                    "radius": 24.47739282811092,
-                    "scanDirection": "normal_positive",
-                    "transition": "dark_to_light",
-                    "type": "edge_circle",
-                    "useSubpixel": true
-                },
-                {
                     "alias": "basso dx",
                     "coordinateSpace": "part",
                     "edgeCleanupDerivative": 5,
@@ -137,52 +62,6 @@
             },
             "lines": [
                 {
-                    "alias": "L alto",
-                    "bandHalfWidth": 20,
-                    "coordinateSpace": "part",
-                    "edgeCleanupDerivative": 5,
-                    "edgeSensitivity": 126,
-                    "edgeStatisticalFilter": 3,
-                    "enabled": true,
-                    "id": "line_1",
-                    "partEnd": {
-                        "x": 152.05673758865237,
-                        "y": -121.00840336134456
-                    },
-                    "partStart": {
-                        "x": -147.51773049645396,
-                        "y": -121.00840336134456
-                    },
-                    "pickMode": "best",
-                    "scanDirection": "normal_positive",
-                    "transition": "light_to_dark",
-                    "type": "edge_line",
-                    "useSubpixel": true
-                },
-                {
-                    "alias": "L Basso",
-                    "bandHalfWidth": 20,
-                    "coordinateSpace": "part",
-                    "edgeCleanupDerivative": 6,
-                    "edgeSensitivity": 125,
-                    "edgeStatisticalFilter": 3,
-                    "enabled": true,
-                    "id": "line_2",
-                    "partEnd": {
-                        "x": -156.82913765399041,
-                        "y": 122.59876249405045
-                    },
-                    "partStart": {
-                        "x": 157.34333154793785,
-                        "y": 122.08472156116136
-                    },
-                    "pickMode": "best",
-                    "scanDirection": "normal_positive",
-                    "transition": "light_to_dark",
-                    "type": "edge_line",
-                    "useSubpixel": true
-                },
-                {
                     "alias": "L dx",
                     "bandHalfWidth": 17,
                     "coordinateSpace": "part",
@@ -234,106 +113,119 @@
             "enabled": true,
             "items": [
                 {
+                    "alias": "distanza centri 1",
                     "enabled": true,
-                    "hasMax": false,
-                    "hasMin": false,
-                    "hasNominal": false,
+                    "hasMax": true,
+                    "hasMin": true,
+                    "hasNominal": true,
                     "hasSampleScale": false,
                     "id": "measurement_1",
-                    "max": 0,
-                    "min": 0,
-                    "nominal": 0,
+                    "label": {
+                        "custom": true,
+                        "x": 1450.9692671394798,
+                        "y": 673.109243697479
+                    },
+                    "max": 5.1,
+                    "min": 4.9,
+                    "nominal": 5,
                     "samplePixels": 110.00000000000819,
                     "sampleValue": 0,
                     "sourceAId": "circle_1_center",
                     "sourceBId": "circle_2_center",
                     "type": "point_point_distance",
-                    "unit": "px"
+                    "unit": "mm"
                 },
                 {
+                    "alias": "distanza centri 2",
                     "enabled": true,
-                    "hasMax": false,
-                    "hasMin": false,
-                    "hasNominal": false,
+                    "hasMax": true,
+                    "hasMin": true,
+                    "hasNominal": true,
                     "hasSampleScale": false,
                     "id": "measurement_2",
-                    "max": 0,
-                    "min": 0,
-                    "nominal": 0,
+                    "label": {
+                        "custom": true,
+                        "x": 1447.9432624113474,
+                        "y": 710.9243697478992
+                    },
+                    "max": 5.1,
+                    "min": 4.9,
+                    "nominal": 5,
                     "samplePixels": 110.03462339777637,
                     "sampleValue": 0,
                     "sourceAId": "circle_3_center",
                     "sourceBId": "circle_4_center",
                     "type": "point_point_distance",
-                    "unit": "px"
+                    "unit": "mm"
                 },
                 {
+                    "alias": "distanza punti 3",
                     "enabled": true,
-                    "hasMax": false,
-                    "hasMin": false,
-                    "hasNominal": false,
+                    "hasMax": true,
+                    "hasMin": true,
+                    "hasNominal": true,
                     "hasSampleScale": false,
                     "id": "measurement_3",
-                    "max": 0,
-                    "min": 0,
-                    "nominal": 0,
+                    "label": {
+                        "custom": true,
+                        "x": 1452.4822695035461,
+                        "y": 753.2773109243698
+                    },
+                    "max": 9.6,
+                    "min": 9.4,
+                    "nominal": 9.5,
                     "samplePixels": 205.00146627130115,
                     "sampleValue": 0,
                     "sourceAId": "circle_1_center",
                     "sourceBId": "circle_3_center",
                     "type": "point_point_distance",
-                    "unit": "px"
+                    "unit": "mm"
                 },
                 {
+                    "alias": "distanza centri 4",
                     "enabled": true,
-                    "hasMax": false,
-                    "hasMin": false,
-                    "hasNominal": false,
+                    "hasMax": true,
+                    "hasMin": true,
+                    "hasNominal": true,
                     "hasSampleScale": false,
                     "id": "measurement_4",
-                    "max": 0,
-                    "min": 0,
-                    "nominal": 0,
+                    "label": {
+                        "custom": true,
+                        "x": 1444.917257683215,
+                        "y": 795.6302521008403
+                    },
+                    "max": 9.6,
+                    "min": 9.4,
+                    "nominal": 9.5,
                     "samplePixels": 204.99901249171896,
                     "sampleValue": 0,
                     "sourceAId": "circle_2_center",
                     "sourceBId": "circle_4_center",
                     "type": "point_point_distance",
-                    "unit": "px"
+                    "unit": "mm"
                 },
                 {
+                    "alias": "lunghezza",
                     "enabled": true,
-                    "hasMax": false,
-                    "hasMin": false,
-                    "hasNominal": false,
-                    "hasSampleScale": false,
-                    "id": "measurement_5",
-                    "max": 0,
-                    "min": 0,
-                    "nominal": 0,
-                    "samplePixels": 240.95875630530801,
-                    "sampleValue": 0,
-                    "sourceAId": "line_1",
-                    "sourceBId": "line_2",
-                    "type": "line_line_distance",
-                    "unit": "px"
-                },
-                {
-                    "enabled": true,
-                    "hasMax": false,
-                    "hasMin": false,
-                    "hasNominal": false,
+                    "hasMax": true,
+                    "hasMin": true,
+                    "hasNominal": true,
                     "hasSampleScale": false,
                     "id": "measurement_6",
-                    "max": 0,
-                    "min": 0,
-                    "nominal": 0,
+                    "label": {
+                        "custom": true,
+                        "x": 1449.4562647754137,
+                        "y": 868.2352941176471
+                    },
+                    "max": 16.650000000000002,
+                    "min": 16.55,
+                    "nominal": 16.6,
                     "samplePixels": 360.28350904762874,
                     "sampleValue": 0,
                     "sourceAId": "line_3",
                     "sourceBId": "line_4",
                     "type": "line_line_distance",
-                    "unit": "px"
+                    "unit": "mm"
                 }
             ]
         },
@@ -348,13 +240,52 @@
                         "x": 771,
                         "y": 409
                     }
+                },
+                "massPca": {
+                    "id": "massPca",
+                    "label": "massPca",
+                    "searchRoi": {
+                        "height": 223,
+                        "width": 1473,
+                        "x": 74,
+                        "y": 440
+                    }
                 }
             },
-            "edge": {
-                "pcaResolveAmbiguity": true
-            },
             "enabled": true,
-            "method": "edgePca"
+            "method": "massPca",
+            "threshold": {
+                "max": 80,
+                "min": 0,
+                "referencePositiveHalfPlane": true
+            }
+        },
+        "threadInspection": {
+            "coordinateSpace": "image",
+            "enabled": true,
+            "extractionRoi": {
+                "image": {
+                    "height": 189,
+                    "width": 827,
+                    "x": 455,
+                    "y": 449
+                },
+                "part": {
+                    "height": 189,
+                    "width": 827,
+                    "x": 455,
+                    "y": 449
+                }
+            },
+            "filter": {
+                "maxSpeckAreaPx": 0,
+                "minSpeckAreaPx": 8,
+                "morphOpenRadius": 2,
+                "outlierRejectSigma": 2.5,
+                "profileSmoothRadius": 1,
+                "thresholdMax": 145,
+                "thresholdMin": 0
+            }
         }
     }
 }

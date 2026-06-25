@@ -184,6 +184,11 @@ void MainWindowRecipeModule::ensureRecipeCameraFolders()
 
 void MainWindowRecipeModule::setActiveRecipe(const QString& recipeId)
 {
+  if (context().resetMeasurementStatistics)
+  {
+    context().resetMeasurementStatistics();
+  }
+
   recipes().setRecipeId(recipeId);
   for (const CameraConfig& camera : config().activeCameras())
   {
@@ -241,6 +246,7 @@ void MainWindowRecipeModule::refreshSelectedCameraRecipeData()
       context().geometry->appendCurrentPartPoseOverlay(selectedCamera(), overlay);
     }
     largeImage()->setGeometryOverlay(overlay);
+    syncThreadExtractionRoiOverlay(selectedCamera());
     return;
   }
 

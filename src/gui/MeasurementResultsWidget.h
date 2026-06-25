@@ -14,6 +14,11 @@ struct CameraMeasurementResultRow
   QString cameraId;
   MeasurementResult measurement;
   qint64 scanElapsedMs = -1;
+  bool hasStatistics = false;
+  QString statisticsUnit;
+  double averageValue = 0.0;
+  double minimumValue = 0.0;
+  double maximumValue = 0.0;
 };
 
 class MeasurementResultsWidget : public QFrame

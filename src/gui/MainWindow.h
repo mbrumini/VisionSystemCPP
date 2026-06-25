@@ -18,6 +18,7 @@
 #include "gui/modules/MainWindowImagingModule.h"
 #include "gui/modules/MainWindowLocalizationModule.h"
 #include "gui/modules/MainWindowMeasurementModule.h"
+#include "gui/modules/MainWindowThreadModule.h"
 #include "gui/modules/MainWindowRecipeModule.h"
 #include "gui/modules/MainWindowSetupModule.h"
 #include "gui/modules/MainWindowSurfaceModule.h"
@@ -31,6 +32,7 @@
 #include <QHash>
 #include <QLabel>
 #include <QMainWindow>
+#include <QQueue>
 #include <QStackedWidget>
 #include <QTextEdit>
 #include <QTimer>
@@ -97,6 +99,8 @@ private:
   void incPendingJobs(const QString& cameraId);
   void decPendingJobs(const QString& cameraId);
   void publishSimulatorResult(const QString& cameraId);
+  void updateMeasurementStatistics(const QString& cameraId, bool accumulate = true);
+  void resetMeasurementStatistics();
   void handleSimulatorFrameAvailable(const QString& channel);
   void handleSimulatorSampleAvailable(const SimulatorFrame& frame);
   void processNextSimulatorFrame(const CameraConfig& camera);
@@ -123,6 +127,7 @@ private:
   MainWindowCameraConfigModule m_cameraConfig;
   MainWindowConstructedGeometryModule m_constructedGeometry;
   MainWindowMeasurementModule m_measurement;
+  MainWindowThreadModule m_thread;
   MainWindowSetupModule m_setup;
 
   QVector<CameraTileWidget*> m_tiles;
@@ -164,6 +169,16 @@ private:
   QHash<QString, int> m_cameraPendingJobs;
   QHash<QString, ProductionThroughputTracker> m_productionThroughput;
   QHash<QString, QVector<MeasurementResult>> m_lastPublishedMeasurements;
+  struct MeasurementStatisticState
+  {
+    QQueue<double> recentValues;
+    double recentSum = 0.0;
+    double minimum = 0.0;
+    double maximum = 0.0;
+    bool hasValue = false;
+    QString unit;
+  };
+  QHash<QString, MeasurementStatisticState> m_measurementStatistics;
   bool m_machineRunning = false;
   bool m_setupDetailsVisible = false;
 

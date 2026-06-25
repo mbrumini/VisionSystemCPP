@@ -491,6 +491,8 @@ void MainWindowGeometryModule::appendCurrentPartPoseOverlay(const CameraConfig& 
     overlay.points.append({QPointF(xEnd.x, xEnd.y), "X", QColor(255, 0, 0)});
     overlay.points.append({QPointF(yEnd.x, yEnd.y), "Y", QColor(255, 0, 255)});
   }
+
+  syncThreadExtractionRoiOverlay(camera);
 }
 
 void MainWindowGeometryModule::testGeometryPoint(const CameraConfig& camera)

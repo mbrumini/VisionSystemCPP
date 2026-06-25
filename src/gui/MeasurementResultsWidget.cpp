@@ -10,6 +10,21 @@
 
 namespace
 {
+enum class Column
+{
+  Camera = 0,
+  Name,
+  Nominal,
+  ToleranceMinus,
+  TolerancePlus,
+  Current,
+  Average,
+  Minimum,
+  Maximum,
+  Scan,
+  Count
+};
+
 QString measurementValue(const MeasurementResult& measurement)
 {
   if (!measurement.valid)
@@ -72,6 +87,16 @@ QColor measurementColor(const MeasurementResult& measurement)
   return QColor("#ff8a00");
 }
 
+QString statisticsValue(double value, const QString& unit)
+{
+  return QString("%1 %2").arg(value, 0, 'f', unit == "px" ? 1 : 3).arg(unit);
+}
+
+QString statisticsText(const CameraMeasurementResultRow& result, double value)
+{
+  return result.hasStatistics ? statisticsValue(value, result.statisticsUnit) : "-";
+}
+
 QTableWidgetItem* valueItem(const MeasurementResult& measurement)
 {
   auto* item = new QTableWidgetItem(measurementValue(measurement));
@@ -94,6 +119,52 @@ QString scanTime(qint64 elapsedMs)
 {
   return elapsedMs >= 0 ? QString("%1 ms").arg(elapsedMs) : "-";
 }
+
+void fillMeasurementRow(QTableWidget* table,
+                        int row,
+                        const QString& cameraId,
+                        const CameraMeasurementResultRow& result,
+                        qint64 scanElapsedMs)
+{
+  const MeasurementResult& measurement = result.measurement;
+  table->setItem(row, static_cast<int>(Column::Camera), new QTableWidgetItem(cameraId));
+  table->setItem(row, static_cast<int>(Column::Name), new QTableWidgetItem(measurementName(measurement)));
+  table->setItem(row, static_cast<int>(Column::Nominal), new QTableWidgetItem(
+    configuredValue(measurement.nominal, measurement.hasNominal, measurement.unit)));
+  table->setItem(row, static_cast<int>(Column::ToleranceMinus), new QTableWidgetItem(toleranceValue(measurement, false)));
+  table->setItem(row, static_cast<int>(Column::TolerancePlus), new QTableWidgetItem(toleranceValue(measurement, true)));
+  table->setItem(row, static_cast<int>(Column::Current), valueItem(measurement));
+  table->setItem(row, static_cast<int>(Column::Average), new QTableWidgetItem(statisticsText(result, result.averageValue)));
+  table->setItem(row, static_cast<int>(Column::Minimum), new QTableWidgetItem(statisticsText(result, result.minimumValue)));
+  table->setItem(row, static_cast<int>(Column::Maximum), new QTableWidgetItem(statisticsText(result, result.maximumValue)));
+  table->setItem(row, static_cast<int>(Column::Scan), new QTableWidgetItem(scanTime(scanElapsedMs)));
+}
+
+void updateMeasurementRow(QTableWidget* table, int row, const CameraMeasurementResultRow& result, qint64 scanElapsedMs)
+{
+  const MeasurementResult& measurement = result.measurement;
+  if (QTableWidgetItem* value = table->item(row, static_cast<int>(Column::Current)))
+  {
+    value->setText(measurementValue(measurement));
+    value->setForeground(measurementColor(measurement));
+  }
+  if (QTableWidgetItem* average = table->item(row, static_cast<int>(Column::Average)))
+  {
+    average->setText(statisticsText(result, result.averageValue));
+  }
+  if (QTableWidgetItem* minimum = table->item(row, static_cast<int>(Column::Minimum)))
+  {
+    minimum->setText(statisticsText(result, result.minimumValue));
+  }
+  if (QTableWidgetItem* maximum = table->item(row, static_cast<int>(Column::Maximum)))
+  {
+    maximum->setText(statisticsText(result, result.maximumValue));
+  }
+  if (QTableWidgetItem* scan = table->item(row, static_cast<int>(Column::Scan)))
+  {
+    scan->setText(scanTime(scanElapsedMs));
+  }
+}
 }
 
 MeasurementResultsWidget::MeasurementResultsWidget(QWidget* parent)
@@ -110,7 +181,7 @@ MeasurementResultsWidget::MeasurementResultsWidget(QWidget* parent)
   layout->addWidget(m_title);
 
   m_table = new QTableWidget(this);
-  m_table->setColumnCount(7);
+  m_table->setColumnCount(static_cast<int>(Column::Count));
   m_table->setHorizontalHeaderLabels({
     "Camera",
     "Misura",
@@ -118,11 +189,14 @@ MeasurementResultsWidget::MeasurementResultsWidget(QWidget* parent)
     "Toll -",
     "Toll +",
     "Misura attuale",
+    "Media",
+    "MIN",
+    "MAX",
     "Scansione"
   });
   m_table->verticalHeader()->setVisible(false);
   m_table->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-  m_table->horizontalHeader()->setSectionResizeMode(5, QHeaderView::Stretch);
+  m_table->horizontalHeader()->setSectionResizeMode(static_cast<int>(Column::Current), QHeaderView::Stretch);
   m_table->setSelectionBehavior(QAbstractItemView::SelectRows);
   m_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
   m_table->setAlternatingRowColors(true);
@@ -150,15 +224,9 @@ void MeasurementResultsWidget::setMeasurements(const QString& cameraId,
   m_table->setRowCount(measurements.size());
   for (int row = 0; row < measurements.size(); ++row)
   {
-    const MeasurementResult& measurement = measurements[row];
-    m_table->setItem(row, 0, new QTableWidgetItem(cameraId));
-    m_table->setItem(row, 1, new QTableWidgetItem(measurementName(measurement)));
-    m_table->setItem(row, 2, new QTableWidgetItem(
-      configuredValue(measurement.nominal, measurement.hasNominal, measurement.unit)));
-    m_table->setItem(row, 3, new QTableWidgetItem(toleranceValue(measurement, false)));
-    m_table->setItem(row, 4, new QTableWidgetItem(toleranceValue(measurement, true)));
-    m_table->setItem(row, 5, valueItem(measurement));
-    m_table->setItem(row, 6, new QTableWidgetItem(scanTime(scanElapsedMs)));
+    CameraMeasurementResultRow result;
+    result.measurement = measurements[row];
+    fillMeasurementRow(m_table, row, cameraId, result, scanElapsedMs);
   }
 }
 
@@ -167,52 +235,33 @@ void MeasurementResultsWidget::setAllCameraMeasurements(const QVector<CameraMeas
   m_title->setText("Misure | Tutte le telecamere");
   setCameraColumnVisible(true);
 
-  auto rowKey = [](const CameraMeasurementResultRow& result) {
-    const MeasurementResult& measurement = result.measurement;
-    return QString("%1|%2|%3|%4|%5")
-      .arg(result.cameraId, measurement.type, measurement.sourceAId, measurement.sourceBId, measurement.id);
-  };
-
   if (m_table->rowCount() == measurements.size() && !measurements.isEmpty())
   {
     bool sameRows = true;
     for (int row = 0; row < measurements.size(); ++row)
     {
-      const QTableWidgetItem* cameraItem = m_table->item(row, 0);
-      const QTableWidgetItem* nameItem = m_table->item(row, 1);
+      const QTableWidgetItem* cameraItem = m_table->item(row, static_cast<int>(Column::Camera));
+      const QTableWidgetItem* nameItem = m_table->item(row, static_cast<int>(Column::Name));
       if (!cameraItem || !nameItem)
       {
         sameRows = false;
         break;
       }
-      const QString expectedKey = rowKey(measurements[row]);
-      const QString actualKey = QString("%1|%2")
-        .arg(cameraItem->text(), nameItem->text());
       const QString expectedShortKey = QString("%1|%2")
         .arg(measurements[row].cameraId, measurementName(measurements[row].measurement));
+      const QString actualKey = QString("%1|%2").arg(cameraItem->text(), nameItem->text());
       if (actualKey != expectedShortKey)
       {
         sameRows = false;
         break;
       }
-      Q_UNUSED(expectedKey);
     }
 
     if (sameRows)
     {
       for (int row = 0; row < measurements.size(); ++row)
       {
-        const CameraMeasurementResultRow& result = measurements[row];
-        const MeasurementResult& measurement = result.measurement;
-        if (QTableWidgetItem* value = m_table->item(row, 5))
-        {
-          value->setText(measurementValue(measurement));
-          value->setForeground(measurementColor(measurement));
-        }
-        if (QTableWidgetItem* scan = m_table->item(row, 6))
-        {
-          scan->setText(scanTime(result.scanElapsedMs));
-        }
+        updateMeasurementRow(m_table, row, measurements[row], measurements[row].scanElapsedMs);
       }
       return;
     }
@@ -222,15 +271,7 @@ void MeasurementResultsWidget::setAllCameraMeasurements(const QVector<CameraMeas
   for (int row = 0; row < measurements.size(); ++row)
   {
     const CameraMeasurementResultRow& result = measurements[row];
-    const MeasurementResult& measurement = result.measurement;
-    m_table->setItem(row, 0, new QTableWidgetItem(result.cameraId));
-    m_table->setItem(row, 1, new QTableWidgetItem(measurementName(measurement)));
-    m_table->setItem(row, 2, new QTableWidgetItem(
-      configuredValue(measurement.nominal, measurement.hasNominal, measurement.unit)));
-    m_table->setItem(row, 3, new QTableWidgetItem(toleranceValue(measurement, false)));
-    m_table->setItem(row, 4, new QTableWidgetItem(toleranceValue(measurement, true)));
-    m_table->setItem(row, 5, valueItem(measurement));
-    m_table->setItem(row, 6, new QTableWidgetItem(scanTime(result.scanElapsedMs)));
+    fillMeasurementRow(m_table, row, result.cameraId, result, result.scanElapsedMs);
   }
 }
 
@@ -266,6 +307,9 @@ void MeasurementResultsWidget::setCameraColumnVisible(bool visible)
 
 void MeasurementResultsWidget::updateColumnVisibility()
 {
-  m_table->setColumnHidden(0, !m_cameraColumnVisible);
-  m_table->setColumnHidden(6, !m_showScanTime);
+  m_table->setColumnHidden(static_cast<int>(Column::Camera), !m_cameraColumnVisible);
+  m_table->setColumnHidden(static_cast<int>(Column::Average), !m_cameraColumnVisible);
+  m_table->setColumnHidden(static_cast<int>(Column::Minimum), !m_cameraColumnVisible);
+  m_table->setColumnHidden(static_cast<int>(Column::Maximum), !m_cameraColumnVisible);
+  m_table->setColumnHidden(static_cast<int>(Column::Scan), !m_showScanTime);
 }

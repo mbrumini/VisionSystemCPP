@@ -213,18 +213,7 @@ void MainWindowGeometryModule::refreshMeasurementOverlay(const CameraConfig& cam
     return;
   }
 
-  if (context().constructedGeometry)
-  {
-    context().constructedGeometry->rebuildConstructedGeometryRecipe(camera);
-  }
-
-  if (context().measurement)
-  {
-    context().measurement->rebuildMeasurementRecipe(camera);
-    GeometryOverlay overlay = largeImage()->geometryOverlay();
-    context().measurement->appendMeasurementOverlay(camera, overlay);
-    largeImage()->setGeometryOverlay(overlay);
-  }
+  showRuntimeGeometryOverlay(camera);
 
   if (context().updateMeasurementResults)
   {

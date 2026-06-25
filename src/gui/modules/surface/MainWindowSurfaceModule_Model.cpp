@@ -153,6 +153,7 @@ bool MainWindowSurfaceModule::localizePoseOnSample(const CameraConfig& camera)
 
   context().lastSurfaceLocalizationResults->insert(camera.id, result.localization);
   cameraRuntime()[camera.id].setCurrentPose(context().imaging->partPoseFromSurfaceReference(camera, result.localization));
+  syncThreadExtractionRoiOverlay(camera);
   return true;
 }
 
@@ -324,6 +325,7 @@ bool MainWindowSurfaceModule::restoreSurfaceModelPoseFromSample(const CameraConf
 
   context().lastSurfaceLocalizationResults->insert(camera.id, result.localization);
   cameraRuntime()[camera.id].setCurrentPose(context().imaging->partPoseFromSurfaceReference(camera, result.localization));
+  syncThreadExtractionRoiOverlay(camera);
   return true;
 }
 
@@ -430,6 +432,7 @@ void MainWindowSurfaceModule::testSurfaceShapeModel(const CameraConfig& camera)
 
     context().lastSurfaceLocalizationResults->insert(camera.id, result.localization);
     cameraRuntime()[camera.id].setCurrentPose(context().imaging->partPoseFromSurfaceReference(camera, result.localization));
+    syncThreadExtractionRoiOverlay(camera);
     if (context().setup)
     {
       context().setup->refreshSetupGeometryResults(camera);
@@ -523,6 +526,7 @@ void MainWindowSurfaceModule::testSurfaceTemplateModel(const CameraConfig& camer
 
     context().lastSurfaceLocalizationResults->insert(camera.id, result.localization);
     cameraRuntime()[camera.id].setCurrentPose(context().imaging->partPoseFromSurfaceReference(camera, result.localization));
+    syncThreadExtractionRoiOverlay(camera);
     if (context().setup)
     {
       context().setup->refreshSetupGeometryResults(camera);

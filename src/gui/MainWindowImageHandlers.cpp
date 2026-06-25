@@ -1,8 +1,10 @@
 #include "gui/MainWindow.h"
 
 #include "gui/modules/MainWindowCameraProfile.h"
+#include "config/GeometryRecipeJson.h"
 #include "gui/geometry/GeometryDiagnosticDrawing.h"
 #include "gui/geometry/GeometryMath.h"
+#include "runtime/PartPose.h"
 
 #include <opencv2/imgproc.hpp>
 
@@ -52,6 +54,45 @@ void MainWindow::setupLargeImageHandlers()
                   .arg(roi.y())
                   .arg(roi.width())
                   .arg(roi.height()));
+      return;
+    }
+
+    if (m_activeDrawingRecipe == MainWindowActiveDrawingRecipe::ThreadInspection)
+    {
+      const PartPose& pose = m_cameraRuntime[m_selectedCameraId].currentPose();
+      if (!pose.valid)
+      {
+        appendLog(trText("log.threadRoiNeedsPose") + ": " + m_selectedCameraId);
+        return;
+      }
+
+      const QRect imageRoi = roi.normalized();
+      const QRect partRoi = imageRectToPartRect(pose, imageRoi).normalized();
+      if (!partRoi.isValid())
+      {
+        appendLog(trText("log.threadExtractionFailed") + ": " + m_selectedCameraId);
+        return;
+      }
+
+      if (!m_recipeManager.saveThreadInspectionExtractionRoi(
+            m_selectedCameraId,
+            GeometryRecipeJson::kPartSpace,
+            partRoi,
+            imageRoi,
+            &error))
+      {
+        appendLog(error);
+        return;
+      }
+
+      appendLog(QString("%1: %2 x=%3 y=%4 w=%5 h=%6")
+                  .arg(trText("log.threadRoiSaved"))
+                  .arg(m_selectedCameraId)
+                  .arg(imageRoi.x())
+                  .arg(imageRoi.y())
+                  .arg(imageRoi.width())
+                  .arg(imageRoi.height()));
+      m_thread.testThreadExtraction(m_selectedCamera);
       return;
     }
 

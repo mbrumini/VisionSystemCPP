@@ -6,6 +6,7 @@
 #include "gui/modules/MainWindowSurfaceModule.h"
 #include "gui/modules/MainWindowLocalizationModule.h"
 #include "gui/modules/MainWindowMeasurementModule.h"
+#include "gui/modules/MainWindowThreadModule.h"
 #include "gui/modules/MainWindowContext.h"
 #include "gui/modules/MainWindowCameraConfigModule.h"
 #include "gui/modules/setup/SetupCameraResolver.h"
@@ -181,6 +182,12 @@ void MainWindowSetupModule::showToolPanel(const CameraConfig& camera, const QStr
       return;
     }
     showAiClassificationPanel(camera);
+    return;
+  }
+
+  if (toolId == "threadInspection")
+  {
+    context().thread->showThreadInspectionPanel(camera);
     return;
   }
 

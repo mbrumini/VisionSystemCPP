@@ -139,6 +139,65 @@ cv::Mat createAsymmetricCross(int width, int height, int background)
   return image;
 }
 
+cv::Mat createScrewShank(int width, int height, int background)
+{
+  cv::Mat image(height, width, CV_8UC3, cv::Scalar(background, background, background));
+  const cv::Scalar dark(12, 12, 12);
+  const int centerY = height / 2;
+  const int coreHalf = std::max(16, height / 28);
+  const int threadAmp = std::max(7, coreHalf / 2);
+  const int pitch = std::max(12, coreHalf);
+
+  const int leftX = 0;
+  const int threadStart = width * 24 / 100;
+  const int threadEnd = width * 66 / 100;
+  const int rightEnd = width * 79 / 100;
+
+  cv::rectangle(
+    image,
+    cv::Point(leftX, centerY - coreHalf),
+    cv::Point(threadStart, centerY + coreHalf),
+    dark,
+    cv::FILLED,
+    cv::LINE_AA);
+
+  std::vector<cv::Point> threadProfile;
+  threadProfile.emplace_back(threadStart, centerY - coreHalf);
+  for (int x = threadStart; x < threadEnd; x += pitch)
+  {
+    const int peakX = std::min(x + pitch / 2, threadEnd);
+    const int nextX = std::min(x + pitch, threadEnd);
+    threadProfile.emplace_back(peakX, centerY - coreHalf - threadAmp);
+    threadProfile.emplace_back(nextX, centerY - coreHalf);
+  }
+  threadProfile.emplace_back(threadEnd, centerY + coreHalf);
+  for (int x = threadEnd; x > threadStart; x -= pitch)
+  {
+    const int peakX = std::max(x - pitch / 2, threadStart);
+    const int prevX = std::max(x - pitch, threadStart);
+    threadProfile.emplace_back(peakX, centerY + coreHalf + threadAmp);
+    threadProfile.emplace_back(prevX, centerY + coreHalf);
+  }
+  cv::fillPoly(image, std::vector<std::vector<cv::Point>>{threadProfile}, dark, cv::LINE_AA);
+
+  const int tipStart = std::max(threadEnd, rightEnd - coreHalf * 2);
+  cv::rectangle(
+    image,
+    cv::Point(threadEnd, centerY - coreHalf),
+    cv::Point(tipStart, centerY + coreHalf),
+    dark,
+    cv::FILLED,
+    cv::LINE_AA);
+  const std::vector<cv::Point> tip = {
+    cv::Point(tipStart, centerY - coreHalf),
+    cv::Point(rightEnd, centerY),
+    cv::Point(tipStart, centerY + coreHalf)
+  };
+  cv::fillConvexPoly(image, tip, dark, cv::LINE_AA);
+
+  return image;
+}
+
 cv::Mat createShape(const QString& id, int width, int height, int background)
 {
   if (id == "cross")
@@ -186,7 +245,11 @@ cv::Mat createShape(const QString& id, int width, int height, int background)
     cv::fillPoly(image, std::vector<std::vector<cv::Point>>{polygon}, dark);
     cv::circle(image, center + cv::Point(80, 82), 22, cv::Scalar(background, background, background), -1, cv::LINE_AA);
   }
-  else
+  else if (id == "screw_shank")
+  {
+    return createScrewShank(width, height, background);
+  }
+  else if (id == "gear")
   {
     const int teeth = 12;
     std::vector<cv::Point> polygon;
@@ -993,6 +1056,7 @@ private:
     m_shapeCombo->addItem("Cerchi concentrici", "circles");
     m_shapeCombo->addItem("Piastra con fori", "plate");
     m_shapeCombo->addItem("Profilo a L", "l_profile");
+    m_shapeCombo->addItem("Gambo vite", "screw_shank");
     m_shapeCombo->addItem("Ruota dentata", "gear");
     m_strategyCombo = new QComboBox(configPanel);
     m_strategyCombo->addItem("Massa / PCA", "massPca");
@@ -2927,22 +2991,13 @@ private:
 
     if (m_hasBaseline)
     {
-      const double rotationCenterX = (m_canvasWidth - 1) * 0.5;
-      const double rotationCenterY = (m_canvasHeight - 1) * 0.5;
       const double deltaAngle =
         m_currentPose.angleDeg - m_baselinePose.angleDeg;
-      const double radians = -deltaAngle * CV_PI / 180.0;
-      const double baselineDx = m_baselineResult.actualX - rotationCenterX;
-      const double baselineDy = m_baselineResult.actualY - rotationCenterY;
-      const double rotatedDx =
-        baselineDx * std::cos(radians) - baselineDy * std::sin(radians);
-      const double rotatedDy =
-        baselineDx * std::sin(radians) + baselineDy * std::cos(radians);
       m_expectedX =
-        rotationCenterX + rotatedDx +
+        m_baselineResult.actualX +
         (m_currentPose.xMm - m_baselinePose.xMm) * pxPerMm;
       m_expectedY =
-        rotationCenterY + rotatedDy +
+        m_baselineResult.actualY +
         (m_currentPose.yMm - m_baselinePose.yMm) * pxPerMm;
       m_expectedAngle =
         m_baselineResult.actualAngle -

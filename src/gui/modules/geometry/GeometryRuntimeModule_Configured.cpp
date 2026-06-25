@@ -214,8 +214,8 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
   {
     selectedPreview() = context().imaging->matToPixmap(result.diagnostic);
     largeImage()->setImage(selectedPreview());
-    largeImage()->clearRoi();
     largeImage()->clearCircles();
+    syncThreadExtractionRoiOverlay(camera);
   }
 
   if (updateView &&

@@ -359,6 +359,10 @@ void MainWindowSetupModule::refreshSetupGeometryResults(const CameraConfig& came
         largeImage()->setGeometryOverlay(overlay);
       }
     }
+    if (context().updateMeasurementStatistics)
+    {
+      context().updateMeasurementStatistics(camera.id);
+    }
     if (onComplete)
     {
       onComplete();

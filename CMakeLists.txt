@@ -52,6 +52,7 @@ add_executable(VisionSystemCPP
     src/config/GeometryRecipeJson.cpp
     src/config/RecipeManagerMeasurement.cpp
     src/config/RecipeManagerSurfaceDefect.cpp
+    src/config/RecipeManagerThreadInspection.cpp
     src/config/RecipeManagerSurfaceLocalization.cpp
     src/config/RecipeManagerStorage.cpp
     src/config/RecipeJsonUtils.h
@@ -155,6 +156,8 @@ add_executable(VisionSystemCPP
     src/gui/modules/MainWindowLocalizationModule.cpp
     src/gui/modules/MainWindowMeasurementModule.h
     src/gui/modules/MainWindowMeasurementModule.cpp
+    src/gui/modules/MainWindowThreadModule.h
+    src/gui/modules/MainWindowThreadModule.cpp
     src/gui/modules/MainWindowMeasurementPanels.cpp
     src/gui/modules/MainWindowMeasurementActions.cpp
     src/gui/modules/MainWindowMeasurementRecipe.cpp
@@ -310,6 +313,8 @@ add_executable(VisionSystemCPP
     src/processing/SurfaceProcessingUtils.h
     src/processing/SurfacePcaStrategy.h
     src/processing/SurfacePcaStrategy.cpp
+    src/processing/thread/ThreadProfileExtractor.h
+    src/processing/thread/ThreadProfileExtractor.cpp
     src/processing/SurfaceThresholdStrategy.h
     src/processing/SurfaceThresholdStrategy.cpp
     src/processing/SurfaceTwoCirclesStrategy.h

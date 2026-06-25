@@ -177,6 +177,10 @@ void MainWindow::buildUi()
     {
       m_measurement.showMeasurementPanel(m_selectedCamera);
     }
+    else if (toolId == "threadInspection")
+    {
+      m_thread.showThreadInspectionPanel(m_selectedCamera);
+    }
     else if (toolId == "localization")
     {
       showLocalizationStrategyList(m_selectedCamera);

@@ -65,7 +65,8 @@ QColor iconColor(const QString& id)
       id == "distance" || id == "angle" ||
       id == "pointPointDistance" || id == "pointLineDistance" ||
       id == "lineLineDistance" || id == "circleDiameterMeasure" ||
-      id == "lineLineAngle")
+      id == "lineLineAngle" || id == "threadInspection" ||
+      id == "threadExtractionRoi" || id == "testThreadExtraction")
   {
     return measurement;
   }
@@ -222,6 +223,9 @@ QIcon IconCatalog::icon(const QString& id)
     ,{"lineLineDistance", ":/icons/measure-line-line.svg"}
     ,{"circleDiameterMeasure", ":/icons/measure-diameter.svg"}
     ,{"lineLineAngle", ":/icons/measure-angle.svg"}
+    ,{"threadInspection", ":/icons/geometry-line.svg"}
+    ,{"threadExtractionRoi", ":/icons/surface-roi.svg"}
+    ,{"testThreadExtraction", ":/icons/play.svg"}
     ,{"nominal", ":/icons/tolerance-nominal.svg"}
     ,{"minTolerance", ":/icons/tolerance-min.svg"}
     ,{"maxTolerance", ":/icons/tolerance-max.svg"}

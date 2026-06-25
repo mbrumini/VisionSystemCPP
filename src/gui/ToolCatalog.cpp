@@ -51,6 +51,11 @@ const QHash<QString, ToolTemplate>& tools()
       {"center", "actions.center"},
       {"area", "actions.area"}
     })},
+    {"threadInspection", makeTool("threadInspection", "tools.threadInspection", {
+      {"threadExtractionRoi", "actions.threadExtractionRoi"},
+      {"testThreadExtraction", "actions.testThreadExtraction"},
+      {"clearThreadRoi", "actions.clearThreadRoi"}
+    })},
     {"dimensions", makeTool("dimensions", "tools.dimensions", {
       {"outerDiameter", "actions.outerDiameter"},
       {"innerDiameter", "actions.innerDiameter"},

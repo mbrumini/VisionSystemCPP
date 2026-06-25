@@ -1,6 +1,7 @@
 #include "gui/MainWindow.h"
 
 #include <QAction>
+#include <QActionGroup>
 #include <QApplication>
 #include <QMenu>
 #include <QMenuBar>
@@ -93,6 +94,29 @@ void MainWindow::buildMenu()
   detailedLogAction->setChecked(m_detailedLogger.enabled());
   connect(detailedLogAction, &QAction::toggled, this, [this](bool checked) {
     setDetailedLogEnabled(checked);
+  });
+  QMenu* simulatorResultsMenu = systemMenu->addMenu("Risultati simulatore");
+  QActionGroup* simulatorResultsGroup = new QActionGroup(simulatorResultsMenu);
+  simulatorResultsGroup->setExclusive(true);
+  QSettings simulatorSettings;
+  const QString simulatorResultMode =
+    simulatorSettings.value("simulator/resultMode", "full").toString();
+  const auto addSimulatorResultMode = [&](const QString& label, const QString& mode) {
+    QAction* action = simulatorResultsMenu->addAction(label);
+    action->setCheckable(true);
+    action->setData(mode);
+    action->setChecked(simulatorResultMode == mode);
+    simulatorResultsGroup->addAction(action);
+    return action;
+  };
+  addSimulatorResultMode("Invia risultati completi", "full");
+  addSimulatorResultMode("Invia risultati leggeri", "summary");
+  addSimulatorResultMode("Non inviare risultati", "none");
+  connect(simulatorResultsGroup, &QActionGroup::triggered, this, [this](QAction* action) {
+    QSettings settings;
+    const QString mode = action->data().toString();
+    settings.setValue("simulator/resultMode", mode);
+    appendLog(QString("Risultati simulatore: %1").arg(action->text()), true);
   });
   systemMenu->addSeparator();
   systemMenu->addAction(trText("commands.exit"), qApp, &QApplication::quit);

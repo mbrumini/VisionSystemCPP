@@ -9,13 +9,19 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QDoubleSpinBox>
 #include <QFormLayout>
+#include <QGroupBox>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QGridLayout>
 #include <QHBoxLayout>
+#include <QHeaderView>
+#include <QRadioButton>
+#include <QTableWidget>
 #include <QVBoxLayout>
 
 #include <functional>
@@ -27,6 +33,46 @@ QString measurementItemLabel(const MeasurementRecipeConfig& config)
   const QString name = config.alias.trimmed().isEmpty() ? config.id
                                                         : QString("%1 (%2)").arg(config.alias.trimmed(), config.id);
   return QString("%1 | %2").arg(name, config.type);
+}
+
+QString measurementKey(const MeasurementRecipeConfig& config)
+{
+  return QString("%1|%2|%3").arg(config.type, config.sourceAId, config.sourceBId);
+}
+
+QString measurementValueText(const MeasurementResult& measurement)
+{
+  if (!measurement.valid)
+  {
+    return "N/D";
+  }
+  if (measurement.hasRealValue)
+  {
+    return QString("%1 %2").arg(measurement.valueReal, 0, 'f', 3).arg(measurement.unit);
+  }
+  return QString("%1 px").arg(measurement.valuePixels, 0, 'f', 3);
+}
+
+const MeasurementResult* findMeasurementResult(const QVector<MeasurementResult>& measurements, const MeasurementRecipeConfig& config)
+{
+  const QString key = measurementKey(config);
+  for (const MeasurementResult& measurement : measurements)
+  {
+    if (QString("%1|%2|%3").arg(measurement.type, measurement.sourceAId, measurement.sourceBId) == key)
+    {
+      return &measurement;
+    }
+  }
+  return nullptr;
+}
+
+double currentMeasurementPixels(const GeometrySet& set, const MeasurementRecipeConfig& config)
+{
+  if (const MeasurementResult* result = findMeasurementResult(set.measurements, config))
+  {
+    return result->valid ? result->valuePixels : 0.0;
+  }
+  return 0.0;
 }
 }
 
@@ -44,10 +90,12 @@ void MainWindowMeasurementModule::removeMeasurement(const CameraConfig& camera, 
 
   QVector<MeasurementRecipeConfig> configs = recipes().loadMeasurements(camera.id);
   bool removed = false;
+  QString removedKey;
   for (int i = configs.size() - 1; i >= 0; --i)
   {
     if (configs[i].id == measurementId)
     {
+      removedKey = measurementKey(configs[i]);
       configs.removeAt(i);
       removed = true;
       break;
@@ -64,6 +112,11 @@ void MainWindowMeasurementModule::removeMeasurement(const CameraConfig& camera, 
   {
     log(QString("%1: %2").arg(tr("log.measurementRecipeSaveFailed"), error));
     return;
+  }
+
+  if (m_selectedMeasurementKeys.value(camera.id) == removedKey)
+  {
+    m_selectedMeasurementKeys.remove(camera.id);
   }
 
   rebuildMeasurementRecipe(camera);
@@ -132,26 +185,311 @@ void MainWindowMeasurementModule::appendMeasurementListControls(QWidget* panel,
     return;
   }
 
-  auto* listRow = new QWidget(panel);
-  auto* listLayout = new QHBoxLayout(listRow);
-  listLayout->setContentsMargins(0, 0, 0, 0);
-  listLayout->setSpacing(6);
-
-  auto* measureCombo = new QComboBox(listRow);
-  for (const MeasurementRecipeConfig& config : measurements)
-  {
-    measureCombo->addItem(measurementItemLabel(config), config.id);
-  }
-
-  auto* deleteButton = createTouchIconButton("delete", tr("actions.deleteMeasurement"), listRow);
-  QObject::connect(deleteButton, &QPushButton::clicked, window(), [this, camera, measureCombo, refreshPanel]() {
-    removeMeasurement(camera, measureCombo->currentData().toString());
+  auto* listButton = createTouchIconButton("ruler", "Misure...", panel);
+  QObject::connect(listButton, &QPushButton::clicked, window(), [this, camera, refreshPanel]() {
+    showMeasurementListDialog(camera);
     refreshPanel();
   });
+  layout->addWidget(listButton);
+}
 
-  listLayout->addWidget(measureCombo, 1);
-  listLayout->addWidget(deleteButton);
-  layout->addWidget(listRow);
+QString MainWindowMeasurementModule::selectedMeasurementKey(const QString& cameraId) const
+{
+  return m_selectedMeasurementKeys.value(cameraId);
+}
+
+void MainWindowMeasurementModule::showMeasurementListDialog(const CameraConfig& camera)
+{
+  refreshMeasurementSources(camera);
+
+  QDialog dialog(window());
+  dialog.setWindowTitle(QString("Misure | %1").arg(camera.id));
+  dialog.resize(820, 420);
+
+  auto* layout = new QVBoxLayout(&dialog);
+  auto* table = new QTableWidget(0, 6, &dialog);
+  table->setHorizontalHeaderLabels({"Nome", "Alias", "Tipo", "Valore", "Stato", "Sorgenti"});
+  table->setSelectionBehavior(QAbstractItemView::SelectRows);
+  table->setSelectionMode(QAbstractItemView::SingleSelection);
+  table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+  table->verticalHeader()->setVisible(false);
+  table->horizontalHeader()->setStretchLastSection(true);
+
+  const auto reloadTable = [this, &camera, table]() {
+    rebuildMeasurementRecipe(camera);
+    const QVector<MeasurementRecipeConfig> measurements = recipes().loadMeasurements(camera.id);
+    const GeometrySet& set = cameraRuntime()[camera.id].geometries();
+    const QString activeKey = selectedMeasurementKey(camera.id);
+    int activeRow = -1;
+
+    table->setRowCount(0);
+    table->setRowCount(measurements.size());
+    for (int row = 0; row < measurements.size(); ++row)
+    {
+      const MeasurementRecipeConfig& config = measurements[row];
+      const QString key = measurementKey(config);
+      const MeasurementResult* result = findMeasurementResult(set.measurements, config);
+      const QString state = result && result->valid
+        ? (result->judgement.isEmpty() ? "OK" : result->judgement)
+        : "N/D";
+      const QString value = result ? measurementValueText(*result) : "N/D";
+
+      const QStringList values = {
+        config.id,
+        config.alias,
+        config.type,
+        value,
+        state,
+        config.sourceBId.isEmpty() ? config.sourceAId : QString("%1 / %2").arg(config.sourceAId, config.sourceBId)
+      };
+      for (int column = 0; column < values.size(); ++column)
+      {
+        auto* item = new QTableWidgetItem(values[column]);
+        item->setData(Qt::UserRole, key);
+        item->setData(Qt::UserRole + 1, config.id);
+        table->setItem(row, column, item);
+      }
+      if (key == activeKey)
+      {
+        activeRow = row;
+      }
+    }
+
+    if (activeRow >= 0)
+    {
+      table->selectRow(activeRow);
+    }
+    table->resizeColumnsToContents();
+  };
+  reloadTable();
+  layout->addWidget(table);
+
+  auto* buttons = new QDialogButtonBox(&dialog);
+  auto* toleranceButton = buttons->addButton("Tolleranze...", QDialogButtonBox::ActionRole);
+  auto* deleteButton = buttons->addButton(tr("actions.deleteMeasurement"), QDialogButtonBox::DestructiveRole);
+  buttons->addButton(QDialogButtonBox::Close);
+  layout->addWidget(buttons);
+
+  QObject::connect(table, &QTableWidget::cellClicked, &dialog, [this, camera, table](int row, int) {
+    if (auto* item = table->item(row, 0))
+    {
+      m_selectedMeasurementKeys[camera.id] = item->data(Qt::UserRole).toString();
+      if (context().geometry)
+      {
+        context().geometry->refreshMeasurementOverlay(camera);
+      }
+    }
+  });
+  QObject::connect(toleranceButton, &QPushButton::clicked, &dialog, [this, camera, table, reloadTable]() {
+    const int row = table->currentRow();
+    if (row < 0)
+    {
+      return;
+    }
+    const QString measurementId = table->item(row, 0)->data(Qt::UserRole + 1).toString();
+    showMeasurementToleranceDialog(camera, measurementId);
+    reloadTable();
+  });
+  QObject::connect(deleteButton, &QPushButton::clicked, &dialog, [this, camera, table, reloadTable]() {
+    const int row = table->currentRow();
+    if (row < 0)
+    {
+      return;
+    }
+    const QString measurementId = table->item(row, 0)->data(Qt::UserRole + 1).toString();
+    removeMeasurement(camera, measurementId);
+    reloadTable();
+  });
+  QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+  dialog.exec();
+}
+
+void MainWindowMeasurementModule::showMeasurementToleranceDialog(const CameraConfig& camera, const QString& measurementId)
+{
+  QVector<MeasurementRecipeConfig> configs = recipes().loadMeasurements(camera.id);
+  int configIndex = -1;
+  for (int i = 0; i < configs.size(); ++i)
+  {
+    if (configs[i].id == measurementId)
+    {
+      configIndex = i;
+      break;
+    }
+  }
+  if (configIndex < 0)
+  {
+    return;
+  }
+
+  MeasurementRecipeConfig config = configs[configIndex];
+  const bool angle = config.type == "line_line_angle";
+  const QString unit = angle ? " deg" : " mm";
+
+  QDialog dialog(window());
+  dialog.setWindowTitle(QString("Tolleranze | %1").arg(config.alias.trimmed().isEmpty() ? config.id : config.alias));
+  auto* layout = new QVBoxLayout(&dialog);
+
+  auto* aliasEdit = new QLineEdit(config.alias, &dialog);
+  aliasEdit->setPlaceholderText("Alias");
+  layout->addWidget(aliasEdit);
+
+  auto* conversionBox = new QGroupBox("Valore reale", &dialog);
+  auto* conversionLayout = new QVBoxLayout(conversionBox);
+  auto* calibrationRadio = new QRadioButton("Usa calibrazione scacchi camera", conversionBox);
+  auto* sampleRadio = new QRadioButton("Usa valore reale misurato sul pezzo", conversionBox);
+  auto* sampleValue = new QDoubleSpinBox(conversionBox);
+  sampleValue->setRange(-1000000.0, 1000000.0);
+  sampleValue->setDecimals(4);
+  sampleValue->setSuffix(unit);
+  sampleValue->setValue(config.sampleValue);
+  conversionLayout->addWidget(calibrationRadio);
+  conversionLayout->addWidget(sampleRadio);
+  conversionLayout->addWidget(sampleValue);
+  layout->addWidget(conversionBox);
+
+  if (angle)
+  {
+    conversionBox->setEnabled(false);
+  }
+  else if (config.hasSampleScale)
+  {
+    sampleRadio->setChecked(true);
+  }
+  else
+  {
+    calibrationRadio->setChecked(true);
+  }
+  sampleValue->setEnabled(sampleRadio->isChecked() && !angle);
+  QObject::connect(sampleRadio, &QRadioButton::toggled, &dialog, [sampleValue, angle](bool checked) {
+    sampleValue->setEnabled(checked && !angle);
+  });
+
+  auto* toleranceBox = new QGroupBox("Tolleranza", &dialog);
+  auto* toleranceLayout = new QVBoxLayout(toleranceBox);
+  auto* toleranceEnabled = new QCheckBox("Abilita OK/NOK", toleranceBox);
+  toleranceEnabled->setChecked(config.hasMin || config.hasMax);
+  auto* minMaxRadio = new QRadioButton("Min / Max", toleranceBox);
+  auto* nominalRadio = new QRadioButton("Nominale + / -", toleranceBox);
+  auto* toleranceForm = new QWidget(toleranceBox);
+  auto* form = new QFormLayout(toleranceForm);
+  form->setContentsMargins(0, 0, 0, 0);
+
+  auto* nominal = new QDoubleSpinBox(toleranceForm);
+  auto* tolMinus = new QDoubleSpinBox(toleranceForm);
+  auto* tolPlus = new QDoubleSpinBox(toleranceForm);
+  auto* min = new QDoubleSpinBox(toleranceForm);
+  auto* max = new QDoubleSpinBox(toleranceForm);
+  for (QDoubleSpinBox* spin : {nominal, tolMinus, tolPlus, min, max})
+  {
+    spin->setRange(-1000000.0, 1000000.0);
+    spin->setDecimals(4);
+    spin->setSuffix(unit);
+  }
+
+  nominal->setValue(config.nominal);
+  min->setValue(config.min);
+  max->setValue(config.max);
+  tolMinus->setValue(config.hasNominal && config.hasMin ? config.min - config.nominal : 0.0);
+  tolPlus->setValue(config.hasNominal && config.hasMax ? config.max - config.nominal : 0.0);
+  if (config.hasNominal && config.hasMin && config.hasMax)
+  {
+    nominalRadio->setChecked(true);
+  }
+  else
+  {
+    minMaxRadio->setChecked(true);
+  }
+
+  form->addRow("Nominale", nominal);
+  form->addRow("Offset limite basso", tolMinus);
+  form->addRow("Offset limite alto", tolPlus);
+  form->addRow("Min", min);
+  form->addRow("Max", max);
+  toleranceLayout->addWidget(toleranceEnabled);
+  toleranceLayout->addWidget(minMaxRadio);
+  toleranceLayout->addWidget(nominalRadio);
+  toleranceLayout->addWidget(toleranceForm);
+  layout->addWidget(toleranceBox);
+
+  const auto syncToleranceMode = [=]() {
+    const bool enabled = toleranceEnabled->isChecked();
+    nominalRadio->setEnabled(enabled);
+    minMaxRadio->setEnabled(enabled);
+    nominal->setEnabled(enabled && nominalRadio->isChecked());
+    tolMinus->setEnabled(enabled && nominalRadio->isChecked());
+    tolPlus->setEnabled(enabled && nominalRadio->isChecked());
+    min->setEnabled(enabled && minMaxRadio->isChecked());
+    max->setEnabled(enabled && minMaxRadio->isChecked());
+  };
+  QObject::connect(toleranceEnabled, &QCheckBox::toggled, &dialog, syncToleranceMode);
+  QObject::connect(minMaxRadio, &QRadioButton::toggled, &dialog, syncToleranceMode);
+  QObject::connect(nominalRadio, &QRadioButton::toggled, &dialog, syncToleranceMode);
+  syncToleranceMode();
+
+  auto* buttons = new QDialogButtonBox(&dialog);
+  auto* saveButton = buttons->addButton("Salva misura", QDialogButtonBox::AcceptRole);
+  buttons->addButton(QDialogButtonBox::Cancel);
+  layout->addWidget(buttons);
+  QObject::connect(saveButton, &QPushButton::clicked, &dialog, [&]() {
+    config.alias = aliasEdit->text().trimmed();
+    config.unit = angle ? "deg" : "mm";
+    if (angle)
+    {
+      config.hasSampleScale = false;
+    }
+    else
+    {
+      config.hasSampleScale = sampleRadio->isChecked();
+      config.sampleValue = sampleValue->value();
+      if (config.hasSampleScale && config.samplePixels <= 0.000001)
+      {
+        config.samplePixels = currentMeasurementPixels(cameraRuntime()[camera.id].geometries(), config);
+      }
+    }
+
+    if (!toleranceEnabled->isChecked())
+    {
+      config.hasNominal = false;
+      config.hasMin = false;
+      config.hasMax = false;
+    }
+    else if (nominalRadio->isChecked())
+    {
+      config.nominal = nominal->value();
+      config.min = config.nominal + tolMinus->value();
+      config.max = config.nominal + tolPlus->value();
+      if (config.max < config.min)
+      {
+        std::swap(config.min, config.max);
+      }
+      config.hasNominal = true;
+      config.hasMin = true;
+      config.hasMax = true;
+    }
+    else
+    {
+      config.min = min->value();
+      config.max = max->value();
+      config.nominal = (config.min + config.max) * 0.5;
+      config.hasNominal = false;
+      config.hasMin = true;
+      config.hasMax = true;
+    }
+
+    saveMeasurementRealSettings(camera, config);
+    rebuildMeasurementRecipe(camera);
+    if (context().geometry)
+    {
+      context().geometry->refreshMeasurementOverlay(camera);
+    }
+    if (context().updateMeasurementResults)
+    {
+      context().updateMeasurementResults();
+    }
+    dialog.accept();
+  });
+  QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+  dialog.exec();
 }
 
 void MainWindowMeasurementModule::showMeasurementPanel(const CameraConfig& camera)
@@ -170,10 +508,6 @@ void MainWindowMeasurementModule::showMeasurementPanel(const CameraConfig& camer
   layout->addWidget(title);
 
   const QVector<MeasurementRecipeConfig> measurements = recipes().loadMeasurements(camera.id);
-  if (!measurements.isEmpty())
-  {
-    appendMeasurementListControls(panel, layout, camera, [this, camera]() { showMeasurementPanel(camera); });
-  }
 
   auto* buttonGrid = new QWidget(panel);
   auto* buttonLayout = new QGridLayout(buttonGrid);
@@ -210,9 +544,9 @@ void MainWindowMeasurementModule::showMeasurementPanel(const CameraConfig& camer
   });
   buttonLayout->addWidget(lineAngleButton, 1, 0);
 
-  auto* realValuesButton = createTouchIconButton("tolerances", tr("tools.tolerances"), panel);
+  auto* realValuesButton = createTouchIconButton("tolerances", measurements.isEmpty() ? tr("tools.tolerances") : "Misure...", panel);
   QObject::connect(realValuesButton, &QPushButton::clicked, window(), [this, camera]() {
-    showMeasurementRealValuesPanel(camera);
+    showMeasurementListDialog(camera);
   });
   buttonLayout->addWidget(realValuesButton, 1, 1);
 

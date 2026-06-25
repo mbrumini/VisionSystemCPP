@@ -1,8 +1,8 @@
 {
     "executionProfile": {
-        "angleMaxDeg": 360,
-        "angleMinDeg": 0,
-        "angleStepDeg": 18.9,
+        "angleMaxDeg": 15,
+        "angleMinDeg": -15,
+        "angleStepDeg": 0.2,
         "cameraId": "CAM01",
         "canvasBackground": 240,
         "canvasHeight": 1080,
@@ -13,14 +13,14 @@
         "pixelSizeMm": 0.0654,
         "recipeId": "rettangolo_hr",
         "sendOnly": true,
-        "shapeId": "plate",
-        "strategyId": "edgePca",
-        "xMaxMm": 10,
-        "xMinMm": -10,
-        "xStepMm": 2.5,
-        "yMaxMm": 20,
-        "yMinMm": -20,
-        "yStepMm": 8
+        "shapeId": "screw_shank",
+        "strategyId": "massPca",
+        "xMaxMm": 0,
+        "xMinMm": 0,
+        "xStepMm": 0.2,
+        "yMaxMm": 0,
+        "yMinMm": 0,
+        "yStepMm": 0.2
     },
-    "name": "profilo_test HR"
+    "name": "filetto"
 }

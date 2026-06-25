@@ -15,6 +15,9 @@
 #include <QSet>
 #include <QVBoxLayout>
 
+#include <algorithm>
+#include <cmath>
+
 namespace
 {
 QString measurementResultKey(const QString& type, const QString& sourceAId, const QString& sourceBId)
@@ -108,6 +111,112 @@ const QVector<MeasurementResult>& measurementsForDisplay(
 
   return live;
 }
+
+QString measurementStatisticKey(const QString& cameraId, const MeasurementResult& measurement)
+{
+  return QString("%1|%2|%3|%4")
+    .arg(cameraId, measurement.type, measurement.sourceAId, measurement.sourceBId);
+}
+
+QString measurementDisplayName(const MeasurementResult& measurement)
+{
+  return measurement.alias.trimmed().isEmpty() ? measurement.id : measurement.alias.trimmed();
+}
+
+bool measurementValueForStatistics(const MeasurementResult& measurement, double& value, QString& unit)
+{
+  if (!measurement.valid)
+  {
+    return false;
+  }
+  if (measurement.hasRealValue)
+  {
+    value = measurement.valueReal;
+    unit = measurement.unit;
+    return true;
+  }
+  value = measurement.valuePixels;
+  unit = "px";
+  return true;
+}
+
+bool isMeasurementStatisticOutlier(const MeasurementResult& measurement, double value)
+{
+  if (!measurement.hasMin || !measurement.hasMax || measurement.max <= measurement.min)
+  {
+    return false;
+  }
+
+  const double center = measurement.hasNominal
+    ? measurement.nominal
+    : (measurement.min + measurement.max) * 0.5;
+  const double lowLimit = center + (measurement.min - center) * 3.0;
+  const double highLimit = center + (measurement.max - center) * 3.0;
+  return value < std::min(lowLimit, highLimit) || value > std::max(lowLimit, highLimit);
+}
+
+QString compactMeasurementValue(double value, const QString& unit)
+{
+  return QString("%1 %2").arg(value, 0, 'f', unit == "px" ? 1 : 3).arg(unit);
+}
+}
+
+void MainWindow::resetMeasurementStatistics()
+{
+  m_measurementStatistics.clear();
+}
+
+void MainWindow::updateMeasurementStatistics(const QString& cameraId, bool accumulate)
+{
+  auto runtimeIt = m_cameraRuntime.find(cameraId);
+  if (runtimeIt == m_cameraRuntime.end())
+  {
+    return;
+  }
+
+  if (!accumulate)
+  {
+    return;
+  }
+
+  constexpr int kRecentMeasurementWindow = 1000;
+  const QVector<MeasurementResult>& measurements = runtimeIt->second.geometries().measurements;
+  const QVector<MeasurementResult> rows = mergedMeasurementRows(m_recipeManager, cameraId, measurements);
+
+  for (const MeasurementResult& measurement : rows)
+  {
+    double value = 0.0;
+    QString unit;
+    const bool hasCurrentValue = measurementValueForStatistics(measurement, value, unit);
+    const bool acceptForStatistics =
+      hasCurrentValue && !isMeasurementStatisticOutlier(measurement, value);
+    if (!acceptForStatistics)
+    {
+      continue;
+    }
+
+    MeasurementStatisticState& state = m_measurementStatistics[measurementStatisticKey(cameraId, measurement)];
+    state.unit = unit;
+    state.recentValues.enqueue(value);
+    state.recentSum += value;
+    while (state.recentValues.size() > kRecentMeasurementWindow)
+    {
+      state.recentSum -= state.recentValues.dequeue();
+    }
+    if (!state.hasValue)
+    {
+      state.minimum = value;
+      state.maximum = value;
+      state.hasValue = true;
+    }
+    else
+    {
+      state.minimum = std::min(state.minimum, value);
+      state.maximum = std::max(state.maximum, value);
+    }
+  }
+
+  scheduleMeasurementResultsUpdate();
 }
 
 void MainWindow::updateControlPanel(const CameraConfig* camera)
@@ -273,11 +382,24 @@ void MainWindow::updateMeasurementResults()
         measurementsForDisplay(camera.id, liveMeasurements, m_lastPublishedMeasurements);
       for (const MeasurementResult& measurement : mergedMeasurementRows(m_recipeManager, camera.id, measurements))
       {
-        rows.append({
-          camera.id,
-          measurement,
-          m_lastSetupScanElapsedMs.value(camera.id, -1)
-        });
+        CameraMeasurementResultRow row;
+        row.cameraId = camera.id;
+        row.measurement = measurement;
+        row.scanElapsedMs = m_lastSetupScanElapsedMs.value(camera.id, -1);
+
+        const auto statIt = m_measurementStatistics.constFind(measurementStatisticKey(camera.id, measurement));
+        if (statIt != m_measurementStatistics.constEnd() && statIt->hasValue)
+        {
+          row.hasStatistics = true;
+          row.statisticsUnit = statIt->unit;
+          row.averageValue = statIt->recentValues.isEmpty()
+            ? statIt->minimum
+            : statIt->recentSum / static_cast<double>(statIt->recentValues.size());
+          row.minimumValue = statIt->minimum;
+          row.maximumValue = statIt->maximum;
+        }
+
+        rows.append(row);
       }
     }
     m_measurementResults->setAllCameraMeasurements(rows);
@@ -442,6 +564,7 @@ void MainWindow::showCameraToolList(const CameraConfig& camera)
   addTool("geometries");
   addTool("constructedGeometries");
   addTool("measurements");
+  addTool("threadInspection");
   const bool hasVisibleAiTool =
     m_accessSession.role() == AccessRole::Guru ||
     QSettings().value("access/tools/aiClassification", true).toBool() ||
@@ -464,6 +587,7 @@ void MainWindow::showCameraToolList(const CameraConfig& camera)
         tool == "surfaceLocalization" ||
         tool == "geometries" ||
         tool == "measurements" ||
+        tool == "threadInspection" ||
         tool == "tolerances")
     {
       continue;

@@ -15,12 +15,12 @@
         "sendOnly": true,
         "shapeId": "plate",
         "strategyId": "edgePca",
-        "xMaxMm": 10,
-        "xMinMm": -10,
-        "xStepMm": 2.5,
+        "xMaxMm": 30,
+        "xMinMm": -30,
+        "xStepMm": 5,
         "yMaxMm": 20,
         "yMinMm": -20,
         "yStepMm": 8
     },
-    "name": "profilo_test HR"
+    "name": "profilo_test HR_movimento"
 }

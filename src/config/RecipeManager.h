@@ -9,6 +9,8 @@
 #include <QStringList>
 #include <QVector>
 
+struct PartPose;
+
 struct LocalizationSettings
 {
   double thresholdFactor = 0.5;
@@ -180,6 +182,22 @@ struct ConstructedGeometryRecipeConfig
   double offset = 0.0;
 };
 
+struct ThreadInspectionSettings
+{
+  bool enabled = false;
+  bool hasExtractionRoi = false;
+  QString coordinateSpace = "part";
+  QRect partRoi;
+  QRect imageRoi;
+  int thresholdMin = 0;
+  int thresholdMax = 80;
+  int morphOpenRadius = 2;
+  int minSpeckAreaPx = 6;
+  int maxSpeckAreaPx = 0;
+  int profileSmoothRadius = 3;
+  double outlierRejectSigma = 2.5;
+};
+
 struct MeasurementRecipeConfig
 {
   bool enabled = true;
@@ -297,6 +315,20 @@ public:
   QVector<MeasurementRecipeConfig> loadMeasurements(const QString& cameraId) const;
   bool saveMeasurements(const QString& cameraId, const QVector<MeasurementRecipeConfig>& configs, QString* errorMessage = nullptr) const;
   bool appendMeasurement(const QString& cameraId, const MeasurementRecipeConfig& config, QString* errorMessage = nullptr) const;
+
+  ThreadInspectionSettings loadThreadInspectionSettings(const QString& cameraId) const;
+  bool saveThreadInspectionSettings(const QString& cameraId, const ThreadInspectionSettings& settings, QString* errorMessage = nullptr) const;
+  bool saveThreadInspectionExtractionRoi(
+    const QString& cameraId,
+    const QString& coordinateSpace,
+    const QRect& partRoi,
+    const QRect& imageRoi,
+    QString* errorMessage = nullptr) const;
+  bool clearThreadInspectionExtractionRoi(const QString& cameraId, QString* errorMessage = nullptr) const;
+  bool migrateThreadInspectionRoiToPartSpace(
+    const QString& cameraId,
+    const PartPose& pose,
+    QString* errorMessage = nullptr) const;
   QString cameraSampleImagesPath(const QString& cameraId) const;
   QString cameraTestImagesPath(const QString& cameraId) const;
   QString cameraAiRawImagesPath(const QString& cameraId) const;

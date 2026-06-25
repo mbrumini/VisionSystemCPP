@@ -1,6 +1,7 @@
 #include "gui/MainWindow.h"
 
 #include "gui/modules/MainWindowCameraProfile.h"
+#include "gui/modules/MainWindowThreadModule.h"
 #include "gui/SurfaceLocalizationStrategies.h"
 #include "gui/ToolCatalog.h"
 #include "gui/TouchIconButton.h"
@@ -21,6 +22,7 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QSet>
+#include <QSettings>
 #include <QVBoxLayout>
 
 #include <opencv2/imgcodecs.hpp>
@@ -73,6 +75,13 @@ void MainWindow::decPendingJobs(const QString& cameraId)
 
 void MainWindow::publishSimulatorResult(const QString& cameraId)
 {
+  const QString resultMode =
+    QSettings().value("simulator/resultMode", "full").toString();
+  if (resultMode == "none")
+  {
+    return;
+  }
+
   const auto runtimeIt = m_cameraRuntime.find(cameraId);
   if (runtimeIt == m_cameraRuntime.end())
   {
@@ -97,19 +106,22 @@ void MainWindow::publishSimulatorResult(const QString& cameraId)
 
   const GeometrySet& geometries = runtime.geometries();
   QJsonArray measurements;
-  for (const MeasurementResult& measurement : geometries.measurements)
+  if (resultMode != "summary")
   {
-    QJsonObject item;
-    item["id"] = measurement.id;
-    item["alias"] = measurement.alias;
-    item["type"] = measurement.type;
-    item["valid"] = measurement.valid;
-    item["valuePixels"] = measurement.valuePixels;
-    item["hasRealValue"] = measurement.hasRealValue;
-    item["valueReal"] = measurement.valueReal;
-    item["unit"] = measurement.unit;
-    item["judgement"] = measurement.judgement;
-    measurements.append(item);
+    for (const MeasurementResult& measurement : geometries.measurements)
+    {
+      QJsonObject item;
+      item["id"] = measurement.id;
+      item["alias"] = measurement.alias;
+      item["type"] = measurement.type;
+      item["valid"] = measurement.valid;
+      item["valuePixels"] = measurement.valuePixels;
+      item["hasRealValue"] = measurement.hasRealValue;
+      item["valueReal"] = measurement.valueReal;
+      item["unit"] = measurement.unit;
+      item["judgement"] = measurement.judgement;
+      measurements.append(item);
+    }
   }
 
   QJsonObject geometryCounts;
@@ -124,6 +136,7 @@ void MainWindow::publishSimulatorResult(const QString& cameraId)
 
   QJsonObject result;
   result["status"] = "processed";
+  result["resultMode"] = resultMode;
   result["visionFrameIndex"] = runtime.frameIndex();
   result["processingMs"] = m_lastSetupScanElapsedMs.value(cameraId, -1);
   result["pose"] = poseObject;
@@ -682,6 +695,7 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
         m_lastSurfaceLocalizationResults.insert(camera.id, result.localization);
         completedRuntime.setCurrentPose(
           m_imaging.partPoseFromSurfaceReference(camera, result.localization));
+        m_thread.syncExtractionRoiOverlay(camera);
         appendLog(
           QString("Pipeline simulatore coordinate: %1 frame=%2 X=%3 Y=%4 A=%5 method=%6 score=%7")
             .arg(camera.id)
@@ -740,6 +754,7 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
           m_largeImage->setSearchPolygon(
             m_recipeManager.loadSurfaceDefectPolygon(camera.id));
         }
+        m_thread.syncExtractionRoiOverlay(camera);
         m_largeImage->setExclusionRects(
           m_recipeManager.loadSurfaceDefectExclusionRects(camera.id));
         updateLargePreview();
@@ -865,6 +880,7 @@ void MainWindow::resetProductionCameraState(const CameraConfig& camera)
 void MainWindow::startMachine()
 {
   m_machineRunning = true;
+  resetMeasurementStatistics();
   QStringList cameraIds;
   for (const CameraConfig& camera : m_config.activeCameras())
   {
@@ -1054,6 +1070,7 @@ void MainWindow::selectCamera(const CameraConfig& camera)
     GeometryOverlay overlay;
     m_geometry.appendCurrentPartPoseOverlay(camera, overlay);
     m_largeImage->setGeometryOverlay(overlay);
+    m_thread.syncExtractionRoiOverlay(camera);
   }
   else if (m_recipeManager.loadLocalizationRoi(camera.id, savedRoi))
   {

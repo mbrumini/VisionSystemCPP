@@ -5,6 +5,8 @@
 #include <QMainWindow>
 #include <QString>
 
+class CameraConfig;
+
 class MainWindowModuleBase
 {
 public:
@@ -58,6 +60,14 @@ protected:
     if (m_context.appendLog)
     {
       m_context.appendLog(produce());
+    }
+  }
+
+  void syncThreadExtractionRoiOverlay(const CameraConfig& camera) const
+  {
+    if (m_context.syncThreadExtractionRoiOverlay)
+    {
+      m_context.syncThreadExtractionRoiOverlay(camera);
     }
   }
 
