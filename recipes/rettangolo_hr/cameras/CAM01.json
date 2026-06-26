@@ -62,46 +62,88 @@
             },
             "lines": [
                 {
-                    "alias": "L dx",
-                    "bandHalfWidth": 17,
+                    "bandHalfWidth": 20,
                     "coordinateSpace": "part",
-                    "edgeCleanupDerivative": 6,
-                    "edgeSensitivity": 123,
-                    "edgeStatisticalFilter": 3,
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
                     "enabled": true,
-                    "id": "line_3",
+                    "id": "line_1",
                     "partEnd": {
-                        "x": 182.0246384574184,
-                        "y": -96.89671584959541
+                        "x": -354.47457627118644,
+                        "y": -39.03614457831327
                     },
                     "partStart": {
-                        "x": 181.51044456347086,
-                        "y": 98.43883864826273
+                        "x": -714.6101694915254,
+                        "y": -41.20481927710847
                     },
-                    "pickMode": "best",
-                    "scanDirection": "normal_negative",
+                    "pickMode": "first",
+                    "scanDirection": "normal_positive",
                     "transition": "light_to_dark",
                     "type": "edge_line",
                     "useSubpixel": true
                 },
                 {
-                    "alias": "L Sx",
                     "bandHalfWidth": 20,
                     "coordinateSpace": "part",
-                    "edgeCleanupDerivative": 6,
-                    "edgeSensitivity": 128,
-                    "edgeStatisticalFilter": 3,
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_2",
+                    "partEnd": {
+                        "x": -352.3050847457627,
+                        "y": 34.69879518072287
+                    },
+                    "partStart": {
+                        "x": -712.4406779661017,
+                        "y": 34.69879518072287
+                    },
+                    "pickMode": "first",
+                    "scanDirection": "normal_positive",
+                    "transition": "dark_to_light",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_3",
+                    "partEnd": {
+                        "x": 755.1625210398354,
+                        "y": -1.9740777666999065
+                    },
+                    "partStart": {
+                        "x": 687.6555077613614,
+                        "y": -37.14855433698898
+                    },
+                    "pickMode": "first",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
                     "enabled": true,
                     "id": "line_4",
                     "partEnd": {
-                        "x": -178.93947509373334,
-                        "y": -93.29842931937168
+                        "x": 686.9373480456329,
+                        "y": 36.78963110667996
                     },
                     "partStart": {
-                        "x": -179.96786288162832,
-                        "y": 97.92479771537364
+                        "x": 752.2898821769215,
+                        "y": 3.768693918245276
                     },
-                    "pickMode": "best",
+                    "pickMode": "first",
                     "scanDirection": "normal_positive",
                     "transition": "light_to_dark",
                     "type": "edge_line",
@@ -113,119 +155,38 @@
             "enabled": true,
             "items": [
                 {
-                    "alias": "distanza centri 1",
                     "enabled": true,
-                    "hasMax": true,
-                    "hasMin": true,
-                    "hasNominal": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
                     "hasSampleScale": false,
                     "id": "measurement_1",
-                    "label": {
-                        "custom": true,
-                        "x": 1450.9692671394798,
-                        "y": 673.109243697479
-                    },
-                    "max": 5.1,
-                    "min": 4.9,
-                    "nominal": 5,
-                    "samplePixels": 110.00000000000819,
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 52.396694185172734,
                     "sampleValue": 0,
-                    "sourceAId": "circle_1_center",
-                    "sourceBId": "circle_2_center",
-                    "type": "point_point_distance",
-                    "unit": "mm"
+                    "sourceAId": "line_4",
+                    "sourceBId": "line_3",
+                    "type": "line_line_angle",
+                    "unit": "deg"
                 },
                 {
-                    "alias": "distanza centri 2",
                     "enabled": true,
-                    "hasMax": true,
-                    "hasMin": true,
-                    "hasNominal": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
                     "hasSampleScale": false,
                     "id": "measurement_2",
-                    "label": {
-                        "custom": true,
-                        "x": 1447.9432624113474,
-                        "y": 710.9243697478992
-                    },
-                    "max": 5.1,
-                    "min": 4.9,
-                    "nominal": 5,
-                    "samplePixels": 110.03462339777637,
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 77.0879051240015,
                     "sampleValue": 0,
-                    "sourceAId": "circle_3_center",
-                    "sourceBId": "circle_4_center",
-                    "type": "point_point_distance",
-                    "unit": "mm"
-                },
-                {
-                    "alias": "distanza punti 3",
-                    "enabled": true,
-                    "hasMax": true,
-                    "hasMin": true,
-                    "hasNominal": true,
-                    "hasSampleScale": false,
-                    "id": "measurement_3",
-                    "label": {
-                        "custom": true,
-                        "x": 1452.4822695035461,
-                        "y": 753.2773109243698
-                    },
-                    "max": 9.6,
-                    "min": 9.4,
-                    "nominal": 9.5,
-                    "samplePixels": 205.00146627130115,
-                    "sampleValue": 0,
-                    "sourceAId": "circle_1_center",
-                    "sourceBId": "circle_3_center",
-                    "type": "point_point_distance",
-                    "unit": "mm"
-                },
-                {
-                    "alias": "distanza centri 4",
-                    "enabled": true,
-                    "hasMax": true,
-                    "hasMin": true,
-                    "hasNominal": true,
-                    "hasSampleScale": false,
-                    "id": "measurement_4",
-                    "label": {
-                        "custom": true,
-                        "x": 1444.917257683215,
-                        "y": 795.6302521008403
-                    },
-                    "max": 9.6,
-                    "min": 9.4,
-                    "nominal": 9.5,
-                    "samplePixels": 204.99901249171896,
-                    "sampleValue": 0,
-                    "sourceAId": "circle_2_center",
-                    "sourceBId": "circle_4_center",
-                    "type": "point_point_distance",
-                    "unit": "mm"
-                },
-                {
-                    "alias": "lunghezza",
-                    "enabled": true,
-                    "hasMax": true,
-                    "hasMin": true,
-                    "hasNominal": true,
-                    "hasSampleScale": false,
-                    "id": "measurement_6",
-                    "label": {
-                        "custom": true,
-                        "x": 1449.4562647754137,
-                        "y": 868.2352941176471
-                    },
-                    "max": 16.650000000000002,
-                    "min": 16.55,
-                    "nominal": 16.6,
-                    "samplePixels": 360.28350904762874,
-                    "sampleValue": 0,
-                    "sourceAId": "line_3",
-                    "sourceBId": "line_4",
+                    "sourceAId": "line_1",
+                    "sourceBId": "line_2",
                     "type": "line_line_distance",
-                    "unit": "mm"
+                    "unit": "px"
                 }
             ]
         },
@@ -261,30 +222,44 @@
             }
         },
         "threadInspection": {
-            "coordinateSpace": "image",
+            "coordinateSpace": "part",
             "enabled": true,
             "extractionRoi": {
                 "image": {
-                    "height": 189,
-                    "width": 827,
-                    "x": 455,
-                    "y": 449
+                    "height": 157,
+                    "width": 815,
+                    "x": 448,
+                    "y": 470
                 },
                 "part": {
-                    "height": 189,
-                    "width": 827,
-                    "x": 455,
-                    "y": 449
+                    "height": 156,
+                    "width": 814,
+                    "x": -310,
+                    "y": -70
                 }
             },
             "filter": {
                 "maxSpeckAreaPx": 0,
-                "minSpeckAreaPx": 8,
-                "morphOpenRadius": 2,
-                "outlierRejectSigma": 2.5,
+                "minSpeckAreaPx": 3,
+                "morphOpenRadius": 0,
+                "outlierRejectSigma": 2.0999999999999996,
                 "profileSmoothRadius": 1,
                 "thresholdMax": 145,
                 "thresholdMin": 0
+            },
+            "measurements": {
+                "major": {
+                    "enabled": true
+                },
+                "minor": {
+                    "enabled": true
+                },
+                "phase": {
+                    "enabled": true
+                },
+                "pitch": {
+                    "enabled": true
+                }
             }
         }
     }

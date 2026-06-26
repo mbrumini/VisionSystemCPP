@@ -440,9 +440,12 @@ void MainWindowThreadModule::refreshThreadProfileOverlay(const CameraConfig& cam
 
   const ThreadInspectionSettings settings = recipes().loadThreadInspectionSettings(camera.id);
   const bool updateView = camera.id == selectedCameraId();
+  const bool machineRunning = context().machineRunning != nullptr && *context().machineRunning;
+  const bool showThreadVisuals = machineRunning || m_threadPanelActive;
+
   if (!settings.hasExtractionRoi)
   {
-    if (updateView)
+    if (updateView && showThreadVisuals)
     {
       syncExtractionRoiOverlay(camera);
     }
@@ -453,9 +456,8 @@ void MainWindowThreadModule::refreshThreadProfileOverlay(const CameraConfig& cam
   QString imageError;
   const cv::Mat input = context().imaging->currentInputImage(camera, &imageError);
   const PartPose& pose = cameraRuntime()[camera.id].currentPose();
-  const bool machineRunning = context().machineRunning != nullptr && *context().machineRunning;
 
-  if (updateView)
+  if (updateView && showThreadVisuals)
   {
     syncExtractionRoiOverlay(camera);
   }
@@ -468,18 +470,22 @@ void MainWindowThreadModule::refreshThreadProfileOverlay(const CameraConfig& cam
 
   applyThreadMeasurements(camera, result);
 
-  if (!updateView)
+  if (!updateView || !showThreadVisuals)
   {
     return;
   }
 
   if (input.empty() || !canExtractThreadProfile(settings, pose))
   {
-    largeImage()->setGeometryOverlay({});
+    if (m_threadPanelActive)
+    {
+      largeImage()->setGeometryOverlay({});
+    }
     return;
   }
 
-  const bool showDiagnosticPreview = !machineRunning && !result.diagnosticImage.empty();
+  const bool showDiagnosticPreview =
+    m_threadPanelActive && !machineRunning && !result.diagnosticImage.empty();
   if (showDiagnosticPreview)
   {
     selectedPreview() = context().imaging->matToPixmap(result.diagnosticImage);
@@ -488,11 +494,14 @@ void MainWindowThreadModule::refreshThreadProfileOverlay(const CameraConfig& cam
 
   if (result.validColumns < 2)
   {
-    largeImage()->setGeometryOverlay({});
+    if (m_threadPanelActive)
+    {
+      largeImage()->setGeometryOverlay({});
+    }
     return;
   }
 
-  GeometryOverlay overlay;
+  GeometryOverlay overlay = machineRunning ? largeImage()->geometryOverlay() : GeometryOverlay{};
   const QSize overlayImageSize = input.empty()
     ? QSize(selectedPreview().width(), selectedPreview().height())
     : QSize(input.cols, input.rows);
@@ -565,6 +574,7 @@ void MainWindowThreadModule::testThreadExtraction(const CameraConfig& camera)
 
 void MainWindowThreadModule::showThreadInspectionPanel(const CameraConfig& camera)
 {
+  m_threadPanelActive = true;
   context().deactivateImageDrawingTools();
   context().clearToolPanel();
 
@@ -709,6 +719,9 @@ void MainWindowThreadModule::showThreadInspectionPanel(const CameraConfig& camer
 
   auto* backButton = createTouchIconButton("back", tr("commands.backToCameraTools"), panel);
   QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() {
+    m_threadPanelActive = false;
+    largeImage()->clearGeometryArea();
+    context().imaging->ensureReferenceImageVisible(camera);
     context().showCameraToolList(camera);
     log(tr("log.backToCameraTools") + ": " + camera.id);
   });

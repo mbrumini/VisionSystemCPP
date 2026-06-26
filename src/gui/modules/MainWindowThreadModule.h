@@ -20,6 +20,7 @@ public:
   void refreshThreadProfileOverlay(const CameraConfig& camera);
   void applyThreadMeasurements(const CameraConfig& camera, const ThreadProfileResult& result);
   void testThreadExtraction(const CameraConfig& camera);
+  bool isThreadPanelActive() const { return m_threadPanelActive; }
 
 private:
   void ensureThreadInspectionPose(const CameraConfig& camera);
@@ -27,4 +28,5 @@ private:
 
   QHash<QString, ThreadDiameterValues> m_stableThreadOverlay;
   bool m_refreshingThreadOverlay = false;
+  bool m_threadPanelActive = false;
 };

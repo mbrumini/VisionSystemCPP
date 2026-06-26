@@ -204,10 +204,6 @@ void MainWindowGeometryModule::showRuntimeGeometryOverlay(const CameraConfig& ca
     context().measurement->appendMeasurementOverlay(camera, overlay, compact);
   }
   largeImage()->setGeometryOverlay(overlay);
-  if (context().refreshThreadProfileOverlay)
-  {
-    context().refreshThreadProfileOverlay(camera);
-  }
 }
 
 void MainWindowGeometryModule::refreshMeasurementOverlay(const CameraConfig& camera)
