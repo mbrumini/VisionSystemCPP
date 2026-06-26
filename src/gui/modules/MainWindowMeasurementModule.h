@@ -23,6 +23,7 @@ public:
   void showLineLineDistancePanel(const CameraConfig& camera);
   void showCircleDiameterPanel(const CameraConfig& camera);
   void showLineLineAnglePanel(const CameraConfig& camera);
+  void showTolerancesDialog(const CameraConfig& camera);
   void showMeasurementRealValuesPanel(const CameraConfig& camera);
   void rebuildMeasurementRecipe(const CameraConfig& camera);
   void removeMeasurement(const CameraConfig& camera, const QString& measurementId);
@@ -49,7 +50,12 @@ private:
                                      const std::function<void()>& refreshPanel);
   QHash<QString, QString> geometryAliasesForCamera(const CameraConfig& camera) const;
   void showMeasurementListDialog(const CameraConfig& camera);
-  void showMeasurementToleranceDialog(const CameraConfig& camera, const QString& measurementId);
+  void showMeasurementToleranceDialog(const CameraConfig& camera,
+                                      const QString& measurementId,
+                                      QWidget* parent = nullptr);
+  void showThreadToleranceDialog(const CameraConfig& camera,
+                                 const QString& threadKey,
+                                 QWidget* parent = nullptr);
   QString selectedMeasurementKey(const QString& cameraId) const;
 
   QHash<QString, QString> m_selectedMeasurementKeys;

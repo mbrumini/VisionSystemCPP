@@ -161,6 +161,7 @@ private:
   bool m_resizingExclusion = false;
   bool m_movingGeometryOverlayPoint = false;
   bool m_movingGeometryOverlayDimensionLabel = false;
+  bool m_movingGeometryOverlayAngleLabel = false;
   bool m_movingCircleBandCenter = false;
   int m_selectedCircleBandRadius = -1;
   ExclusionHandle m_activeRoiHandle = ExclusionHandle::None;
@@ -170,6 +171,7 @@ private:
   int m_selectedPolygonVertexIndex = -1;
   int m_selectedGeometryOverlayPointIndex = -1;
   int m_selectedGeometryOverlayDimensionIndex = -1;
+  int m_selectedGeometryOverlayAngleIndex = -1;
   QPoint m_dragStart;
   QPoint m_dragEnd;
   QPoint m_moveStartImagePoint;
@@ -193,5 +195,7 @@ private:
 
   int geometryOverlayPointAt(const QPoint& widgetPoint) const;
   int geometryOverlayDimensionLabelAt(const QPoint& widgetPoint) const;
+  int geometryOverlayAngleLabelAt(const QPoint& widgetPoint) const;
   QPointF geometryOverlayDimensionLabelPoint(const GeometryOverlayDimension& dimension) const;
+  QPointF geometryOverlayAngleLabelPoint(const GeometryOverlayAngle& angle) const;
 };

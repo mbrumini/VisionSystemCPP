@@ -182,6 +182,18 @@ struct ConstructedGeometryRecipeConfig
   double offset = 0.0;
 };
 
+struct ThreadMeasurementLimits
+{
+  bool enabled = false;
+  QString alias;
+  double nominal = 0.0;
+  double min = 0.0;
+  double max = 0.0;
+  bool hasNominal = false;
+  bool hasMin = false;
+  bool hasMax = false;
+};
+
 struct ThreadInspectionSettings
 {
   bool enabled = false;
@@ -196,6 +208,10 @@ struct ThreadInspectionSettings
   int maxSpeckAreaPx = 0;
   int profileSmoothRadius = 3;
   double outlierRejectSigma = 2.5;
+  ThreadMeasurementLimits majorDiameter;
+  ThreadMeasurementLimits minorDiameter;
+  ThreadMeasurementLimits pitchLength;
+  ThreadMeasurementLimits phaseOffset;
 };
 
 struct MeasurementRecipeConfig
@@ -238,6 +254,7 @@ public:
   explicit RecipeManager(QString recipeId = "default");
 
   static QString recipesRootPath();
+  static QString defaultRecipeTemplateId();
   static QString normalizeRecipeId(const QString& text);
   static QStringList availableRecipes();
   static bool createRecipe(const QString& recipeId, QString* errorMessage = nullptr);

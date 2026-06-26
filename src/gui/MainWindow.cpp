@@ -269,6 +269,9 @@ void MainWindow::bindModules()
   m_ctx.syncThreadExtractionRoiOverlay = [this](const CameraConfig& camera) {
     m_thread.syncExtractionRoiOverlay(camera);
   };
+  m_ctx.refreshThreadProfileOverlay = [this](const CameraConfig& camera) {
+    m_thread.refreshThreadProfileOverlay(camera);
+  };
 
   m_ctx.trText = [this](const QString& key) { return trText(key); };
   m_ctx.isDetailedLogEnabled = [this]() { return isDetailedLogEnabled(); };

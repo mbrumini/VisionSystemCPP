@@ -30,32 +30,21 @@ QString saveVersionedTestReport(
     return {};
   }
 
-  const QString stem = configuredInfo.completeBaseName();
-  const QString historyDirectory = outputDirectory.filePath(stem);
-  if (!QDir().mkpath(historyDirectory))
+  const QString timestamp = testVisionTimestamp();
+  const QString reportPath = outputDirectory.filePath(timestamp + ".json");
+
+  const QByteArray data = QJsonDocument(report).toJson(QJsonDocument::Indented);
+  QFile reportFile(reportPath);
+  if (!reportFile.open(QIODevice::WriteOnly | QIODevice::Truncate) ||
+      reportFile.write(data) != data.size())
   {
     if (errorMessage)
     {
-      *errorMessage = "Impossibile creare storico report: " + historyDirectory;
+      *errorMessage = "Impossibile salvare report: " + reportPath;
     }
     return {};
   }
-
-  const QByteArray data = QJsonDocument(report).toJson(QJsonDocument::Indented);
-  const QString versionedPath = QDir(historyDirectory).filePath(testVisionTimestamp() + ".json");
-  for (const QString& path : {versionedPath, configuredOutputPath})
-  {
-    QFile file(path);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate) || file.write(data) != data.size())
-    {
-      if (errorMessage)
-      {
-        *errorMessage = "Impossibile salvare report: " + path;
-      }
-      return {};
-    }
-  }
-  return versionedPath;
+  return reportPath;
 }
 
 QString saveTestVisionDataset(

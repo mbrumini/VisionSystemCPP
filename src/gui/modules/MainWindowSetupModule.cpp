@@ -157,6 +157,12 @@ void MainWindowSetupModule::showToolPanel(const CameraConfig& camera, const QStr
     return;
   }
 
+  if (toolId == "tolerances")
+  {
+    context().measurement->showTolerancesDialog(camera);
+    return;
+  }
+
   if (toolId == "ai")
   {
     showAiPanel(camera);

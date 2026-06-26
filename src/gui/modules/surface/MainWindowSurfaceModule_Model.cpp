@@ -86,12 +86,13 @@ bool MainWindowSurfaceModule::localizePoseOnSample(const CameraConfig& camera)
   }
 
   const SurfaceAnnulusLocalizationConfig annulus = recipes().loadSurfaceAnnulusLocalization(camera.id);
+  const SurfaceDefectSettings recipeSettings = recipes().loadSurfaceDefectSettings(camera.id);
   const QVector<QRect> exclusionRects = recipes().loadSurfaceDefectExclusionRects(camera.id);
   const QVector<QPoint> searchPolygon = recipes().loadSurfaceDefectPolygon(camera.id);
   const bool hasPolygon = searchPolygon.size() >= 3;
-  const QRect effectiveRoi = recipes().effectiveSurfaceSearchRect(camera.id, QSize(input.cols, input.rows));
-  const cv::Rect searchRect = toCvRect(effectiveRoi);
+  const cv::Rect fullSearchRect(0, 0, input.cols, input.rows);
   const std::vector<cv::Point> cvSearchPolygon = toCvPoints(searchPolygon);
+  const bool resolveAmbiguity = annulus.pcaResolveAmbiguity || recipeSettings.pcaResolveAmbiguity;
   SurfaceDefectProcessor processor;
   SurfaceDefectResult result;
 
@@ -109,41 +110,53 @@ bool MainWindowSurfaceModule::localizePoseOnSample(const CameraConfig& camera)
         cvSearchPolygon,
         toCvRects(exclusionRects),
         annulus.edgeSensitivity,
-        annulus.pcaResolveAmbiguity,
+        resolveAmbiguity,
         false);
     }
     else
     {
       result = processor.locateByEdgePca(
         input,
-        searchRect,
+        fullSearchRect,
         toCvRects(exclusionRects),
         annulus.edgeSensitivity,
-        annulus.pcaResolveAmbiguity,
+        resolveAmbiguity,
         false);
     }
   }
   else if (annulus.method == "massPca")
   {
     ensureMassPcaReferenceFromSample(camera);
-    const SurfaceDefectSettings recipeSettings = recipes().loadSurfaceDefectSettings(camera.id);
     const SurfaceThresholdSettings thresholdSettings = thresholdSettingsFromRecipe(recipeSettings);
     result = processor.detectByGrayscaleThreshold(
       input,
-      searchRect,
+      fullSearchRect,
       toCvRects(exclusionRects),
       thresholdSettings,
       false);
   }
   else
   {
-    result = processor.locateByEdgePca(
-      input,
-      searchRect,
-      toCvRects(exclusionRects),
-      annulus.edgeSensitivity,
-      annulus.pcaResolveAmbiguity,
-      false);
+    if (hasPolygon)
+    {
+      result = processor.locateByEdgePca(
+        input,
+        cvSearchPolygon,
+        toCvRects(exclusionRects),
+        annulus.edgeSensitivity,
+        resolveAmbiguity,
+        false);
+    }
+    else
+    {
+      result = processor.locateByEdgePca(
+        input,
+        fullSearchRect,
+        toCvRects(exclusionRects),
+        annulus.edgeSensitivity,
+        resolveAmbiguity,
+        false);
+    }
   }
 
   if (!result.processed || !result.localization.found)

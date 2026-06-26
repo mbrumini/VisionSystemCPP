@@ -470,27 +470,33 @@ void MainWindowGeometryModule::appendCurrentPartPoseOverlay(const CameraConfig& 
   const bool compact = context().machineRunning != nullptr && *context().machineRunning;
   GeometryDiagnosticDrawing::appendCyanPointCross(overlay, pose.origin, compact);
 
-  const double armLength = compact ? 42.0 : 80.0;
-  const int axisWidth = compact ? 2 : 4;
+  const int imageWidth = selectedPreview().width();
+  const int imageHeight = selectedPreview().height();
+  const double imageDiagonal = imageWidth > 0 && imageHeight > 0
+    ? std::hypot(static_cast<double>(imageWidth), static_cast<double>(imageHeight))
+    : 1000.0;
+  const double armLength = std::max(220.0, imageDiagonal * (compact ? 0.34 : 0.42));
+  const int axisWidth = compact ? 3 : 5;
+  const QColor xColor(255, 35, 35);
+  const QColor yColor(35, 220, 90);
+  const cv::Point2d xStart = pose.origin - pose.xAxis * armLength;
   const cv::Point2d xEnd = pose.origin + pose.xAxis * armLength;
+  const cv::Point2d yStart = pose.origin - pose.yAxis * armLength;
   const cv::Point2d yEnd = pose.origin + pose.yAxis * armLength;
   overlay.lines.append({
-    QPointF(pose.origin.x, pose.origin.y),
+    QPointF(xStart.x, xStart.y),
     QPointF(xEnd.x, xEnd.y),
-    QColor(255, 0, 0),
+    xColor,
     axisWidth
   });
   overlay.lines.append({
-    QPointF(pose.origin.x, pose.origin.y),
+    QPointF(yStart.x, yStart.y),
     QPointF(yEnd.x, yEnd.y),
-    QColor(255, 0, 255),
+    yColor,
     axisWidth
   });
-  if (!compact)
-  {
-    overlay.points.append({QPointF(xEnd.x, xEnd.y), "X", QColor(255, 0, 0)});
-    overlay.points.append({QPointF(yEnd.x, yEnd.y), "Y", QColor(255, 0, 255)});
-  }
+  overlay.points.append({QPointF(xEnd.x, xEnd.y), "X", xColor, compact ? 4.0 : 6.0});
+  overlay.points.append({QPointF(yEnd.x, yEnd.y), "Y", yColor, compact ? 4.0 : 6.0});
 
   syncThreadExtractionRoiOverlay(camera);
 }

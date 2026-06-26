@@ -1,8 +1,9 @@
 #include "measurement/MeasurementGeometryMath.h"
 
+#include "geometry/ConstructedGeometryMath.h"
+
 #include <algorithm>
 #include <cmath>
-
 namespace MeasurementGeometryMath
 {
 namespace
@@ -50,6 +51,21 @@ bool alignedParallelDirection(const cv::Point2d& directionA, cv::Point2d& direct
   return true;
 }
 
+bool orientedRayFromVertex(const LineGeometry& line, const cv::Point2d& vertex, cv::Point2d& unitRay)
+{
+  const cv::Point2d toStart = line.start - vertex;
+  const cv::Point2d toEnd = line.end - vertex;
+  const double lenStartSq = toStart.dot(toStart);
+  const double lenEndSq = toEnd.dot(toEnd);
+  cv::Point2d ray = (lenEndSq >= lenStartSq) ? toEnd : toStart;
+  const double length = std::sqrt(ray.dot(ray));
+  if (length < kEpsilon)
+  {
+    return false;
+  }
+  unitRay = ray * (1.0 / length);
+  return true;
+}
 void fillMeasurementPoint(PointGeometry& point,
                           const cv::Point2d& imagePoint,
                           const QString& id,
@@ -171,6 +187,20 @@ bool circleDiameterPixels(const CircleGeometry& circle, double& diameterPixels)
 
 bool lineLineAngleDegrees(const LineGeometry& lineA, const LineGeometry& lineB, double& angleDegrees)
 {
+  PointGeometry intersection;
+  if (ConstructedGeometryMath::lineLineIntersection(lineA, lineB, intersection))
+  {
+    cv::Point2d rayA;
+    cv::Point2d rayB;
+    if (orientedRayFromVertex(lineA, intersection.point, rayA) &&
+        orientedRayFromVertex(lineB, intersection.point, rayB))
+    {
+      const double dot = std::clamp(rayA.dot(rayB), -1.0, 1.0);
+      angleDegrees = std::acos(dot) * 180.0 / 3.14159265358979323846;
+      return true;
+    }
+  }
+
   cv::Point2d directionA;
   cv::Point2d directionB;
   double lengthA = 0.0;
@@ -183,5 +213,48 @@ bool lineLineAngleDegrees(const LineGeometry& lineA, const LineGeometry& lineB, 
   const double dot = std::clamp(std::abs(directionA.dot(directionB)), 0.0, 1.0);
   angleDegrees = std::acos(dot) * 180.0 / 3.14159265358979323846;
   return true;
+}
+
+bool lineLineAngleGeometry(const LineGeometry& lineA,
+                           const LineGeometry& lineB,
+                           double& angleDegrees,
+                           cv::Point2d& vertex,
+                           cv::Point2d& rayA,
+                           cv::Point2d& rayB)
+{
+  PointGeometry intersection;
+  if (!ConstructedGeometryMath::lineLineIntersection(lineA, lineB, intersection))
+  {
+    return false;
+  }
+
+  vertex = intersection.point;
+  if (!orientedRayFromVertex(lineA, vertex, rayA) || !orientedRayFromVertex(lineB, vertex, rayB))
+  {
+    return false;
+  }
+
+  const double dot = std::clamp(rayA.dot(rayB), -1.0, 1.0);
+  angleDegrees = std::acos(dot) * 180.0 / 3.14159265358979323846;
+  return true;
+}
+QString geometrySourceMetaId(const QString& sourceId)
+{
+  const int separator = sourceId.lastIndexOf(':');
+  if (separator <= 0)
+  {
+    return sourceId;
+  }
+
+  const QString suffix = sourceId.mid(separator + 1);
+  if (suffix.startsWith("line_") ||
+      suffix.startsWith("point_") ||
+      suffix.startsWith("circle_") ||
+      suffix.startsWith("constructed_") ||
+      suffix.startsWith("arc_"))
+  {
+    return suffix;
+  }
+  return sourceId;
 }
 }

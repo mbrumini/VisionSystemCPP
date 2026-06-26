@@ -7,18 +7,24 @@
 
 namespace
 {
+QString resolveGeometryMetaId(const QString& id)
+{
+  return MeasurementGeometryMath::geometrySourceMetaId(id);
+}
+
 const LineGeometry* findLineByMetaId(const GeometrySet& set, const QString& id)
 {
+  const QString metaId = resolveGeometryMetaId(id);
   for (const LineGeometry& line : set.lines)
   {
-    if (line.meta.id == id)
+    if (line.meta.id == metaId)
     {
       return &line;
     }
   }
   for (const ConstructedLineGeometry& line : set.constructedLines)
   {
-    if (line.line.meta.id == id)
+    if (line.line.meta.id == metaId)
     {
       return &line.line;
     }
@@ -28,16 +34,17 @@ const LineGeometry* findLineByMetaId(const GeometrySet& set, const QString& id)
 
 const PointGeometry* findPointByMetaId(const GeometrySet& set, const QString& id)
 {
+  const QString metaId = resolveGeometryMetaId(id);
   for (const PointGeometry& point : set.points)
   {
-    if (point.meta.id == id)
+    if (point.meta.id == metaId)
     {
       return &point;
     }
   }
   for (const ConstructedPointGeometry& point : set.constructedPoints)
   {
-    if (point.point.meta.id == id)
+    if (point.point.meta.id == metaId)
     {
       return &point.point;
     }
@@ -45,7 +52,7 @@ const PointGeometry* findPointByMetaId(const GeometrySet& set, const QString& id
   static thread_local PointGeometry circleCenterPoint;
   for (const CircleGeometry& circle : set.circles)
   {
-    if (circle.meta.id == id)
+    if (circle.meta.id == metaId)
     {
       circleCenterPoint.point = circle.center;
       circleCenterPoint.meta = circle.meta;
@@ -55,7 +62,7 @@ const PointGeometry* findPointByMetaId(const GeometrySet& set, const QString& id
   }
   for (const ArcGeometry& arc : set.arcs)
   {
-    if (arc.meta.id == id)
+    if (arc.meta.id == metaId)
     {
       circleCenterPoint.point = arc.center;
       circleCenterPoint.meta = arc.meta;
@@ -68,9 +75,10 @@ const PointGeometry* findPointByMetaId(const GeometrySet& set, const QString& id
 
 bool findCircleLikeByMetaId(const GeometrySet& set, const QString& id, CircleGeometry& result)
 {
+  const QString metaId = resolveGeometryMetaId(id);
   for (const CircleGeometry& circle : set.circles)
   {
-    if (circle.meta.id == id)
+    if (circle.meta.id == metaId)
     {
       result = circle;
       return true;
@@ -78,7 +86,7 @@ bool findCircleLikeByMetaId(const GeometrySet& set, const QString& id, CircleGeo
   }
   for (const ArcGeometry& arc : set.arcs)
   {
-    if (arc.meta.id == id)
+    if (arc.meta.id == metaId)
     {
       result.meta = arc.meta;
       result.center = arc.center;
@@ -92,17 +100,18 @@ bool findCircleLikeByMetaId(const GeometrySet& set, const QString& id, CircleGeo
 
 const CircleGeometry* findCircleByMetaId(const GeometrySet& set, const QString& id)
 {
+  const QString metaId = resolveGeometryMetaId(id);
   static thread_local CircleGeometry arcCircle;
   for (const CircleGeometry& circle : set.circles)
   {
-    if (circle.meta.id == id)
+    if (circle.meta.id == metaId)
     {
       return &circle;
     }
   }
   for (const ArcGeometry& arc : set.arcs)
   {
-    if (arc.meta.id == id)
+    if (arc.meta.id == metaId)
     {
       arcCircle.meta = arc.meta;
       arcCircle.center = arc.center;
@@ -337,10 +346,29 @@ void rebuildConstructedGeometries(GeometrySet& set, const QVector<ConstructedGeo
   }
 }
 
+static bool isThreadMeasurementType(const QString& type)
+{
+  return type == QStringLiteral("thread_major_diameter") ||
+         type == QStringLiteral("thread_minor_diameter") ||
+         type == QStringLiteral("thread_pitch") ||
+         type == QStringLiteral("thread_phase") ||
+         type == QStringLiteral("thread_pitch_diameter");
+}
+
 void rebuildMeasurements(GeometrySet& set,
                          const QVector<MeasurementRecipeConfig>& configs,
                          const CameraMeasurementCalibration& calibration)
 {
+  QVector<MeasurementResult> threadMeasurements;
+  threadMeasurements.reserve(set.measurements.size());
+  for (const MeasurementResult& measurement : set.measurements)
+  {
+    if (isThreadMeasurementType(measurement.type))
+    {
+      threadMeasurements.append(measurement);
+    }
+  }
+
   set.measurements.clear();
 
   QSet<QString> processedMeasurementKeys;
@@ -434,6 +462,11 @@ void rebuildMeasurements(GeometrySet& set,
         appendFailedMeasurementResult(set, config);
       }
     }
+  }
+
+  for (const MeasurementResult& measurement : threadMeasurements)
+  {
+    set.measurements.append(measurement);
   }
 }
 

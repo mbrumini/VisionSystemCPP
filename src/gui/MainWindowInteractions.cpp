@@ -120,6 +120,18 @@ void MainWindow::publishSimulatorResult(const QString& cameraId)
       item["valueReal"] = measurement.valueReal;
       item["unit"] = measurement.unit;
       item["judgement"] = measurement.judgement;
+      if (measurement.sampleCount > 0)
+      {
+        item["sampleCount"] = measurement.sampleCount;
+      }
+      if (measurement.pointCount > 0)
+      {
+        item["pointCount"] = measurement.pointCount;
+      }
+      if (!measurement.diagnostic.isEmpty())
+      {
+        item["diagnostic"] = measurement.diagnostic;
+      }
       measurements.append(item);
     }
   }

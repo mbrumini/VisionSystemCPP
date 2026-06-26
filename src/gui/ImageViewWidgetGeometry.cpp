@@ -387,9 +387,11 @@ QPointF ImageViewWidget::geometryOverlayDimensionLabelPoint(const GeometryOverla
   return (imagePointToWidget(dimension.imageStart) + imagePointToWidget(dimension.imageEnd)) * 0.5 + QPointF(10, -10);
 }
 
-int ImageViewWidget::geometryOverlayDimensionLabelAt(const QPoint& widgetPoint) const
+namespace
 {
-  QFont labelFont = font();
+QFont measurementLabelFont(const QFont& baseFont)
+{
+  QFont labelFont = baseFont;
   if (labelFont.pointSize() > 0)
   {
     labelFont.setPointSize(labelFont.pointSize() + 4);
@@ -399,7 +401,82 @@ int ImageViewWidget::geometryOverlayDimensionLabelAt(const QPoint& widgetPoint) 
     labelFont.setPixelSize(std::max(18, labelFont.pixelSize() + 5));
   }
   labelFont.setBold(true);
-  const QFontMetrics metrics(labelFont);
+  return labelFont;
+}
+
+QRectF measurementLabelHitRect(const QFontMetrics& metrics, const QString& label, const QPointF& labelPoint)
+{
+  QRectF labelRect = metrics.boundingRect(label);
+  labelRect.moveTopLeft(labelPoint + QPointF(0, -labelRect.height()));
+  return labelRect.adjusted(-12, -10, 12, 10);
+}
+
+QPointF defaultAngleLabelWidgetPoint(const QPointF& center, const QPointF& armA, const QPointF& armB)
+{
+  const QPointF vectorA = armA - center;
+  const QPointF vectorB = armB - center;
+  const double lengthA = std::hypot(vectorA.x(), vectorA.y());
+  const double lengthB = std::hypot(vectorB.x(), vectorB.y());
+  if (lengthA < 0.001 || lengthB < 0.001)
+  {
+    return center + QPointF(10, -10);
+  }
+
+  const double radius = std::max(18.0, std::min({48.0, lengthA * 0.35, lengthB * 0.35}));
+  const double startAngle = std::atan2(vectorA.y(), vectorA.x());
+  double delta = std::atan2(vectorB.y(), vectorB.x()) - startAngle;
+  while (delta > 3.14159265358979323846)
+  {
+    delta -= 2.0 * 3.14159265358979323846;
+  }
+  while (delta < -3.14159265358979323846)
+  {
+    delta += 2.0 * 3.14159265358979323846;
+  }
+
+  const double labelAngle = startAngle + delta * 0.5;
+  return center + QPointF(std::cos(labelAngle), std::sin(labelAngle)) * (radius + 14.0);
+}
+}
+
+QPointF ImageViewWidget::geometryOverlayAngleLabelPoint(const GeometryOverlayAngle& angle) const
+{
+  const QPointF center = imagePointToWidget(angle.imageCenter);
+  const QPointF armA = imagePointToWidget(angle.imageArmA);
+  const QPointF armB = imagePointToWidget(angle.imageArmB);
+  if (angle.hasLabelPoint)
+  {
+    return imagePointToWidget(angle.labelPoint);
+  }
+
+  return defaultAngleLabelWidgetPoint(center, armA, armB);
+}
+
+int ImageViewWidget::geometryOverlayAngleLabelAt(const QPoint& widgetPoint) const
+{
+  const QFontMetrics metrics(measurementLabelFont(font()));
+
+  for (int i = m_geometryOverlay.angles.size() - 1; i >= 0; --i)
+  {
+    const GeometryOverlayAngle& angle = m_geometryOverlay.angles[i];
+    if (angle.id.isEmpty() || angle.label.isEmpty())
+    {
+      continue;
+    }
+
+    const QPointF labelPoint = geometryOverlayAngleLabelPoint(angle);
+    if (measurementLabelHitRect(metrics, angle.label, labelPoint).contains(widgetPoint))
+    {
+      return i;
+    }
+  }
+
+  return -1;
+}
+
+int ImageViewWidget::geometryOverlayDimensionLabelAt(const QPoint& widgetPoint) const
+{
+  const QFontMetrics metrics(measurementLabelFont(font()));
 
   for (int i = m_geometryOverlay.dimensions.size() - 1; i >= 0; --i)
   {
@@ -410,10 +487,7 @@ int ImageViewWidget::geometryOverlayDimensionLabelAt(const QPoint& widgetPoint) 
     }
 
     const QPointF labelPoint = geometryOverlayDimensionLabelPoint(dimension);
-    QRectF labelRect = metrics.boundingRect(dimension.label);
-    labelRect.moveTopLeft(labelPoint + QPointF(0, -labelRect.height()));
-    labelRect = labelRect.adjusted(-12, -10, 12, 10);
-    if (labelRect.contains(widgetPoint))
+    if (measurementLabelHitRect(metrics, dimension.label, labelPoint).contains(widgetPoint))
     {
       return i;
     }

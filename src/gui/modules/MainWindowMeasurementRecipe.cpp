@@ -57,16 +57,17 @@ bool lineIntersection(const LineGeometry& lineA, const LineGeometry& lineB, cv::
 
 const LineGeometry* findLineByMetaId(const GeometrySet& set, const QString& id)
 {
+  const QString metaId = MeasurementGeometryMath::geometrySourceMetaId(id);
   for (const LineGeometry& line : set.lines)
   {
-    if (line.meta.id == id)
+    if (line.meta.id == metaId)
     {
       return &line;
     }
   }
   for (const ConstructedLineGeometry& line : set.constructedLines)
   {
-    if (line.line.meta.id == id)
+    if (line.line.meta.id == metaId)
     {
       return &line.line;
     }
@@ -76,16 +77,17 @@ const LineGeometry* findLineByMetaId(const GeometrySet& set, const QString& id)
 
 const PointGeometry* findPointByMetaId(const GeometrySet& set, const QString& id)
 {
+  const QString metaId = MeasurementGeometryMath::geometrySourceMetaId(id);
   for (const PointGeometry& point : set.points)
   {
-    if (point.meta.id == id)
+    if (point.meta.id == metaId)
     {
       return &point;
     }
   }
   for (const ConstructedPointGeometry& point : set.constructedPoints)
   {
-    if (point.point.meta.id == id)
+    if (point.point.meta.id == metaId)
     {
       return &point.point;
     }
@@ -93,7 +95,7 @@ const PointGeometry* findPointByMetaId(const GeometrySet& set, const QString& id
   static thread_local PointGeometry circleCenterPoint;
   for (const CircleGeometry& circle : set.circles)
   {
-    if (circle.meta.id == id)
+    if (circle.meta.id == metaId)
     {
       circleCenterPoint.point = circle.center;
       circleCenterPoint.meta = circle.meta;
@@ -103,7 +105,7 @@ const PointGeometry* findPointByMetaId(const GeometrySet& set, const QString& id
   }
   for (const ArcGeometry& arc : set.arcs)
   {
-    if (arc.meta.id == id)
+    if (arc.meta.id == metaId)
     {
       circleCenterPoint.point = arc.center;
       circleCenterPoint.meta = arc.meta;
@@ -116,17 +118,18 @@ const PointGeometry* findPointByMetaId(const GeometrySet& set, const QString& id
 
 const CircleGeometry* findCircleByMetaId(const GeometrySet& set, const QString& id)
 {
+  const QString metaId = MeasurementGeometryMath::geometrySourceMetaId(id);
   static thread_local CircleGeometry arcCircle;
   for (const CircleGeometry& circle : set.circles)
   {
-    if (circle.meta.id == id)
+    if (circle.meta.id == metaId)
     {
       return &circle;
     }
   }
   for (const ArcGeometry& arc : set.arcs)
   {
-    if (arc.meta.id == id)
+    if (arc.meta.id == metaId)
     {
       arcCircle.meta = arc.meta;
       arcCircle.center = arc.center;
@@ -362,6 +365,7 @@ void MainWindowMeasurementModule::saveMeasurementRealSettings(const CameraConfig
       config.hasNominal = updatedConfig.hasNominal;
       config.hasMin = updatedConfig.hasMin;
       config.hasMax = updatedConfig.hasMax;
+      config.enabled = updatedConfig.enabled;
       changed = true;
       break;
     }
@@ -505,16 +509,19 @@ void MainWindowMeasurementModule::appendMeasurementOverlay(
       }
 
       cv::Point2d center;
-      if (!lineIntersection(*lineA, *lineB, center))
+      cv::Point2d directionA;
+      cv::Point2d directionB;
+      double angleDegrees = 0.0;
+      if (!MeasurementGeometryMath::lineLineAngleGeometry(
+            *lineA, *lineB, angleDegrees, center, directionA, directionB))
       {
         center = lineA->start;
-      }
-
-      cv::Point2d directionA = normalizedDirection(*lineA);
-      cv::Point2d directionB = normalizedDirection(*lineB);
-      if (directionA.dot(directionB) < 0.0)
-      {
-        directionB *= -1.0;
+        directionA = normalizedDirection(*lineA);
+        directionB = normalizedDirection(*lineB);
+        if (directionA.dot(directionB) < 0.0)
+        {
+          directionB *= -1.0;
+        }
       }
 
       const double armLength = angleArmLength > 0.0
@@ -528,6 +535,9 @@ void MainWindowMeasurementModule::appendMeasurementOverlay(
         QColor("#ff8a00"),
         selectedAngleWidth
       };
+      angleOverlay.id = measurementKey(measurement.type, measurement.sourceAId, measurement.sourceBId);
+      angleOverlay.labelPoint = measurement.labelPoint;
+      angleOverlay.hasLabelPoint = measurement.hasLabelPoint;
       angleOverlay.labelColor = measurementLabelColor(measurement);
       overlay.angles.append(angleOverlay);
       if (!compact || selectedOnly)

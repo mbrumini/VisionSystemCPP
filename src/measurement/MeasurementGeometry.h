@@ -24,4 +24,7 @@ struct MeasurementResult
   bool hasMin = false;
   bool hasMax = false;
   QString judgement;
+  int sampleCount = 0;
+  int pointCount = 0;
+  QString diagnostic;
 };

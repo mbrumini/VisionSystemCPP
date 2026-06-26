@@ -3,6 +3,7 @@
 #include "gui/geometry/GeometryOverlay.h"
 #include "gui/modules/MainWindowCameraProfile.h"
 #include "gui/modules/MainWindowGeometryModule.h"
+#include "gui/modules/MainWindowImagingModule.h"
 #include "gui/modules/MainWindowSetupModule.h"
 #include "runtime/CameraRuntime.h"
 
@@ -193,6 +194,10 @@ void MainWindowRecipeModule::setActiveRecipe(const QString& recipeId)
   for (const CameraConfig& camera : config().activeCameras())
   {
     cameraRuntime()[camera.id].clearCurrentPose(camera.id);
+  }
+  if (!selectedCameraId().isEmpty() && context().imaging)
+  {
+    context().imaging->restoreSampleWorkspace(selectedCamera());
   }
   if (context().geometry)
   {

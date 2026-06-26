@@ -97,6 +97,28 @@ void ImageViewWidget::mouseReleaseEvent(QMouseEvent* event)
     return;
   }
 
+  if (m_movingGeometryOverlayAngleLabel)
+  {
+    if (m_geometryOverlayDimensionLabelMovedHandler &&
+        m_selectedGeometryOverlayAngleIndex >= 0 &&
+        m_selectedGeometryOverlayAngleIndex < m_geometryOverlay.angles.size() &&
+        imageDrawRect().contains(event->pos()))
+    {
+      const QPointF imagePoint = widgetToImageF(event->pos());
+      GeometryOverlayAngle& angle = m_geometryOverlay.angles[m_selectedGeometryOverlayAngleIndex];
+      angle.labelPoint = imagePoint;
+      angle.hasLabelPoint = true;
+      m_geometryOverlayDimensionLabelMovedHandler(angle.id, imagePoint);
+    }
+
+    m_movingGeometryOverlayAngleLabel = false;
+    m_selectedGeometryOverlayAngleIndex = -1;
+    m_dragging = false;
+    setCursor(Qt::ArrowCursor);
+    update();
+    return;
+  }
+
   if (m_movingCircleBandCenter || m_selectedCircleBandRadius >= 0)
   {
     const int changedRadiusIndex = m_movingCircleBandCenter ? -1 : m_selectedCircleBandRadius;

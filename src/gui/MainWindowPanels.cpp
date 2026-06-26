@@ -74,6 +74,63 @@ const MeasurementResult* findRuntimeMeasurement(const QVector<MeasurementResult>
   return fallback;
 }
 
+const MeasurementResult* findRuntimeMeasurementByType(const QVector<MeasurementResult>& measurements,
+                                                        const QString& type)
+{
+  for (const MeasurementResult& measurement : measurements)
+  {
+    if (measurement.type == type)
+    {
+      return &measurement;
+    }
+  }
+  return nullptr;
+}
+
+void appendThreadMeasurementRows(const RecipeManager& recipes,
+                               const QString& cameraId,
+                               const QVector<MeasurementResult>& runtimeMeasurements,
+                               QVector<MeasurementResult>& rows)
+{
+  const ThreadInspectionSettings threadSettings = recipes.loadThreadInspectionSettings(cameraId);
+  if (!threadSettings.enabled || !threadSettings.hasExtractionRoi)
+  {
+    return;
+  }
+
+  const QStringList types = {
+    QStringLiteral("thread_major_diameter"),
+    QStringLiteral("thread_minor_diameter"),
+    QStringLiteral("thread_pitch"),
+    QStringLiteral("thread_phase")
+  };
+  const ThreadMeasurementLimits* limits[] = {
+    &threadSettings.majorDiameter,
+    &threadSettings.minorDiameter,
+    &threadSettings.pitchLength,
+    &threadSettings.phaseOffset
+  };
+  for (int index = 0; index < types.size(); ++index)
+  {
+    if (!limits[index]->enabled)
+    {
+      continue;
+    }
+
+    const MeasurementResult* runtime = findRuntimeMeasurementByType(runtimeMeasurements, types[index]);
+    if (runtime)
+    {
+      rows.append(*runtime);
+    }
+  }
+
+  if (const MeasurementResult* runtime =
+        findRuntimeMeasurementByType(runtimeMeasurements, QStringLiteral("thread_pitch_diameter")))
+  {
+    rows.append(*runtime);
+  }
+}
+
 QVector<MeasurementResult> mergedMeasurementRows(const RecipeManager& recipes,
                                                  const QString& cameraId,
                                                  const QVector<MeasurementResult>& runtimeMeasurements)
@@ -89,6 +146,7 @@ QVector<MeasurementResult> mergedMeasurementRows(const RecipeManager& recipes,
     const MeasurementResult* runtime = findRuntimeMeasurement(runtimeMeasurements, config);
     rows.append(runtime ? *runtime : failedMeasurementRow(config));
   }
+  appendThreadMeasurementRows(recipes, cameraId, runtimeMeasurements, rows);
   return rows;
 }
 
@@ -564,6 +622,7 @@ void MainWindow::showCameraToolList(const CameraConfig& camera)
   addTool("geometries");
   addTool("constructedGeometries");
   addTool("measurements");
+  addTool("tolerances");
   addTool("threadInspection");
   const bool hasVisibleAiTool =
     m_accessSession.role() == AccessRole::Guru ||

@@ -129,6 +129,14 @@ bool MainWindowImagingModule::ensureReferenceImageVisible(const CameraConfig& ca
   selectedPreview() = loadCameraSamplePreview(camera);
   if (selectedPreview().isNull())
   {
+    if (largeImage())
+    {
+      largeImage()->clearImage();
+    }
+    if (context().updateLargePreview)
+    {
+      context().updateLargePreview();
+    }
     return false;
   }
 

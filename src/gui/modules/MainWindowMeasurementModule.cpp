@@ -25,6 +25,7 @@
 #include <QVBoxLayout>
 
 #include <functional>
+#include <memory>
 
 namespace
 {
@@ -73,6 +74,99 @@ double currentMeasurementPixels(const GeometrySet& set, const MeasurementRecipeC
     return result->valid ? result->valuePixels : 0.0;
   }
   return 0.0;
+}
+
+QString threadMeasurementLabel(const QString& threadKey)
+{
+  if (threadKey == QStringLiteral("major"))
+  {
+    return QObject::tr("labels.threadMajorDiameter");
+  }
+  if (threadKey == QStringLiteral("pitch"))
+  {
+    return QObject::tr("labels.threadPitch");
+  }
+  if (threadKey == QStringLiteral("phase"))
+  {
+    return QObject::tr("labels.threadPhase");
+  }
+  if (threadKey == QStringLiteral("minor"))
+  {
+    return QObject::tr("labels.threadMinorDiameter");
+  }
+  return threadKey;
+}
+
+ThreadMeasurementLimits* threadLimitsForKey(ThreadInspectionSettings& settings, const QString& threadKey)
+{
+  if (threadKey == QStringLiteral("major"))
+  {
+    return &settings.majorDiameter;
+  }
+  if (threadKey == QStringLiteral("pitch"))
+  {
+    return &settings.pitchLength;
+  }
+  if (threadKey == QStringLiteral("phase"))
+  {
+    return &settings.phaseOffset;
+  }
+  if (threadKey == QStringLiteral("minor"))
+  {
+    return &settings.minorDiameter;
+  }
+  return nullptr;
+}
+
+const ThreadMeasurementLimits* threadLimitsForKey(
+  const ThreadInspectionSettings& settings,
+  const QString& threadKey)
+{
+  return threadLimitsForKey(const_cast<ThreadInspectionSettings&>(settings), threadKey);
+}
+
+struct ToleranceEntry
+{
+  enum class Source
+  {
+    Geometry,
+    Thread
+  };
+
+  Source source = Source::Geometry;
+  int geometryIndex = -1;
+  QString threadKey;
+};
+
+QVector<ToleranceEntry> buildToleranceEntries(
+  const QVector<MeasurementRecipeConfig>& configs,
+  const ThreadInspectionSettings& threadSettings)
+{
+  QVector<ToleranceEntry> entries;
+  for (int index = 0; index < configs.size(); ++index)
+  {
+    entries.append({ToleranceEntry::Source::Geometry, index, {}});
+  }
+
+  if (threadSettings.enabled && threadSettings.hasExtractionRoi)
+  {
+    entries.append({ToleranceEntry::Source::Thread, -1, QStringLiteral("major")});
+    entries.append({ToleranceEntry::Source::Thread, -1, QStringLiteral("minor")});
+    entries.append({ToleranceEntry::Source::Thread, -1, QStringLiteral("pitch")});
+    entries.append({ToleranceEntry::Source::Thread, -1, QStringLiteral("phase")});
+  }
+
+  return entries;
+}
+
+QString toleranceEntryLabel(const ToleranceEntry& entry, const QVector<MeasurementRecipeConfig>& configs)
+{
+  if (entry.source == ToleranceEntry::Source::Geometry)
+  {
+    return measurementItemLabel(configs[entry.geometryIndex]);
+  }
+
+  return threadMeasurementLabel(entry.threadKey);
 }
 }
 
@@ -304,7 +398,9 @@ void MainWindowMeasurementModule::showMeasurementListDialog(const CameraConfig& 
   dialog.exec();
 }
 
-void MainWindowMeasurementModule::showMeasurementToleranceDialog(const CameraConfig& camera, const QString& measurementId)
+void MainWindowMeasurementModule::showMeasurementToleranceDialog(const CameraConfig& camera,
+                                                              const QString& measurementId,
+                                                              QWidget* parent)
 {
   QVector<MeasurementRecipeConfig> configs = recipes().loadMeasurements(camera.id);
   int configIndex = -1;
@@ -325,7 +421,7 @@ void MainWindowMeasurementModule::showMeasurementToleranceDialog(const CameraCon
   const bool angle = config.type == "line_line_angle";
   const QString unit = angle ? " deg" : " mm";
 
-  QDialog dialog(window());
+  QDialog dialog(parent ? parent : window());
   dialog.setWindowTitle(QString("Tolleranze | %1").arg(config.alias.trimmed().isEmpty() ? config.id : config.alias));
   auto* layout = new QVBoxLayout(&dialog);
 
@@ -436,6 +532,8 @@ void MainWindowMeasurementModule::showMeasurementToleranceDialog(const CameraCon
     if (angle)
     {
       config.hasSampleScale = false;
+      config.samplePixels = currentMeasurementPixels(cameraRuntime()[camera.id].geometries(), config);
+      config.unit = "deg";
     }
     else
     {
@@ -544,9 +642,9 @@ void MainWindowMeasurementModule::showMeasurementPanel(const CameraConfig& camer
   });
   buttonLayout->addWidget(lineAngleButton, 1, 0);
 
-  auto* realValuesButton = createTouchIconButton("tolerances", measurements.isEmpty() ? tr("tools.tolerances") : "Misure...", panel);
+  auto* realValuesButton = createTouchIconButton("tolerances", tr("tools.tolerances"), panel);
   QObject::connect(realValuesButton, &QPushButton::clicked, window(), [this, camera]() {
-    showMeasurementListDialog(camera);
+    showTolerancesDialog(camera);
   });
   buttonLayout->addWidget(realValuesButton, 1, 1);
 
@@ -566,172 +664,276 @@ void MainWindowMeasurementModule::showMeasurementPanel(const CameraConfig& camer
   toolsLayout()->addWidget(panel);
 }
 
-void MainWindowMeasurementModule::showMeasurementRealValuesPanel(const CameraConfig& camera)
+void MainWindowMeasurementModule::showThreadToleranceDialog(const CameraConfig& camera,
+                                                            const QString& threadKey,
+                                                            QWidget* parent)
 {
-  context().clearToolPanel();
-  refreshMeasurementSources(camera);
-
-  QVector<MeasurementRecipeConfig> configs = recipes().loadMeasurements(camera.id);
-
-  auto* panel = new QWidget(toolsContainer());
-  auto* layout = new QVBoxLayout(panel);
-  layout->setContentsMargins(0, 0, 0, 0);
-  layout->setSpacing(8);
-
-  auto* title = new QLabel(QString("%1 | %2").arg(tr("tools.tolerances"), camera.id), panel);
-  title->setObjectName("toolPanelTitle");
-  layout->addWidget(title);
-
-  if (configs.isEmpty())
+  ThreadInspectionSettings settings = recipes().loadThreadInspectionSettings(camera.id);
+  ThreadMeasurementLimits* limits = threadLimitsForKey(settings, threadKey);
+  if (!limits)
   {
-    auto* note = new QLabel("Nessuna misura configurata.", panel);
-    note->setObjectName("toolPanelNote");
-    note->setWordWrap(true);
-    layout->addWidget(note);
+    return;
+  }
+
+  QDialog dialog(parent ? parent : window());
+  dialog.setWindowTitle(QString("%1 | %2").arg(tr("tools.tolerances"), threadMeasurementLabel(threadKey)));
+  auto* layout = new QVBoxLayout(&dialog);
+
+  auto* aliasEdit = new QLineEdit(limits->alias, &dialog);
+  aliasEdit->setPlaceholderText(tr("labels.operatorAlias"));
+  layout->addWidget(aliasEdit);
+
+  auto* measureEnabled = new QCheckBox(tr("labels.enableMeasurement"), &dialog);
+  measureEnabled->setChecked(limits->enabled);
+  layout->addWidget(measureEnabled);
+
+  auto* toleranceBox = new QGroupBox("Tolleranza", &dialog);
+  auto* toleranceLayout = new QVBoxLayout(toleranceBox);
+  auto* toleranceEnabled = new QCheckBox(tr("labels.enableToleranceOkNok"), toleranceBox);
+  toleranceEnabled->setChecked(limits->hasNominal || limits->hasMin || limits->hasMax);
+  auto* minMaxRadio = new QRadioButton("Min / Max", toleranceBox);
+  auto* nominalRadio = new QRadioButton("Nominale + / -", toleranceBox);
+  auto* toleranceForm = new QWidget(toleranceBox);
+  auto* form = new QFormLayout(toleranceForm);
+  form->setContentsMargins(0, 0, 0, 0);
+
+  auto* nominal = new QDoubleSpinBox(toleranceForm);
+  auto* tolMinus = new QDoubleSpinBox(toleranceForm);
+  auto* tolPlus = new QDoubleSpinBox(toleranceForm);
+  auto* min = new QDoubleSpinBox(toleranceForm);
+  auto* max = new QDoubleSpinBox(toleranceForm);
+  for (QDoubleSpinBox* spin : {nominal, tolMinus, tolPlus, min, max})
+  {
+    spin->setRange(-1000000.0, 1000000.0);
+    spin->setDecimals(4);
+    spin->setSuffix(QStringLiteral(" mm"));
+  }
+
+  nominal->setValue(limits->nominal);
+  min->setValue(limits->min);
+  max->setValue(limits->max);
+  tolMinus->setValue(limits->hasNominal && limits->hasMin ? limits->min - limits->nominal : 0.0);
+  tolPlus->setValue(limits->hasNominal && limits->hasMax ? limits->max - limits->nominal : 0.0);
+  if (limits->hasNominal && limits->hasMin && limits->hasMax)
+  {
+    nominalRadio->setChecked(true);
   }
   else
   {
-    auto* form = new QWidget(panel);
-    auto* formLayout = new QFormLayout(form);
-    formLayout->setContentsMargins(0, 0, 0, 0);
-    formLayout->setSpacing(8);
-
-    auto* measureCombo = new QComboBox(form);
-    for (int i = 0; i < configs.size(); ++i)
-    {
-      measureCombo->addItem(measurementItemLabel(configs[i]), i);
-    }
-
-    auto* aliasEdit = new QLineEdit(form);
-    aliasEdit->setPlaceholderText("Alias operatore");
-    auto* realValuesEnabled = new QCheckBox("Abilita tolleranza OK/NOK", form);
-    auto* sampleValue = new QDoubleSpinBox(form);
-    sampleValue->setRange(-1000000.0, 1000000.0);
-    sampleValue->setDecimals(4);
-    sampleValue->setSuffix(" mm");
-    auto* nominal = new QDoubleSpinBox(form);
-    nominal->setRange(-1000000.0, 1000000.0);
-    nominal->setDecimals(4);
-    nominal->setSuffix(" mm");
-    auto* min = new QDoubleSpinBox(form);
-    min->setRange(-1000000.0, 1000000.0);
-    min->setDecimals(4);
-    min->setSuffix(" mm");
-    auto* max = new QDoubleSpinBox(form);
-    max->setRange(-1000000.0, 1000000.0);
-    max->setDecimals(4);
-    max->setSuffix(" mm");
-
-    auto loadConfig = [=]() {
-      const int index = measureCombo->currentData().toInt();
-      if (index < 0 || index >= configs.size())
-      {
-        return;
-      }
-      const MeasurementRecipeConfig& config = configs[index];
-      aliasEdit->setText(config.alias);
-      const bool angle = config.type == "line_line_angle";
-      const QString suffix = angle ? " deg" : " mm";
-      sampleValue->setSuffix(suffix);
-      nominal->setSuffix(suffix);
-      min->setSuffix(suffix);
-      max->setSuffix(suffix);
-      realValuesEnabled->setChecked(config.hasSampleScale || config.hasNominal || config.hasMin || config.hasMax);
-      sampleValue->setValue(config.sampleValue);
-      nominal->setValue(config.nominal);
-      min->setValue(config.min);
-      max->setValue(config.max);
-    };
-
-    QObject::connect(measureCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), loadConfig);
-    const auto enableTolerance = [realValuesEnabled]() {
-      realValuesEnabled->setChecked(true);
-    };
-    QObject::connect(nominal, &QDoubleSpinBox::editingFinished, window(), enableTolerance);
-    QObject::connect(min, &QDoubleSpinBox::editingFinished, window(), enableTolerance);
-    QObject::connect(max, &QDoubleSpinBox::editingFinished, window(), enableTolerance);
-    loadConfig();
-
-    formLayout->addRow("Misura", measureCombo);
-    formLayout->addRow("Alias operatore", aliasEdit);
-    formLayout->addRow(realValuesEnabled);
-    formLayout->addRow("Valore campione", sampleValue);
-    formLayout->addRow("Nominale", nominal);
-    formLayout->addRow("Limite minimo", min);
-    formLayout->addRow("Limite massimo", max);
-    layout->addWidget(form);
-
-    auto* actionRow = new QWidget(panel);
-    auto* actionLayout = new QHBoxLayout(actionRow);
-    actionLayout->setContentsMargins(0, 0, 0, 0);
-    actionLayout->setSpacing(6);
-
-    auto* saveButton = createTouchIconButton("save", "Salva valori", actionRow);
-    QObject::connect(saveButton, &QPushButton::clicked, window(), [=]() mutable {
-      const int index = measureCombo->currentData().toInt();
-      if (index < 0 || index >= configs.size())
-      {
-        return;
-      }
-      MeasurementRecipeConfig config = configs[index];
-      config.alias = aliasEdit->text().trimmed();
-      const bool angle = config.type == "line_line_angle";
-      config.unit = angle ? "deg" : "mm";
-      const bool enabled = realValuesEnabled->isChecked();
-      if (config.samplePixels <= 0.000001)
-      {
-        const GeometrySet& set = cameraRuntime()[camera.id].geometries();
-        for (const MeasurementResult& measurement : set.measurements)
-        {
-          if (measurement.type == config.type &&
-              measurement.sourceAId == config.sourceAId &&
-              measurement.sourceBId == config.sourceBId)
-          {
-            config.samplePixels = measurement.valuePixels;
-            break;
-          }
-        }
-      }
-      config.hasSampleScale = enabled && config.samplePixels > 0.000001;
-      config.sampleValue = sampleValue->value();
-      config.hasNominal = enabled;
-      config.nominal = nominal->value();
-      config.hasMin = enabled;
-      config.min = min->value();
-      config.hasMax = enabled;
-      config.max = max->value();
-      saveMeasurementRealSettings(camera, config);
-      configs[index] = config;
-      rebuildMeasurementRecipe(camera);
-      if (context().geometry)
-      {
-        context().geometry->refreshMeasurementOverlay(camera);
-      }
-      if (context().updateMeasurementResults)
-      {
-        context().updateMeasurementResults();
-      }
-    });
-    actionLayout->addWidget(saveButton);
-
-    auto* deleteButton = createTouchIconButton("delete", tr("actions.deleteMeasurement"), actionRow);
-    QObject::connect(deleteButton, &QPushButton::clicked, window(), [=]() {
-      const int index = measureCombo->currentData().toInt();
-      if (index < 0 || index >= configs.size())
-      {
-        return;
-      }
-      removeMeasurement(camera, configs[index].id);
-      showMeasurementRealValuesPanel(camera);
-    });
-    actionLayout->addWidget(deleteButton);
-    layout->addWidget(actionRow);
+    minMaxRadio->setChecked(true);
   }
 
-  auto* backButton = createTouchIconButton("back", tr("tools.measurements"), panel);
-  QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() { showMeasurementPanel(camera); });
-  layout->addWidget(backButton);
-  layout->addStretch(1);
+  form->addRow(tr("labels.nominal"), nominal);
+  form->addRow("Offset limite basso", tolMinus);
+  form->addRow("Offset limite alto", tolPlus);
+  form->addRow(tr("labels.minLimit"), min);
+  form->addRow(tr("labels.maxLimit"), max);
+  toleranceLayout->addWidget(toleranceEnabled);
+  toleranceLayout->addWidget(minMaxRadio);
+  toleranceLayout->addWidget(nominalRadio);
+  toleranceLayout->addWidget(toleranceForm);
+  layout->addWidget(toleranceBox);
 
-  toolsLayout()->addWidget(panel);
+  const auto syncToleranceMode = [=]() {
+    const bool enabled = toleranceEnabled->isChecked();
+    nominalRadio->setEnabled(enabled);
+    minMaxRadio->setEnabled(enabled);
+    nominal->setEnabled(enabled && nominalRadio->isChecked());
+    tolMinus->setEnabled(enabled && nominalRadio->isChecked());
+    tolPlus->setEnabled(enabled && nominalRadio->isChecked());
+    min->setEnabled(enabled && minMaxRadio->isChecked());
+    max->setEnabled(enabled && minMaxRadio->isChecked());
+  };
+  QObject::connect(toleranceEnabled, &QCheckBox::toggled, &dialog, syncToleranceMode);
+  QObject::connect(minMaxRadio, &QRadioButton::toggled, &dialog, syncToleranceMode);
+  QObject::connect(nominalRadio, &QRadioButton::toggled, &dialog, syncToleranceMode);
+  syncToleranceMode();
+
+  auto* buttons = new QDialogButtonBox(&dialog);
+  auto* saveButton = buttons->addButton(tr("actions.saveMeasurement"), QDialogButtonBox::AcceptRole);
+  buttons->addButton(QDialogButtonBox::Cancel);
+  layout->addWidget(buttons);
+  QObject::connect(saveButton, &QPushButton::clicked, &dialog, [&]() {
+    limits->enabled = measureEnabled->isChecked();
+    limits->alias = aliasEdit->text().trimmed();
+    if (!toleranceEnabled->isChecked())
+    {
+      limits->hasNominal = false;
+      limits->hasMin = false;
+      limits->hasMax = false;
+    }
+    else if (nominalRadio->isChecked())
+    {
+      limits->nominal = nominal->value();
+      limits->min = limits->nominal + tolMinus->value();
+      limits->max = limits->nominal + tolPlus->value();
+      if (limits->max < limits->min)
+      {
+        std::swap(limits->min, limits->max);
+      }
+      limits->hasNominal = true;
+      limits->hasMin = true;
+      limits->hasMax = true;
+    }
+    else
+    {
+      limits->min = min->value();
+      limits->max = max->value();
+      limits->nominal = (limits->min + limits->max) * 0.5;
+      limits->hasNominal = false;
+      limits->hasMin = true;
+      limits->hasMax = true;
+    }
+
+    QString error;
+    if (!recipes().saveThreadInspectionSettings(camera.id, settings, &error))
+    {
+      log(error);
+      return;
+    }
+
+    rebuildMeasurementRecipe(camera);
+    if (context().refreshThreadProfileOverlay)
+    {
+      context().refreshThreadProfileOverlay(camera);
+    }
+    if (context().geometry)
+    {
+      context().geometry->refreshMeasurementOverlay(camera);
+    }
+    if (context().updateMeasurementResults)
+    {
+      context().updateMeasurementResults();
+    }
+    dialog.accept();
+  });
+  QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+  dialog.exec();
+}
+
+void MainWindowMeasurementModule::showTolerancesDialog(const CameraConfig& camera)
+{
+  refreshMeasurementSources(camera);
+
+  QVector<MeasurementRecipeConfig> configs = recipes().loadMeasurements(camera.id);
+  const ThreadInspectionSettings threadSettings = recipes().loadThreadInspectionSettings(camera.id);
+  const QVector<ToleranceEntry> entries = buildToleranceEntries(configs, threadSettings);
+
+  QDialog dialog(window());
+  dialog.setWindowTitle(QString("%1 | %2").arg(tr("tools.tolerances"), camera.id));
+  dialog.resize(820, 420);
+
+  auto* layout = new QVBoxLayout(&dialog);
+  if (entries.isEmpty())
+  {
+    auto* note = new QLabel(tr("labels.noMeasurementsConfigured"), &dialog);
+    note->setWordWrap(true);
+    layout->addWidget(note);
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
+    layout->addWidget(buttons);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    dialog.exec();
+    return;
+  }
+
+  auto* table = new QTableWidget(0, 5, &dialog);
+  table->setHorizontalHeaderLabels({"Nome", "Tipo", "Valore", "Stato", "Origine"});
+  table->setSelectionBehavior(QAbstractItemView::SelectRows);
+  table->setSelectionMode(QAbstractItemView::SingleSelection);
+  table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+  table->verticalHeader()->setVisible(false);
+  table->horizontalHeader()->setStretchLastSection(true);
+
+  const auto reloadTable = [this, &camera, &configs, table, entries]() {
+    rebuildMeasurementRecipe(camera);
+    const GeometrySet& set = cameraRuntime()[camera.id].geometries();
+    table->setRowCount(entries.size());
+    for (int row = 0; row < entries.size(); ++row)
+    {
+      const ToleranceEntry& entry = entries[row];
+      QString name;
+      QString type;
+      QString value = "N/D";
+      QString state = "N/D";
+      QString origin;
+
+      if (entry.source == ToleranceEntry::Source::Geometry)
+      {
+        const MeasurementRecipeConfig& config = configs[entry.geometryIndex];
+        name = config.alias.trimmed().isEmpty() ? config.id : config.alias;
+        type = config.type;
+        origin = "Geometria";
+        if (const MeasurementResult* result = findMeasurementResult(set.measurements, config))
+        {
+          value = measurementValueText(*result);
+          state = result->valid
+            ? (result->judgement.isEmpty() ? "OK" : result->judgement)
+            : "N/D";
+        }
+      }
+      else
+      {
+        name = threadMeasurementLabel(entry.threadKey);
+        type = QString("thread_%1").arg(entry.threadKey);
+        origin = "Filetto";
+        const ThreadInspectionSettings threadLimitsSource =
+          recipes().loadThreadInspectionSettings(camera.id);
+        const ThreadMeasurementLimits* limits =
+          threadLimitsForKey(threadLimitsSource, entry.threadKey);
+        if (limits && limits->enabled)
+        {
+          state = limits->hasMin || limits->hasMax ? "Configurato" : "N/D";
+        }
+      }
+
+      const QStringList values = {name, type, value, state, origin};
+      for (int column = 0; column < values.size(); ++column)
+      {
+        auto* item = new QTableWidgetItem(values[column]);
+        item->setData(Qt::UserRole, row);
+        table->setItem(row, column, item);
+      }
+    }
+    table->resizeColumnsToContents();
+  };
+  reloadTable();
+  layout->addWidget(table);
+  if (table->rowCount() > 0)
+  {
+    table->selectRow(0);
+  }
+
+  auto* buttons = new QDialogButtonBox(&dialog);
+  auto* editButton = buttons->addButton("Tolleranze...", QDialogButtonBox::ActionRole);
+  buttons->addButton(QDialogButtonBox::Close);
+  layout->addWidget(buttons);
+
+  const auto editSelected = [this, &camera, &configs, &dialog, table, entries, reloadTable]() {
+    const int row = table->currentRow();
+    if (row < 0 || row >= entries.size())
+    {
+      return;
+    }
+    const ToleranceEntry& entry = entries[row];
+    if (entry.source == ToleranceEntry::Source::Geometry)
+    {
+      showMeasurementToleranceDialog(camera, configs[entry.geometryIndex].id, &dialog);
+    }
+    else
+    {
+      showThreadToleranceDialog(camera, entry.threadKey, &dialog);
+    }
+    configs = recipes().loadMeasurements(camera.id);
+    reloadTable();
+  };
+
+  QObject::connect(table, &QTableWidget::cellDoubleClicked, &dialog, editSelected);
+  QObject::connect(editButton, &QPushButton::clicked, &dialog, editSelected);
+  QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+  dialog.exec();
+}
+
+void MainWindowMeasurementModule::showMeasurementRealValuesPanel(const CameraConfig& camera)
+{
+  showTolerancesDialog(camera);
 }

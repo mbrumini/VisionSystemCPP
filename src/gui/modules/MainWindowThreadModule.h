@@ -1,8 +1,12 @@
 #pragma once
 
 #include "gui/modules/MainWindowModuleBase.h"
+#include "processing/thread/ThreadProfileMeasurer.h"
+
+#include <QHash>
 
 class CameraConfig;
+struct ThreadProfileResult;
 
 class MainWindowThreadModule : public MainWindowModuleBase
 {
@@ -13,5 +17,14 @@ public:
   void activateThreadExtractionRoiDrawing(const CameraConfig& camera);
   void clearThreadExtractionRoi(const CameraConfig& camera);
   void syncExtractionRoiOverlay(const CameraConfig& camera);
+  void refreshThreadProfileOverlay(const CameraConfig& camera);
+  void applyThreadMeasurements(const CameraConfig& camera, const ThreadProfileResult& result);
   void testThreadExtraction(const CameraConfig& camera);
+
+private:
+  void ensureThreadInspectionPose(const CameraConfig& camera);
+  ThreadDiameterValues smoothThreadOverlay(const QString& cameraId, const ThreadDiameterValues& incoming);
+
+  QHash<QString, ThreadDiameterValues> m_stableThreadOverlay;
+  bool m_refreshingThreadOverlay = false;
 };

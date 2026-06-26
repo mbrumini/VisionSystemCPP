@@ -63,7 +63,9 @@ void drawAngleOverlay(QPainter& painter,
                       const QString& label,
                       const QColor& color,
                       int width,
-                      const QColor& labelColor)
+                      const QColor& labelColor,
+                      bool hasCustomLabelPoint = false,
+                      const QPointF& customLabelPoint = {})
 {
   const QPointF vectorA = armA - center;
   const QPointF vectorB = armB - center;
@@ -104,7 +106,9 @@ void drawAngleOverlay(QPainter& painter,
   }
 
   const double labelAngle = startAngle + delta * 0.5;
-  const QPointF labelPoint = center + QPointF(std::cos(labelAngle), std::sin(labelAngle)) * (radius + 14.0);
+  const QPointF labelPoint = hasCustomLabelPoint
+    ? customLabelPoint
+    : center + QPointF(std::cos(labelAngle), std::sin(labelAngle)) * (radius + 14.0);
   drawMeasurementLabel(painter, labelPoint, label, labelColor);
 }
 }
@@ -396,14 +400,22 @@ void ImageViewWidget::paintEvent(QPaintEvent* event)
 
     for (const GeometryOverlayAngle& angle : m_geometryOverlay.angles)
     {
+      const QPointF center = imagePointToWidget(angle.imageCenter);
+      const QPointF armA = imagePointToWidget(angle.imageArmA);
+      const QPointF armB = imagePointToWidget(angle.imageArmB);
+      const QPointF labelPoint = angle.hasLabelPoint
+        ? imagePointToWidget(angle.labelPoint)
+        : QPointF();
       drawAngleOverlay(painter,
-                       imagePointToWidget(angle.imageCenter),
-                       imagePointToWidget(angle.imageArmA),
-                       imagePointToWidget(angle.imageArmB),
+                       center,
+                       armA,
+                       armB,
                        angle.label,
                        angle.color,
                        angle.width,
-                       angle.labelColor);
+                       angle.labelColor,
+                       angle.hasLabelPoint,
+                       labelPoint);
     }
 
     for (const GeometryOverlayPoint& point : m_geometryOverlay.points)
@@ -411,8 +423,11 @@ void ImageViewWidget::paintEvent(QPaintEvent* event)
       const QPointF widgetPoint = imagePointToWidget(point.imagePoint);
       painter.setPen(QPen(QColor("#ffffff"), 2));
       painter.setBrush(point.color);
-      painter.drawEllipse(widgetPoint, 6, 6);
-      painter.drawText(widgetPoint + QPointF(9, -9), point.label);
+      painter.drawEllipse(widgetPoint, point.radius, point.radius);
+      if (!point.label.isEmpty())
+      {
+        painter.drawText(widgetPoint + QPointF(point.radius + 3.0, -point.radius - 3.0), point.label);
+      }
     }
   }
 

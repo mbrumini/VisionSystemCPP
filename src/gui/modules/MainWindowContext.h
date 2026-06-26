@@ -116,6 +116,7 @@ struct MainWindowContext
   std::function<void(const CameraConfig&)> reloadCameraReferenceImage;
   std::function<void(const CameraConfig*)> updateControlPanel;
   std::function<void(const CameraConfig&)> syncThreadExtractionRoiOverlay;
+  std::function<void(const CameraConfig&)> refreshThreadProfileOverlay;
   std::function<void()> clearToolPanel;
   std::function<void()> deactivateImageDrawingTools;
   std::function<void(const CameraConfig&)> showCameraToolList;

@@ -337,6 +337,10 @@ void MainWindowSetupModule::refreshSetupGeometryResults(const CameraConfig& came
 {
   if (!context().geometry)
   {
+    if (context().refreshThreadProfileOverlay)
+    {
+      context().refreshThreadProfileOverlay(camera);
+    }
     if (onComplete)
     {
       onComplete();
@@ -358,6 +362,10 @@ void MainWindowSetupModule::refreshSetupGeometryResults(const CameraConfig& came
         context().measurement->appendMeasurementOverlay(camera, overlay);
         largeImage()->setGeometryOverlay(overlay);
       }
+    }
+    if (context().refreshThreadProfileOverlay)
+    {
+      context().refreshThreadProfileOverlay(camera);
     }
     if (context().updateMeasurementStatistics)
     {

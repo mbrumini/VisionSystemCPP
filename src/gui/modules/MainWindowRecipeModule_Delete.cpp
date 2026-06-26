@@ -46,6 +46,12 @@ void MainWindowRecipeModule::deleteRecipe()
     return;
   }
 
+  if (recipeId == RecipeManager::defaultRecipeTemplateId())
+  {
+    QMessageBox::warning(window(), tr("menu.deleteRecipe"), tr("messages.cannotDeleteTemplateRecipe"));
+    return;
+  }
+
   if (available.size() <= 1)
   {
     QMessageBox::warning(window(), tr("menu.deleteRecipe"), tr("messages.cannotDeleteLastRecipe"));

@@ -18,6 +18,11 @@ QString RecipeManager::recipesRootPath()
   return recipesRoot();
 }
 
+QString RecipeManager::defaultRecipeTemplateId()
+{
+  return QStringLiteral("default");
+}
+
 QString RecipeManager::normalizeRecipeId(const QString& text)
 {
   QString result = text.trimmed().toLower();
@@ -80,6 +85,22 @@ bool RecipeManager::createRecipe(const QString& recipeId, QString* errorMessage)
     }
 
     return false;
+  }
+
+  if (normalizedId == defaultRecipeTemplateId())
+  {
+    if (errorMessage)
+    {
+      *errorMessage = "Non puoi creare una ricetta con lo stesso nome del template predefinito.";
+    }
+
+    return false;
+  }
+
+  const QString templateId = defaultRecipeTemplateId();
+  if (availableRecipes().contains(templateId))
+  {
+    return duplicateRecipe(templateId, normalizedId, errorMessage);
   }
 
   QDir recipeDir;

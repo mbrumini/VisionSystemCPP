@@ -4,6 +4,8 @@
 #include "geometry/LineGeometry.h"
 #include "geometry/PointGeometry.h"
 
+#include <QString>
+
 namespace MeasurementGeometryMath
 {
 bool pointPointDistance(const PointGeometry& pointA, const PointGeometry& pointB, double& distancePixels);
@@ -15,4 +17,15 @@ bool parallelLineDistance(const LineGeometry& lineA,
                           PointGeometry* pointOnLineB = nullptr);
 bool circleDiameterPixels(const CircleGeometry& circle, double& diameterPixels);
 bool lineLineAngleDegrees(const LineGeometry& lineA, const LineGeometry& lineB, double& angleDegrees);
+
+// Corner angle at intersection with oriented rays for overlay.
+bool lineLineAngleGeometry(const LineGeometry& lineA,
+                           const LineGeometry& lineB,
+                           double& angleDegrees,
+                           cv::Point2d& vertex,
+                           cv::Point2d& rayA,
+                           cv::Point2d& rayB);
+
+// Resolves combo ids like "line:0:line_1" to "line_1".
+QString geometrySourceMetaId(const QString& sourceId);
 }

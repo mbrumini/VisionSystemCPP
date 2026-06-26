@@ -36,6 +36,47 @@ void applyThreadFilterFromJson(ThreadInspectionSettings& settings, const QJsonOb
   settings.outlierRejectSigma = filter.value("outlierRejectSigma").toDouble(settings.outlierRejectSigma);
 }
 
+void applyThreadMeasurementLimitsFromJson(ThreadMeasurementLimits& limits, const QJsonObject& object)
+{
+  limits.enabled = object.value("enabled").toBool(limits.enabled);
+  limits.alias = object.value("alias").toString(limits.alias);
+  limits.nominal = object.value("nominal").toDouble(limits.nominal);
+  limits.min = object.value("min").toDouble(limits.min);
+  limits.max = object.value("max").toDouble(limits.max);
+  limits.hasNominal = object.value("hasNominal").toBool(limits.hasNominal);
+  limits.hasMin = object.value("hasMin").toBool(limits.hasMin);
+  limits.hasMax = object.value("hasMax").toBool(limits.hasMax);
+}
+
+QJsonObject threadMeasurementLimitsToJson(const ThreadMeasurementLimits& limits)
+{
+  QJsonObject object;
+  if (limits.enabled)
+  {
+    object["enabled"] = true;
+  }
+  if (!limits.alias.isEmpty())
+  {
+    object["alias"] = limits.alias;
+  }
+  if (limits.hasNominal)
+  {
+    object["nominal"] = limits.nominal;
+    object["hasNominal"] = true;
+  }
+  if (limits.hasMin)
+  {
+    object["min"] = limits.min;
+    object["hasMin"] = true;
+  }
+  if (limits.hasMax)
+  {
+    object["max"] = limits.max;
+    object["hasMax"] = true;
+  }
+  return object;
+}
+
 QJsonObject threadInspectionObjectFromSettings(const ThreadInspectionSettings& settings)
 {
   QJsonObject threadInspection;
@@ -55,6 +96,12 @@ QJsonObject threadInspectionObjectFromSettings(const ThreadInspectionSettings& s
     threadInspection["extractionRoi"] = extractionRoi;
   }
   threadInspection["filter"] = threadFilterToJson(settings);
+  QJsonObject measurements;
+  measurements["major"] = threadMeasurementLimitsToJson(settings.majorDiameter);
+  measurements["pitch"] = threadMeasurementLimitsToJson(settings.pitchLength);
+  measurements["minor"] = threadMeasurementLimitsToJson(settings.minorDiameter);
+  measurements["phase"] = threadMeasurementLimitsToJson(settings.phaseOffset);
+  threadInspection["measurements"] = measurements;
   return threadInspection;
 }
 
@@ -73,6 +120,11 @@ ThreadInspectionSettings threadInspectionSettingsFromObject(const QJsonObject& t
   settings.hasExtractionRoi = settings.partRoi.isValid() || settings.imageRoi.isValid();
 
   applyThreadFilterFromJson(settings, threadInspection.value("filter").toObject());
+  const QJsonObject measurements = threadInspection.value("measurements").toObject();
+  applyThreadMeasurementLimitsFromJson(settings.majorDiameter, measurements.value("major").toObject());
+  applyThreadMeasurementLimitsFromJson(settings.pitchLength, measurements.value("pitch").toObject());
+  applyThreadMeasurementLimitsFromJson(settings.minorDiameter, measurements.value("minor").toObject());
+  applyThreadMeasurementLimitsFromJson(settings.phaseOffset, measurements.value("phase").toObject());
   return settings;
 }
 }
@@ -114,6 +166,10 @@ bool RecipeManager::saveThreadInspectionSettings(
   merged.maxSpeckAreaPx = settings.maxSpeckAreaPx;
   merged.profileSmoothRadius = settings.profileSmoothRadius;
   merged.outlierRejectSigma = settings.outlierRejectSigma;
+  merged.majorDiameter = settings.majorDiameter;
+  merged.pitchLength = settings.pitchLength;
+  merged.minorDiameter = settings.minorDiameter;
+  merged.phaseOffset = settings.phaseOffset;
   tools["threadInspection"] = threadInspectionObjectFromSettings(merged);
   root["tools"] = tools;
 

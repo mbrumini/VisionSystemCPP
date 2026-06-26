@@ -11,6 +11,7 @@ struct GeometryOverlayPoint
   QPointF imagePoint;
   QString label;
   QColor color = QColor("#ff4fd8");
+  double radius = 6.0;
 };
 
 struct GeometryOverlayLine
@@ -51,6 +52,9 @@ struct GeometryOverlayAngle
   QString label;
   QColor color = QColor("#ff8a00");
   int width = 3;
+  QString id;
+  QPointF labelPoint;
+  bool hasLabelPoint = false;
   QColor labelColor = QColor("#ff8a00");
 };
 

@@ -315,6 +315,10 @@ add_executable(VisionSystemCPP
     src/processing/SurfacePcaStrategy.cpp
     src/processing/thread/ThreadProfileExtractor.h
     src/processing/thread/ThreadProfileExtractor.cpp
+    src/processing/thread/ThreadProfileMeasurer.h
+    src/processing/thread/ThreadProfileMeasurer.cpp
+    src/processing/thread/ThreadProfileRootAnalyzer.h
+    src/processing/thread/ThreadProfileRootAnalyzer.cpp
     src/processing/SurfaceThresholdStrategy.h
     src/processing/SurfaceThresholdStrategy.cpp
     src/processing/SurfaceTwoCirclesStrategy.h
@@ -345,6 +349,19 @@ target_link_libraries(VisionSystemCPP PRIVATE
 
 add_executable(VisionSystemTestVision
     tests/testvision/main.cpp
+    tests/testvision/TestVisionStyle.h
+    tests/testvision/TestVisionStyle.cpp
+    tests/testvision/TestVisionWindow.h
+    tests/testvision/TestVisionWindow.cpp
+    tests/testvision/TestVisionTypes.h
+    tests/testvision/TestVisionMath.h
+    tests/testvision/TestVisionMath.cpp
+    tests/testvision/TestVisionJson.h
+    tests/testvision/TestVisionJson.cpp
+    tests/testvision/TestVisionSyntheticImages.h
+    tests/testvision/TestVisionSyntheticImages.cpp
+    tests/testvision/TestVisionPlotWidgets.h
+    tests/testvision/TestVisionPlotWidgets.cpp
     tests/testvision/CampaignEditorDialog.h
     tests/testvision/CampaignEditorDialog.cpp
     tests/testvision/TestVisionArtifacts.h
@@ -354,6 +371,8 @@ add_executable(VisionSystemTestVision
     src/simulator/SimulatorProtocol.h
     src/simulator/SimulatorProtocol.cpp
 )
+
+set_target_properties(VisionSystemTestVision PROPERTIES AUTOMOC ON)
 
 target_link_libraries(VisionSystemTestVision PRIVATE
     ${OpenCV_LIBS}
