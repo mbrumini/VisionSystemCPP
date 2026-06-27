@@ -388,6 +388,10 @@ void MainWindowThreadModule::applyThreadMeasurements(const CameraConfig& camera,
   {
     settings.pitchLength.alias = tr("labels.threadPitch");
   }
+  if (settings.pitchDiameter.alias.isEmpty())
+  {
+    settings.pitchDiameter.alias = tr("labels.threadPitchDiameter");
+  }
   if (settings.phaseOffset.alias.isEmpty())
   {
     settings.phaseOffset.alias = tr("labels.threadPhase");

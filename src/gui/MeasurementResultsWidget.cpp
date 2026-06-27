@@ -35,7 +35,9 @@ QString measurementValue(const MeasurementResult& measurement)
   {
     return QString("%1 %2").arg(measurement.valueReal, 0, 'f', 3).arg(measurement.unit);
   }
-  const QString suffix = measurement.type == "line_line_angle" ? " deg" : " px";
+  const bool angleMeasurement =
+    measurement.type == "line_line_angle" || measurement.type == "thread_phase";
+  const QString suffix = angleMeasurement ? " deg" : " px";
   return QString("%1%2").arg(measurement.valuePixels, 0, 'f', 3).arg(suffix);
 }
 

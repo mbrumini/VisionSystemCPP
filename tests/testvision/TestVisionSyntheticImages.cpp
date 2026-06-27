@@ -1,7 +1,9 @@
 #include "TestVisionSyntheticImages.h"
 
+#include <QDir>
 #include <QImage>
 
+#include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 
 #include <cmath>
@@ -33,7 +35,9 @@ cv::Mat createScrewShank(int width, int height, int background)
 
   const int leftX = 0;
   const int threadStart = width * 24 / 100;
-  const int threadEnd = width * 66 / 100;
+  const int targetThreadEnd = width * 66 / 100;
+  const int threadCount = std::max(4, (targetThreadEnd - threadStart) / pitch);
+  const int threadEnd = threadStart + threadCount * pitch;
   const int rightEnd = width * 79 / 100;
 
   cv::rectangle(
@@ -44,22 +48,35 @@ cv::Mat createScrewShank(int width, int height, int background)
     cv::FILLED,
     cv::LINE_AA);
 
-  std::vector<cv::Point> threadProfile;
-  threadProfile.emplace_back(threadStart, centerY - coreHalf);
-  for (int x = threadStart; x < threadEnd; x += pitch)
+  std::vector<cv::Point> topProfile;
+  topProfile.emplace_back(threadStart, centerY - coreHalf);
+  for (int tooth = 0; tooth < threadCount; ++tooth)
   {
-    const int peakX = std::min(x + pitch / 2, threadEnd);
-    const int nextX = std::min(x + pitch, threadEnd);
-    threadProfile.emplace_back(peakX, centerY - coreHalf - threadAmp);
-    threadProfile.emplace_back(nextX, centerY - coreHalf);
+    const int x = threadStart + tooth * pitch;
+    const int peakX = x + pitch / 2;
+    const int nextX = x + pitch;
+    topProfile.emplace_back(peakX, centerY - coreHalf - threadAmp);
+    topProfile.emplace_back(nextX, centerY - coreHalf);
   }
-  threadProfile.emplace_back(threadEnd, centerY + coreHalf);
-  for (int x = threadEnd; x > threadStart; x -= pitch)
+
+  std::vector<cv::Point> bottomProfile;
+  bottomProfile.emplace_back(threadStart, centerY + coreHalf);
+  for (int tooth = 0; tooth + 1 < threadCount; ++tooth)
   {
-    const int peakX = std::max(x - pitch / 2, threadStart);
-    const int prevX = std::max(x - pitch, threadStart);
-    threadProfile.emplace_back(peakX, centerY + coreHalf + threadAmp);
-    threadProfile.emplace_back(prevX, centerY + coreHalf);
+    const int x = threadStart + tooth * pitch;
+    const int baseX = x + pitch / 2;
+    const int peakX = x + pitch;
+    const int nextX = x + pitch * 3 / 2;
+    bottomProfile.emplace_back(baseX, centerY + coreHalf);
+    bottomProfile.emplace_back(peakX, centerY + coreHalf + threadAmp);
+    bottomProfile.emplace_back(nextX, centerY + coreHalf);
+  }
+  bottomProfile.emplace_back(threadEnd, centerY + coreHalf);
+
+  std::vector<cv::Point> threadProfile = topProfile;
+  for (auto it = bottomProfile.rbegin(); it != bottomProfile.rend(); ++it)
+  {
+    threadProfile.push_back(*it);
   }
   cv::fillPoly(image, std::vector<std::vector<cv::Point>>{threadProfile}, dark, cv::LINE_AA);
 
@@ -78,6 +95,24 @@ cv::Mat createScrewShank(int width, int height, int background)
   };
   cv::fillConvexPoly(image, tip, dark, cv::LINE_AA);
 
+  return image;
+}
+
+cv::Mat loadStressAllToolsShape(int width, int height, int background)
+{
+  const QString path = QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath(
+    QStringLiteral("tests/assets/stress_all_tools/master.png"));
+  cv::Mat image = cv::imread(path.toStdString(), cv::IMREAD_COLOR);
+  if (image.empty())
+  {
+    return cv::Mat(height, width, CV_8UC3, cv::Scalar(background, background, background));
+  }
+  if (image.cols != width || image.rows != height)
+  {
+    cv::Mat resized;
+    cv::resize(image, resized, cv::Size(width, height), 0, 0, cv::INTER_AREA);
+    return resized;
+  }
   return image;
 }
 }
@@ -136,6 +171,10 @@ cv::Mat testVisionCreateShape(const QString& id, int width, int height, int back
   else if (id == "screw_shank")
   {
     return createScrewShank(width, height, background);
+  }
+  else if (id == "stress_all_tools")
+  {
+    return loadStressAllToolsShape(width, height, background);
   }
   else if (id == "gear")
   {

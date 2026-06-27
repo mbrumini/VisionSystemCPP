@@ -309,6 +309,7 @@ void TestVisionWindow::buildUi()
     m_shapeCombo->addItem("Piastra con fori", "plate");
     m_shapeCombo->addItem("Profilo a L", "l_profile");
     m_shapeCombo->addItem("Gambo vite", "screw_shank");
+    m_shapeCombo->addItem("Stress tutti i tool", "stress_all_tools");
     m_shapeCombo->addItem("Ruota dentata", "gear");
     m_strategyCombo = new QComboBox(configPanel);
     m_strategyCombo->addItem("Massa / PCA", "massPca");

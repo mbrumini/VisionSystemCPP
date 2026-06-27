@@ -210,6 +210,7 @@ struct ThreadInspectionSettings
   double outlierRejectSigma = 2.5;
   ThreadMeasurementLimits majorDiameter;
   ThreadMeasurementLimits minorDiameter;
+  ThreadMeasurementLimits pitchDiameter;
   ThreadMeasurementLimits pitchLength;
   ThreadMeasurementLimits phaseOffset;
 };

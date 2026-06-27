@@ -11,7 +11,9 @@ RealMeasurementResult MeasurementUnitConverter::convert(const QString& cameraId,
   result.sourceAId = measurement.sourceAId;
   result.sourceBId = measurement.sourceBId;
   result.valuePixels = measurement.valuePixels;
-  result.valueDegrees = measurement.type == "line_line_angle" ? measurement.valuePixels : 0.0;
-  result.displayUnit = measurement.type == "line_line_angle" ? MeasurementUnit::Degree : MeasurementUnit::Millimeter;
+  const bool angleMeasurement =
+    measurement.type == "line_line_angle" || measurement.type == "thread_phase";
+  result.valueDegrees = angleMeasurement ? measurement.valuePixels : 0.0;
+  result.displayUnit = angleMeasurement ? MeasurementUnit::Degree : MeasurementUnit::Millimeter;
   return result;
 }

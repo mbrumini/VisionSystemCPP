@@ -1,0 +1,26 @@
+{
+    "executionProfile": {
+        "angleMaxDeg": 360,
+        "angleMinDeg": 0,
+        "angleStepDeg": 1.25,
+        "cameraId": "CAM01",
+        "canvasBackground": 240,
+        "canvasHeight": 1080,
+        "canvasWidth": 1920,
+        "frameDeliveryMode": "sendOnly",
+        "intervalMs": 100,
+        "passes": 2,
+        "pixelSizeMm": 0.0654,
+        "recipeId": "stress_test",
+        "sendOnly": true,
+        "shapeId": "stress_all_tools",
+        "strategyId": "massPca",
+        "xMaxMm": 1,
+        "xMinMm": -1,
+        "xStepMm": 0.2,
+        "yMaxMm": 1,
+        "yMinMm": -1,
+        "yStepMm": 0.2
+    },
+    "name": "stress test"
+}

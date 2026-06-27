@@ -76,25 +76,80 @@ double currentMeasurementPixels(const GeometrySet& set, const MeasurementRecipeC
   return 0.0;
 }
 
-QString threadMeasurementLabel(const QString& threadKey)
+QString threadMeasurementLabel(const QString& threadKey, const std::function<QString(const QString&)>& trText = {})
 {
   if (threadKey == QStringLiteral("major"))
   {
-    return QObject::tr("labels.threadMajorDiameter");
+    return trText ? trText(QStringLiteral("labels.threadMajorDiameter")) : QStringLiteral("Diametro esterno");
   }
   if (threadKey == QStringLiteral("pitch"))
   {
-    return QObject::tr("labels.threadPitch");
+    return trText ? trText(QStringLiteral("labels.threadPitch")) : QStringLiteral("Passo filetto");
+  }
+  if (threadKey == QStringLiteral("pitch_diameter"))
+  {
+    return trText ? trText(QStringLiteral("labels.threadPitchDiameter")) : QStringLiteral("Diametro medio");
   }
   if (threadKey == QStringLiteral("phase"))
   {
-    return QObject::tr("labels.threadPhase");
+    return trText ? trText(QStringLiteral("labels.threadPhase")) : QStringLiteral("Fase filetto");
   }
   if (threadKey == QStringLiteral("minor"))
   {
-    return QObject::tr("labels.threadMinorDiameter");
+    return trText ? trText(QStringLiteral("labels.threadMinorDiameter")) : QStringLiteral("Diametro interno");
   }
   return threadKey;
+}
+
+QString threadMeasurementType(const QString& threadKey)
+{
+  if (threadKey == QStringLiteral("major"))
+  {
+    return QStringLiteral("thread_major_diameter");
+  }
+  if (threadKey == QStringLiteral("minor"))
+  {
+    return QStringLiteral("thread_minor_diameter");
+  }
+  if (threadKey == QStringLiteral("pitch"))
+  {
+    return QStringLiteral("thread_pitch");
+  }
+  if (threadKey == QStringLiteral("pitch_diameter"))
+  {
+    return QStringLiteral("thread_pitch_diameter");
+  }
+  if (threadKey == QStringLiteral("phase"))
+  {
+    return QStringLiteral("thread_phase");
+  }
+  return QString("thread_%1").arg(threadKey);
+}
+
+const MeasurementResult* findThreadMeasurementResult(const QVector<MeasurementResult>& measurements,
+                                                     const QString& threadKey)
+{
+  const QString type = threadMeasurementType(threadKey);
+  const QString id = QString("thread_%1").arg(threadKey);
+  const MeasurementResult* fallback = nullptr;
+  for (const MeasurementResult& measurement : measurements)
+  {
+    if (measurement.type != type && measurement.id != id)
+    {
+      continue;
+    }
+
+    if (measurement.valid)
+    {
+      return &measurement;
+    }
+
+    if (!fallback)
+    {
+      fallback = &measurement;
+    }
+  }
+  return fallback;
 }
 
 ThreadMeasurementLimits* threadLimitsForKey(ThreadInspectionSettings& settings, const QString& threadKey)
@@ -106,6 +161,10 @@ ThreadMeasurementLimits* threadLimitsForKey(ThreadInspectionSettings& settings, 
   if (threadKey == QStringLiteral("pitch"))
   {
     return &settings.pitchLength;
+  }
+  if (threadKey == QStringLiteral("pitch_diameter"))
+  {
+    return &settings.pitchDiameter;
   }
   if (threadKey == QStringLiteral("phase"))
   {
@@ -152,6 +211,7 @@ QVector<ToleranceEntry> buildToleranceEntries(
   {
     entries.append({ToleranceEntry::Source::Thread, -1, QStringLiteral("major")});
     entries.append({ToleranceEntry::Source::Thread, -1, QStringLiteral("minor")});
+    entries.append({ToleranceEntry::Source::Thread, -1, QStringLiteral("pitch_diameter")});
     entries.append({ToleranceEntry::Source::Thread, -1, QStringLiteral("pitch")});
     entries.append({ToleranceEntry::Source::Thread, -1, QStringLiteral("phase")});
   }
@@ -676,7 +736,9 @@ void MainWindowMeasurementModule::showThreadToleranceDialog(const CameraConfig& 
   }
 
   QDialog dialog(parent ? parent : window());
-  dialog.setWindowTitle(QString("%1 | %2").arg(tr("tools.tolerances"), threadMeasurementLabel(threadKey)));
+  dialog.setWindowTitle(QString("%1 | %2").arg(
+    tr("tools.tolerances"),
+    threadMeasurementLabel(threadKey, [this](const QString& key) { return tr(key); })));
   auto* layout = new QVBoxLayout(&dialog);
 
   auto* aliasEdit = new QLineEdit(limits->alias, &dialog);
@@ -706,7 +768,7 @@ void MainWindowMeasurementModule::showThreadToleranceDialog(const CameraConfig& 
   {
     spin->setRange(-1000000.0, 1000000.0);
     spin->setDecimals(4);
-    spin->setSuffix(QStringLiteral(" mm"));
+    spin->setSuffix(threadKey == QStringLiteral("phase") ? QStringLiteral(" deg") : QStringLiteral(" mm"));
   }
 
   nominal->setValue(limits->nominal);
@@ -873,14 +935,21 @@ void MainWindowMeasurementModule::showTolerancesDialog(const CameraConfig& camer
       }
       else
       {
-        name = threadMeasurementLabel(entry.threadKey);
-        type = QString("thread_%1").arg(entry.threadKey);
+        name = threadMeasurementLabel(entry.threadKey, [this](const QString& key) { return tr(key); });
+        type = threadMeasurementType(entry.threadKey);
         origin = "Filetto";
+        if (const MeasurementResult* result = findThreadMeasurementResult(set.measurements, entry.threadKey))
+        {
+          value = measurementValueText(*result);
+          state = result->valid
+            ? (result->judgement.isEmpty() ? "OK" : result->judgement)
+            : "N/D";
+        }
         const ThreadInspectionSettings threadLimitsSource =
           recipes().loadThreadInspectionSettings(camera.id);
         const ThreadMeasurementLimits* limits =
           threadLimitsForKey(threadLimitsSource, entry.threadKey);
-        if (limits && limits->enabled)
+        if (state == QStringLiteral("N/D") && limits && limits->enabled)
         {
           state = limits->hasMin || limits->hasMax ? "Configurato" : "N/D";
         }

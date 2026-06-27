@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="600" viewBox="0 0 1280 600" role="img" aria-label="Stress test part with shoulders, radii and external thread">
+  <title>Stress all tools master part</title>
+  <desc>
+    Synthetic black part for machine-vision stress tests: stepped shaft, pockets, radii,
+    straight datum sections, chamfered end and measurable external thread.
+  </desc>
+
+  <defs>
+    <style>
+      .part { fill: #000000; }
+    </style>
+  </defs>
+
+  <rect id="background" width="1280" height="600" fill="#ffffff"/>
+
+  <g id="part">
+    <path id="main-stepped-body" class="part" d="
+      M 40 205
+      L 130 205
+      L 130 245
+      L 225 245
+      L 225 205
+      L 340 205
+      L 340 145
+      L 395 145
+      C 400 185 425 205 468 205
+      C 486 201 515 205 545 205
+      L 670 205
+      Q 690 205 690 225
+      L 690 240
+      L 805 240
+      L 805 286
+      L 845 286
+      L 860 272
+      L 875 286
+      L 890 272
+      L 905 286
+      L 920 272
+      L 935 286
+      L 950 272
+      L 965 286
+      L 980 272
+      L 995 286
+      L 1010 272
+      L 1025 286
+      L 1040 272
+      L 1055 286
+      L 1070 272
+      L 1085 286
+      L 1100 272
+      L 1115 286
+      L 1130 272
+      L 1145 286
+      L 1160 272
+      L 1175 286
+      L 1208 286
+      L 1248 312
+      L 1248 348
+      L 1208 374
+      L 1175 374
+      L 1160 388
+      L 1145 374
+      L 1130 388
+      L 1115 374
+      L 1100 388
+      L 1085 374
+      L 1070 388
+      L 1055 374
+      L 1040 388
+      L 1025 374
+      L 1010 388
+      L 995 374
+      L 980 388
+      L 965 374
+      L 950 388
+      L 935 374
+      L 920 388
+      L 905 374
+      L 890 388
+      L 875 374
+      L 860 388
+      L 845 374
+      L 805 374
+      L 805 420
+      L 690 420
+      L 690 435
+      Q 690 455 670 455
+      L 545 455
+      C 515 455 486 459 468 455
+      C 425 455 400 480 395 520
+      L 340 520
+      L 340 455
+      L 225 455
+      L 225 415
+      L 130 415
+      L 130 455
+      L 40 455
+      Z"/>
+  </g>
+
+</svg>

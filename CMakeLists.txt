@@ -317,6 +317,8 @@ add_executable(VisionSystemCPP
     src/processing/thread/ThreadProfileExtractor.cpp
     src/processing/thread/ThreadProfileMeasurer.h
     src/processing/thread/ThreadProfileMeasurer.cpp
+    src/processing/thread/ThreadPhaseAnalyzer.h
+    src/processing/thread/ThreadPhaseAnalyzer.cpp
     src/processing/thread/ThreadProfileRootAnalyzer.h
     src/processing/thread/ThreadProfileRootAnalyzer.cpp
     src/processing/SurfaceThresholdStrategy.h

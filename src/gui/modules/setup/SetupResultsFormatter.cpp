@@ -158,7 +158,8 @@ QString setupResultsText(const CameraConfig& camera,
       continue;
     }
 
-    const QString unit = result->type == "line_line_angle" ? "deg" : "px";
+    const QString unit =
+      (result->type == "line_line_angle" || result->type == "thread_phase") ? "deg" : "px";
     lines << QString("  %1  %2 %3").arg(label).arg(result->valuePixels, 0, 'f', 3).arg(unit);
   }
 

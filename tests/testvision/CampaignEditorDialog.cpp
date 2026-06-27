@@ -123,6 +123,7 @@ CampaignEditorDialog::CampaignEditorDialog(
   m_shape->addItem("Piastra con fori", "plate");
   m_shape->addItem("Profilo a L", "l_profile");
   m_shape->addItem("Gambo vite", "screw_shank");
+  m_shape->addItem("Stress tutti i tool", "stress_all_tools");
   m_shape->addItem("Ruota dentata", "gear");
   m_resolution = new QComboBox(formPanel);
   m_resolution->addItem("640 × 480", QVariant::fromValue(QSize(640, 480)));

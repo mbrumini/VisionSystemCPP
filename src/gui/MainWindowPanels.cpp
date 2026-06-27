@@ -36,7 +36,7 @@ MeasurementResult failedMeasurementRow(const MeasurementRecipeConfig& config)
   result.valid = false;
   result.judgement = "N/D";
   result.unit = config.unit.isEmpty() ? "px" : config.unit;
-  if (config.type == "line_line_angle")
+  if (config.type == "line_line_angle" || config.type == "thread_phase")
   {
     result.unit = "deg";
   }

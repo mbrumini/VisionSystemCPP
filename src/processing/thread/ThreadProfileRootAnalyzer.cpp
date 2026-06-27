@@ -89,6 +89,27 @@ std::vector<double> consecutiveSpacings(const std::vector<double>& positions)
   return spacings;
 }
 
+std::vector<double> plausibleSpacings(const std::vector<double>& positions, double expectedPitchPx)
+{
+  std::vector<double> spacings = consecutiveSpacings(positions);
+  if (spacings.empty() || expectedPitchPx <= 0.5)
+  {
+    return spacings;
+  }
+
+  const double minSpacingPx = std::max(2.0, expectedPitchPx * 0.55);
+  const double maxSpacingPx = expectedPitchPx * 1.65;
+  spacings.erase(
+    std::remove_if(
+      spacings.begin(),
+      spacings.end(),
+      [minSpacingPx, maxSpacingPx](double spacing) {
+        return spacing < minSpacingPx || spacing > maxSpacingPx;
+      }),
+    spacings.end());
+  return spacings;
+}
+
 std::vector<double> invertedProfile(const std::vector<double>& values)
 {
   std::vector<double> inverted;
@@ -114,6 +135,75 @@ struct IndexedProminence
   double alongPx = 0.0;
   double prominence = 0.0;
 };
+
+template <typename PointType>
+std::vector<PointType> filterInsideCrestSpan(
+  const std::vector<PointType>& points,
+  double firstCrestAlongPx,
+  double lastCrestAlongPx,
+  double guardPx)
+{
+  std::vector<PointType> filtered;
+  filtered.reserve(points.size());
+  if (lastCrestAlongPx <= firstCrestAlongPx)
+  {
+    return filtered;
+  }
+
+  const double minAlongPx = firstCrestAlongPx + guardPx;
+  const double maxAlongPx = lastCrestAlongPx - guardPx;
+  for (const PointType& point : points)
+  {
+    if (point.alongPx > minAlongPx && point.alongPx < maxAlongPx)
+    {
+      filtered.push_back(point);
+    }
+  }
+  return filtered;
+}
+
+template <typename TopPointType, typename BottomPointType>
+std::vector<std::pair<TopPointType, BottomPointType>> pairByNearestAlong(
+  const std::vector<TopPointType>& topPoints,
+  const std::vector<BottomPointType>& bottomPoints,
+  double maxDistancePx)
+{
+  std::vector<std::pair<TopPointType, BottomPointType>> pairs;
+  pairs.reserve(std::min(topPoints.size(), bottomPoints.size()));
+  if (topPoints.empty() || bottomPoints.empty())
+  {
+    return pairs;
+  }
+
+  std::vector<bool> bottomUsed(bottomPoints.size(), false);
+  for (const TopPointType& topPoint : topPoints)
+  {
+    int bestIndex = -1;
+    double bestDistance = maxDistancePx;
+    for (int i = 0; i < static_cast<int>(bottomPoints.size()); ++i)
+    {
+      if (bottomUsed[static_cast<size_t>(i)])
+      {
+        continue;
+      }
+
+      const double distance = std::abs(bottomPoints[static_cast<size_t>(i)].alongPx - topPoint.alongPx);
+      if (distance <= bestDistance)
+      {
+        bestDistance = distance;
+        bestIndex = i;
+      }
+    }
+
+    if (bestIndex >= 0)
+    {
+      bottomUsed[static_cast<size_t>(bestIndex)] = true;
+      pairs.push_back({topPoint, bottomPoints[static_cast<size_t>(bestIndex)]});
+    }
+  }
+
+  return pairs;
+}
 
 double estimatePitchPx(const std::vector<IndexedProminence>& crestPeaks, int fallbackRadius)
 {
@@ -991,11 +1081,13 @@ ThreadRootAnalysis ThreadProfileRootAnalyzer::analyze(const ThreadProfileResult&
   }
 
   std::vector<double> crestDiameters;
-  const size_t pairedCount = std::min(refinedTopCrests.size(), refinedBottomCrests.size());
-  for (size_t pairIndex = 0; pairIndex < pairedCount; ++pairIndex)
+  const double crestPairDistancePx = std::max(8.0, pitchEstimatePx * 0.75);
+  const std::vector<std::pair<RefinedTopCrest, RefinedBottomCrest>> crestPairs =
+    pairByNearestAlong(refinedTopCrests, refinedBottomCrests, crestPairDistancePx);
+  for (const auto& crestPair : crestPairs)
   {
-    const RefinedTopCrest& topCrest = refinedTopCrests[pairIndex];
-    const RefinedBottomCrest& bottomCrest = refinedBottomCrests[pairIndex];
+    const RefinedTopCrest& topCrest = crestPair.first;
+    const RefinedBottomCrest& bottomCrest = crestPair.second;
 
     if (topCrest.topY + 1e-3 >= bottomCrest.bottomY)
     {
@@ -1021,12 +1113,46 @@ ThreadRootAnalysis ThreadProfileRootAnalyzer::analyze(const ThreadProfileResult&
 
   analysis.majorPx = arithmeticMean(crestDiameters);
 
-  std::vector<double> grooveDiameters;
-  const size_t pairedGrooveCount = std::min(refinedTopGrooves.size(), refinedBottomGrooves.size());
-  for (size_t pairIndex = 0; pairIndex < pairedGrooveCount; ++pairIndex)
+  std::vector<double> crestCenters;
+  for (const ThreadCrestPoint& crest : analysis.crests)
   {
-    const RefinedTopGroove& topGroove = refinedTopGrooves[pairIndex];
-    const RefinedBottomGroove& bottomGroove = refinedBottomGrooves[pairIndex];
+    crestCenters.push_back(crest.alongPx);
+  }
+  std::sort(crestCenters.begin(), crestCenters.end());
+
+  const std::vector<double> crestSpacings = plausibleSpacings(crestCenters, pitchEstimatePx);
+  if (!crestSpacings.empty())
+  {
+    analysis.pitchPx = robustMedian(crestSpacings);
+  }
+  else if (pitchEstimatePx > 0.5)
+  {
+    analysis.pitchPx = pitchEstimatePx;
+  }
+
+  const double grooveGuardPx = std::clamp(analysis.pitchPx * 0.12, 2.0, 18.0);
+  const double groovePairDistancePx = std::max(8.0, analysis.pitchPx * 0.65);
+  if (crestCenters.size() >= 2)
+  {
+    refinedTopGrooves = filterInsideCrestSpan(
+      refinedTopGrooves,
+      crestCenters.front(),
+      crestCenters.back(),
+      grooveGuardPx);
+    refinedBottomGrooves = filterInsideCrestSpan(
+      refinedBottomGrooves,
+      crestCenters.front(),
+      crestCenters.back(),
+      grooveGuardPx);
+  }
+
+  std::vector<double> grooveDiameters;
+  const std::vector<std::pair<RefinedTopGroove, RefinedBottomGroove>> groovePairs =
+    pairByNearestAlong(refinedTopGrooves, refinedBottomGrooves, groovePairDistancePx);
+  for (const auto& groovePair : groovePairs)
+  {
+    const RefinedTopGroove& topGroove = groovePair.first;
+    const RefinedBottomGroove& bottomGroove = groovePair.second;
     if (topGroove.topY + 1e-3 >= bottomGroove.bottomY)
     {
       continue;
@@ -1051,28 +1177,15 @@ ThreadRootAnalysis ThreadProfileRootAnalyzer::analyze(const ThreadProfileResult&
     analysis.middlePx = (analysis.majorPx + analysis.minorPx) * 0.5;
   }
 
-  std::vector<double> crestCenters;
-  for (const ThreadCrestPoint& crest : analysis.crests)
-  {
-    crestCenters.push_back(crest.alongPx);
-  }
-  std::sort(crestCenters.begin(), crestCenters.end());
-
-  const std::vector<double> crestSpacings = consecutiveSpacings(crestCenters);
-  if (!crestSpacings.empty())
-  {
-    analysis.pitchPx = robustMedian(crestSpacings);
-  }
-  else if (pitchEstimatePx > 0.5)
-  {
-    analysis.pitchPx = pitchEstimatePx;
-  }
-
   std::vector<double> phaseOffsets;
-  phaseOffsets.reserve(pairedCount);
-  for (size_t pairIndex = 0; pairIndex < pairedCount; ++pairIndex)
+  phaseOffsets.reserve(crestPairs.size());
+  for (const auto& crestPair : crestPairs)
   {
-    phaseOffsets.push_back(refinedBottomCrests[pairIndex].alongPx - refinedTopCrests[pairIndex].alongPx);
+    const double offset = crestPair.second.alongPx - crestPair.first.alongPx;
+    if (std::abs(offset) <= std::max(8.0, analysis.pitchPx * 0.75))
+    {
+      phaseOffsets.push_back(offset);
+    }
   }
   if (!phaseOffsets.empty())
   {

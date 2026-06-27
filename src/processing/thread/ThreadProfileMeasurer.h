@@ -16,6 +16,7 @@ struct ThreadDiameterValues
   double middlePx = 0.0;
   double pitchPx = 0.0;
   double phasePx = 0.0;
+  int phaseSampleCount = 0;
   int grooveCount = 0;
   int sampleCount = 0;
   int topCrestCandidateCount = 0;

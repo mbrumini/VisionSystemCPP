@@ -1,5 +1,6 @@
 #include "processing/thread/ThreadProfileMeasurer.h"
 
+#include "processing/thread/ThreadPhaseAnalyzer.h"
 #include "processing/thread/ThreadProfileRootAnalyzer.h"
 
 #include <algorithm>
@@ -16,7 +17,8 @@ MeasurementResult makeThreadMeasurement(const QString& id,
                                         const CameraMeasurementCalibration& calibration,
                                         int sampleCount = 0,
                                         int pointCount = 0,
-                                        const QString& diagnostic = {})
+                                        const QString& diagnostic = {},
+                                        bool angleDegrees = false)
 {
   MeasurementResult result;
   result.id = id;
@@ -24,7 +26,7 @@ MeasurementResult makeThreadMeasurement(const QString& id,
   result.type = type;
   result.sourceAId = QStringLiteral("thread");
   result.valuePixels = valuePixels;
-  result.valid = valuePixels > 0.0;
+  result.valid = angleDegrees ? valuePixels >= 0.0 : valuePixels > 0.0;
   result.nominal = limits.nominal;
   result.min = limits.min;
   result.max = limits.max;
@@ -35,7 +37,13 @@ MeasurementResult makeThreadMeasurement(const QString& id,
   result.pointCount = pointCount;
   result.diagnostic = diagnostic;
 
-  if (calibration.enabled &&
+  if (angleDegrees)
+  {
+    result.valueReal = valuePixels;
+    result.unit = QStringLiteral("deg");
+    result.hasRealValue = true;
+  }
+  else if (calibration.enabled &&
       calibration.pixelSizeXMm > 0.000001 &&
       calibration.pixelSizeYMm > 0.000001)
   {
@@ -99,7 +107,12 @@ ThreadDiameterValues ThreadProfileMeasurer::measureDiameters(const ThreadProfile
   values.minorPx = analysis.minorPx;
   values.middlePx = analysis.middlePx;
   values.pitchPx = analysis.pitchPx;
-  values.phasePx = analysis.phasePx;
+  const ThreadPhaseAnalysis phase = ThreadPhaseAnalyzer().analyze(result, analysis.crests);
+  if (phase.valid)
+  {
+    values.phasePx = phase.phaseDegrees;
+    values.phaseSampleCount = phase.sampleCount;
+  }
   values.valid = true;
   return values;
 }
@@ -121,7 +134,8 @@ QVector<MeasurementResult> ThreadProfileMeasurer::buildMeasurementResults(
                           const ThreadMeasurementLimits& limits,
                           double valuePixels,
                           int sampleCount = 0,
-                          int pointCount = 0) {
+                          int pointCount = 0,
+                          bool angleDegrees = false) {
     if (!limits.enabled)
     {
       return;
@@ -137,7 +151,8 @@ QVector<MeasurementResult> ThreadProfileMeasurer::buildMeasurementResults(
         calibration,
         sampleCount,
         pointCount,
-        diameters.valid ? QString() : diameters.diagnostic);
+        diameters.valid ? QString() : diameters.diagnostic,
+        angleDegrees);
     if (!diameters.valid)
     {
       measurement.valid = false;
@@ -165,11 +180,11 @@ QVector<MeasurementResult> ThreadProfileMeasurer::buildMeasurementResults(
 
   if (diameters.valid && diameters.middlePx > 0.0)
   {
-    ThreadMeasurementLimits middleLimits;
+    ThreadMeasurementLimits middleLimits = settings.pitchDiameter;
     middleLimits.enabled = true;
     MeasurementResult middle = makeThreadMeasurement(
       QStringLiteral("thread_pitch_diameter"),
-      QStringLiteral("Diametro medio filetto"),
+      settings.pitchDiameter.alias.isEmpty() ? QStringLiteral("Diametro medio filetto") : settings.pitchDiameter.alias,
       QStringLiteral("thread_pitch_diameter"),
       diameters.middlePx,
       middleLimits,
@@ -188,7 +203,10 @@ QVector<MeasurementResult> ThreadProfileMeasurer::buildMeasurementResults(
          settings.phaseOffset.alias.isEmpty() ? QStringLiteral("Fase filetto") : settings.phaseOffset.alias,
          QStringLiteral("thread_phase"),
          settings.phaseOffset,
-         diameters.phasePx);
+         diameters.phasePx,
+         diameters.phaseSampleCount,
+         diameters.phaseSampleCount + 1,
+         true);
 
   return results;
 }

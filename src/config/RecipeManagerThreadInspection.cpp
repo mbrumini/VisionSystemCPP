@@ -98,6 +98,7 @@ QJsonObject threadInspectionObjectFromSettings(const ThreadInspectionSettings& s
   threadInspection["filter"] = threadFilterToJson(settings);
   QJsonObject measurements;
   measurements["major"] = threadMeasurementLimitsToJson(settings.majorDiameter);
+  measurements["pitchDiameter"] = threadMeasurementLimitsToJson(settings.pitchDiameter);
   measurements["pitch"] = threadMeasurementLimitsToJson(settings.pitchLength);
   measurements["minor"] = threadMeasurementLimitsToJson(settings.minorDiameter);
   measurements["phase"] = threadMeasurementLimitsToJson(settings.phaseOffset);
@@ -122,6 +123,7 @@ ThreadInspectionSettings threadInspectionSettingsFromObject(const QJsonObject& t
   applyThreadFilterFromJson(settings, threadInspection.value("filter").toObject());
   const QJsonObject measurements = threadInspection.value("measurements").toObject();
   applyThreadMeasurementLimitsFromJson(settings.majorDiameter, measurements.value("major").toObject());
+  applyThreadMeasurementLimitsFromJson(settings.pitchDiameter, measurements.value("pitchDiameter").toObject());
   applyThreadMeasurementLimitsFromJson(settings.pitchLength, measurements.value("pitch").toObject());
   applyThreadMeasurementLimitsFromJson(settings.minorDiameter, measurements.value("minor").toObject());
   applyThreadMeasurementLimitsFromJson(settings.phaseOffset, measurements.value("phase").toObject());
@@ -167,6 +169,7 @@ bool RecipeManager::saveThreadInspectionSettings(
   merged.profileSmoothRadius = settings.profileSmoothRadius;
   merged.outlierRejectSigma = settings.outlierRejectSigma;
   merged.majorDiameter = settings.majorDiameter;
+  merged.pitchDiameter = settings.pitchDiameter;
   merged.pitchLength = settings.pitchLength;
   merged.minorDiameter = settings.minorDiameter;
   merged.phaseOffset = settings.phaseOffset;
