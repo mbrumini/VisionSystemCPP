@@ -11,6 +11,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QSlider>
+#include <QSpinBox>
 #include <QVBoxLayout>
 
 namespace
@@ -43,7 +44,6 @@ void MainWindowSetupModule::showCameraAcquisitionPanel(const CameraConfig& camer
   {
     startCameraSimulation(camera, false);
   }
-  runtime.setIntervalMs(100);
   if (runtime.running() && camera.id == selectedCameraId())
   {
     context().simulationTimer->start(runtime.intervalMs());
@@ -67,6 +67,33 @@ void MainWindowSetupModule::showCameraAcquisitionPanel(const CameraConfig& camer
   note->setObjectName("toolPanelNote");
   note->setWordWrap(true);
   layout->addWidget(note);
+
+  QCheckBox* autoResolution = nullptr;
+  QSpinBox* frameWidth = nullptr;
+  QSpinBox* frameHeight = nullptr;
+  if (camera.type == "usb")
+  {
+    auto* formatBox = new QGroupBox("Formato immagine", panel);
+    auto* formatLayout = new QFormLayout(formatBox);
+    autoResolution = new QCheckBox("Massima automatica", formatBox);
+    autoResolution->setChecked(acquisition.frameWidth <= 0 || acquisition.frameHeight <= 0);
+    frameWidth = new QSpinBox(formatBox);
+    frameWidth->setRange(160, 8192);
+    frameWidth->setSingleStep(16);
+    frameWidth->setValue(acquisition.frameWidth > 0 ? acquisition.frameWidth : 640);
+    frameWidth->setSuffix(" px");
+    frameHeight = new QSpinBox(formatBox);
+    frameHeight->setRange(120, 8192);
+    frameHeight->setSingleStep(16);
+    frameHeight->setValue(acquisition.frameHeight > 0 ? acquisition.frameHeight : 480);
+    frameHeight->setSuffix(" px");
+    frameWidth->setEnabled(!autoResolution->isChecked());
+    frameHeight->setEnabled(!autoResolution->isChecked());
+    formatLayout->addRow(autoResolution);
+    formatLayout->addRow("Larghezza", frameWidth);
+    formatLayout->addRow("Altezza", frameHeight);
+    layout->addWidget(formatBox);
+  }
 
   auto* exposureBox = new QGroupBox(tr("actions.exposure"), panel);
   auto* exposureLayout = new QFormLayout(exposureBox);
@@ -118,8 +145,15 @@ void MainWindowSetupModule::showCameraAcquisitionPanel(const CameraConfig& camer
   QObject::connect(autoExposure, &QCheckBox::toggled, exposure, &QDoubleSpinBox::setDisabled);
   QObject::connect(autoGain, &QCheckBox::toggled, gainControl, &QWidget::setDisabled);
   QObject::connect(autoWhite, &QCheckBox::toggled, whiteBalance, &QDoubleSpinBox::setDisabled);
+  if (autoResolution && frameWidth && frameHeight)
+  {
+    QObject::connect(autoResolution, &QCheckBox::toggled, frameWidth, &QSpinBox::setDisabled);
+    QObject::connect(autoResolution, &QCheckBox::toggled, frameHeight, &QSpinBox::setDisabled);
+  }
 
-  auto currentSettings = [autoExposure, exposure, autoGain, gain, autoWhite, whiteBalance]() {
+  const int savedFrameIntervalMs = acquisition.frameIntervalMs;
+  auto currentSettings = [autoExposure, exposure, autoGain, gain, autoWhite, whiteBalance,
+                          autoResolution, frameWidth, frameHeight, savedFrameIntervalMs]() {
     CameraAcquisitionConfig updated;
     updated.autoExposure = autoExposure->isChecked();
     updated.hasExposure = !updated.autoExposure;
@@ -130,6 +164,12 @@ void MainWindowSetupModule::showCameraAcquisitionPanel(const CameraConfig& camer
     updated.autoWhiteBalance = autoWhite->isChecked();
     updated.hasWhiteBalance = !updated.autoWhiteBalance;
     updated.whiteBalance = whiteBalance->value();
+    updated.frameIntervalMs = savedFrameIntervalMs;
+    if (autoResolution && frameWidth && frameHeight && !autoResolution->isChecked())
+    {
+      updated.frameWidth = frameWidth->value();
+      updated.frameHeight = frameHeight->value();
+    }
     return updated;
   };
 
@@ -168,6 +208,18 @@ void MainWindowSetupModule::showCameraAcquisitionPanel(const CameraConfig& camer
   QObject::connect(autoGain, &QCheckBox::toggled, window(), [applyLive](bool) {
     applyLive();
   });
+  if (autoResolution && frameWidth && frameHeight)
+  {
+    QObject::connect(autoResolution, &QCheckBox::toggled, window(), [applyLive](bool) {
+      applyLive();
+    });
+    QObject::connect(frameWidth, qOverload<int>(&QSpinBox::valueChanged), window(), [applyLive](int) {
+      applyLive();
+    });
+    QObject::connect(frameHeight, qOverload<int>(&QSpinBox::valueChanged), window(), [applyLive](int) {
+      applyLive();
+    });
+  }
   applyLive();
 
   auto* saveButton = createTouchIconButton("saveSample", tr("actions.saveOk"), panel);

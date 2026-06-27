@@ -9,6 +9,7 @@
 #include "gui/modules/MainWindowThreadModule.h"
 #include "gui/modules/MainWindowContext.h"
 #include "gui/modules/MainWindowCameraConfigModule.h"
+#include "config/RecipeJsonUtils.h"
 #include "gui/modules/setup/SetupCameraResolver.h"
 #include "gui/modules/setup/SetupResultsDialog.h"
 #include "gui/modules/setup/SetupResultsFormatter.h"
@@ -24,6 +25,14 @@
 #include <QVBoxLayout>
 
 #include <opencv2/core.hpp>
+
+namespace
+{
+QString camerasConfigPath()
+{
+  return RecipeJsonUtils::appPath("config/cameras.json");
+}
+}
 
 MainWindowSetupModule::MainWindowSetupModule(MainWindowContext& context)
   : MainWindowModuleBase(context)
@@ -54,6 +63,9 @@ void MainWindowSetupModule::showCameraSetupPanel(const CameraConfig& camera)
   CameraRuntime& runtime = cameraRuntime()[camera.id];
   if (!runtime.running())
   {
+    // The frame interval is machine/acquisition setup, not recipe data: keep it
+    // with the camera so USB/Vimba live grab cadence survives restart.
+    runtime.setIntervalMs(camera.acquisition.frameIntervalMs);
     context().geometry->restoreCleanGeometryImage(camera);
   }
   CameraSetupPanelTexts texts;
@@ -82,6 +94,18 @@ void MainWindowSetupModule::showCameraSetupPanel(const CameraConfig& camera)
     [this, camera](int value) {
       CameraRuntime& runtime = cameraRuntime()[camera.id];
       runtime.setIntervalMs(value);
+      CameraAcquisitionConfig acquisition = camera.acquisition;
+      acquisition.frameIntervalMs = value;
+      config().updateCameraAcquisitionSettings(camera.id, acquisition);
+      QString error;
+      if (!config().saveCameraAcquisitionSettings(camerasConfigPath(), camera.id, acquisition, &error))
+      {
+        log(error);
+      }
+      if (selectedCameraId() == camera.id)
+      {
+        selectedCamera().acquisition = acquisition;
+      }
       if (runtime.running() && camera.id == selectedCamera().id)
       {
         context().simulationTimer->start(runtime.intervalMs());

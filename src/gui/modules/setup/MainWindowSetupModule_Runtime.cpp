@@ -38,6 +38,7 @@ void MainWindowSetupModule::startCameraSimulation(const CameraConfig& camera, bo
   }
 
   CameraRuntime& runtime = cameraRuntime()[effectiveCamera.id];
+  runtime.setIntervalMs(effectiveCamera.acquisition.frameIntervalMs);
   QString error;
   const QString testFolder = context().imaging->cameraTestImagesFolder(effectiveCamera);
   if (!runtime.start(effectiveCamera, testFolder, &error))

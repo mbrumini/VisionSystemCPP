@@ -5,6 +5,7 @@
 #include "gui/geometry/GeometryGuideRuntime.h"
 #include "gui/geometry/GeometryOverlayPrimitives.h"
 #include "processing/geometry/EdgeCircleDetector.h"
+#include "processing/geometry/EdgeCircleDetectorExperimental.h"
 #include "processing/geometry/EdgeLineDetector.h"
 #include "processing/geometry/EdgePointDetector.h"
 #include "runtime/PartPose.h"
@@ -238,8 +239,7 @@ ConfiguredGeometryDetectOutput detectConfiguredGeometries(const ConfiguredGeomet
     config.transition = circle.transition;
     config.pickMode = circle.pickMode;
 
-    EdgeCircleDetector detector;
-    const EdgeCircleDetectorResult result = detector.detect(image, config);
+    const EdgeCircleDetectorResult result = detectEdgeCircleWithSelectedDetector(image, config);
     if (!result.processed || !result.found)
     {
       continue;
@@ -307,8 +307,7 @@ ConfiguredGeometryDetectOutput detectConfiguredGeometries(const ConfiguredGeomet
     config.startAngleRadians = guideStartAngle;
     config.endAngleRadians = guideEndAngle;
 
-    EdgeCircleDetector detector;
-    const EdgeCircleDetectorResult result = detector.detect(image, config);
+    const EdgeCircleDetectorResult result = detectEdgeCircleWithSelectedDetector(image, config);
     if (!result.processed || !result.found)
     {
       continue;

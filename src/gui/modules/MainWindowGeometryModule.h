@@ -2,6 +2,7 @@
 
 #include "gui/geometry/GeometryRuntimeConfig.h"
 #include "gui/geometry/LineGeometryMouseController.h"
+#include "gui/ImagePrimitives.h"
 #include "gui/modules/MainWindowModuleBase.h"
 
 #include <QHash>
@@ -89,6 +90,7 @@ public:
   const GeometryCircleRuntimeConfig& activeGeometryCircleConfig(const QString& cameraId) const;
   void activateGeometryCircleDrawing(const CameraConfig& camera);
   void handleGeometryCirclePoints(const CameraConfig& camera, const QVector<QPoint>& points);
+  void handleGeometryCircleBandChanged(const CameraConfig& camera, const QVector<ImageCircle>& circles, int changedRadiusIndex);
   void showConfiguredGeometryCircles(const CameraConfig& camera);
   void testGeometryCircle(const CameraConfig& camera);
 

@@ -300,6 +300,8 @@ add_executable(VisionSystemCPP
     src/processing/geometry/EdgeLineDetector.cpp
     src/processing/geometry/EdgeCircleDetector.h
     src/processing/geometry/EdgeCircleDetector.cpp
+    src/processing/geometry/EdgeCircleDetectorExperimental.h
+    src/processing/geometry/EdgeCircleDetectorExperimental.cpp
     src/processing/SurfaceDefectProcessor.h
     src/processing/SurfaceDefectProcessor.cpp
     src/processing/SurfaceEdgeStrategy.h

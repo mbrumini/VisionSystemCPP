@@ -21,6 +21,7 @@ private:
   void showCircleCenterPanel(const CameraConfig& camera);
   void showMidpointPanel(const CameraConfig& camera);
   void showOffsetLinePanel(const CameraConfig& camera);
+  void showMidlinePanel(const CameraConfig& camera);
   void showAngleBisectorPanel(const CameraConfig& camera);
   void showTangentLinePanel(const CameraConfig& camera);
   void showProjectPointPanel(const CameraConfig& camera);
@@ -39,6 +40,7 @@ private:
   void createCircleCenter(const CameraConfig& camera, const QString& circleId);
   void createMidpoint(const CameraConfig& camera, const QString& firstPointId, const QString& secondPointId);
   void createOffsetLine(const CameraConfig& camera, const QString& lineId, double offset);
+  void createMidline(const CameraConfig& camera, const QString& firstLineId, const QString& secondLineId);
   void createAngleBisectors(const CameraConfig& camera, const QString& firstLineId, const QString& secondLineId);
   void createTangentLines(const CameraConfig& camera, const QString& pointId, const QString& circleId);
   void createProjectedPoint(const CameraConfig& camera, const QString& pointId, const QString& lineId);

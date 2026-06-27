@@ -1,7 +1,13 @@
 #include "camera/UsbCameraDiscovery.h"
 
+#include <QtGlobal>
+
 #include <opencv2/core.hpp>
 #include <opencv2/videoio.hpp>
+
+#include <algorithm>
+#include <utility>
+#include <vector>
 
 namespace
 {
@@ -12,6 +18,90 @@ void addDiagnostic(QStringList* diagnostics, const QString& message)
     diagnostics->append(message);
   }
 }
+
+const std::vector<std::pair<int, int>>& candidateResolutions()
+{
+  static const std::vector<std::pair<int, int>> resolutions = {
+    {4096, 3000},
+    {3840, 2160},
+    {2592, 1944},
+    {2048, 1536},
+    {1920, 1080},
+    {1600, 1200},
+    {1280, 1024},
+    {1280, 720},
+    {1024, 768},
+    {800, 600},
+    {640, 480},
+  };
+  return resolutions;
+}
+
+bool grabFrame(cv::VideoCapture& capture, cv::Mat& frame)
+{
+  for (int attempt = 0; attempt < 3; ++attempt)
+  {
+    capture >> frame;
+    if (!frame.empty())
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+qint64 pixelCount(int width, int height)
+{
+  return static_cast<qint64>(width) * static_cast<qint64>(height);
+}
+}
+
+UsbCameraResolution UsbCameraDiscovery::probeBestResolution(cv::VideoCapture& capture)
+{
+  UsbCameraResolution best;
+  if (!capture.isOpened())
+  {
+    return best;
+  }
+
+  cv::Mat frame;
+  if (grabFrame(capture, frame))
+  {
+    best.width = frame.cols;
+    best.height = frame.rows;
+  }
+
+  for (const std::pair<int, int>& candidate : candidateResolutions())
+  {
+    capture.set(cv::CAP_PROP_FRAME_WIDTH, candidate.first);
+    capture.set(cv::CAP_PROP_FRAME_HEIGHT, candidate.second);
+    if (!grabFrame(capture, frame))
+    {
+      continue;
+    }
+
+    const qint64 candidatePixels = pixelCount(frame.cols, frame.rows);
+    const qint64 bestPixels = pixelCount(best.width, best.height);
+    if (candidatePixels > bestPixels)
+    {
+      best.width = frame.cols;
+      best.height = frame.rows;
+    }
+  }
+
+  if (best.width > 0 && best.height > 0)
+  {
+    capture.set(cv::CAP_PROP_FRAME_WIDTH, best.width);
+    capture.set(cv::CAP_PROP_FRAME_HEIGHT, best.height);
+    grabFrame(capture, frame);
+    if (!frame.empty())
+    {
+      best.width = frame.cols;
+      best.height = frame.rows;
+    }
+  }
+
+  return best;
 }
 
 QVector<UsbCameraDeviceInfo> UsbCameraDiscovery::discover(int maxIndex, QStringList* diagnostics)
@@ -49,17 +139,23 @@ QVector<UsbCameraDeviceInfo> UsbCameraDiscovery::discover(int maxIndex, QStringL
       continue;
     }
 
+    const int defaultWidth = frame.cols;
+    const int defaultHeight = frame.rows;
+    const UsbCameraResolution resolution = probeBestResolution(capture);
+
     UsbCameraDeviceInfo info;
     info.index = index;
     info.displayName = QString("USB Camera %1").arg(index);
-    info.width = frame.cols;
-    info.height = frame.rows;
+    info.width = resolution.width > 0 ? resolution.width : defaultWidth;
+    info.height = resolution.height > 0 ? resolution.height : defaultHeight;
     info.fps = capture.get(cv::CAP_PROP_FPS);
     devices.append(info);
     addDiagnostic(
       diagnostics,
-      QString("USB camera found: index=%1 size=%2x%3 fps=%4")
+      QString("USB camera found: index=%1 default=%2x%3 negotiated=%4x%5 fps=%6")
         .arg(info.index)
+        .arg(defaultWidth)
+        .arg(defaultHeight)
         .arg(info.width)
         .arg(info.height)
         .arg(info.fps, 0, 'f', 2));

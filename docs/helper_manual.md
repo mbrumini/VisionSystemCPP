@@ -93,6 +93,8 @@ File principali:
 - `src/gui/modules/geometry/*`
 - `src/config/GeometryRecipeJson.*`
 - `src/processing/GeometryMeasurementPipeline.cpp`
+- `src/processing/geometry/EdgeCircleDetector.*`
+- `src/processing/geometry/EdgeCircleDetectorExperimental.*`
 
 Le geometrie configurabili sono quelle disegnate/rilevate direttamente:
 
@@ -103,6 +105,25 @@ Le geometrie configurabili sono quelle disegnate/rilevate direttamente:
 
 Regola: la configurazione sta nella ricetta camera; il risultato runtime sta nel
 set geometrie della camera corrente.
+
+Nota sul cerchio edge: `EdgeCircleDetectorExperimental` e' ora il detector
+robusto ufficiale per cerchi e archi. Rimane separato dal detector storico per
+permettere confronto e rollback rapido. Usa campionamento bilineare, selezione
+bilanciata per settori e doppio fit con filtro residui.
+
+Per forzare temporaneamente il detector storico da PowerShell:
+
+```powershell
+$env:VISION_EDGE_CIRCLE_STANDARD='1'
+.\build\Release\VisionSystemCPP.exe
+```
+
+Per tornare al robusto ufficiale, chiudere il software e rilanciarlo senza quella
+variabile oppure usare:
+
+```powershell
+Remove-Item Env:\VISION_EDGE_CIRCLE_STANDARD
+```
 
 ## Geometrie costruite
 
@@ -295,10 +316,31 @@ Main files:
 - `src/gui/modules/geometry/*`
 - `src/config/GeometryRecipeJson.*`
 - `src/processing/GeometryMeasurementPipeline.cpp`
+- `src/processing/geometry/EdgeCircleDetector.*`
+- `src/processing/geometry/EdgeCircleDetectorExperimental.*`
 
 Configurable geometries are directly drawn or detected: point, line, circle and
 arc. Configuration lives in the camera recipe; runtime results live in the
 current camera geometry set.
+
+Circle edge note: `EdgeCircleDetectorExperimental` is now the official robust
+detector for circles and arcs. It remains separate from the historical detector
+so comparison and rollback stay simple. It uses bilinear sampling, balanced
+sector selection and a two-pass fit with residual filtering.
+
+To temporarily force the historical detector from PowerShell:
+
+```powershell
+$env:VISION_EDGE_CIRCLE_STANDARD='1'
+.\build\Release\VisionSystemCPP.exe
+```
+
+To return to the official robust detector, close the software and relaunch it
+without that variable, or run:
+
+```powershell
+Remove-Item Env:\VISION_EDGE_CIRCLE_STANDARD
+```
 
 ## Constructed Geometries
 

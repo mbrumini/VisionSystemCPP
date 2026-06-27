@@ -77,18 +77,6 @@ void MainWindowGeometryModule::showGeometryCirclePanel(const CameraConfig& camer
   formLayout->setContentsMargins(6, 6, 6, 6);
   formLayout->setHorizontalSpacing(8);
   formLayout->setVerticalSpacing(8);
-  auto* innerBand = new QSlider(Qt::Horizontal, form);
-  innerBand->setRange(1, 500);
-  innerBand->setValue(circleConfig.innerBand);
-  auto* innerBandValue = new QLabel(QString("%1 px").arg(circleConfig.innerBand), form);
-  innerBandValue->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-  innerBandValue->setMinimumWidth(52);
-  auto* outerBand = new QSlider(Qt::Horizontal, form);
-  outerBand->setRange(1, 500);
-  outerBand->setValue(circleConfig.outerBand);
-  auto* outerBandValue = new QLabel(QString("%1 px").arg(circleConfig.outerBand), form);
-  outerBandValue->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-  outerBandValue->setMinimumWidth(52);
   auto* sensitivity = new QSlider(Qt::Horizontal, form);
   sensitivity->setRange(1, 255);
   sensitivity->setValue(circleConfig.edgeSensitivity);
@@ -132,12 +120,6 @@ void MainWindowGeometryModule::showGeometryCirclePanel(const CameraConfig& camer
   aliasEdit->setPlaceholderText(tr("labels.operatorAlias"));
 
   int row = 0;
-  formLayout->addWidget(new QLabel(tr("labels.edgeBandInner"), form), row, 0);
-  formLayout->addWidget(innerBandValue, row, 1);
-  formLayout->addWidget(new QLabel(tr("labels.edgeBandOuter"), form), row, 2);
-  formLayout->addWidget(outerBandValue, row++, 3);
-  formLayout->addWidget(innerBand, row, 0, 1, 2);
-  formLayout->addWidget(outerBand, row++, 2, 1, 2);
   formLayout->addWidget(new QLabel(tr("labels.edgeSensitivity"), form), row, 0, 1, 3);
   formLayout->addWidget(sensitivityValue, row++, 3);
   formLayout->addWidget(sensitivity, row++, 0, 1, 4);
@@ -196,18 +178,6 @@ void MainWindowGeometryModule::showGeometryCirclePanel(const CameraConfig& camer
     activateGeometryCircleDrawing(camera);
   });
   QObject::connect(deleteCircleButton, &QPushButton::clicked, window(), [this, camera]() { removeActiveGeometryCircle(camera); });
-  QObject::connect(innerBand, &QSlider::valueChanged, window(), [this, camera, innerBandValue](int value) {
-    innerBandValue->setText(QString("%1 px").arg(value));
-    activeGeometryCircleConfig(camera.id).innerBand = value;
-    saveGeometryCirclesRecipe(camera);
-    showConfiguredGeometryCircles(camera);
-  });
-  QObject::connect(outerBand, &QSlider::valueChanged, window(), [this, camera, outerBandValue](int value) {
-    outerBandValue->setText(QString("%1 px").arg(value));
-    activeGeometryCircleConfig(camera.id).outerBand = value;
-    saveGeometryCirclesRecipe(camera);
-    showConfiguredGeometryCircles(camera);
-  });
   QObject::connect(sensitivity, &QSlider::valueChanged, window(), [this, camera, sensitivityValue](int value) {
     sensitivityValue->setText(QString::number(value));
     activeGeometryCircleConfig(camera.id).edgeSensitivity = value;

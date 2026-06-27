@@ -290,6 +290,46 @@ void MainWindowConstructedGeometryModule::createOffsetLine(const CameraConfig& c
         .arg(offset, 0, 'f', 2));
 }
 
+void MainWindowConstructedGeometryModule::createMidline(const CameraConfig& camera,
+                                                        const QString& firstLineId,
+                                                        const QString& secondLineId)
+{
+  GeometrySet& set = cameraRuntime()[camera.id].geometries();
+  const LineGeometry* firstLine = findConstructedGeometryLineSource(set, firstLineId);
+  const LineGeometry* secondLine = findConstructedGeometryLineSource(set, secondLineId);
+  if (!firstLine || !secondLine || firstLine == secondLine)
+  {
+    log(QString("%1: %2").arg(tr("log.constructedMidlineMissing"), camera.id));
+    return;
+  }
+
+  LineGeometry line;
+  if (!ConstructedGeometryMath::midlineBetweenLines(*firstLine, *secondLine, line))
+  {
+    log(QString("%1: %2").arg(tr("log.constructedMidlineInvalid"), camera.id));
+    return;
+  }
+
+  ConstructedLineGeometry constructed;
+  constructed.line = line;
+  constructed.sourceAId = firstLine->meta.id;
+  constructed.sourceBId = secondLine->meta.id;
+  set.constructedLines.append(constructed);
+  saveConstructedGeometryRecipeAction(camera, "midline_between_lines", constructed.sourceAId, constructed.sourceBId);
+
+  GeometryOverlay overlay;
+  overlay.lines.append({toPointF(firstLine->start), toPointF(firstLine->end), QColor("#35c46a"), 3});
+  overlay.lines.append({toPointF(secondLine->start), toPointF(secondLine->end), QColor("#35c46a"), 3});
+  overlay.lines.append({toPointF(line.start), toPointF(line.end), QColor("#ff8a00"), 5});
+  largeImage()->setGeometryOverlay(overlay);
+
+  log(QString("%1: %2 %3/%4")
+        .arg(tr("log.constructedMidlineCreated"))
+        .arg(camera.id)
+        .arg(constructed.sourceAId)
+        .arg(constructed.sourceBId));
+}
+
 void MainWindowConstructedGeometryModule::createAngleBisectors(const CameraConfig& camera,
                                                                const QString& firstLineId,
                                                                const QString& secondLineId)

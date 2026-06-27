@@ -201,6 +201,64 @@ bool offsetLine(const LineGeometry& source, double offset, LineGeometry& result)
   return true;
 }
 
+bool midlineBetweenLines(const LineGeometry& a, const LineGeometry& b, LineGeometry& result)
+{
+  cv::Point2d firstDirection;
+  cv::Point2d secondDirection;
+  double firstLength = 0.0;
+  double secondLength = 0.0;
+  if (!normalizedDirection(a, firstDirection, firstLength) ||
+      !normalizedDirection(b, secondDirection, secondLength))
+  {
+    return false;
+  }
+
+  if (firstDirection.dot(secondDirection) < 0.0)
+  {
+    secondDirection *= -1.0;
+  }
+
+  // A midline is meaningful only for two nearly parallel edges. Rejecting
+  // skewed pairs is safer than returning a plausible-looking but false datum.
+  if (std::abs(firstDirection.dot(secondDirection)) < 0.85)
+  {
+    return false;
+  }
+
+  cv::Point2d direction;
+  if (!normalizedVector(firstDirection + secondDirection, direction))
+  {
+    direction = firstDirection;
+  }
+
+  const cv::Point2d firstCenter = (a.start + a.end) * 0.5;
+  const cv::Point2d secondCenter = (b.start + b.end) * 0.5;
+  const cv::Point2d center = (firstCenter + secondCenter) * 0.5;
+
+  // Keep the constructed datum as long as the useful overlap/span of the two
+  // source lines, so downstream line-line distances do not depend on draw order.
+  const auto projection = [&](const cv::Point2d& point) {
+    return (point - center).dot(direction);
+  };
+  const double values[] = {
+    projection(a.start),
+    projection(a.end),
+    projection(b.start),
+    projection(b.end)
+  };
+  const auto minmax = std::minmax_element(std::begin(values), std::end(values));
+
+  result.start = center + direction * (*minmax.first);
+  result.end = center + direction * (*minmax.second);
+  result.meta.id = QString("%1_midline_%2").arg(a.meta.id, b.meta.id);
+  result.meta.label = result.meta.id;
+  result.meta.method = "constructed_midline_between_lines";
+  result.meta.coordinateSpace = GeometryCoordinateSpace::Image;
+  result.meta.valid = a.meta.valid && b.meta.valid;
+  result.meta.score = std::min(a.meta.score, b.meta.score);
+  return true;
+}
+
 QVector<LineGeometry> angleBisectors(const LineGeometry& a, const LineGeometry& b)
 {
   QVector<LineGeometry> results;

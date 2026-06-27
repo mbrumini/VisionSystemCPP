@@ -356,6 +356,13 @@ void MainWindow::setupLargeImageHandlers()
       return;
     }
 
+    if (m_activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry &&
+        m_geometry.drawingTarget() == MainWindowGeometryModule::DrawingTarget::Circle)
+    {
+      m_geometry.handleGeometryCircleBandChanged(m_selectedCamera, circles, changedRadiusIndex);
+      return;
+    }
+
     const SurfaceAnnulusLocalizationConfig current =
       m_recipeManager.loadSurfaceAnnulusLocalization(m_selectedCameraId);
     QString error;

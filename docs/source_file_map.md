@@ -374,6 +374,8 @@ EN: quick map of the files under `src/`. Use it to find the right area before ch
 | --- | --- | --- |
 | `src/processing/geometry/EdgeCircleDetector.cpp` | Implementa il detector o riconoscitore edge circle detector. | Implements the detector/recognizer for edge circle detector. |
 | `src/processing/geometry/EdgeCircleDetector.h` | Dichiara il detector o riconoscitore edge circle detector. | Declares the detector/recognizer for edge circle detector. |
+| `src/processing/geometry/EdgeCircleDetectorExperimental.cpp` | Implementa il detector robusto ufficiale per cerchi/archi edge, mantenuto separato per rollback. | Implements the official robust edge circle/arc detector, kept separate for rollback. |
+| `src/processing/geometry/EdgeCircleDetectorExperimental.h` | Dichiara il detector robusto cerchio/arco edge e il selettore con fallback standard. | Declares the robust edge circle/arc detector and the selector with standard fallback. |
 | `src/processing/geometry/EdgeLineDetector.cpp` | Implementa il detector o riconoscitore edge line detector. | Implements the detector/recognizer for edge line detector. |
 | `src/processing/geometry/EdgeLineDetector.h` | Dichiara il detector o riconoscitore edge line detector. | Declares the detector/recognizer for edge line detector. |
 | `src/processing/geometry/EdgePointDetector.cpp` | Implementa il detector o riconoscitore edge point detector. | Implements the detector/recognizer for edge point detector. |

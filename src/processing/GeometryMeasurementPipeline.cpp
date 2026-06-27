@@ -303,6 +303,18 @@ void rebuildConstructedGeometries(GeometrySet& set, const QVector<ConstructedGeo
       continue;
     }
 
+    if (config.type == "midline_between_lines")
+    {
+      const LineGeometry* first = findLineByMetaId(set, config.sourceAId);
+      const LineGeometry* second = findLineByMetaId(set, config.sourceBId);
+      LineGeometry line;
+      if (first && second && ConstructedGeometryMath::midlineBetweenLines(*first, *second, line))
+      {
+        set.constructedLines.append({line, first->meta.id, second->meta.id, 0.0});
+      }
+      continue;
+    }
+
     if (config.type == "angle_bisector")
     {
       const LineGeometry* first = findLineByMetaId(set, config.sourceAId);

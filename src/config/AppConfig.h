@@ -33,6 +33,9 @@ struct CameraAcquisitionConfig
   bool autoWhiteBalance = true;
   bool hasWhiteBalance = false;
   double whiteBalance = 0.0;
+  int frameWidth = 0;
+  int frameHeight = 0;
+  int frameIntervalMs = 500;
 };
 
 struct ProcessingProfile

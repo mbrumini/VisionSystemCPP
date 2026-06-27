@@ -5,19 +5,28 @@
 #include "gui/modules/ConstructedGeometryPointSource.h"
 #include "gui/modules/MainWindowGeometryModule.h"
 #include "gui/modules/MainWindowSetupModule.h"
+#include "gui/geometry/GeometryOverlay.h"
 #include "gui/modules/geometry/GeometryPanelNavigation.h"
 #include "gui/TouchIconButton.h"
 #include "runtime/CameraRuntime.h"
 
 #include <QComboBox>
+#include <QColor>
 #include <QDoubleSpinBox>
 #include <QGridLayout>
 #include <QLabel>
 #include <QPushButton>
 #include <QVBoxLayout>
 
+#include <cmath>
+
 namespace
 {
+QPointF toPointF(const cv::Point2d& point)
+{
+  return QPointF(point.x, point.y);
+}
+
 QWidget* createPanel(QWidget* parent)
 {
   return new QWidget(parent);
@@ -72,6 +81,48 @@ void addPointSources(QComboBox* combo, const QVector<ConstructedGeometryPointSou
   {
     combo->addItem(source.label, source.id);
   }
+}
+
+void appendSelectionPoint(GeometryOverlay& overlay,
+                          const PointGeometry& point,
+                          const QString& label,
+                          const QColor& color)
+{
+  overlay.points.append({toPointF(point.point), label, color, 9.0});
+}
+
+void appendSelectionLine(GeometryOverlay& overlay,
+                         const LineGeometry& line,
+                         const QString& label,
+                         const QColor& color)
+{
+  const QPointF start = toPointF(line.start);
+  const QPointF end = toPointF(line.end);
+  overlay.lines.append({start, end, color, 9});
+  overlay.points.append({(start + end) * 0.5, label, color, 8.0});
+}
+
+void appendSelectionCircle(GeometryOverlay& overlay,
+                           const CircleGeometry& circle,
+                           const QString& label,
+                           const QColor& color)
+{
+  constexpr int kSegments = 96;
+  constexpr double kPi = 3.14159265358979323846;
+  QPointF previous;
+  for (int index = 0; index <= kSegments; ++index)
+  {
+    const double angle = 2.0 * kPi * static_cast<double>(index) / static_cast<double>(kSegments);
+    const QPointF current(
+      circle.center.x + std::cos(angle) * circle.radius,
+      circle.center.y + std::sin(angle) * circle.radius);
+    if (index > 0)
+    {
+      overlay.lines.append({previous, current, color, 7});
+    }
+    previous = current;
+  }
+  overlay.points.append({toPointF(circle.center), label, color, 8.0});
 }
 }
 
@@ -147,17 +198,21 @@ void MainWindowConstructedGeometryModule::showConstructedGeometryPanel(const Cam
   QObject::connect(offsetButton, &QPushButton::clicked, window(), [this, camera]() { showOffsetLinePanel(camera); });
   buttonLayout->addWidget(offsetButton, 1, 1);
 
+  auto* midlineButton = createTouchIconButton("offsetLine", tr("actions.midline"), panel);
+  QObject::connect(midlineButton, &QPushButton::clicked, window(), [this, camera]() { showMidlinePanel(camera); });
+  buttonLayout->addWidget(midlineButton, 1, 2);
+
   auto* bisectorButton = createTouchIconButton("angleBisector", tr("actions.angleBisector"), panel);
   QObject::connect(bisectorButton, &QPushButton::clicked, window(), [this, camera]() { showAngleBisectorPanel(camera); });
-  buttonLayout->addWidget(bisectorButton, 1, 2);
+  buttonLayout->addWidget(bisectorButton, 1, 3);
 
   auto* tangentButton = createTouchIconButton("tangentLine", tr("actions.tangentLine"), panel);
   QObject::connect(tangentButton, &QPushButton::clicked, window(), [this, camera]() { showTangentLinePanel(camera); });
-  buttonLayout->addWidget(tangentButton, 1, 3);
+  buttonLayout->addWidget(tangentButton, 2, 0);
 
   auto* projectButton = createTouchIconButton("projectPoint", tr("actions.projectPoint"), panel);
   QObject::connect(projectButton, &QPushButton::clicked, window(), [this, camera]() { showProjectPointPanel(camera); });
-  buttonLayout->addWidget(projectButton, 2, 0);
+  buttonLayout->addWidget(projectButton, 2, 1);
 
   auto* backButton = createTouchIconButton("back",
     GeometryPanelNavigation::backLabel(context(), camera, tr("commands.backToCameraTools")),
@@ -168,7 +223,7 @@ void MainWindowConstructedGeometryModule::showConstructedGeometryPanel(const Cam
       context().showCameraToolList(camera);
     }
   });
-  buttonLayout->addWidget(backButton, 2, 1);
+  buttonLayout->addWidget(backButton, 2, 2);
   layout->addWidget(buttonGrid);
   layout->addStretch(1);
 
@@ -194,6 +249,29 @@ void MainWindowConstructedGeometryModule::showLineLineIntersectionPanel(const Ca
   addLineSources(secondCombo, lineSources);
   if (secondCombo->count() > 1) { secondCombo->setCurrentIndex(1); }
 
+  const auto updateSourceOverlay = [this, camera, firstCombo, secondCombo]() {
+    if (!context().geometry || !largeImage())
+    {
+      return;
+    }
+    context().geometry->showRuntimeGeometryOverlay(camera);
+    const GeometrySet& refreshedSet = cameraRuntime()[camera.id].geometries();
+    GeometryOverlay overlay = largeImage()->geometryOverlay();
+    const QString firstId = firstCombo->currentData().toString();
+    if (const LineGeometry* line = findConstructedGeometryLineSource(refreshedSet, firstId))
+    {
+      appendSelectionLine(overlay, *line, QStringLiteral("A %1").arg(firstId), QColor("#ffcc00"));
+    }
+    const QString secondId = secondCombo->currentData().toString();
+    if (const LineGeometry* line = findConstructedGeometryLineSource(refreshedSet, secondId))
+    {
+      appendSelectionLine(overlay, *line, QStringLiteral("B %1").arg(secondId), QColor("#00e5ff"));
+    }
+    largeImage()->setGeometryOverlay(overlay);
+  };
+  QObject::connect(firstCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  QObject::connect(secondCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+
   formLayout->addWidget(new QLabel(tr("labels.sourceLineA"), panel), 0, 0);
   formLayout->addWidget(firstCombo, 0, 1);
   formLayout->addWidget(new QLabel(tr("labels.sourceLineB"), panel), 1, 0);
@@ -211,6 +289,7 @@ void MainWindowConstructedGeometryModule::showLineLineIntersectionPanel(const Ca
   layout->addWidget(backButton);
   layout->addStretch(1);
   toolsLayout()->addWidget(panel);
+  updateSourceOverlay();
 }
 
 void MainWindowConstructedGeometryModule::showLineCircleIntersectionPanel(const CameraConfig& camera)
@@ -230,6 +309,31 @@ void MainWindowConstructedGeometryModule::showLineCircleIntersectionPanel(const 
   auto* circleCombo = new QComboBox(panel);
   addLineSources(lineCombo, lineSources);
   addCircleSources(circleCombo, circleSources);
+
+  const auto updateSourceOverlay = [this, camera, lineCombo, circleCombo]() {
+    if (!context().geometry || !largeImage())
+    {
+      return;
+    }
+    context().geometry->showRuntimeGeometryOverlay(camera);
+    const GeometrySet& refreshedSet = cameraRuntime()[camera.id].geometries();
+    GeometryOverlay overlay = largeImage()->geometryOverlay();
+    const QString lineId = lineCombo->currentData().toString();
+    if (const LineGeometry* line = findConstructedGeometryLineSource(refreshedSet, lineId))
+    {
+      appendSelectionLine(overlay, *line, QStringLiteral("L %1").arg(lineId), QColor("#ffcc00"));
+    }
+    const QString circleId = circleCombo->currentData().toString();
+    CircleGeometry circle;
+    if (constructedGeometryCircleSourceValue(refreshedSet, circleId, circle))
+    {
+      appendSelectionCircle(overlay, circle, QStringLiteral("C %1").arg(circleId), QColor("#00e5ff"));
+    }
+    largeImage()->setGeometryOverlay(overlay);
+  };
+  QObject::connect(lineCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  QObject::connect(circleCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+
   formLayout->addWidget(new QLabel(tr("labels.sourceLine"), panel), 0, 0);
   formLayout->addWidget(lineCombo, 0, 1);
   formLayout->addWidget(new QLabel(tr("labels.sourceCircle"), panel), 1, 0);
@@ -247,6 +351,7 @@ void MainWindowConstructedGeometryModule::showLineCircleIntersectionPanel(const 
   layout->addWidget(backButton);
   layout->addStretch(1);
   toolsLayout()->addWidget(panel);
+  updateSourceOverlay();
 }
 
 void MainWindowConstructedGeometryModule::showCircleCircleIntersectionPanel(const CameraConfig& camera)
@@ -266,6 +371,31 @@ void MainWindowConstructedGeometryModule::showCircleCircleIntersectionPanel(cons
   addCircleSources(firstCombo, circleSources);
   addCircleSources(secondCombo, circleSources);
   if (secondCombo->count() > 1) { secondCombo->setCurrentIndex(1); }
+
+  const auto updateSourceOverlay = [this, camera, firstCombo, secondCombo]() {
+    if (!context().geometry || !largeImage())
+    {
+      return;
+    }
+    context().geometry->showRuntimeGeometryOverlay(camera);
+    const GeometrySet& refreshedSet = cameraRuntime()[camera.id].geometries();
+    GeometryOverlay overlay = largeImage()->geometryOverlay();
+    CircleGeometry circle;
+    const QString firstId = firstCombo->currentData().toString();
+    if (constructedGeometryCircleSourceValue(refreshedSet, firstId, circle))
+    {
+      appendSelectionCircle(overlay, circle, QStringLiteral("A %1").arg(firstId), QColor("#ffcc00"));
+    }
+    const QString secondId = secondCombo->currentData().toString();
+    if (constructedGeometryCircleSourceValue(refreshedSet, secondId, circle))
+    {
+      appendSelectionCircle(overlay, circle, QStringLiteral("B %1").arg(secondId), QColor("#00e5ff"));
+    }
+    largeImage()->setGeometryOverlay(overlay);
+  };
+  QObject::connect(firstCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  QObject::connect(secondCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+
   formLayout->addWidget(new QLabel(tr("labels.sourceCircleA"), panel), 0, 0);
   formLayout->addWidget(firstCombo, 0, 1);
   formLayout->addWidget(new QLabel(tr("labels.sourceCircleB"), panel), 1, 0);
@@ -283,6 +413,7 @@ void MainWindowConstructedGeometryModule::showCircleCircleIntersectionPanel(cons
   layout->addWidget(backButton);
   layout->addStretch(1);
   toolsLayout()->addWidget(panel);
+  updateSourceOverlay();
 }
 
 void MainWindowConstructedGeometryModule::showCircleCenterPanel(const CameraConfig& camera)
@@ -300,6 +431,25 @@ void MainWindowConstructedGeometryModule::showCircleCenterPanel(const CameraConf
 
   auto* circleCombo = new QComboBox(panel);
   addCircleSources(circleCombo, circleSources);
+
+  const auto updateSourceOverlay = [this, camera, circleCombo]() {
+    if (!context().geometry || !largeImage())
+    {
+      return;
+    }
+    context().geometry->showRuntimeGeometryOverlay(camera);
+    const GeometrySet& refreshedSet = cameraRuntime()[camera.id].geometries();
+    GeometryOverlay overlay = largeImage()->geometryOverlay();
+    const QString circleId = circleCombo->currentData().toString();
+    CircleGeometry circle;
+    if (constructedGeometryCircleSourceValue(refreshedSet, circleId, circle))
+    {
+      appendSelectionCircle(overlay, circle, QStringLiteral("C %1").arg(circleId), QColor("#ffcc00"));
+    }
+    largeImage()->setGeometryOverlay(overlay);
+  };
+  QObject::connect(circleCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+
   formLayout->addWidget(new QLabel(tr("labels.sourceCircleOrArc"), panel), 0, 0);
   formLayout->addWidget(circleCombo, 0, 1);
 
@@ -315,6 +465,7 @@ void MainWindowConstructedGeometryModule::showCircleCenterPanel(const CameraConf
   layout->addWidget(backButton);
   layout->addStretch(1);
   toolsLayout()->addWidget(panel);
+  updateSourceOverlay();
 }
 
 void MainWindowConstructedGeometryModule::showMidpointPanel(const CameraConfig& camera)
@@ -334,6 +485,30 @@ void MainWindowConstructedGeometryModule::showMidpointPanel(const CameraConfig& 
   addPointSources(firstCombo, pointSources);
   addPointSources(secondCombo, pointSources);
   if (secondCombo->count() > 1) { secondCombo->setCurrentIndex(1); }
+
+  const auto updateSourceOverlay = [this, camera, firstCombo, secondCombo]() {
+    if (!context().geometry || !largeImage())
+    {
+      return;
+    }
+    context().geometry->showRuntimeGeometryOverlay(camera);
+    const GeometrySet& refreshedSet = cameraRuntime()[camera.id].geometries();
+    GeometryOverlay overlay = largeImage()->geometryOverlay();
+    const QString firstId = firstCombo->currentData().toString();
+    if (const PointGeometry* point = findConstructedGeometryPointSource(refreshedSet, firstId))
+    {
+      appendSelectionPoint(overlay, *point, QStringLiteral("A %1").arg(firstId), QColor("#ffcc00"));
+    }
+    const QString secondId = secondCombo->currentData().toString();
+    if (const PointGeometry* point = findConstructedGeometryPointSource(refreshedSet, secondId))
+    {
+      appendSelectionPoint(overlay, *point, QStringLiteral("B %1").arg(secondId), QColor("#00e5ff"));
+    }
+    largeImage()->setGeometryOverlay(overlay);
+  };
+  QObject::connect(firstCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  QObject::connect(secondCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+
   formLayout->addWidget(new QLabel(tr("labels.sourcePointA"), panel), 0, 0);
   formLayout->addWidget(firstCombo, 0, 1);
   formLayout->addWidget(new QLabel(tr("labels.sourcePointB"), panel), 1, 0);
@@ -351,6 +526,7 @@ void MainWindowConstructedGeometryModule::showMidpointPanel(const CameraConfig& 
   layout->addWidget(backButton);
   layout->addStretch(1);
   toolsLayout()->addWidget(panel);
+  updateSourceOverlay();
 }
 
 void MainWindowConstructedGeometryModule::showOffsetLinePanel(const CameraConfig& camera)
@@ -373,6 +549,23 @@ void MainWindowConstructedGeometryModule::showOffsetLinePanel(const CameraConfig
   offsetSpin->setSingleStep(1.0);
   offsetSpin->setValue(10.0);
 
+  const auto updateSourceOverlay = [this, camera, lineCombo]() {
+    if (!context().geometry || !largeImage())
+    {
+      return;
+    }
+    context().geometry->showRuntimeGeometryOverlay(camera);
+    const GeometrySet& refreshedSet = cameraRuntime()[camera.id].geometries();
+    GeometryOverlay overlay = largeImage()->geometryOverlay();
+    const QString lineId = lineCombo->currentData().toString();
+    if (const LineGeometry* line = findConstructedGeometryLineSource(refreshedSet, lineId))
+    {
+      appendSelectionLine(overlay, *line, QStringLiteral("L %1").arg(lineId), QColor("#ffcc00"));
+    }
+    largeImage()->setGeometryOverlay(overlay);
+  };
+  QObject::connect(lineCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+
   formLayout->addWidget(new QLabel(tr("labels.sourceLine"), panel), 0, 0);
   formLayout->addWidget(lineCombo, 0, 1);
   formLayout->addWidget(new QLabel(tr("labels.offsetPixels"), panel), 1, 0);
@@ -390,6 +583,67 @@ void MainWindowConstructedGeometryModule::showOffsetLinePanel(const CameraConfig
   layout->addWidget(backButton);
   layout->addStretch(1);
   toolsLayout()->addWidget(panel);
+  updateSourceOverlay();
+}
+
+void MainWindowConstructedGeometryModule::showMidlinePanel(const CameraConfig& camera)
+{
+  context().clearToolPanel();
+  refreshConstructedGeometrySources(camera);
+
+  const QVector<ConstructedGeometryLineSource> lineSources =
+    constructedGeometryLineSources(cameraRuntime()[camera.id].geometries(), geometryAliasesForCamera(camera));
+  auto* panel = createPanel(toolsContainer());
+  auto* layout = createPanelLayout(panel);
+  addTitle(layout, panel, QString("%1 | %2").arg(tr("actions.midline"), camera.id));
+  auto* formLayout = addForm(layout, panel);
+
+  auto* firstCombo = new QComboBox(panel);
+  auto* secondCombo = new QComboBox(panel);
+  addLineSources(firstCombo, lineSources);
+  addLineSources(secondCombo, lineSources);
+  if (secondCombo->count() > 1) { secondCombo->setCurrentIndex(1); }
+
+  const auto updateSourceOverlay = [this, camera, firstCombo, secondCombo]() {
+    if (!context().geometry || !largeImage())
+    {
+      return;
+    }
+    context().geometry->showRuntimeGeometryOverlay(camera);
+    const GeometrySet& refreshedSet = cameraRuntime()[camera.id].geometries();
+    GeometryOverlay overlay = largeImage()->geometryOverlay();
+    const QString firstId = firstCombo->currentData().toString();
+    if (const LineGeometry* line = findConstructedGeometryLineSource(refreshedSet, firstId))
+    {
+      appendSelectionLine(overlay, *line, QStringLiteral("A %1").arg(firstId), QColor("#ffcc00"));
+    }
+    const QString secondId = secondCombo->currentData().toString();
+    if (const LineGeometry* line = findConstructedGeometryLineSource(refreshedSet, secondId))
+    {
+      appendSelectionLine(overlay, *line, QStringLiteral("B %1").arg(secondId), QColor("#00e5ff"));
+    }
+    largeImage()->setGeometryOverlay(overlay);
+  };
+  QObject::connect(firstCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  QObject::connect(secondCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  formLayout->addWidget(new QLabel(tr("labels.sourceLineA"), panel), 0, 0);
+  formLayout->addWidget(firstCombo, 0, 1);
+  formLayout->addWidget(new QLabel(tr("labels.sourceLineB"), panel), 1, 0);
+  formLayout->addWidget(secondCombo, 1, 1);
+
+  auto* createButton = createTouchIconButton("offsetLine", tr("actions.midline"), panel);
+  createButton->setEnabled(lineSources.size() >= 2);
+  QObject::connect(createButton, &QPushButton::clicked, window(), [this, camera, firstCombo, secondCombo]() {
+    createMidline(camera, firstCombo->currentData().toString(), secondCombo->currentData().toString());
+  });
+  layout->addWidget(createButton);
+
+  auto* backButton = createTouchIconButton("back", tr("tools.constructedGeometries"), panel);
+  QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() { showConstructedGeometryPanel(camera); });
+  layout->addWidget(backButton);
+  layout->addStretch(1);
+  toolsLayout()->addWidget(panel);
+  updateSourceOverlay();
 }
 
 void MainWindowConstructedGeometryModule::showAngleBisectorPanel(const CameraConfig& camera)
@@ -409,6 +663,30 @@ void MainWindowConstructedGeometryModule::showAngleBisectorPanel(const CameraCon
   addLineSources(firstCombo, lineSources);
   addLineSources(secondCombo, lineSources);
   if (secondCombo->count() > 1) { secondCombo->setCurrentIndex(1); }
+
+  const auto updateSourceOverlay = [this, camera, firstCombo, secondCombo]() {
+    if (!context().geometry || !largeImage())
+    {
+      return;
+    }
+    context().geometry->showRuntimeGeometryOverlay(camera);
+    const GeometrySet& refreshedSet = cameraRuntime()[camera.id].geometries();
+    GeometryOverlay overlay = largeImage()->geometryOverlay();
+    const QString firstId = firstCombo->currentData().toString();
+    if (const LineGeometry* line = findConstructedGeometryLineSource(refreshedSet, firstId))
+    {
+      appendSelectionLine(overlay, *line, QStringLiteral("A %1").arg(firstId), QColor("#ffcc00"));
+    }
+    const QString secondId = secondCombo->currentData().toString();
+    if (const LineGeometry* line = findConstructedGeometryLineSource(refreshedSet, secondId))
+    {
+      appendSelectionLine(overlay, *line, QStringLiteral("B %1").arg(secondId), QColor("#00e5ff"));
+    }
+    largeImage()->setGeometryOverlay(overlay);
+  };
+  QObject::connect(firstCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  QObject::connect(secondCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+
   formLayout->addWidget(new QLabel(tr("labels.sourceLineA"), panel), 0, 0);
   formLayout->addWidget(firstCombo, 0, 1);
   formLayout->addWidget(new QLabel(tr("labels.sourceLineB"), panel), 1, 0);
@@ -426,6 +704,7 @@ void MainWindowConstructedGeometryModule::showAngleBisectorPanel(const CameraCon
   layout->addWidget(backButton);
   layout->addStretch(1);
   toolsLayout()->addWidget(panel);
+  updateSourceOverlay();
 }
 
 void MainWindowConstructedGeometryModule::showTangentLinePanel(const CameraConfig& camera)
@@ -445,6 +724,31 @@ void MainWindowConstructedGeometryModule::showTangentLinePanel(const CameraConfi
   auto* circleCombo = new QComboBox(panel);
   addPointSources(pointCombo, pointSources);
   addCircleSources(circleCombo, circleSources);
+
+  const auto updateSourceOverlay = [this, camera, pointCombo, circleCombo]() {
+    if (!context().geometry || !largeImage())
+    {
+      return;
+    }
+    context().geometry->showRuntimeGeometryOverlay(camera);
+    const GeometrySet& refreshedSet = cameraRuntime()[camera.id].geometries();
+    GeometryOverlay overlay = largeImage()->geometryOverlay();
+    const QString pointId = pointCombo->currentData().toString();
+    if (const PointGeometry* point = findConstructedGeometryPointSource(refreshedSet, pointId))
+    {
+      appendSelectionPoint(overlay, *point, QStringLiteral("P %1").arg(pointId), QColor("#ffcc00"));
+    }
+    const QString circleId = circleCombo->currentData().toString();
+    CircleGeometry circle;
+    if (constructedGeometryCircleSourceValue(refreshedSet, circleId, circle))
+    {
+      appendSelectionCircle(overlay, circle, QStringLiteral("C %1").arg(circleId), QColor("#00e5ff"));
+    }
+    largeImage()->setGeometryOverlay(overlay);
+  };
+  QObject::connect(pointCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  QObject::connect(circleCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+
   formLayout->addWidget(new QLabel(tr("labels.sourcePoint"), panel), 0, 0);
   formLayout->addWidget(pointCombo, 0, 1);
   formLayout->addWidget(new QLabel(tr("labels.sourceCircle"), panel), 1, 0);
@@ -462,6 +766,7 @@ void MainWindowConstructedGeometryModule::showTangentLinePanel(const CameraConfi
   layout->addWidget(backButton);
   layout->addStretch(1);
   toolsLayout()->addWidget(panel);
+  updateSourceOverlay();
 }
 
 void MainWindowConstructedGeometryModule::showProjectPointPanel(const CameraConfig& camera)
@@ -481,6 +786,30 @@ void MainWindowConstructedGeometryModule::showProjectPointPanel(const CameraConf
   auto* lineCombo = new QComboBox(panel);
   addPointSources(pointCombo, pointSources);
   addLineSources(lineCombo, lineSources);
+
+  const auto updateSourceOverlay = [this, camera, pointCombo, lineCombo]() {
+    if (!context().geometry || !largeImage())
+    {
+      return;
+    }
+    context().geometry->showRuntimeGeometryOverlay(camera);
+    const GeometrySet& refreshedSet = cameraRuntime()[camera.id].geometries();
+    GeometryOverlay overlay = largeImage()->geometryOverlay();
+    const QString pointId = pointCombo->currentData().toString();
+    if (const PointGeometry* point = findConstructedGeometryPointSource(refreshedSet, pointId))
+    {
+      appendSelectionPoint(overlay, *point, QStringLiteral("P %1").arg(pointId), QColor("#ffcc00"));
+    }
+    const QString lineId = lineCombo->currentData().toString();
+    if (const LineGeometry* line = findConstructedGeometryLineSource(refreshedSet, lineId))
+    {
+      appendSelectionLine(overlay, *line, QStringLiteral("L %1").arg(lineId), QColor("#00e5ff"));
+    }
+    largeImage()->setGeometryOverlay(overlay);
+  };
+  QObject::connect(pointCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  QObject::connect(lineCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+
   formLayout->addWidget(new QLabel(tr("labels.sourcePoint"), panel), 0, 0);
   formLayout->addWidget(pointCombo, 0, 1);
   formLayout->addWidget(new QLabel(tr("labels.sourceLine"), panel), 1, 0);
@@ -498,4 +827,5 @@ void MainWindowConstructedGeometryModule::showProjectPointPanel(const CameraConf
   layout->addWidget(backButton);
   layout->addStretch(1);
   toolsLayout()->addWidget(panel);
+  updateSourceOverlay();
 }

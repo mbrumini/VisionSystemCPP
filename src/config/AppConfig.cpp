@@ -136,6 +136,9 @@ bool AppConfig::load(const QString& filePath, QString* errorMessage)
     camera.acquisition.autoWhiteBalance = acquisitionObject.value("autoWhiteBalance").toBool(camera.acquisition.autoWhiteBalance);
     camera.acquisition.hasWhiteBalance = acquisitionObject.contains("whiteBalance");
     camera.acquisition.whiteBalance = acquisitionObject.value("whiteBalance").toDouble(camera.acquisition.whiteBalance);
+    camera.acquisition.frameWidth = acquisitionObject.value("frameWidth").toInt(0);
+    camera.acquisition.frameHeight = acquisitionObject.value("frameHeight").toInt(0);
+    camera.acquisition.frameIntervalMs = acquisitionObject.value("frameIntervalMs").toInt(camera.acquisition.frameIntervalMs);
     camera.processingProfileId = cameraObject.value("processingProfile").toString("default");
     camera.profile = profiles.value(camera.processingProfileId, profiles.value("default"));
 
@@ -407,6 +410,12 @@ bool AppConfig::saveCameraAcquisitionSettings(
     {
       acquisitionObject["whiteBalance"] = acquisition.whiteBalance;
     }
+    if (acquisition.frameWidth > 0 && acquisition.frameHeight > 0)
+    {
+      acquisitionObject["frameWidth"] = acquisition.frameWidth;
+      acquisitionObject["frameHeight"] = acquisition.frameHeight;
+    }
+    acquisitionObject["frameIntervalMs"] = acquisition.frameIntervalMs;
     cameraObject["acquisition"] = acquisitionObject;
     cameras[i] = cameraObject;
     found = true;
@@ -530,6 +539,12 @@ bool AppConfig::saveCameraSystemSettings(
     {
       acquisitionObject["whiteBalance"] = camera.acquisition.whiteBalance;
     }
+    if (camera.acquisition.frameWidth > 0 && camera.acquisition.frameHeight > 0)
+    {
+      acquisitionObject["frameWidth"] = camera.acquisition.frameWidth;
+      acquisitionObject["frameHeight"] = camera.acquisition.frameHeight;
+    }
+    acquisitionObject["frameIntervalMs"] = camera.acquisition.frameIntervalMs;
     cameraObject["acquisition"] = acquisitionObject;
     if (!camera.modelName.isEmpty())
     {

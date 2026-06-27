@@ -11,6 +11,7 @@
 #include "gui/geometry/GeometryOverlayPrimitives.h"
 
 #include "processing/geometry/EdgeCircleDetector.h"
+#include "processing/geometry/EdgeCircleDetectorExperimental.h"
 
 #include <QColor>
 #include <QPointF>
@@ -444,8 +445,7 @@ void MainWindowGeometryModule::testGeometryArc(const CameraConfig& camera)
         .arg(arcConfig.transition == EdgeLineTransition::DarkToLight ? "dark_to_light" : "light_to_dark")
         .arg(arcConfig.pickMode == EdgeLinePickMode::Last ? "last" : (arcConfig.pickMode == EdgeLinePickMode::Best ? "best" : "first")));
 
-  EdgeCircleDetector detector;
-  const EdgeCircleDetectorResult result = detector.detect(input, config);
+  const EdgeCircleDetectorResult result = detectEdgeCircleWithSelectedDetector(input, config);
   if (!result.processed || result.diagnosticImage.empty())
   {
     log(result.message.isEmpty() ? tr("log.geometryArcFailed") + ": " + camera.id : result.message);

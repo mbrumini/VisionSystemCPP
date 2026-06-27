@@ -1941,6 +1941,17 @@ void TestVisionWindow::startBroadcastTest(const QJsonArray& targets)
     {
       return;
     }
+    if (m_sendOnlyCheck && m_sendOnlyCheck->isChecked())
+    {
+      QMessageBox::warning(
+        this,
+        "TestVision",
+        "Il broadcast multicamera non supporta la modalita' Solo invio: "
+        "con piu' camere puo' saturare la pipe e bloccare TestVision. "
+        "Disattiva Solo invio per raccogliere i dati camera per camera.");
+      appendLog("Broadcast multicamera annullato: Solo invio attivo");
+      return;
+    }
     m_broadcastRunning = true;
     m_activeBroadcastWorkers = targets.size();
     m_broadcastSummaries = {};

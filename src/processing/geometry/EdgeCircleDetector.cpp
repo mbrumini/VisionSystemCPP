@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <cmath>
 
+// Historical detector kept as a fallback. The robust production selector lives
+// in EdgeCircleDetectorExperimental and can still route here for A/B tests.
 namespace
 {
 bool pointInsideImage(const cv::Mat& image, const cv::Point2d& point)
@@ -220,6 +222,33 @@ std::vector<cv::Point> toIntegerPoints(const std::vector<cv::Point2d>& points)
   }
   return result;
 }
+
+void drawPointLegend(cv::Mat& image,
+                     const cv::Point2d& anchor,
+                     int rawCount,
+                     int activeCount,
+                     const QString& mode)
+{
+  const cv::Point origin = surfacePoint(anchor);
+  const cv::Point textPoint(origin.x + 12, origin.y - 28);
+  const std::string label = QString("%1  raw=%2  active=%3")
+    .arg(mode)
+    .arg(rawCount)
+    .arg(activeCount)
+    .toStdString();
+  cv::putText(image, label, textPoint, cv::FONT_HERSHEY_SIMPLEX, 0.55, cv::Scalar(16, 16, 16), 3, cv::LINE_AA);
+  cv::putText(image, label, textPoint, cv::FONT_HERSHEY_SIMPLEX, 0.55, cv::Scalar(255, 255, 255), 1, cv::LINE_AA);
+
+  const cv::Point rawPoint(textPoint.x, textPoint.y + 22);
+  const cv::Point activePoint(textPoint.x + 88, textPoint.y + 22);
+  cv::circle(image, rawPoint, 3, cv::Scalar(0, 120, 255), -1, cv::LINE_AA);
+  cv::putText(image, "raw", rawPoint + cv::Point(10, 5), cv::FONT_HERSHEY_SIMPLEX, 0.45, cv::Scalar(16, 16, 16), 3, cv::LINE_AA);
+  cv::putText(image, "raw", rawPoint + cv::Point(10, 5), cv::FONT_HERSHEY_SIMPLEX, 0.45, cv::Scalar(0, 120, 255), 1, cv::LINE_AA);
+  cv::circle(image, activePoint, 5, cv::Scalar(16, 16, 16), -1, cv::LINE_AA);
+  cv::circle(image, activePoint, 3, cv::Scalar(0, 255, 255), -1, cv::LINE_AA);
+  cv::putText(image, "active", activePoint + cv::Point(10, 5), cv::FONT_HERSHEY_SIMPLEX, 0.45, cv::Scalar(16, 16, 16), 3, cv::LINE_AA);
+  cv::putText(image, "active", activePoint + cv::Point(10, 5), cv::FONT_HERSHEY_SIMPLEX, 0.45, cv::Scalar(0, 255, 255), 1, cv::LINE_AA);
+}
 }
 
 EdgeCircleDetectorResult EdgeCircleDetector::detect(const cv::Mat& input, const EdgeCircleDetectorConfig& config) const
@@ -334,6 +363,12 @@ EdgeCircleDetectorResult EdgeCircleDetector::detect(const cv::Mat& input, const 
     // Draw main colored dot (cyan/yellow)
     cv::circle(result.diagnosticImage, imagePoint, 2, cv::Scalar(0, 255, 255), -1, cv::LINE_AA);
   }
+
+  drawPointLegend(result.diagnosticImage,
+                  config.guideCenter + cv::Point2d(-config.guideRadius, -config.guideRadius),
+                  static_cast<int>(result.rawEdgePoints.size()),
+                  static_cast<int>(result.edgePoints.size()),
+                  "STD");
 
   const double span = configuredArcSpanRadians(config);
   const int requiredMinPoints = config.useArc

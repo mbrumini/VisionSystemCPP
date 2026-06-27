@@ -9,6 +9,7 @@
 #include "gui/geometry/GeometryMath.h"
 #include "gui/geometry/GeometryOverlayPrimitives.h"
 #include "processing/geometry/EdgeCircleDetector.h"
+#include "processing/geometry/EdgeCircleDetectorExperimental.h"
 #include "processing/geometry/EdgePointDetector.h"
 
 #include <QColor>
@@ -45,8 +46,8 @@ void MainWindowGeometryModule::activateGeometryCircleDrawing(const CameraConfig&
   context().deactivateImageDrawingTools();
   *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Geometry;
   m_drawingTarget = DrawingTarget::Circle;
-  largeImage()->setThreePointCircleDrawingEnabled(true);
   showConfiguredGeometryCircles(camera);
+  largeImage()->setThreePointCircleDrawingEnabled(true);
   log(tr("log.geometryCircleDrawing") + ": " + camera.id);
 }
 
@@ -90,6 +91,50 @@ void MainWindowGeometryModule::handleGeometryCirclePoints(const CameraConfig& ca
   m_drawingTarget = DrawingTarget::Circle;
   saveGeometryCirclesRecipe(camera);
   showConfiguredGeometryCircles(camera);
+}
+
+void MainWindowGeometryModule::handleGeometryCircleBandChanged(const CameraConfig& camera,
+                                                               const QVector<ImageCircle>& circles,
+                                                               int changedRadiusIndex)
+{
+  if (camera.id != selectedCameraId() || circles.size() < 3)
+  {
+    return;
+  }
+
+  GeometryCircleRuntimeConfig& config = activeGeometryCircleConfig(camera.id);
+  const QPoint center = circles[0].center;
+  const int guideRadius = qMax(2, static_cast<int>(std::round(config.radius)));
+  const int currentInnerRadius = qMax(1, guideRadius - config.innerBand);
+  const int currentOuterRadius = guideRadius + config.outerBand;
+  const int outerRadius = changedRadiusIndex == 0
+    ? qMax(guideRadius + 1, circles[0].radius)
+    : currentOuterRadius;
+  const int innerRadius = changedRadiusIndex == 2
+    ? qBound(1, circles[2].radius, guideRadius - 1)
+    : currentInnerRadius;
+
+  config.imageCenter = cv::Point2d(center.x(), center.y());
+  config.radius = guideRadius;
+  config.innerBand = qMax(1, guideRadius - innerRadius);
+  config.outerBand = qMax(1, outerRadius - guideRadius);
+  config.hasImageCircle = true;
+
+  const PartPose& pose = cameraRuntime()[camera.id].currentPose();
+  if (pose.valid)
+  {
+    config.partCenter = imageToPart(pose, config.imageCenter);
+    config.hasCircle = true;
+    config.anchorInImageSpace = false;
+  }
+  else
+  {
+    config.hasCircle = false;
+  }
+
+  saveGeometryCirclesRecipe(camera);
+  showConfiguredGeometryCircles(camera);
+  testGeometryCircle(camera);
 }
 
 void MainWindowGeometryModule::showConfiguredGeometryCircles(const CameraConfig& camera)
@@ -139,6 +184,12 @@ void MainWindowGeometryModule::showConfiguredGeometryCircles(const CameraConfig&
       circle.scanDirection != EdgeLineScanDirection::NormalNegative,
       QColor(0, 210, 255, 150),
       2);
+    largeImage()->setCircles({
+      {QPoint(qRound(center.x), qRound(center.y)), qRound(outerRadius)},
+      {QPoint(qRound(center.x), qRound(center.y)), qRound(guideRadius)},
+      {QPoint(qRound(center.x), qRound(center.y)), qRound(innerRadius)}
+    });
+    largeImage()->setCircleBandEditingEnabled(true);
   }
   appendCurrentPartPoseOverlay(camera, overlay);
   largeImage()->setGeometryOverlay(overlay);
@@ -223,8 +274,7 @@ void MainWindowGeometryModule::testGeometryCircle(const CameraConfig& camera)
         .arg(circleConfig.transition == EdgeLineTransition::DarkToLight ? "dark_to_light" : "light_to_dark")
         .arg(circleConfig.pickMode == EdgeLinePickMode::Last ? "last" : (circleConfig.pickMode == EdgeLinePickMode::Best ? "best" : "first")));
 
-  EdgeCircleDetector detector;
-  const EdgeCircleDetectorResult result = detector.detect(input, config);
+  const EdgeCircleDetectorResult result = detectEdgeCircleWithSelectedDetector(input, config);
   if (!result.processed || result.diagnosticImage.empty())
   {
     log(result.message.isEmpty() ? tr("log.geometryCircleFailed") + ": " + camera.id : result.message);
