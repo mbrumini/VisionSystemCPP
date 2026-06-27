@@ -33,6 +33,8 @@ CMakeUserPresets.json
 
 # Logs
 *.log
+*.dmp
+*.mdmp
 tests/reports/
 tests/datasets/
 

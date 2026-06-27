@@ -1,0 +1,82 @@
+{
+    "cameraId": "CAM09",
+    "tools": {
+        "geometries": {
+            "circles": [
+                {
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 17,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 3,
+                    "enabled": true,
+                    "id": "circle_1",
+                    "imageCenter": {
+                        "x": 896,
+                        "y": 445
+                    },
+                    "innerBand": 20,
+                    "outerBand": 20,
+                    "partCenter": {
+                        "x": -13.257215597617403,
+                        "y": 0.26397097609788034
+                    },
+                    "pickMode": "best",
+                    "radius": 168.32275254702824,
+                    "scanDirection": "normal_negative",
+                    "transition": "light_to_dark",
+                    "type": "edge_circle",
+                    "useSubpixel": true
+                }
+            ],
+            "enabled": true,
+            "guideReferenceSize": {
+                "height": 1080,
+                "width": 1920
+            }
+        },
+        "measurements": {
+            "enabled": true,
+            "items": [
+                {
+                    "enabled": true,
+                    "hasMax": true,
+                    "hasMin": true,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_1",
+                    "max": 16.4,
+                    "min": 16.3,
+                    "nominal": 16.35,
+                    "samplePixels": 354.94722224347004,
+                    "sampleValue": 0,
+                    "sourceAId": "circle_1",
+                    "type": "circle_diameter",
+                    "unit": "mm"
+                }
+            ]
+        },
+        "surfaceLocalization": {
+            "annulus": {
+                "innerCircle": {
+                    "centerX": 892,
+                    "centerY": 437,
+                    "radius": 129
+                },
+                "outerCircle": {
+                    "centerX": 892,
+                    "centerY": 437,
+                    "radius": 202
+                }
+            },
+            "enabled": true,
+            "exclusionRects": [
+            ],
+            "method": "threshold",
+            "threshold": {
+                "max": 124,
+                "min": 0,
+                "value": 124
+            }
+        }
+    }
+}

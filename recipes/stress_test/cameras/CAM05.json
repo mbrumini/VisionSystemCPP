@@ -1,5 +1,5 @@
-{
-    "cameraId": "CAM01",
+﻿{
+    "cameraId": "CAM05",
     "tools": {
         "geometries": {
             "arcs": [
@@ -927,6 +927,24 @@
                     "unit": "mm"
                 },
                 {
+                    "alias": "Diametro punta",
+                    "enabled": true,
+                    "hasMax": true,
+                    "hasMin": true,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_5",
+                    "max": 7.4,
+                    "min": 7.2,
+                    "nominal": 7.300000000000001,
+                    "samplePixels": 158.1508708861219,
+                    "sampleValue": 0,
+                    "sourceAId": "line_23",
+                    "sourceBId": "line_27",
+                    "type": "line_line_distance",
+                    "unit": "mm"
+                },
+                {
                     "alias": "Altezza 1",
                     "enabled": true,
                     "hasMax": true,
@@ -1016,42 +1034,6 @@
                     "sourceBId": "line_19_midline_line_20",
                     "type": "line_line_distance",
                     "unit": "px"
-                },
-                {
-                    "alias": "Punta",
-                    "enabled": true,
-                    "hasMax": true,
-                    "hasMin": true,
-                    "hasNominal": false,
-                    "hasSampleScale": false,
-                    "id": "measurement_11",
-                    "max": 7.35,
-                    "min": 7.2,
-                    "nominal": 7.275,
-                    "samplePixels": 158.1508708861219,
-                    "sampleValue": 0,
-                    "sourceAId": "line_23",
-                    "sourceBId": "line_27",
-                    "type": "line_line_distance",
-                    "unit": "mm"
-                },
-                {
-                    "alias": "Angolo punta",
-                    "enabled": true,
-                    "hasMax": true,
-                    "hasMin": true,
-                    "hasNominal": false,
-                    "hasSampleScale": false,
-                    "id": "measurement_12",
-                    "max": 80,
-                    "min": 75,
-                    "nominal": 77.5,
-                    "samplePixels": 76.4236328486826,
-                    "sampleValue": 0,
-                    "sourceAId": "line_24",
-                    "sourceBId": "line_26",
-                    "type": "line_line_angle",
-                    "unit": "deg"
                 }
             ]
         },
@@ -1137,3 +1119,4 @@
         }
     }
 }
+
