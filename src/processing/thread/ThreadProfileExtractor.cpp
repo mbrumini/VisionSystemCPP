@@ -108,6 +108,7 @@ std::vector<double> rejectOutliers(const std::vector<double>& values, double sig
     return values;
   }
 
+  std::sort(finite.begin(), finite.end());
   const double median = finite[finite.size() / 2];
   std::vector<double> deviations;
   deviations.reserve(finite.size());

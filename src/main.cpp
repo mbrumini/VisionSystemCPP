@@ -15,7 +15,7 @@ public:
   {
     if (hint == QStyle::SH_ToolTip_WakeUpDelay)
     {
-      return 1200;
+      return 1000;
     }
     if (hint == QStyle::SH_ToolTip_FallAsleepDelay)
     {

@@ -195,6 +195,21 @@ LineGeometry fitLineGeometry(
   line.edgePoints = points;
   return line;
 }
+
+int effectiveMinEdgePoints(double guideLength)
+{
+  constexpr int kMinPointFloor = 4;
+  // Richiede piu punti solo quando la guida di scansione e piu lunga.
+  constexpr int kMinPointCeiling = 20;
+  constexpr double kGuidePixelsPerPoint = 12.0;
+
+  const int maxScanPoints = std::max(2, static_cast<int>(std::round(guideLength))) + 1;
+  const int lengthBasedMinPoints = std::clamp(
+    static_cast<int>(std::ceil(guideLength / kGuidePixelsPerPoint)),
+    kMinPointFloor,
+    kMinPointCeiling);
+  return std::min(lengthBasedMinPoints, maxScanPoints);
+}
 }
 
 EdgeLineDetectorResult EdgeLineDetector::detect(const cv::Mat& input, const EdgeLineDetectorConfig& config) const
@@ -252,9 +267,16 @@ EdgeLineDetectorResult EdgeLineDetector::detect(const cv::Mat& input, const Edge
   }
   result.processed = true;
 
-  if (static_cast<int>(result.edgePoints.size()) < config.minPoints)
+  const double guideLength = std::hypot(
+    config.guideEnd.x - config.guideStart.x,
+    config.guideEnd.y - config.guideStart.y);
+  const int effectiveMinPoints = effectiveMinEdgePoints(guideLength);
+
+  if (static_cast<int>(result.edgePoints.size()) < effectiveMinPoints)
   {
-    result.message = QString("Punti edge linea insufficienti: %1").arg(result.edgePoints.size());
+    result.message = QString("Punti edge linea insufficienti: %1 (richiesti: %2)")
+      .arg(result.edgePoints.size())
+      .arg(effectiveMinPoints);
     return result;
   }
 

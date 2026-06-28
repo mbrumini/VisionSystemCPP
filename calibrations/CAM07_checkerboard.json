@@ -1,0 +1,21 @@
+{
+    "averageHorizontalPitchPixels": 44.33423738238252,
+    "averageVerticalPitchPixels": 44.53780680474139,
+    "calibrationType": "checkerboard_scale",
+    "cameraId": "CAM07",
+    "modelId": "CAM07_planar_scale",
+    "originImagePoint": {
+        "x": 53.84458923339844,
+        "y": 27.179536819458008
+    },
+    "originWorldMm": {
+        "x": 0,
+        "y": 0
+    },
+    "pixelSizeXMm": 0.12631321368404366,
+    "pixelSizeYMm": 0.12573587254870924,
+    "rmsErrorPixels": 0.8731899622450153,
+    "rotationDegrees": -1.023236893155698,
+    "sourceFile": "live-frame",
+    "valid": true
+}

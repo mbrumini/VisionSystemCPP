@@ -162,6 +162,8 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
   advancedButton->setChecked(false);
   advancedButton->setArrowType(Qt::RightArrow);
   advancedButton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+  advancedButton->setToolTip(tr("groups.strategyControls"));
+  advancedButton->setAccessibleName(tr("groups.strategyControls"));
 
   auto* advancedPanel = new QWidget(panel);
   auto* advancedLayout = new QVBoxLayout(advancedPanel);

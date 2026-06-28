@@ -151,6 +151,8 @@ void MainWindowGeometryModule::showGeometryArcPanel(const CameraConfig& camera)
   advancedButton->setCheckable(true);
   advancedButton->setArrowType(Qt::RightArrow);
   advancedButton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+  advancedButton->setToolTip(tr("groups.strategyControls"));
+  advancedButton->setAccessibleName(tr("groups.strategyControls"));
   auto* advancedPanel = new QWidget(panel);
   auto* advancedLayout = new QGridLayout(advancedPanel);
   advancedLayout->setContentsMargins(6, 6, 6, 6);

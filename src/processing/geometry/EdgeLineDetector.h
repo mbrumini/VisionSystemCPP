@@ -32,7 +32,6 @@ struct EdgeLineDetectorConfig
   int edgeSensitivity = 60;
   int edgeCleanupDerivative = 12;
   int edgeStatisticalFilter = 0;
-  int minPoints = 20;
   bool useSubpixel = false;
   EdgeLineScanDirection scanDirection = EdgeLineScanDirection::NormalPositive;
   EdgeLineTransition transition = EdgeLineTransition::LightToDark;

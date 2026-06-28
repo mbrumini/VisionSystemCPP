@@ -143,6 +143,34 @@
                     "sourceAId": "line_19",
                     "sourceBId": "line_20",
                     "type": "midline_between_lines"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_6",
+                    "sourceAId": "line_24",
+                    "sourceBId": "line_23",
+                    "type": "line_line_intersection"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_7",
+                    "sourceAId": "line_26",
+                    "sourceBId": "line_27",
+                    "type": "line_line_intersection"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_8",
+                    "sourceAId": "line_25",
+                    "sourceBId": "line_24",
+                    "type": "line_line_intersection"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_9",
+                    "sourceAId": "line_26",
+                    "sourceBId": "line_25",
+                    "type": "line_line_intersection"
                 }
             ],
             "enabled": true,
@@ -578,12 +606,12 @@
                     "enabled": true,
                     "id": "line_21",
                     "partEnd": {
-                        "x": -296.8774345198119,
-                        "y": 84.00079586152017
+                        "x": -299.40336326282136,
+                        "y": 82.60851926977696
                     },
                     "partStart": {
-                        "x": -249.16756212222958,
-                        "y": 84.43056108237172
+                        "x": -244.8946102021173,
+                        "y": 82.01368301026233
                     },
                     "pickMode": "best",
                     "scanDirection": "normal_positive",
@@ -600,11 +628,11 @@
                     "enabled": true,
                     "id": "line_22",
                     "partEnd": {
-                        "x": -245.31728071815974,
-                        "y": -74.62213359920244
+                        "x": -244.24004114456693,
+                        "y": -74.26321036889337
                     },
                     "partStart": {
-                        "x": -297.7429399663363,
+                        "x": -298.46109968206474,
                         "y": -74.98105682951152
                     },
                     "pickMode": "best",
@@ -1077,6 +1105,50 @@
                     "sourceAId": "arc_3",
                     "type": "circle_diameter",
                     "unit": "px"
+                },
+                {
+                    "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_16",
+                    "label": {
+                        "custom": true,
+                        "x": 943.728813559322,
+                        "y": 889.156626506024
+                    },
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 158.19880241877036,
+                    "sampleValue": 0,
+                    "sourceAId": "line_26_x_line_27",
+                    "sourceBId": "line_24_x_line_23",
+                    "type": "point_point_distance",
+                    "unit": "px"
+                },
+                {
+                    "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_17",
+                    "label": {
+                        "custom": true,
+                        "x": 1015.3220338983051,
+                        "y": 954.2168674698795
+                    },
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 64.85620846819036,
+                    "sampleValue": 0,
+                    "sourceAId": "line_26_x_line_25",
+                    "sourceBId": "line_25_x_line_24",
+                    "type": "point_point_distance",
+                    "unit": "px"
                 }
             ]
         },
@@ -1129,14 +1201,39 @@
             },
             "measurements": {
                 "major": {
+                    "enabled": true,
+                    "hasMax": true,
+                    "hasMin": true,
+                    "max": 0,
+                    "min": 0
                 },
                 "minor": {
+                    "enabled": true,
+                    "hasMax": true,
+                    "hasMin": true,
+                    "max": 0,
+                    "min": 0
                 },
                 "phase": {
+                    "enabled": true,
+                    "hasMax": true,
+                    "hasMin": true,
+                    "max": 0,
+                    "min": 0
                 },
                 "pitch": {
+                    "enabled": true,
+                    "hasMax": true,
+                    "hasMin": true,
+                    "max": 0,
+                    "min": 0
                 },
                 "pitchDiameter": {
+                    "enabled": true,
+                    "hasMax": true,
+                    "hasMin": true,
+                    "max": 0,
+                    "min": 0
                 }
             }
         }

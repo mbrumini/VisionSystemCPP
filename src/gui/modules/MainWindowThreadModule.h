@@ -18,7 +18,7 @@ public:
   void clearThreadExtractionRoi(const CameraConfig& camera);
   void syncExtractionRoiOverlay(const CameraConfig& camera);
   void refreshThreadProfileOverlay(const CameraConfig& camera);
-  void applyThreadMeasurements(const CameraConfig& camera, const ThreadProfileResult& result);
+  ThreadDiameterValues applyThreadMeasurements(const CameraConfig& camera, const ThreadProfileResult& result);
   void testThreadExtraction(const CameraConfig& camera);
   bool isThreadPanelActive() const { return m_threadPanelActive; }
 

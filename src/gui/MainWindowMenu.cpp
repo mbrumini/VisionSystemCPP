@@ -1,5 +1,7 @@
 #include "gui/MainWindow.h"
 
+#include "gui/IconCatalog.h"
+
 #include <QAction>
 #include <QActionGroup>
 #include <QApplication>
@@ -94,6 +96,24 @@ void MainWindow::buildMenu()
   detailedLogAction->setChecked(m_detailedLogger.enabled());
   connect(detailedLogAction, &QAction::toggled, this, [this](bool checked) {
     setDetailedLogEnabled(checked);
+  });
+  QMenu* iconSetMenu = systemMenu->addMenu("Serie icone");
+  QActionGroup* iconSetGroup = new QActionGroup(iconSetMenu);
+  iconSetGroup->setExclusive(true);
+  const QString currentIconSet = IconCatalog::iconSet();
+  for (const QString& iconSetId : IconCatalog::iconSetIds())
+  {
+    QAction* action = iconSetMenu->addAction(IconCatalog::iconSetLabel(iconSetId));
+    action->setCheckable(true);
+    action->setData(iconSetId);
+    action->setChecked(currentIconSet == iconSetId);
+    iconSetGroup->addAction(action);
+  }
+  connect(iconSetGroup, &QActionGroup::triggered, this, [this](QAction* action) {
+    const QString iconSetId = action->data().toString();
+    IconCatalog::setIconSet(iconSetId);
+    appendLog(QString("Serie icone salvata: %1. Riavvia l'app per applicarla.")
+      .arg(IconCatalog::iconSetLabel(iconSetId)), true);
   });
   QMenu* simulatorResultsMenu = systemMenu->addMenu("Risultati simulatore");
   QActionGroup* simulatorResultsGroup = new QActionGroup(simulatorResultsMenu);

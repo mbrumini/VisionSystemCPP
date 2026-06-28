@@ -178,16 +178,14 @@ QVector<MeasurementResult> ThreadProfileMeasurer::buildMeasurementResults(
          static_cast<int>(diameters.grooves.size()),
          static_cast<int>(diameters.grooves.size() * 2));
 
-  if (diameters.valid && diameters.middlePx > 0.0)
+  if (diameters.valid && diameters.middlePx > 0.0 && settings.pitchDiameter.enabled)
   {
-    ThreadMeasurementLimits middleLimits = settings.pitchDiameter;
-    middleLimits.enabled = true;
     MeasurementResult middle = makeThreadMeasurement(
       QStringLiteral("thread_pitch_diameter"),
       settings.pitchDiameter.alias.isEmpty() ? QStringLiteral("Diametro medio filetto") : settings.pitchDiameter.alias,
       QStringLiteral("thread_pitch_diameter"),
       diameters.middlePx,
-      middleLimits,
+      settings.pitchDiameter,
       calibration,
       static_cast<int>(std::min(diameters.crests.size(), diameters.grooves.size())),
       static_cast<int>((diameters.crests.size() + diameters.grooves.size()) * 2));

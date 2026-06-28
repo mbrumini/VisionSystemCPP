@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+
+    <defs>
+      <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#1F2937"/>
+        <stop offset="1" stop-color="#0B1220"/>
+      </linearGradient>
+      <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="1.2" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+
+<g filter="url(#glow)">
+
+<circle cx="48" cy="48" r="24" fill="none" stroke="#E5E7EB" stroke-width="4"/>
+<path d="M21 29 V67 M75 29 V67" stroke="#FB7185" stroke-width="5" stroke-linecap="round"/>
+<path d="M21 38 H32 M21 58 H32 M75 38 H64 M75 58 H64" stroke="#FB7185" stroke-width="4" stroke-linecap="round"/>
+<line x1="30" y1="48" x2="66" y2="48" stroke="#E5E7EB" stroke-width="3" stroke-dasharray="5 4"/>
+<text x="48" y="82" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#FB7185">Ø</text>
+
+</g>
+</svg>

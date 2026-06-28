@@ -1,14 +1,106 @@
 #include "gui/IconCatalog.h"
 
 #include <QColor>
+#include <QDir>
+#include <QFile>
 #include <QHash>
 #include <QPainter>
 #include <QPixmap>
+#include <QSettings>
+#include <QStringList>
 #include <QStyle>
 #include <QApplication>
+#include <QVector>
 
 namespace
 {
+struct IconSetDefinition
+{
+  QString id;
+  QString label;
+  QString resourceFolder;
+  QString extension;
+};
+
+QVector<IconSetDefinition> iconSetDefinitions()
+{
+  return {
+    {"classic", "Classica", {}, {}},
+    {"visionTransparent", "Vision trasparente", "svg_transparent", "svg"},
+    {"visionDarkTile", "Vision tile scura", "svg_dark_tile", "svg"},
+    {"visionPngDark", "Vision PNG scura", "png_dark_128", "png"}
+  };
+}
+
+QString normalizeIconSet(const QString& iconSet)
+{
+  for (const IconSetDefinition& definition : iconSetDefinitions())
+  {
+    if (definition.id == iconSet)
+    {
+      return iconSet;
+    }
+  }
+  return "classic";
+}
+
+IconSetDefinition iconSetDefinition(const QString& iconSet)
+{
+  const QString normalized = normalizeIconSet(iconSet);
+  for (const IconSetDefinition& definition : iconSetDefinitions())
+  {
+    if (definition.id == normalized)
+    {
+      return definition;
+    }
+  }
+  return iconSetDefinitions().first();
+}
+
+QString iconSettingsPath()
+{
+  return QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath("config/vision_ui.ini");
+}
+
+QSettings iconSettings()
+{
+  return QSettings(iconSettingsPath(), QSettings::IniFormat);
+}
+
+QString themedIconName(const QString& id)
+{
+  static const QHash<QString, QString> aliases = {
+    {"configureStrategy", "configure"},
+    {"sampleImage", "assignSampleImage"},
+    {"aiSample", "datasetCapture"},
+    {"surfaceOuterCircle", "surfaceThreshold"},
+    {"surfaceInnerCircle", "surfaceCircleEdge"},
+    {"surfaceEdgeCircle", "surfaceCircleEdge"}
+  };
+  return aliases.value(id, id);
+}
+
+QString themedIconPath(const QString& id)
+{
+  const IconSetDefinition definition = iconSetDefinition(IconCatalog::iconSet());
+  if (definition.id == "classic")
+  {
+    return {};
+  }
+
+  const QString path = QString(":/icons/vision/%1/%2.%3")
+    .arg(definition.resourceFolder, themedIconName(id), definition.extension);
+  if (QFile::exists(path))
+  {
+    return path;
+  }
+
+  const QString filePath = QDir(QString::fromUtf8(PROJECT_SOURCE_DIR))
+    .filePath(QString("vision_icon_pack/%1/%2.%3")
+      .arg(definition.resourceFolder, themedIconName(id), definition.extension));
+  return QFile::exists(filePath) ? filePath : QString();
+}
+
 QColor iconColor(const QString& id)
 {
   static const QColor acquisition("#4d9cff");
@@ -124,10 +216,17 @@ QIcon tintedIcon(const QString& path, const QColor& color)
 
   return icon.isNull() ? source : icon;
 }
+
+bool preservesSourceColors(const QString& path)
+{
+  return path.startsWith(":/icons/colored/") ||
+         path.startsWith(":/icons/vision/");
+}
 }
 
 QIcon IconCatalog::icon(const QString& id)
 {
+  static QHash<QString, QIcon> iconCache;
   static const QHash<QString, QString> paths = {
     {"start", ":/icons/play.svg"},
     {"stop", ":/icons/stop.svg"},
@@ -232,11 +331,75 @@ QIcon IconCatalog::icon(const QString& id)
     ,{"okNokRule", ":/icons/tolerance-oknok.svg"}
   };
 
+  const QString themedPath = themedIconPath(id);
+  if (!themedPath.isEmpty())
+  {
+    const QString cacheKey = "native|" + themedPath;
+    if (!iconCache.contains(cacheKey))
+    {
+      iconCache.insert(cacheKey, QIcon(themedPath));
+    }
+    return iconCache.value(cacheKey);
+  }
+
   const QString path = paths.value(id);
   if (!path.isEmpty())
   {
-    return tintedIcon(path, iconColor(id));
+    if (preservesSourceColors(path))
+    {
+      const QString cacheKey = "native|" + path;
+      if (!iconCache.contains(cacheKey))
+      {
+        iconCache.insert(cacheKey, QIcon(path));
+      }
+      return iconCache.value(cacheKey);
+    }
+    const QString cacheKey = "tinted|" + id + "|" + path;
+    if (!iconCache.contains(cacheKey))
+    {
+      iconCache.insert(cacheKey, tintedIcon(path, iconColor(id)));
+    }
+    return iconCache.value(cacheKey);
   }
 
   return QApplication::style()->standardIcon(QStyle::SP_FileIcon);
+}
+
+QString IconCatalog::iconSet()
+{
+  if (!QFile::exists(iconSettingsPath()))
+  {
+    QSettings legacySettings;
+    const QString legacyIconSet = normalizeIconSet(legacySettings.value("ui/iconSet", "classic").toString());
+    if (legacyIconSet != "classic")
+    {
+      setIconSet(legacyIconSet);
+      return legacyIconSet;
+    }
+  }
+
+  QSettings settings = iconSettings();
+  return normalizeIconSet(settings.value("ui/iconSet", "classic").toString());
+}
+
+void IconCatalog::setIconSet(const QString& iconSet)
+{
+  QSettings settings = iconSettings();
+  settings.setValue("ui/iconSet", normalizeIconSet(iconSet));
+  settings.sync();
+}
+
+QStringList IconCatalog::iconSetIds()
+{
+  QStringList ids;
+  for (const IconSetDefinition& definition : iconSetDefinitions())
+  {
+    ids.append(definition.id);
+  }
+  return ids;
+}
+
+QString IconCatalog::iconSetLabel(const QString& iconSet)
+{
+  return iconSetDefinition(iconSet).label;
 }

@@ -358,7 +358,7 @@ void MainWindowThreadModule::clearThreadExtractionRoi(const CameraConfig& camera
   activateThreadExtractionRoiDrawing(camera);
 }
 
-void MainWindowThreadModule::applyThreadMeasurements(const CameraConfig& camera, const ThreadProfileResult& result)
+ThreadDiameterValues MainWindowThreadModule::applyThreadMeasurements(const CameraConfig& camera, const ThreadProfileResult& result)
 {
   GeometrySet& geometries = cameraRuntime()[camera.id].geometries();
   geometries.measurements.erase(
@@ -377,7 +377,7 @@ void MainWindowThreadModule::applyThreadMeasurements(const CameraConfig& camera,
   ThreadInspectionSettings settings = recipes().loadThreadInspectionSettings(camera.id);
   if (!settings.enabled || !settings.hasExtractionRoi)
   {
-    return;
+    return {};
   }
 
   if (settings.majorDiameter.alias.isEmpty())
@@ -407,10 +407,7 @@ void MainWindowThreadModule::applyThreadMeasurements(const CameraConfig& camera,
   calibration.pixelSizeYMm = camera.calibration.pixelSizeYMm;
 
   const ThreadDiameterValues diameters = ThreadProfileMeasurer().measureDiameters(result);
-  if (!diameters.valid &&
-      context().isDetailedLogEnabled &&
-      context().isDetailedLogEnabled() &&
-      !diameters.diagnostic.isEmpty())
+  if (!diameters.valid && !diameters.diagnostic.isEmpty())
   {
     log(QStringLiteral("thread diagnostic: %1 %2").arg(camera.id, diameters.diagnostic));
   }
@@ -425,6 +422,7 @@ void MainWindowThreadModule::applyThreadMeasurements(const CameraConfig& camera,
   {
     context().updateMeasurementResults();
   }
+  return diameters;
 }
 
 void MainWindowThreadModule::refreshThreadProfileOverlay(const CameraConfig& camera)
@@ -472,7 +470,8 @@ void MainWindowThreadModule::refreshThreadProfileOverlay(const CameraConfig& cam
     result = ThreadProfileExtractor().extractOriented(input, pose, settings);
   }
 
-  applyThreadMeasurements(camera, result);
+  // Analisi eseguita una sola volta: il risultato viene riusato per overlay e misure.
+  const ThreadDiameterValues measured = applyThreadMeasurements(camera, result);
 
   if (!updateView || !showThreadVisuals)
   {
@@ -510,7 +509,6 @@ void MainWindowThreadModule::refreshThreadProfileOverlay(const CameraConfig& cam
     ? QSize(selectedPreview().width(), selectedPreview().height())
     : QSize(input.cols, input.rows);
   appendPartPoseAxesOverlay(overlay, pose, overlayImageSize);
-  const ThreadDiameterValues measured = ThreadProfileMeasurer().measureDiameters(result);
   if (machineRunning)
   {
     m_stableThreadOverlay.remove(camera.id);

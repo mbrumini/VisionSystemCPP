@@ -35,6 +35,8 @@ QPushButton* createAiButton(const QString& iconId, const QString& label, QWidget
 {
   auto* button = new QPushButton(IconCatalog::icon(iconId), label, parent);
   button->setObjectName("touchButton");
+  button->setToolTip(label);
+  button->setAccessibleName(label);
   button->setMinimumHeight(48);
   return button;
 }
