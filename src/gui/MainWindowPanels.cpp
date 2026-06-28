@@ -20,9 +20,12 @@
 
 namespace
 {
-QString measurementResultKey(const QString& type, const QString& sourceAId, const QString& sourceBId)
+QString measurementResultKey(const QString& type,
+                             const QString& criterion,
+                             const QString& sourceAId,
+                             const QString& sourceBId)
 {
-  return QString("%1|%2|%3").arg(type, sourceAId, sourceBId);
+  return QString("%1|%2|%3|%4").arg(type, criterion, sourceAId, sourceBId);
 }
 
 MeasurementResult failedMeasurementRow(const MeasurementRecipeConfig& config)
@@ -31,6 +34,7 @@ MeasurementResult failedMeasurementRow(const MeasurementRecipeConfig& config)
   result.id = config.id;
   result.alias = config.alias;
   result.type = config.type;
+  result.criterion = config.criterion;
   result.sourceAId = config.sourceAId;
   result.sourceBId = config.sourceBId;
   result.valid = false;
@@ -52,11 +56,11 @@ MeasurementResult failedMeasurementRow(const MeasurementRecipeConfig& config)
 const MeasurementResult* findRuntimeMeasurement(const QVector<MeasurementResult>& measurements,
                                                 const MeasurementRecipeConfig& config)
 {
-  const QString key = measurementResultKey(config.type, config.sourceAId, config.sourceBId);
+  const QString key = measurementResultKey(config.type, config.criterion, config.sourceAId, config.sourceBId);
   const MeasurementResult* fallback = nullptr;
   for (const MeasurementResult& measurement : measurements)
   {
-    if (measurementResultKey(measurement.type, measurement.sourceAId, measurement.sourceBId) != key)
+    if (measurementResultKey(measurement.type, measurement.criterion, measurement.sourceAId, measurement.sourceBId) != key)
     {
       continue;
     }
@@ -172,8 +176,8 @@ const QVector<MeasurementResult>& measurementsForDisplay(
 
 QString measurementStatisticKey(const QString& cameraId, const MeasurementResult& measurement)
 {
-  return QString("%1|%2|%3|%4")
-    .arg(cameraId, measurement.type, measurement.sourceAId, measurement.sourceBId);
+  return QString("%1|%2|%3|%4|%5")
+    .arg(cameraId, measurement.type, measurement.criterion, measurement.sourceAId, measurement.sourceBId);
 }
 
 QString measurementDisplayName(const MeasurementResult& measurement)

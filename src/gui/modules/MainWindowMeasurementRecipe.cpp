@@ -155,6 +155,7 @@ void appendMeasurementResult(GeometrySet& set,
   result.id = config.id;
   result.alias = config.alias;
   result.type = config.type;
+  result.criterion = config.criterion;
   result.sourceAId = sourceAId;
   result.sourceBId = sourceBId;
   result.valuePixels = value;
@@ -209,6 +210,7 @@ void appendFailedMeasurementResult(GeometrySet& set, const MeasurementRecipeConf
   result.id = config.id;
   result.alias = config.alias;
   result.type = config.type;
+  result.criterion = config.criterion;
   result.sourceAId = config.sourceAId;
   result.sourceBId = config.sourceBId;
   result.valid = false;
@@ -249,12 +251,31 @@ QString measurementLabel(const MeasurementResult& measurement, const QString& un
 
 QString measurementKey(const MeasurementRecipeConfig& config)
 {
-  return QString("%1|%2|%3").arg(config.type, config.sourceAId, config.sourceBId);
+  return QString("%1|%2|%3|%4").arg(config.type, config.criterion, config.sourceAId, config.sourceBId);
 }
 
 QString measurementKey(const QString& type, const QString& sourceAId, const QString& sourceBId)
 {
-  return QString("%1|%2|%3").arg(type, sourceAId, sourceBId);
+  return QString("%1|average|%2|%3").arg(type, sourceAId, sourceBId);
+}
+
+QString measurementKey(const MeasurementResult& measurement)
+{
+  return QString("%1|%2|%3|%4")
+    .arg(measurement.type, measurement.criterion, measurement.sourceAId, measurement.sourceBId);
+}
+
+MeasurementGeometryMath::ParallelLineDistanceMode parallelLineDistanceMode(const QString& type, const QString& criterion)
+{
+  if (criterion == "min" || type == "line_line_distance_min")
+  {
+    return MeasurementGeometryMath::ParallelLineDistanceMode::Minimum;
+  }
+  if (criterion == "max" || type == "line_line_distance_max")
+  {
+    return MeasurementGeometryMath::ParallelLineDistanceMode::Maximum;
+  }
+  return MeasurementGeometryMath::ParallelLineDistanceMode::Average;
 }
 
 QColor measurementLabelColor(const MeasurementResult& measurement)
@@ -282,7 +303,7 @@ GeometryOverlayDimension measurementDimension(const QPointF& start,
   dimension.color = QColor("#ff8a00");
   dimension.labelColor = measurementLabelColor(measurement);
   dimension.width = width;
-  dimension.id = measurementKey(measurement.type, measurement.sourceAId, measurement.sourceBId);
+  dimension.id = measurementKey(measurement);
   dimension.labelPoint = measurement.labelPoint;
   dimension.hasLabelPoint = measurement.hasLabelPoint;
   return dimension;
@@ -293,11 +314,13 @@ bool MainWindowMeasurementModule::saveMeasurementRecipeAction(const CameraConfig
                                                               const QString& type,
                                                               const QString& sourceAId,
                                                               const QString& sourceBId,
-                                                              double samplePixels)
+                                                              double samplePixels,
+                                                              const QString& criterion)
 {
   MeasurementRecipeConfig config;
   config.enabled = true;
   config.type = type;
+  config.criterion = criterion;
   config.sourceAId = sourceAId;
   config.sourceBId = sourceBId;
   config.samplePixels = samplePixels;
@@ -419,7 +442,7 @@ void MainWindowMeasurementModule::appendMeasurementOverlay(
       continue;
     }
     const bool selectedOnly = !selectedKey.isEmpty();
-    if (selectedOnly && measurementKey(measurement.type, measurement.sourceAId, measurement.sourceBId) != selectedKey)
+    if (selectedOnly && measurementKey(measurement) != selectedKey)
     {
       continue;
     }
@@ -475,15 +498,8 @@ void MainWindowMeasurementModule::appendMeasurementOverlay(
       PointGeometry pointOnA;
       PointGeometry pointOnB;
       double distancePixels = 0.0;
-      MeasurementGeometryMath::ParallelLineDistanceMode mode = MeasurementGeometryMath::ParallelLineDistanceMode::Average;
-      if (measurement.type == "line_line_distance_min")
-      {
-        mode = MeasurementGeometryMath::ParallelLineDistanceMode::Minimum;
-      }
-      else if (measurement.type == "line_line_distance_max")
-      {
-        mode = MeasurementGeometryMath::ParallelLineDistanceMode::Maximum;
-      }
+      const MeasurementGeometryMath::ParallelLineDistanceMode mode =
+        parallelLineDistanceMode(measurement.type, measurement.criterion);
       if (!lineA || !lineB || !MeasurementGeometryMath::parallelLineDistance(*lineA, *lineB, mode, distancePixels, &pointOnA, &pointOnB))
       {
         continue;
@@ -556,7 +572,7 @@ void MainWindowMeasurementModule::appendMeasurementOverlay(
         QColor("#ff8a00"),
         selectedAngleWidth
       };
-      angleOverlay.id = measurementKey(measurement.type, measurement.sourceAId, measurement.sourceBId);
+      angleOverlay.id = measurementKey(measurement);
       angleOverlay.labelPoint = measurement.labelPoint;
       angleOverlay.hasLabelPoint = measurement.hasLabelPoint;
       angleOverlay.labelColor = measurementLabelColor(measurement);

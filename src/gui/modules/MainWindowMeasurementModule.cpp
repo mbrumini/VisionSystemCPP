@@ -34,20 +34,24 @@ QString measurementItemLabel(const MeasurementRecipeConfig& config)
   const QString name = config.alias.trimmed().isEmpty() ? config.id
                                                         : QString("%1 (%2)").arg(config.alias.trimmed(), config.id);
   QString type = config.type;
+  QString criterion = config.criterion;
   if (type == "line_line_distance_min")
   {
-    type = "line_line_distance MIN";
+    type = "line_line_distance";
+    criterion = "min";
   }
   else if (type == "line_line_distance_max")
   {
-    type = "line_line_distance MAX";
+    type = "line_line_distance";
+    criterion = "max";
   }
-  return QString("%1 | %2").arg(name, type);
+  const QString criterionLabel = criterion == "min" ? "MIN" : (criterion == "max" ? "MAX" : "MEDIA");
+  return QString("%1 | %2 | %3").arg(name, type, criterionLabel);
 }
 
 QString measurementKey(const MeasurementRecipeConfig& config)
 {
-  return QString("%1|%2|%3").arg(config.type, config.sourceAId, config.sourceBId);
+  return QString("%1|%2|%3|%4").arg(config.type, config.criterion, config.sourceAId, config.sourceBId);
 }
 
 QString measurementValueText(const MeasurementResult& measurement)
@@ -75,7 +79,7 @@ const MeasurementResult* findMeasurementResult(const QVector<MeasurementResult>&
   const QString key = measurementKey(config);
   for (const MeasurementResult& measurement : measurements)
   {
-    if (QString("%1|%2|%3").arg(measurement.type, measurement.sourceAId, measurement.sourceBId) == key)
+    if (QString("%1|%2|%3|%4").arg(measurement.type, measurement.criterion, measurement.sourceAId, measurement.sourceBId) == key)
     {
       return &measurement;
     }
@@ -407,7 +411,7 @@ void MainWindowMeasurementModule::showMeasurementListDialog(const CameraConfig& 
       const QStringList values = {
         config.id,
         config.alias,
-        config.type,
+        measurementItemLabel(config),
         value,
         state,
         config.sourceBId.isEmpty() ? config.sourceAId : QString("%1 / %2").arg(config.sourceAId, config.sourceBId)

@@ -40,7 +40,7 @@ private:
   void createLineLineDistance(const CameraConfig& camera,
                               const QString& lineAId,
                               const QString& lineBId,
-                              const QString& measurementType = "line_line_distance");
+                              const QString& criterion = "average");
   void createCircleDiameter(const CameraConfig& camera, const QString& circleId);
   void createLineLineAngle(const CameraConfig& camera, const QString& lineAId, const QString& lineBId);
   void saveMeasurementRealSettings(const CameraConfig& camera, const MeasurementRecipeConfig& config);
@@ -48,7 +48,8 @@ private:
                                    const QString& type,
                                    const QString& sourceAId,
                                    const QString& sourceBId = {},
-                                   double samplePixels = 0.0);
+                                   double samplePixels = 0.0,
+                                   const QString& criterion = "average");
   void finalizeMeasurementCreate(const CameraConfig& camera, const QString& successLog);
   void appendMeasurementListControls(QWidget* panel,
                                      QVBoxLayout* layout,

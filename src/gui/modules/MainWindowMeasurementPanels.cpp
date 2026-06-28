@@ -603,7 +603,7 @@ void MainWindowMeasurementModule::showLineLineDistancePanel(const CameraConfig& 
       camera,
       lineACombo->currentData().toString(),
       lineBCombo->currentData().toString(),
-      "line_line_distance_min");
+      "min");
     refreshPanel();
   });
   QObject::connect(saveMaxButton, &QPushButton::clicked, window(), [this, camera, lineACombo, lineBCombo, refreshPanel]() {
@@ -611,7 +611,7 @@ void MainWindowMeasurementModule::showLineLineDistancePanel(const CameraConfig& 
       camera,
       lineACombo->currentData().toString(),
       lineBCombo->currentData().toString(),
-      "line_line_distance_max");
+      "max");
     refreshPanel();
   });
   appendMeasurementListControls(panel, layout, camera, refreshPanel);

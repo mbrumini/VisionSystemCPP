@@ -128,7 +128,20 @@ const CircleGeometry* findCircleByMetaId(const GeometrySet& set, const QString& 
 
 QString measurementKey(const MeasurementRecipeConfig& config)
 {
-  return QString("%1|%2|%3").arg(config.type, config.sourceAId, config.sourceBId);
+  return QString("%1|%2|%3|%4").arg(config.type, config.criterion, config.sourceAId, config.sourceBId);
+}
+
+MeasurementGeometryMath::ParallelLineDistanceMode parallelLineDistanceMode(const MeasurementRecipeConfig& config)
+{
+  if (config.criterion == "min" || config.type == "line_line_distance_min")
+  {
+    return MeasurementGeometryMath::ParallelLineDistanceMode::Minimum;
+  }
+  if (config.criterion == "max" || config.type == "line_line_distance_max")
+  {
+    return MeasurementGeometryMath::ParallelLineDistanceMode::Maximum;
+  }
+  return MeasurementGeometryMath::ParallelLineDistanceMode::Average;
 }
 
 void appendMeasurementResult(GeometrySet& set,
@@ -142,6 +155,7 @@ void appendMeasurementResult(GeometrySet& set,
   result.id = config.id;
   result.alias = config.alias;
   result.type = config.type;
+  result.criterion = config.criterion;
   result.sourceAId = sourceAId;
   result.sourceBId = sourceBId;
   result.valuePixels = value;
@@ -196,6 +210,7 @@ void appendFailedMeasurementResult(GeometrySet& set, const MeasurementRecipeConf
   result.id = config.id;
   result.alias = config.alias;
   result.type = config.type;
+  result.criterion = config.criterion;
   result.sourceAId = config.sourceAId;
   result.sourceBId = config.sourceBId;
   result.valid = false;
@@ -439,15 +454,7 @@ void rebuildMeasurements(GeometrySet& set,
       const LineGeometry* lineA = findLineByMetaId(set, config.sourceAId);
       const LineGeometry* lineB = findLineByMetaId(set, config.sourceBId);
       double distancePixels = 0.0;
-      MeasurementGeometryMath::ParallelLineDistanceMode mode = MeasurementGeometryMath::ParallelLineDistanceMode::Average;
-      if (config.type == "line_line_distance_min")
-      {
-        mode = MeasurementGeometryMath::ParallelLineDistanceMode::Minimum;
-      }
-      else if (config.type == "line_line_distance_max")
-      {
-        mode = MeasurementGeometryMath::ParallelLineDistanceMode::Maximum;
-      }
+      const MeasurementGeometryMath::ParallelLineDistanceMode mode = parallelLineDistanceMode(config);
 
       if (lineA && lineB && MeasurementGeometryMath::parallelLineDistance(*lineA, *lineB, mode, distancePixels))
       {

@@ -50,9 +50,25 @@ QString measurementValue(const MeasurementResult& measurement)
 
 QString measurementName(const MeasurementResult& measurement)
 {
-  return measurement.alias.trimmed().isEmpty()
+  QString name = measurement.alias.trimmed().isEmpty()
     ? measurement.id
     : measurement.alias.trimmed();
+  if (measurement.type == "line_line_distance")
+  {
+    if (measurement.criterion == "min")
+    {
+      name += " MIN";
+    }
+    else if (measurement.criterion == "max")
+    {
+      name += " MAX";
+    }
+    else
+    {
+      name += " MEDIA";
+    }
+  }
+  return name;
 }
 
 QString configuredValue(double value, bool configured, const QString& unit)

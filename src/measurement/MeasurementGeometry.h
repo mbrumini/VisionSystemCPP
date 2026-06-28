@@ -8,6 +8,7 @@ struct MeasurementResult
   QString id;
   QString alias;
   QString type;
+  QString criterion = "average";
   QString sourceAId;
   QString sourceBId;
   double valuePixels = 0.0;

@@ -28,8 +28,35 @@ QString yesNoStatus(bool found, const MainWindowContext& context)
   return found ? context.trText("status.found") : context.trText("status.notFound");
 }
 
-QString measurementTypeLabel(const QString& type, const MainWindowContext& context)
+QString normalizedMeasurementType(const MeasurementRecipeConfig& config)
 {
+  if (config.type == "line_line_distance_min" || config.type == "line_line_distance_max")
+  {
+    return "line_line_distance";
+  }
+  return config.type;
+}
+
+QString normalizedMeasurementCriterion(const MeasurementRecipeConfig& config)
+{
+  if (config.type == "line_line_distance_min")
+  {
+    return "min";
+  }
+  if (config.type == "line_line_distance_max")
+  {
+    return "max";
+  }
+  if (config.criterion == "min" || config.criterion == "max")
+  {
+    return config.criterion;
+  }
+  return "average";
+}
+
+QString measurementTypeLabel(const MeasurementRecipeConfig& config, const MainWindowContext& context)
+{
+  const QString type = normalizedMeasurementType(config);
   if (type == "point_point_distance")
   {
     return context.trText("actions.pointPointDistance");
@@ -40,15 +67,16 @@ QString measurementTypeLabel(const QString& type, const MainWindowContext& conte
   }
   if (type == "line_line_distance")
   {
-    return context.trText("actions.lineLineDistance");
-  }
-  if (type == "line_line_distance_min")
-  {
-    return context.trText("actions.lineLineDistance") + " MIN";
-  }
-  if (type == "line_line_distance_max")
-  {
-    return context.trText("actions.lineLineDistance") + " MAX";
+    const QString criterion = normalizedMeasurementCriterion(config);
+    if (criterion == "min")
+    {
+      return context.trText("actions.lineLineDistance") + " MIN";
+    }
+    if (criterion == "max")
+    {
+      return context.trText("actions.lineLineDistance") + " MAX";
+    }
+    return context.trText("actions.lineLineDistance") + " MEDIA";
   }
   if (type == "circle_diameter")
   {
@@ -63,7 +91,17 @@ QString measurementTypeLabel(const QString& type, const MainWindowContext& conte
 
 QString measurementKey(const MeasurementRecipeConfig& config)
 {
-  return QString("%1|%2|%3").arg(config.type, config.sourceAId, config.sourceBId);
+  return QString("%1|%2|%3|%4")
+    .arg(normalizedMeasurementType(config),
+         normalizedMeasurementCriterion(config),
+         config.sourceAId,
+         config.sourceBId);
+}
+
+QString measurementKey(const MeasurementResult& measurement)
+{
+  return QString("%1|%2|%3|%4")
+    .arg(measurement.type, measurement.criterion, measurement.sourceAId, measurement.sourceBId);
 }
 }
 
@@ -150,7 +188,7 @@ QString setupResultsText(const CameraConfig& camera,
     const MeasurementResult* result = nullptr;
     for (const MeasurementResult& measurement : set.measurements)
     {
-      if (measurement.id == measurementConfig.id)
+      if (measurement.id == measurementConfig.id || measurementKey(measurement) == key)
       {
         result = &measurement;
         break;
@@ -158,7 +196,7 @@ QString setupResultsText(const CameraConfig& camera,
     }
 
     const QString label = measurementConfig.id.isEmpty()
-      ? measurementTypeLabel(measurementConfig.type, context)
+      ? measurementTypeLabel(measurementConfig, context)
       : measurementConfig.id;
     if (!result || !result->valid)
     {

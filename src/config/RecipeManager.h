@@ -221,6 +221,7 @@ struct MeasurementRecipeConfig
   QString id;
   QString alias;
   QString type;
+  QString criterion = "average";
   QString sourceAId;
   QString sourceBId;
   QPointF labelPoint;

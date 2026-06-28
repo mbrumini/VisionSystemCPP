@@ -7,6 +7,22 @@
 
 using namespace RecipeJsonUtils;
 
+namespace
+{
+QString normalizeMeasurementCriterion(const QString& criterion)
+{
+  if (criterion == "min" || criterion == "minimum")
+  {
+    return "min";
+  }
+  if (criterion == "max" || criterion == "maximum")
+  {
+    return "max";
+  }
+  return "average";
+}
+}
+
 QVector<MeasurementRecipeConfig> RecipeManager::loadMeasurements(const QString& cameraId) const
 {
   const auto cached = m_measurementsCache.constFind(cameraId);
@@ -35,6 +51,17 @@ QVector<MeasurementRecipeConfig> RecipeManager::loadMeasurements(const QString& 
     config.alias = item.value("alias").toString();
     config.enabled = item.value("enabled").toBool(config.enabled);
     config.type = item.value("type").toString();
+    config.criterion = normalizeMeasurementCriterion(item.value("criterion").toString(config.criterion));
+    if (config.type == "line_line_distance_min")
+    {
+      config.type = "line_line_distance";
+      config.criterion = "min";
+    }
+    else if (config.type == "line_line_distance_max")
+    {
+      config.type = "line_line_distance";
+      config.criterion = "max";
+    }
     config.sourceAId = item.value("sourceAId").toString();
     config.sourceBId = item.value("sourceBId").toString();
     config.unit = item.value("unit").toString(config.unit);
@@ -97,6 +124,7 @@ bool RecipeManager::saveMeasurements(const QString& cameraId, const QVector<Meas
       item["alias"] = config.alias.trimmed();
     }
     item["type"] = config.type;
+    item["criterion"] = normalizeMeasurementCriterion(config.criterion);
     item["sourceAId"] = config.sourceAId;
     item["unit"] = config.unit;
     item["samplePixels"] = config.samplePixels;
@@ -149,6 +177,7 @@ bool RecipeManager::appendMeasurement(const QString& cameraId, const Measurement
   for (MeasurementRecipeConfig& existing : configs)
   {
     if (existing.type == config.type &&
+        normalizeMeasurementCriterion(existing.criterion) == normalizeMeasurementCriterion(config.criterion) &&
         existing.sourceAId == config.sourceAId &&
         existing.sourceBId == config.sourceBId)
     {
