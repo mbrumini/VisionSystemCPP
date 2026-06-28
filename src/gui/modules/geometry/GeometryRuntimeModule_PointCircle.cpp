@@ -19,6 +19,60 @@
 #include <algorithm>
 #include <cmath>
 
+namespace
+{
+bool containsNearbyEdgePoint(const std::vector<cv::Point2d>& points, const cv::Point2d& target)
+{
+  constexpr double kNearSquared = 0.25;
+  for (const cv::Point2d& point : points)
+  {
+    const cv::Point2d delta = point - target;
+    if ((delta.x * delta.x + delta.y * delta.y) <= kNearSquared)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+void appendEdgeFilterOverlay(GeometryOverlay& overlay,
+                             const EdgeCircleDetectorResult& result,
+                             const cv::Point2d& labelPoint)
+{
+  for (const cv::Point2d& point : result.sectorEdgePoints)
+  {
+    if (!containsNearbyEdgePoint(result.statisticalEdgePoints, point))
+    {
+      overlay.points.append({QPointF(point.x, point.y), QString(), QColor("#ff3b30"), 4.0, false});
+    }
+  }
+
+  for (const cv::Point2d& point : result.statisticalEdgePoints)
+  {
+    if (!containsNearbyEdgePoint(result.edgePoints, point))
+    {
+      overlay.points.append({QPointF(point.x, point.y), QString(), QColor("#ff8a00"), 3.5, false});
+    }
+  }
+
+  for (const cv::Point2d& point : result.edgePoints)
+  {
+    overlay.points.append({QPointF(point.x, point.y), QString(), QColor("#f5d547"), 3.0, false});
+  }
+
+  overlay.points.append({
+    QPointF(labelPoint.x, labelPoint.y),
+    QString("stat %1/%2  active %3")
+      .arg(result.statisticalEdgePoints.size())
+      .arg(result.sectorEdgePoints.size())
+      .arg(result.edgePoints.size()),
+    QColor("#ffffff"),
+    2.0,
+    false
+  });
+}
+}
+
 void MainWindowGeometryModule::activateGeometryPointDrawing(const CameraConfig& camera)
 {
   if (camera.id != selectedCameraId())
@@ -89,7 +143,6 @@ void MainWindowGeometryModule::handleGeometryCirclePoints(const CameraConfig& ca
   largeImage()->setThreePointCircleDrawingEnabled(false);
   *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Geometry;
   m_drawingTarget = DrawingTarget::Circle;
-  saveGeometryCirclesRecipe(camera);
   showConfiguredGeometryCircles(camera);
 }
 
@@ -132,15 +185,14 @@ void MainWindowGeometryModule::handleGeometryCircleBandChanged(const CameraConfi
     config.hasCircle = false;
   }
 
-  saveGeometryCirclesRecipe(camera);
-  showConfiguredGeometryCircles(camera);
-  testGeometryCircle(camera);
+  showConfiguredGeometryCircles(camera, true);
 }
 
-void MainWindowGeometryModule::showConfiguredGeometryCircles(const CameraConfig& camera)
+void MainWindowGeometryModule::showConfiguredGeometryCircles(const CameraConfig& camera, bool editable)
 {
   GeometryCircleRuntimeConfig& circle = activeGeometryCircleConfig(camera.id);
   GeometryOverlay overlay;
+  largeImage()->setCircleBandEditingEnabled(false);
   largeImage()->clearCircles();
   const PartPose& pose = cameraRuntime()[camera.id].currentPose();
   cv::Size imageSize;
@@ -149,47 +201,66 @@ void MainWindowGeometryModule::showConfiguredGeometryCircles(const CameraConfig&
   {
     imageSize = frame.size();
   }
-  QVector<GeometryCircleRuntimeConfig> circles = {circle};
-  QVector<GeometryLineRuntimeConfig> lines;
-  QVector<GeometryPointRuntimeConfig> points;
-  QVector<GeometryArcRuntimeConfig> arcs;
-  GeometryGuideRuntime::syncPartGuidesFromImage(pose, lines, points, circles, arcs);
-  circle = circles.first();
-
   const QSize referenceSize = guideReferenceSize(camera.id);
-  const bool usePartCircle = GeometryGuideRuntime::shouldUsePartGuide(
-    pose.valid,
-    circle.hasCircle,
-    circle.hasImageCircle,
-    circle.anchorInImageSpace,
-    referenceSize,
-    imageSize);
-  if (usePartCircle || circle.hasImageCircle)
+  QVector<GeometryCircleRuntimeConfig>& circleList = m_circleConfigs[camera.id];
+  if (circleList.isEmpty())
   {
+    appendCurrentPartPoseOverlay(camera, overlay);
+    largeImage()->setGeometryOverlay(overlay);
+    return;
+  }
+  const int activeIndex = qBound(0, m_activeCircleIndexes.value(camera.id, 0), circleList.size() - 1);
+
+  for (int i = 0; i < circleList.size(); ++i)
+  {
+    GeometryCircleRuntimeConfig& item = circleList[i];
+    QVector<GeometryCircleRuntimeConfig> circles = {item};
+    QVector<GeometryLineRuntimeConfig> lines;
+    QVector<GeometryPointRuntimeConfig> points;
+    QVector<GeometryArcRuntimeConfig> arcs;
+    GeometryGuideRuntime::syncPartGuidesFromImage(pose, lines, points, circles, arcs);
+    item = circles.first();
+
+    const bool usePartCircle = GeometryGuideRuntime::shouldUsePartGuide(
+      pose.valid,
+      item.hasCircle,
+      item.hasImageCircle,
+      item.anchorInImageSpace,
+      referenceSize,
+      imageSize);
+    if (!usePartCircle && !item.hasImageCircle)
+    {
+      continue;
+    }
+
     const cv::Point2d center = GeometryGuideRuntime::resolveImagePoint(
-      pose, usePartCircle, circle.partCenter, circle.imageCenter, referenceSize, imageSize);
+      pose, usePartCircle, item.partCenter, item.imageCenter, referenceSize, imageSize);
     const double guideRadius = usePartCircle
-      ? circle.radius
-      : GeometryGuideRuntime::mapImageGuideRadius(circle.radius, referenceSize, imageSize);
-    const double innerRadius = std::max(1.0, guideRadius - circle.innerBand);
-    const double outerRadius = guideRadius + circle.outerBand;
-    appendGeometryCirclePolyline(overlay, center, innerRadius, QColor(0, 210, 255, 90), 1);
-    appendGeometryCirclePolyline(overlay, center, guideRadius, QColor("#00d2ff"), 5);
-    appendGeometryCirclePolyline(overlay, center, outerRadius, QColor(0, 210, 255, 90), 1);
-    appendGeometryCircleSearchBandGuides(
-      overlay,
-      center,
-      innerRadius,
-      outerRadius,
-      circle.scanDirection != EdgeLineScanDirection::NormalNegative,
-      QColor(0, 210, 255, 150),
-      2);
-    largeImage()->setCircles({
-      {QPoint(qRound(center.x), qRound(center.y)), qRound(outerRadius)},
-      {QPoint(qRound(center.x), qRound(center.y)), qRound(guideRadius)},
-      {QPoint(qRound(center.x), qRound(center.y)), qRound(innerRadius)}
-    });
-    largeImage()->setCircleBandEditingEnabled(true);
+      ? item.radius
+      : GeometryGuideRuntime::mapImageGuideRadius(item.radius, referenceSize, imageSize);
+    const double innerRadius = std::max(1.0, guideRadius - item.innerBand);
+    const double outerRadius = guideRadius + item.outerBand;
+    const bool active = i == activeIndex;
+    appendGeometryCirclePolyline(overlay, center, innerRadius, QColor(0, 210, 255, active ? 90 : 35), 1);
+    appendGeometryCirclePolyline(overlay, center, guideRadius, active ? QColor("#00d2ff") : QColor(170, 205, 220, 170), active ? 5 : 2);
+    appendGeometryCirclePolyline(overlay, center, outerRadius, QColor(0, 210, 255, active ? 90 : 35), 1);
+    if (active)
+    {
+      appendGeometryCircleSearchBandGuides(
+        overlay,
+        center,
+        innerRadius,
+        outerRadius,
+        item.scanDirection != EdgeLineScanDirection::NormalNegative,
+        QColor(0, 210, 255, 150),
+        2);
+      largeImage()->setCircles({
+        {QPoint(qRound(center.x), qRound(center.y)), qRound(outerRadius)},
+        {QPoint(qRound(center.x), qRound(center.y)), qRound(guideRadius)},
+        {QPoint(qRound(center.x), qRound(center.y)), qRound(innerRadius)}
+      });
+      largeImage()->setCircleBandEditingEnabled(editable);
+    }
   }
   appendCurrentPartPoseOverlay(camera, overlay);
   largeImage()->setGeometryOverlay(overlay);
@@ -302,6 +373,10 @@ void MainWindowGeometryModule::testGeometryCircle(const CameraConfig& camera)
   geometries.circles.append(result.circle);
   GeometryOverlay circleOverlay;
   appendGeometryCirclePolyline(circleOverlay, result.circle.center, result.circle.radius, QColor("#00d2ff"), 7);
+  appendEdgeFilterOverlay(
+    circleOverlay,
+    result,
+    result.circle.center + cv::Point2d(result.circle.radius * 0.70710678118, -result.circle.radius * 0.70710678118));
   appendCurrentPartPoseOverlay(camera, circleOverlay);
   largeImage()->setGeometryOverlay(circleOverlay);
   refreshMeasurementOverlay(camera);
@@ -323,7 +398,6 @@ void MainWindowGeometryModule::testGeometryCircle(const CameraConfig& camera)
     circleConfig.hasImageCircle = true;
   }
   circleConfig.radius = result.circle.radius;
-  saveGeometryCirclesRecipe(camera);
 }
 
 void MainWindowGeometryModule::handleGeometryPointGuidePoint(const CameraConfig& camera, const QPointF& imagePoint)
@@ -366,7 +440,7 @@ void MainWindowGeometryModule::handleGeometryPointGuidePoint(const CameraConfig&
 
 void MainWindowGeometryModule::handleGeometryPointHandleMoved(const CameraConfig& camera, int pointIndex, const QPointF& imagePoint)
 {
-  if (camera.id != selectedCameraId() || pointIndex < 0 || pointIndex > 1)
+  if (camera.id != selectedCameraId() || pointIndex < 0 || pointIndex > 2)
   {
     return;
   }
@@ -399,8 +473,6 @@ void MainWindowGeometryModule::handleGeometryPointHandleMoved(const CameraConfig
   }
 
   updateGeometryPointOverlay(camera);
-  saveGeometryPointRecipe(camera);
-  testGeometryPoint(camera);
 }
 
 GeometryOverlay MainWindowGeometryModule::configuredGeometryPointsOverlay(const CameraConfig& camera, bool includeActive) const

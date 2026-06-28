@@ -61,6 +61,7 @@ public:
   void setGeometryPointMovedHandler(std::function<void(const QPointF&)> handler);
   void setGeometryOverlayPointMovedHandler(std::function<void(int, const QPointF&)> handler);
   void setGeometryOverlayDimensionLabelMovedHandler(std::function<void(const QString&, const QPointF&)> handler);
+  void setImageClickedHandler(std::function<void(const QPointF&)> handler);
   void setTwoPointLineHandler(std::function<void(const QVector<QPoint>&)> handler);
 
 protected:
@@ -191,6 +192,7 @@ private:
   std::function<void(const QPointF&)> m_geometryPointMovedHandler;
   std::function<void(int, const QPointF&)> m_geometryOverlayPointMovedHandler;
   std::function<void(const QString&, const QPointF&)> m_geometryOverlayDimensionLabelMovedHandler;
+  std::function<void(const QPointF&)> m_imageClickedHandler;
   std::function<void(const QVector<QPoint>&)> m_twoPointLineHandler;
 
   int geometryOverlayPointAt(const QPoint& widgetPoint) const;

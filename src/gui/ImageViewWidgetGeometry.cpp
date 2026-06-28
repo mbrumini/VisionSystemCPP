@@ -367,6 +367,11 @@ int ImageViewWidget::geometryOverlayPointAt(const QPoint& widgetPoint) const
 {
   for (int i = m_geometryOverlay.points.size() - 1; i >= 0; --i)
   {
+    if (!m_geometryOverlay.points[i].editable)
+    {
+      continue;
+    }
+
     const QPointF widgetHandle = imagePointToWidget(m_geometryOverlay.points[i].imagePoint);
     if (QRectF(widgetHandle - QPointF(9, 9), QSizeF(18, 18)).contains(widgetPoint))
     {

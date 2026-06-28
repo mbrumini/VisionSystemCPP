@@ -4,7 +4,7 @@
 
 namespace
 {
-bool fitLeastSquares(const std::vector<cv::Point>& points, cv::Point2d& center, double& radius)
+bool fitLeastSquares(const std::vector<cv::Point2d>& points, cv::Point2d& center, double& radius)
 {
   if (points.size() < 3)
   {
@@ -45,7 +45,7 @@ bool fitLeastSquares(const std::vector<cv::Point>& points, cv::Point2d& center, 
   return std::isfinite(center.x) && std::isfinite(center.y) && std::isfinite(radius);
 }
 
-double meanRadialError(const std::vector<cv::Point>& points, const cv::Point2d& center, double radius)
+double meanRadialError(const std::vector<cv::Point2d>& points, const cv::Point2d& center, double radius)
 {
   if (points.empty())
   {
@@ -53,16 +53,45 @@ double meanRadialError(const std::vector<cv::Point>& points, const cv::Point2d& 
   }
 
   double total = 0.0;
-  for (const cv::Point& point : points)
+  for (const cv::Point2d& point : points)
   {
-    total += std::abs(cv::norm(cv::Point2d(point) - center) - radius);
+    total += std::abs(cv::norm(point - center) - radius);
   }
 
   return total / static_cast<double>(points.size());
 }
+
+std::vector<cv::Point2d> toDoublePoints(const std::vector<cv::Point>& points)
+{
+  std::vector<cv::Point2d> doublePoints;
+  doublePoints.reserve(points.size());
+  for (const cv::Point& point : points)
+  {
+    doublePoints.push_back(cv::Point2d(point));
+  }
+  return doublePoints;
+}
+
+std::vector<cv::Point> toIntegerPoints(const std::vector<cv::Point2d>& points)
+{
+  std::vector<cv::Point> integerPoints;
+  integerPoints.reserve(points.size());
+  for (const cv::Point2d& point : points)
+  {
+    integerPoints.push_back(cv::Point(
+      static_cast<int>(std::round(point.x)),
+      static_cast<int>(std::round(point.y))));
+  }
+  return integerPoints;
+}
 }
 
 CircleFitResult CircleFit::fit(const std::vector<cv::Point>& points, const CircleFitSettings& settings)
+{
+  return fit(toDoublePoints(points), settings);
+}
+
+CircleFitResult CircleFit::fit(const std::vector<cv::Point2d>& points, const CircleFitSettings& settings)
 {
   CircleFitResult result;
   result.inputPoints = static_cast<int>(points.size());
@@ -81,27 +110,27 @@ CircleFitResult CircleFit::fit(const std::vector<cv::Point>& points, const Circl
 
   result.center = firstCenter;
   result.radius = firstRadius;
-  result.inliers = points;
+  std::vector<cv::Point2d> inliers = points;
 
   if (settings.robustRefit)
   {
-    result.inliers.clear();
+    inliers.clear();
     const double maxError = std::max(0.0, settings.maxRadialError);
 
-    for (const cv::Point& point : points)
+    for (const cv::Point2d& point : points)
     {
-      const double radialError = std::abs(cv::norm(cv::Point2d(point) - firstCenter) - firstRadius);
+      const double radialError = std::abs(cv::norm(point - firstCenter) - firstRadius);
       if (radialError <= maxError)
       {
-        result.inliers.push_back(point);
+        inliers.push_back(point);
       }
     }
 
-    if (static_cast<int>(result.inliers.size()) >= settings.minPoints)
+    if (static_cast<int>(inliers.size()) >= settings.minPoints)
     {
       cv::Point2d refinedCenter;
       double refinedRadius = 0.0;
-      if (fitLeastSquares(result.inliers, refinedCenter, refinedRadius))
+      if (fitLeastSquares(inliers, refinedCenter, refinedRadius))
       {
         result.center = refinedCenter;
         result.radius = refinedRadius;
@@ -109,12 +138,13 @@ CircleFitResult CircleFit::fit(const std::vector<cv::Point>& points, const Circl
     }
     else
     {
-      result.inliers = points;
+      inliers = points;
     }
   }
 
   result.found = true;
-  result.usedPoints = static_cast<int>(result.inliers.size());
-  result.meanError = meanRadialError(result.inliers, result.center, result.radius);
+  result.usedPoints = static_cast<int>(inliers.size());
+  result.meanError = meanRadialError(inliers, result.center, result.radius);
+  result.inliers = toIntegerPoints(inliers);
   return result;
 }

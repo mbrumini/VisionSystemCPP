@@ -33,7 +33,16 @@ QString measurementItemLabel(const MeasurementRecipeConfig& config)
 {
   const QString name = config.alias.trimmed().isEmpty() ? config.id
                                                         : QString("%1 (%2)").arg(config.alias.trimmed(), config.id);
-  return QString("%1 | %2").arg(name, config.type);
+  QString type = config.type;
+  if (type == "line_line_distance_min")
+  {
+    type = "line_line_distance MIN";
+  }
+  else if (type == "line_line_distance_max")
+  {
+    type = "line_line_distance MAX";
+  }
+  return QString("%1 | %2").arg(name, type);
 }
 
 QString measurementKey(const MeasurementRecipeConfig& config)
@@ -49,6 +58,13 @@ QString measurementValueText(const MeasurementResult& measurement)
   }
   if (measurement.hasRealValue)
   {
+    if (measurement.unit != "deg")
+    {
+      return QString("%1 %2 (%3 px)")
+        .arg(measurement.valueReal, 0, 'f', 3)
+        .arg(measurement.unit)
+        .arg(measurement.valuePixels, 0, 'f', 3);
+    }
     return QString("%1 %2").arg(measurement.valueReal, 0, 'f', 3).arg(measurement.unit);
   }
   return QString("%1 px").arg(measurement.valuePixels, 0, 'f', 3);
@@ -654,6 +670,10 @@ void MainWindowMeasurementModule::showMeasurementPanel(const CameraConfig& camer
 {
   context().deactivateImageDrawingTools();
   context().clearToolPanel();
+  m_imagePickMode = ImagePickMode::None;
+  m_pickPrimaryCombo = nullptr;
+  m_pickSecondaryCombo = nullptr;
+  m_nextPickTarget = 0;
   refreshMeasurementSources(camera);
 
   auto* panel = new QWidget(toolsContainer());

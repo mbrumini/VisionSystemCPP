@@ -31,6 +31,13 @@ void LineGeometryEditor::movePoint(int pointIndex, const QPointF& imagePoint)
   {
     m_state.imageEnd = imagePoint;
   }
+  else if (pointIndex == 2 && m_state.hasStart && m_state.hasEnd)
+  {
+    const QPointF center = (m_state.imageStart + m_state.imageEnd) * 0.5;
+    const QPointF delta = imagePoint - center;
+    m_state.imageStart += delta;
+    m_state.imageEnd += delta;
+  }
 
   m_state.hasPreview = false;
 }
@@ -89,6 +96,10 @@ GeometryOverlay LineGeometryEditor::overlay() const
     overlay.points.append({endPoint, "2"});
     overlay.lines.append({m_state.imageStart, endPoint});
     overlay.bands.append(m_bandEditor.bandForSegment(m_state.imageStart, endPoint));
+    if (m_state.hasEnd)
+    {
+      overlay.points.append({(m_state.imageStart + m_state.imageEnd) * 0.5, QString(), QColor("#ff4fd8"), 8.0});
+    }
   }
 
   return overlay;

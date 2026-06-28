@@ -2,8 +2,8 @@
 
 #include "processing/geometry/EdgeCircleDetector.h"
 
-// Experimental circle-edge detector kept separate from EdgeCircleDetector so the
-// production path can be switched back instantly if the new strategy is weaker.
+// Official robust circle/arc edge detector. The class keeps its historical name
+// so existing includes stay stable and the standard fallback remains available.
 class EdgeCircleDetectorExperimental
 {
 public:

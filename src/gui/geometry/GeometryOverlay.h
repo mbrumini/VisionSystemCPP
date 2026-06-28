@@ -12,6 +12,7 @@ struct GeometryOverlayPoint
   QString label;
   QColor color = QColor("#ff4fd8");
   double radius = 6.0;
+  bool editable = true;
 };
 
 struct GeometryOverlayLine

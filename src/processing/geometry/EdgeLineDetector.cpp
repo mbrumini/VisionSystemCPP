@@ -2,6 +2,7 @@
 
 #include "processing/SurfaceProcessingUtils.h"
 #include "processing/geometry/EdgePointFilters.h"
+#include "processing/geometry/EdgeProfile.h"
 
 #include <opencv2/imgproc.hpp>
 
@@ -59,26 +60,6 @@ bool pointInsideGuideBand(
   return cross <= halfWidth;
 }
 
-bool pointInsideImage(const cv::Mat& image, const cv::Point2d& point)
-{
-  return point.x >= 0.0 && point.y >= 0.0 && point.x < image.cols && point.y < image.rows;
-}
-
-double sampledGray(const cv::Mat& gray, const cv::Point2d& point)
-{
-  const double x = std::clamp(point.x, 0.0, static_cast<double>(gray.cols - 1));
-  const double y = std::clamp(point.y, 0.0, static_cast<double>(gray.rows - 1));
-  const int x0 = static_cast<int>(std::floor(x));
-  const int y0 = static_cast<int>(std::floor(y));
-  const int x1 = std::min(x0 + 1, gray.cols - 1);
-  const int y1 = std::min(y0 + 1, gray.rows - 1);
-  const double tx = x - static_cast<double>(x0);
-  const double ty = y - static_cast<double>(y0);
-  const double top = gray.at<uchar>(y0, x0) * (1.0 - tx) + gray.at<uchar>(y0, x1) * tx;
-  const double bottom = gray.at<uchar>(y1, x0) * (1.0 - tx) + gray.at<uchar>(y1, x1) * tx;
-  return top * (1.0 - ty) + bottom * ty;
-}
-
 std::vector<cv::Point2d> scanLineEdges(
   const cv::Mat& gray,
   const EdgeLineDetectorConfig& config,
@@ -101,66 +82,26 @@ std::vector<cv::Point2d> scanLineEdges(
 
   const int alongSamples = std::max(2, static_cast<int>(std::round(length)));
   const int halfWidth = std::max(1, config.bandHalfWidth);
-  const int sampleRadius = std::clamp(halfWidth / 5, 2, 6);
   for (int i = 0; i <= alongSamples; ++i)
   {
     const cv::Point2d base = config.guideStart + unit * (length * static_cast<double>(i) / alongSamples);
-    bool found = false;
-    int bestStrength = -1;
-    cv::Point2d bestPoint;
-    cv::Point2d previousPoint = base + normal * (-halfWidth);
-    if (!pointInsideImage(gray, previousPoint))
+    const cv::Point2d scanStart = base - normal * halfWidth;
+    const cv::Point2d scanEnd = base + normal * halfWidth;
+    if (!EdgeProfileSampler::pointInsideImage(gray, scanStart))
     {
       continue;
     }
 
-    double previousValue = sampledGray(gray, previousPoint);
-    for (int offset = -halfWidth + 1; offset <= halfWidth; ++offset)
+    const std::vector<EdgeProfileSample> profile = EdgeProfileSampler::sampleLine(gray, scanStart, scanEnd, halfWidth * 2);
+    const EdgeProfileCandidate located = SubpixelEdgeLocator::locate(
+      profile,
+      config.transition,
+      config.pickMode,
+      gradientThreshold,
+      config.useSubpixel);
+    if (located.found)
     {
-      const cv::Point2d currentPoint = base + normal * offset;
-      if (!pointInsideImage(gray, currentPoint))
-      {
-        continue;
-      }
-
-      const double currentValue = sampledGray(gray, currentPoint);
-      const double delta = currentValue - previousValue;
-      const bool matchesTransition =
-        (config.transition == EdgeLineTransition::DarkToLight && delta >= gradientThreshold) ||
-        (config.transition == EdgeLineTransition::LightToDark && delta <= -gradientThreshold);
-      if (matchesTransition)
-      {
-        cv::Point2d candidate = currentPoint;
-        if (config.useSubpixel && std::abs(delta) > kEpsilon)
-        {
-          const double target = (previousValue + currentValue) * 0.5;
-          const double t = std::clamp((target - previousValue) / delta, 0.0, 1.0);
-          candidate = previousPoint + (currentPoint - previousPoint) * t;
-        }
-
-        const double strength = std::abs(delta);
-        if (config.pickMode == EdgeLinePickMode::First)
-        {
-          points.push_back(candidate);
-          found = true;
-          break;
-        }
-
-        if (config.pickMode == EdgeLinePickMode::Last || strength > bestStrength)
-        {
-          bestStrength = strength;
-          bestPoint = candidate;
-          found = true;
-        }
-      }
-
-      previousPoint = currentPoint;
-      previousValue = currentValue;
-    }
-
-    if (found && config.pickMode != EdgeLinePickMode::First)
-    {
-      points.push_back(bestPoint);
+      points.push_back(located.point);
     }
   }
 
@@ -251,6 +192,7 @@ LineGeometry fitLineGeometry(
   line.meta.score = 1.0;
   line.start = center + direction * minProjection;
   line.end = center + direction * maxProjection;
+  line.edgePoints = points;
   return line;
 }
 }
@@ -288,12 +230,13 @@ EdgeLineDetectorResult EdgeLineDetector::detect(const cv::Mat& input, const Edge
   const int sensitivity = std::clamp(config.edgeSensitivity, 1, 255);
   const int gradientThreshold = std::max(2, (256 - sensitivity) / 12 + 1);
   result.rawEdgePoints = scanLineEdges(blurred, config, gradientThreshold);
-  result.edgePoints = EdgePointFilters::filterByDerivative(
+  result.derivativeEdgePoints = EdgePointFilters::filterByDerivative(
     result.rawEdgePoints,
     {config.guideStart, config.guideEnd, config.edgeCleanupDerivative});
-  result.edgePoints = EdgePointFilters::filterByNormalMedianDeviation(
-    result.edgePoints,
+  result.statisticalEdgePoints = EdgePointFilters::filterByNormalMedianDeviation(
+    result.derivativeEdgePoints,
     {config.guideStart, config.guideEnd, config.edgeStatisticalFilter});
+  result.edgePoints = result.statisticalEdgePoints;
 
   cv::rectangle(result.diagnosticImage, result.searchRoi, cv::Scalar(0, 255, 255), 2);
   drawScanDiagnostics(result.diagnosticImage, config);

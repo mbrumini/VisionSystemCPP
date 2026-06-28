@@ -123,6 +123,22 @@ bool parallelLineDistance(const LineGeometry& lineA,
                           PointGeometry* pointOnLineA,
                           PointGeometry* pointOnLineB)
 {
+  return parallelLineDistance(
+    lineA,
+    lineB,
+    ParallelLineDistanceMode::Average,
+    distancePixels,
+    pointOnLineA,
+    pointOnLineB);
+}
+
+bool parallelLineDistance(const LineGeometry& lineA,
+                          const LineGeometry& lineB,
+                          ParallelLineDistanceMode mode,
+                          double& distancePixels,
+                          PointGeometry* pointOnLineA,
+                          PointGeometry* pointOnLineB)
+{
   cv::Point2d directionA;
   cv::Point2d directionB;
   double lengthA = 0.0;
@@ -149,7 +165,70 @@ bool parallelLineDistance(const LineGeometry& lineA,
   const double signedDistance = (midpointB - anchorOnA).dot(normal);
   const double tOnB = (anchorOnA - midpointB).dot(sharedDirection);
   const cv::Point2d footOnB = midpointB + sharedDirection * tOnB;
-  distancePixels = std::abs(signedDistance);
+
+  if (mode == ParallelLineDistanceMode::Average)
+  {
+    distancePixels = std::abs(signedDistance);
+  }
+  else
+  {
+    if (lineA.edgePoints.empty() || lineB.edgePoints.empty())
+    {
+      return false;
+    }
+
+    const double side = signedDistance < 0.0 ? -1.0 : 1.0;
+    double minA = 0.0;
+    double maxA = 0.0;
+    double minB = 0.0;
+    double maxB = 0.0;
+    bool firstA = true;
+    bool firstB = true;
+    for (const cv::Point2d& point : lineA.edgePoints)
+    {
+      const double value = (point - anchorOnA).dot(normal) * side;
+      if (firstA)
+      {
+        minA = value;
+        maxA = value;
+        firstA = false;
+      }
+      else
+      {
+        minA = std::min(minA, value);
+        maxA = std::max(maxA, value);
+      }
+    }
+    for (const cv::Point2d& point : lineB.edgePoints)
+    {
+      const double value = (point - anchorOnA).dot(normal) * side;
+      if (firstB)
+      {
+        minB = value;
+        maxB = value;
+        firstB = false;
+      }
+      else
+      {
+        minB = std::min(minB, value);
+        maxB = std::max(maxB, value);
+      }
+    }
+
+    if (firstA || firstB)
+    {
+      return false;
+    }
+
+    if (mode == ParallelLineDistanceMode::Minimum)
+    {
+      distancePixels = std::max(0.0, minB - maxA);
+    }
+    else
+    {
+      distancePixels = std::max(0.0, maxB - minA);
+    }
+  }
 
   const double score = std::min(lineA.meta.score, lineB.meta.score);
   const bool valid = lineA.meta.valid && lineB.meta.valid;

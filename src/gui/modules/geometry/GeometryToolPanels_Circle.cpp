@@ -59,6 +59,7 @@ void MainWindowGeometryModule::showGeometryCirclePanel(const CameraConfig& camer
   }
   circleSelector->setCurrentIndex(qBound(0, m_activeCircleIndexes.value(camera.id, 0), circleConfigs.size() - 1));
   auto* newCircleButton = createTouchIconButton("new", tr("actions.newGeometryCircle"), panel);
+  auto* editCircleButton = createTouchIconButton("circleGeometry", tr("actions.editGeometry"), panel);
   auto* deleteCircleButton = createTouchIconButton("delete", tr("actions.deleteGeometryCircle"), panel);
 
   auto* top = new QWidget(panel);
@@ -68,7 +69,8 @@ void MainWindowGeometryModule::showGeometryCirclePanel(const CameraConfig& camer
   topLayout->addWidget(new QLabel(tr("actions.circleGeometry"), top), 0, 0);
   topLayout->addWidget(circleSelector, 0, 1);
   topLayout->addWidget(newCircleButton, 0, 2);
-  topLayout->addWidget(deleteCircleButton, 0, 3);
+  topLayout->addWidget(editCircleButton, 0, 3);
+  topLayout->addWidget(deleteCircleButton, 0, 4);
   topLayout->setColumnStretch(1, 1);
   layout->addWidget(top);
 
@@ -178,57 +180,59 @@ void MainWindowGeometryModule::showGeometryCirclePanel(const CameraConfig& camer
     activateGeometryCircleDrawing(camera);
   });
   QObject::connect(deleteCircleButton, &QPushButton::clicked, window(), [this, camera]() { removeActiveGeometryCircle(camera); });
+  QObject::connect(editCircleButton, &QPushButton::clicked, window(), [this, camera]() {
+    testConfiguredGeometryLines(camera);
+    showConfiguredGeometryCircles(camera, true);
+  });
   QObject::connect(sensitivity, &QSlider::valueChanged, window(), [this, camera, sensitivityValue](int value) {
     sensitivityValue->setText(QString::number(value));
     activeGeometryCircleConfig(camera.id).edgeSensitivity = value;
-    saveGeometryCirclesRecipe(camera);
-    showConfiguredGeometryCircles(camera);
+    testGeometryCircle(camera);
   });
   QObject::connect(cleanup, &QSlider::valueChanged, window(), [this, camera, cleanupValue](int value) {
     cleanupValue->setText(QString("%1 px").arg(value));
     activeGeometryCircleConfig(camera.id).edgeCleanupDerivative = value;
-    saveGeometryCirclesRecipe(camera);
-    showConfiguredGeometryCircles(camera);
+    testGeometryCircle(camera);
   });
   QObject::connect(statFilter, &QSlider::valueChanged, window(), [this, camera, statFilterValue](int value) {
     statFilterValue->setText(QString("%1 px").arg(value));
     activeGeometryCircleConfig(camera.id).edgeStatisticalFilter = value;
-    saveGeometryCirclesRecipe(camera);
-    showConfiguredGeometryCircles(camera);
+    testGeometryCircle(camera);
   });
   QObject::connect(subpixel, &QCheckBox::toggled, window(), [this, camera](bool checked) {
     activeGeometryCircleConfig(camera.id).useSubpixel = checked;
-    saveGeometryCirclesRecipe(camera);
-    showConfiguredGeometryCircles(camera);
+    testGeometryCircle(camera);
   });
   QObject::connect(scanDirection, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
     activeGeometryCircleConfig(camera.id).scanDirection =
       index == 1 ? EdgeLineScanDirection::NormalNegative : EdgeLineScanDirection::NormalPositive;
-    saveGeometryCirclesRecipe(camera);
-    showConfiguredGeometryCircles(camera);
+    testGeometryCircle(camera);
   });
   QObject::connect(transition, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
     activeGeometryCircleConfig(camera.id).transition = index == 1 ? EdgeLineTransition::DarkToLight : EdgeLineTransition::LightToDark;
-    saveGeometryCirclesRecipe(camera);
-    showConfiguredGeometryCircles(camera);
+    testGeometryCircle(camera);
   });
   QObject::connect(pickMode, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
     activeGeometryCircleConfig(camera.id).pickMode = index == 1 ? EdgeLinePickMode::Last : (index == 2 ? EdgeLinePickMode::Best : EdgeLinePickMode::First);
-    saveGeometryCirclesRecipe(camera);
-    showConfiguredGeometryCircles(camera);
+    testGeometryCircle(camera);
   });
   QObject::connect(aliasEdit, &QLineEdit::editingFinished, window(), [this, camera, aliasEdit]() {
     activeGeometryCircleConfig(camera.id).alias = aliasEdit->text().trimmed();
-    saveGeometryCirclesRecipe(camera);
     syncRuntimeGeometryLabels(camera);
     showConfiguredGeometryCircles(camera);
     refreshMeasurementOverlay(camera);
   });
 
+  auto* saveButton = createTouchIconButton("saveSample", tr("actions.saveGeometry"), panel);
   auto* testButton = createTouchIconButton("start", tr("actions.testGeometry"), panel);
   auto* backButton = createTouchIconButton("back",
     GeometryPanelNavigation::backLabel(context(), camera, tr("commands.backToCameraTools")),
     panel);
+  QObject::connect(saveButton, &QPushButton::clicked, window(), [this, camera]() {
+    saveGeometryCirclesRecipe(camera);
+    showConfiguredGeometryCircles(camera, true);
+    refreshMeasurementOverlay(camera);
+  });
   QObject::connect(testButton, &QPushButton::clicked, window(), [this, camera]() { testGeometryCircle(camera); });
   QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() {
     if (!GeometryPanelNavigation::returnToSetup(context(), camera))
@@ -236,6 +240,7 @@ void MainWindowGeometryModule::showGeometryCirclePanel(const CameraConfig& camer
       showGeometryPanel(camera);
     }
   });
+  layout->addWidget(saveButton);
   layout->addWidget(testButton);
   layout->addWidget(backButton);
   layout->addStretch(1);

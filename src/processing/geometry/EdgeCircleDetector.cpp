@@ -278,7 +278,9 @@ EdgeCircleDetectorResult EdgeCircleDetector::detect(const cv::Mat& input, const 
   const int gradientThreshold = std::max(2, (256 - sensitivity) / 12 + 1);
   result.rawEdgePoints = scanCircleEdges(blurred, config, gradientThreshold);
   result.edgePoints = filterByRadialDerivative(result.rawEdgePoints, config);
+  result.sectorEdgePoints = result.edgePoints;
   result.edgePoints = filterByRadialMedianDeviation(result.edgePoints, config);
+  result.statisticalEdgePoints = result.edgePoints;
 
   result.processed = true;
   if (config.guideRadius <= static_cast<double>(config.innerBand))

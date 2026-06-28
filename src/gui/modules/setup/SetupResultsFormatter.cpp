@@ -42,6 +42,14 @@ QString measurementTypeLabel(const QString& type, const MainWindowContext& conte
   {
     return context.trText("actions.lineLineDistance");
   }
+  if (type == "line_line_distance_min")
+  {
+    return context.trText("actions.lineLineDistance") + " MIN";
+  }
+  if (type == "line_line_distance_max")
+  {
+    return context.trText("actions.lineLineDistance") + " MAX";
+  }
   if (type == "circle_diameter")
   {
     return context.trText("actions.circleDiameterMeasure");
@@ -158,9 +166,20 @@ QString setupResultsText(const CameraConfig& camera,
       continue;
     }
 
-    const QString unit =
-      (result->type == "line_line_angle" || result->type == "thread_phase") ? "deg" : "px";
-    lines << QString("  %1  %2 %3").arg(label).arg(result->valuePixels, 0, 'f', 3).arg(unit);
+    if (result->hasRealValue && result->unit != "deg")
+    {
+      lines << QString("  %1  %2 %3 (%4 px)")
+                 .arg(label)
+                 .arg(result->valueReal, 0, 'f', 3)
+                 .arg(result->unit)
+                 .arg(result->valuePixels, 0, 'f', 3);
+    }
+    else
+    {
+      const QString unit =
+        (result->type == "line_line_angle" || result->type == "thread_phase") ? "deg" : "px";
+      lines << QString("  %1  %2 %3").arg(label).arg(result->valuePixels, 0, 'f', 3).arg(unit);
+    }
   }
 
   return lines.join('\n');

@@ -502,6 +502,8 @@
     "deleteGeometryArc": "Elimina arco",
     "deleteMeasurement": "Elimina misura",
     "saveMeasurement": "Salva misura",
+    "editGeometry": "Modifica geometria",
+    "saveGeometry": "Salva geometria",
     "circleGeometry": "Cerchio",
     "arcGeometry": "Arco",
     "edgeGeometry": "Edge",

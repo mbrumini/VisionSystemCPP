@@ -44,6 +44,8 @@ struct EdgeLineDetectorResult : GeometryDetectorResult
   LineGeometry line;
   std::vector<cv::Point2d> edgePoints;
   std::vector<cv::Point2d> rawEdgePoints;
+  std::vector<cv::Point2d> derivativeEdgePoints;
+  std::vector<cv::Point2d> statisticalEdgePoints;
   cv::Rect searchRoi;
 };
 

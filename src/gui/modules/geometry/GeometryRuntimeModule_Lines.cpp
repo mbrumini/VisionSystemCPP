@@ -77,7 +77,7 @@ void MainWindowGeometryModule::handleGeometryLinePoint(const CameraConfig& camer
 
 void MainWindowGeometryModule::handleGeometryLineHandleMoved(const CameraConfig& camera, int pointIndex, const QPointF& imagePoint)
 {
-  if (camera.id != selectedCameraId() || pointIndex < 0 || pointIndex > 1)
+  if (camera.id != selectedCameraId() || pointIndex < 0 || pointIndex > 2)
   {
     return;
   }
@@ -110,8 +110,6 @@ void MainWindowGeometryModule::handleGeometryLineHandleMoved(const CameraConfig&
   }
 
   updateGeometryLineOverlay(camera);
-  saveGeometryLinesRecipe(camera);
-  testGeometryLine(camera);
 }
 
 GeometryOverlay MainWindowGeometryModule::configuredGeometryLinesOverlay(const CameraConfig& camera, bool includeActive) const
@@ -143,17 +141,37 @@ GeometryOverlay MainWindowGeometryModule::configuredGeometryLinesOverlay(const C
       line.anchorInImageSpace,
       referenceSize,
       imageSize);
-    if (!usePartLine && !line.hasImageLine)
-    {
-      continue;
-    }
 
-    const cv::Point2d imageStart = GeometryGuideRuntime::resolveImagePoint(
-      pose, usePartLine, line.partStart, line.imageStart, referenceSize, imageSize);
-    const cv::Point2d imageEnd = GeometryGuideRuntime::resolveImagePoint(
-      pose, usePartLine, line.partEnd, line.imageEnd, referenceSize, imageSize);
-    const QPointF start(imageStart.x, imageStart.y);
-    const QPointF end(imageEnd.x, imageEnd.y);
+    QPointF start;
+    QPointF end;
+    if (usePartLine || line.hasImageLine)
+    {
+      const cv::Point2d imageStart = GeometryGuideRuntime::resolveImagePoint(
+        pose, usePartLine, line.partStart, line.imageStart, referenceSize, imageSize);
+      const cv::Point2d imageEnd = GeometryGuideRuntime::resolveImagePoint(
+        pose, usePartLine, line.partEnd, line.imageEnd, referenceSize, imageSize);
+      start = QPointF(imageStart.x, imageStart.y);
+      end = QPointF(imageEnd.x, imageEnd.y);
+    }
+    else
+    {
+      bool foundRuntimeLine = false;
+      const GeometrySet& geometries = cameraRuntime().at(camera.id).geometries();
+      for (const LineGeometry& runtimeLine : geometries.lines)
+      {
+        if (runtimeLine.meta.id == line.id)
+        {
+          start = QPointF(runtimeLine.start.x, runtimeLine.start.y);
+          end = QPointF(runtimeLine.end.x, runtimeLine.end.y);
+          foundRuntimeLine = true;
+          break;
+        }
+      }
+      if (!foundRuntimeLine)
+      {
+        continue;
+      }
+    }
     const QPointF center = (start + end) * 0.5;
     const QPointF delta = end - start;
     const double length = std::hypot(delta.x(), delta.y());

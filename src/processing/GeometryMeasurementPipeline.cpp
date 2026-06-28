@@ -3,6 +3,7 @@
 #include "geometry/ConstructedGeometryMath.h"
 #include "measurement/MeasurementGeometryMath.h"
 
+#include <array>
 #include <QSet>
 
 namespace
@@ -49,25 +50,27 @@ const PointGeometry* findPointByMetaId(const GeometrySet& set, const QString& id
       return &point.point;
     }
   }
-  static thread_local PointGeometry circleCenterPoint;
+  static thread_local std::array<PointGeometry, 16> syntheticCenterPoints;
+  static thread_local std::size_t syntheticCenterPointIndex = 0;
+  auto nextSyntheticCenterPoint = [](const GeometryMeta& meta, const cv::Point2d& center) -> const PointGeometry* {
+    PointGeometry& point = syntheticCenterPoints[syntheticCenterPointIndex++ % syntheticCenterPoints.size()];
+    point.point = center;
+    point.meta = meta;
+    point.meta.valid = true;
+    return &point;
+  };
   for (const CircleGeometry& circle : set.circles)
   {
     if (circle.meta.id == metaId)
     {
-      circleCenterPoint.point = circle.center;
-      circleCenterPoint.meta = circle.meta;
-      circleCenterPoint.meta.valid = true;
-      return &circleCenterPoint;
+      return nextSyntheticCenterPoint(circle.meta, circle.center);
     }
   }
   for (const ArcGeometry& arc : set.arcs)
   {
     if (arc.meta.id == metaId)
     {
-      circleCenterPoint.point = arc.center;
-      circleCenterPoint.meta = arc.meta;
-      circleCenterPoint.meta.valid = true;
-      return &circleCenterPoint;
+      return nextSyntheticCenterPoint(arc.meta, arc.center);
     }
   }
   return nullptr;
@@ -429,12 +432,24 @@ void rebuildMeasurements(GeometrySet& set,
       continue;
     }
 
-    if (config.type == "line_line_distance")
+    if (config.type == "line_line_distance" ||
+        config.type == "line_line_distance_min" ||
+        config.type == "line_line_distance_max")
     {
       const LineGeometry* lineA = findLineByMetaId(set, config.sourceAId);
       const LineGeometry* lineB = findLineByMetaId(set, config.sourceBId);
       double distancePixels = 0.0;
-      if (lineA && lineB && MeasurementGeometryMath::parallelLineDistance(*lineA, *lineB, distancePixels))
+      MeasurementGeometryMath::ParallelLineDistanceMode mode = MeasurementGeometryMath::ParallelLineDistanceMode::Average;
+      if (config.type == "line_line_distance_min")
+      {
+        mode = MeasurementGeometryMath::ParallelLineDistanceMode::Minimum;
+      }
+      else if (config.type == "line_line_distance_max")
+      {
+        mode = MeasurementGeometryMath::ParallelLineDistanceMode::Maximum;
+      }
+
+      if (lineA && lineB && MeasurementGeometryMath::parallelLineDistance(*lineA, *lineB, mode, distancePixels))
       {
         appendMeasurementResult(set, config, calibration, lineA->meta.id, lineB->meta.id, distancePixels);
       }

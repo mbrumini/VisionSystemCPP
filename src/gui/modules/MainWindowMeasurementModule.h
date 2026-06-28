@@ -4,12 +4,14 @@
 
 #include <QHash>
 #include <QPointF>
+#include <QPointer>
 #include <QString>
 
 #include <functional>
 
 class CameraConfig;
 class GeometryOverlay;
+class QComboBox;
 struct MeasurementRecipeConfig;
 
 class MainWindowMeasurementModule : public MainWindowModuleBase
@@ -29,12 +31,16 @@ public:
   void removeMeasurement(const CameraConfig& camera, const QString& measurementId);
   void appendMeasurementOverlay(const CameraConfig& camera, GeometryOverlay& overlay, bool compact = false) const;
   void setMeasurementLabelPosition(const CameraConfig& camera, const QString& measurementKey, const QPointF& imagePoint);
+  void handleImagePick(const CameraConfig& camera, const QPointF& imagePoint);
 
 private:
   void refreshMeasurementSources(const CameraConfig& camera);
   void createPointPointDistance(const CameraConfig& camera, const QString& pointAId, const QString& pointBId);
   void createPointLineDistance(const CameraConfig& camera, const QString& pointId, const QString& lineId);
-  void createLineLineDistance(const CameraConfig& camera, const QString& lineAId, const QString& lineBId);
+  void createLineLineDistance(const CameraConfig& camera,
+                              const QString& lineAId,
+                              const QString& lineBId,
+                              const QString& measurementType = "line_line_distance");
   void createCircleDiameter(const CameraConfig& camera, const QString& circleId);
   void createLineLineAngle(const CameraConfig& camera, const QString& lineAId, const QString& lineBId);
   void saveMeasurementRealSettings(const CameraConfig& camera, const MeasurementRecipeConfig& config);
@@ -59,4 +65,17 @@ private:
   QString selectedMeasurementKey(const QString& cameraId) const;
 
   QHash<QString, QString> m_selectedMeasurementKeys;
+  enum class ImagePickMode
+  {
+    None,
+    PointPoint,
+    PointLine,
+    LineLineDistance,
+    CircleDiameter,
+    LineLineAngle
+  };
+  ImagePickMode m_imagePickMode = ImagePickMode::None;
+  QPointer<QComboBox> m_pickPrimaryCombo;
+  QPointer<QComboBox> m_pickSecondaryCombo;
+  int m_nextPickTarget = 0;
 };

@@ -3,8 +3,11 @@
 #include "gui/modules/MainWindowModuleBase.h"
 
 #include <QHash>
+#include <QPointF>
+#include <QPointer>
 
 class CameraConfig;
+class QComboBox;
 
 class MainWindowConstructedGeometryModule : public MainWindowModuleBase
 {
@@ -13,6 +16,7 @@ public:
 
   void showConstructedGeometryPanel(const CameraConfig& camera);
   void rebuildConstructedGeometryRecipe(const CameraConfig& camera);
+  void handleImagePick(const CameraConfig& camera, const QPointF& imagePoint);
 
 private:
   void showLineLineIntersectionPanel(const CameraConfig& camera);
@@ -44,4 +48,21 @@ private:
   void createAngleBisectors(const CameraConfig& camera, const QString& firstLineId, const QString& secondLineId);
   void createTangentLines(const CameraConfig& camera, const QString& pointId, const QString& circleId);
   void createProjectedPoint(const CameraConfig& camera, const QString& pointId, const QString& lineId);
+
+  enum class ImagePickMode
+  {
+    None,
+    LineLine,
+    LineCircle,
+    CircleCircle,
+    Circle,
+    PointPoint,
+    Line,
+    PointCircle,
+    PointLine
+  };
+  ImagePickMode m_imagePickMode = ImagePickMode::None;
+  QPointer<QComboBox> m_pickPrimaryCombo;
+  QPointer<QComboBox> m_pickSecondaryCombo;
+  int m_nextPickTarget = 0;
 };

@@ -9,48 +9,48 @@
                     "edgeSensitivity": 60,
                     "edgeStatisticalFilter": 0,
                     "enabled": true,
-                    "endAngleRadians": 3.151903591322616,
+                    "endAngleRadians": 3.10063660157035,
                     "id": "arc_2",
                     "imageCenter": {
-                        "x": 691.0564202334631,
-                        "y": 268.02140077821014
+                        "x": 697.7776565908382,
+                        "y": 260.86241819881883
                     },
                     "imageEnd": {
-                        "x": 592,
-                        "y": 267
+                        "x": 593.5230618253189,
+                        "y": 265.1346638248401
                     },
                     "imageStart": {
-                        "x": 687,
-                        "y": 367.00000000000006
+                        "x": 697.3110776500457,
+                        "y": 365.20346916392896
                     },
                     "imageThrough": {
-                        "x": 619.2367539345346,
-                        "y": 336.25008376219216
+                        "x": 625.3547837804822,
+                        "y": 335.9769980505807
                     },
                     "innerBand": 20,
                     "outerBand": 20,
                     "partCenter": {
-                        "x": 274.44357976653697,
-                        "y": 329.9785992217898
+                        "x": 267.72234340916185,
+                        "y": 337.1375818011811
                     },
                     "partEnd": {
-                        "x": 373.50000000000006,
-                        "y": 330.99999999999994
+                        "x": 371.97693817468115,
+                        "y": 332.8653361751598
                     },
-                    "partEndAngleRadians": 0.010310937732822894,
+                    "partEndAngleRadians": 6.242229255160143,
                     "partStart": {
-                        "x": 278.5,
-                        "y": 230.99999999999991
+                        "x": 268.1889223499543,
+                        "y": 232.796530836071
                     },
-                    "partStartAngleRadians": 4.753348859695222,
+                    "partStartAngleRadians": 4.716860622433849,
                     "partThrough": {
-                        "x": 346.26324606546547,
-                        "y": 261.7499162378078
+                        "x": 340.14521621951786,
+                        "y": 262.02300194941927
                     },
-                    "pickMode": "best",
-                    "radius": 99.06168608002875,
+                    "pickMode": "first",
+                    "radius": 104.34209415385385,
                     "scanDirection": "normal_positive",
-                    "startAngleRadians": 1.6117562061054294,
+                    "startAngleRadians": 1.5752679688440563,
                     "transition": "light_to_dark",
                     "type": "edge_arc",
                     "useSubpixel": true
@@ -61,153 +61,49 @@
                     "edgeSensitivity": 60,
                     "edgeStatisticalFilter": 0,
                     "enabled": true,
-                    "endAngleRadians": 4.51789215545825,
+                    "endAngleRadians": 4.534381512536165,
                     "id": "arc_3",
                     "imageCenter": {
-                        "x": 705.8044953350297,
-                        "y": 929.6899915182358
+                        "x": 702.6156670746634,
+                        "y": 928.0293757649939
                     },
                     "imageEnd": {
-                        "x": 684,
+                        "x": 683,
                         "y": 819
                     },
                     "imageStart": {
-                        "x": 593,
-                        "y": 928
+                        "x": 592,
+                        "y": 922
                     },
                     "imageThrough": {
-                        "x": 619.2011172698351,
-                        "y": 857.3880887298624
+                        "x": 619.5957893430117,
+                        "y": 854.6817167981948
                     },
                     "innerBand": 20,
                     "outerBand": 20,
                     "partCenter": {
-                        "x": 259.6955046649702,
-                        "y": -331.6899915182359
+                        "x": 262.88433292533654,
+                        "y": -330.029375764994
                     },
                     "partEnd": {
-                        "x": 281.5,
+                        "x": 282.5,
                         "y": -221.00000000000003
                     },
-                    "partEndAngleRadians": 1.3762995018684563,
+                    "partEndAngleRadians": 1.3927888589463717,
                     "partStart": {
-                        "x": 372.49999999999994,
-                        "y": -330.00000000000006
+                        "x": 373.49999999999994,
+                        "y": -324.00000000000006
                     },
-                    "partStartAngleRadians": 0.014980476546538802,
+                    "partStartAngleRadians": 0.054453544727825556,
                     "partThrough": {
-                        "x": 346.29888273016485,
-                        "y": -259.38808872986243
+                        "x": 345.90421065698825,
+                        "y": -256.6817167981948
                     },
                     "pickMode": "best",
-                    "radius": 112.81715401091475,
+                    "radius": 110.77986809203318,
                     "scanDirection": "normal_positive",
-                    "startAngleRadians": 3.156573130136332,
+                    "startAngleRadians": 3.1960461983176187,
                     "transition": "light_to_dark",
-                    "type": "edge_arc",
-                    "useSubpixel": true
-                },
-                {
-                    "coordinateSpace": "part",
-                    "edgeCleanupDerivative": 12,
-                    "edgeSensitivity": 60,
-                    "edgeStatisticalFilter": 0,
-                    "enabled": true,
-                    "endAngleRadians": 6.059480030076783,
-                    "id": "arc_4",
-                    "imageCenter": {
-                        "x": 1003.5,
-                        "y": 400.1666666666667
-                    },
-                    "imageEnd": {
-                        "x": 1035,
-                        "y": 393
-                    },
-                    "imageStart": {
-                        "x": 1012,
-                        "y": 369
-                    },
-                    "imageThrough": {
-                        "x": 1026.823807579381,
-                        "y": 377.814684403093
-                    },
-                    "innerBand": 20,
-                    "outerBand": 20,
-                    "partCenter": {
-                        "x": -37.99999999999998,
-                        "y": 197.83333333333331
-                    },
-                    "partEnd": {
-                        "x": -69.49999999999997,
-                        "y": 205
-                    },
-                    "partEndAngleRadians": 2.9178873764869895,
-                    "partStart": {
-                        "x": -46.49999999999997,
-                        "y": 229
-                    },
-                    "partStartAngleRadians": 1.8370483759458216,
-                    "partThrough": {
-                        "x": -61.323807579381054,
-                        "y": 220.185315596907
-                    },
-                    "pickMode": "best",
-                    "radius": 32.30497037780893,
-                    "scanDirection": "normal_positive",
-                    "startAngleRadians": 4.9786410295356145,
-                    "transition": "dark_to_light",
-                    "type": "edge_arc",
-                    "useSubpixel": true
-                },
-                {
-                    "coordinateSpace": "part",
-                    "edgeCleanupDerivative": 12,
-                    "edgeSensitivity": 60,
-                    "edgeStatisticalFilter": 0,
-                    "enabled": true,
-                    "endAngleRadians": 1.4876550949064553,
-                    "id": "arc_5",
-                    "imageCenter": {
-                        "x": 1010,
-                        "y": 793
-                    },
-                    "imageEnd": {
-                        "x": 1012,
-                        "y": 817
-                    },
-                    "imageStart": {
-                        "x": 1034,
-                        "y": 791
-                    },
-                    "imageThrough": {
-                        "x": 1028.3847763108502,
-                        "y": 808.5563491861041
-                    },
-                    "innerBand": 20,
-                    "outerBand": 20,
-                    "partCenter": {
-                        "x": -44.50000000000002,
-                        "y": -195
-                    },
-                    "partEnd": {
-                        "x": -46.50000000000003,
-                        "y": -219
-                    },
-                    "partEndAngleRadians": 4.6292477484962475,
-                    "partStart": {
-                        "x": -68.50000000000003,
-                        "y": -193
-                    },
-                    "partStartAngleRadians": 3.058451421701352,
-                    "partThrough": {
-                        "x": -62.88477631085018,
-                        "y": -210.55634918610406
-                    },
-                    "pickMode": "first",
-                    "radius": 24.08318915758459,
-                    "scanDirection": "normal_positive",
-                    "startAngleRadians": 6.200044075291145,
-                    "transition": "dark_to_light",
                     "type": "edge_arc",
                     "useSubpixel": true
                 }
@@ -216,29 +112,29 @@
                 {
                     "enabled": true,
                     "id": "constructed_1",
-                    "sourceAId": "line_3",
-                    "sourceBId": "line_4",
-                    "type": "midline_between_lines"
-                },
-                {
-                    "enabled": true,
-                    "id": "constructed_2",
                     "sourceAId": "line_5",
                     "sourceBId": "line_6",
                     "type": "midline_between_lines"
                 },
                 {
                     "enabled": true,
+                    "id": "constructed_2",
+                    "sourceAId": "line_8",
+                    "sourceBId": "line_7",
+                    "type": "midline_between_lines"
+                },
+                {
+                    "enabled": true,
                     "id": "constructed_3",
-                    "sourceAId": "line_7",
-                    "sourceBId": "line_8",
+                    "sourceAId": "line_3",
+                    "sourceBId": "line_4",
                     "type": "midline_between_lines"
                 },
                 {
                     "enabled": true,
                     "id": "constructed_4",
-                    "sourceAId": "line_16",
-                    "sourceBId": "line_15",
+                    "sourceAId": "line_15",
+                    "sourceBId": "line_16",
                     "type": "midline_between_lines"
                 },
                 {
@@ -270,28 +166,6 @@
                     "partStart": {
                         "x": 609.7033898305085,
                         "y": 231.4939759036144
-                    },
-                    "pickMode": "best",
-                    "scanDirection": "normal_positive",
-                    "transition": "light_to_dark",
-                    "type": "edge_line",
-                    "useSubpixel": true
-                },
-                {
-                    "bandHalfWidth": 20,
-                    "coordinateSpace": "part",
-                    "edgeCleanupDerivative": 12,
-                    "edgeSensitivity": 60,
-                    "edgeStatisticalFilter": 0,
-                    "enabled": true,
-                    "id": "line_2",
-                    "partEnd": {
-                        "x": 611.1782334384859,
-                        "y": -217.29411764705884
-                    },
-                    "partStart": {
-                        "x": 470.3580441640379,
-                        "y": -217.29411764705884
                     },
                     "pickMode": "best",
                     "scanDirection": "normal_positive",
@@ -532,8 +406,8 @@
                         "y": 229.5542521994135
                     },
                     "partStart": {
-                        "x": 231.1026417171162,
-                        "y": 231.6656891495601
+                        "x": 226.63103448275868,
+                        "y": 229.17647058823528
                     },
                     "pickMode": "best",
                     "scanDirection": "normal_positive",
@@ -550,8 +424,8 @@
                     "enabled": true,
                     "id": "line_14",
                     "partEnd": {
-                        "x": 162.26612127045243,
-                        "y": -220.92816419612316
+                        "x": 163.49807507218483,
+                        "y": -219.69669327251998
                     },
                     "partStart": {
                         "x": -41.00625601539937,
@@ -576,8 +450,8 @@
                         "y": 169.44566301096705
                     },
                     "partStart": {
-                        "x": -70.08631008041877,
-                        "y": 199.23629112662013
+                        "x": -70.44538993828311,
+                        "y": 195.28813559322032
                     },
                     "pickMode": "best",
                     "scanDirection": "normal_positive",
@@ -752,8 +626,8 @@
                         "y": 84.22857142857161
                     },
                     "partStart": {
-                        "x": -803.205440900563,
-                        "y": 84.2285714285716
+                        "x": -807.6363381335327,
+                        "y": 83.66301096709876
                     },
                     "pickMode": "best",
                     "scanDirection": "normal_positive",
@@ -829,22 +703,44 @@
                 },
                 {
                     "bandHalfWidth": 20,
-                    "coordinateSpace": "image",
+                    "coordinateSpace": "part",
                     "edgeCleanupDerivative": 12,
                     "edgeSensitivity": 60,
                     "edgeStatisticalFilter": 0,
                     "enabled": true,
                     "id": "line_27",
-                    "imageEnd": {
-                        "x": 1765.617796837309,
-                        "y": 673.1999999999999
+                    "partEnd": {
+                        "x": -807.0721961047682,
+                        "y": -75.87186629526448
                     },
-                    "imageStart": {
-                        "x": 1807.3009916912356,
-                        "y": 672.6857142857142
+                    "partStart": {
+                        "x": -841.8009916912356,
+                        "y": -74.6857142857141
                     },
                     "pickMode": "best",
                     "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_29",
+                    "partEnd": {
+                        "x": 461.16820276497697,
+                        "y": -221.03071672354957
+                    },
+                    "partStart": {
+                        "x": 620.4308755760369,
+                        "y": -221.03071672354957
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_negative",
                     "transition": "light_to_dark",
                     "type": "edge_line",
                     "useSubpixel": true
@@ -855,99 +751,136 @@
             "enabled": true,
             "items": [
                 {
-                    "alias": "Diametro sopra testa",
                     "enabled": true,
-                    "hasMax": true,
-                    "hasMin": true,
+                    "hasMax": false,
+                    "hasMin": false,
                     "hasNominal": false,
                     "hasSampleScale": false,
                     "id": "measurement_1",
-                    "max": 20.8,
-                    "min": 20.4,
-                    "nominal": 20.6,
-                    "samplePixels": 449.7881167950774,
+                    "label": {
+                        "custom": true,
+                        "x": 1416.677966101695,
+                        "y": 448.91566265060237
+                    },
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 657.7951755259711,
                     "sampleValue": 0,
-                    "sourceAId": "line_1",
-                    "sourceBId": "line_2",
-                    "type": "line_line_distance",
-                    "unit": "mm"
+                    "sourceAId": "arc_2",
+                    "sourceBId": "arc_3",
+                    "type": "point_point_distance",
+                    "unit": "px"
                 },
                 {
-                    "alias": "Dimametro gola",
                     "enabled": true,
-                    "hasMax": true,
-                    "hasMin": true,
-                    "hasNominal": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
                     "hasSampleScale": false,
                     "id": "measurement_2",
-                    "max": 14.1,
-                    "min": 14,
-                    "nominal": 14,
-                    "samplePixels": 305.94739013073627,
+                    "label": {
+                        "custom": true,
+                        "x": 1416.677966101695,
+                        "y": 199.5180722891566
+                    },
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 450.52468876265186,
                     "sampleValue": 0,
-                    "sourceAId": "line_9",
-                    "sourceBId": "line_10",
+                    "sourceAId": "line_29",
+                    "sourceBId": "line_1",
                     "type": "line_line_distance",
-                    "unit": "mm"
+                    "unit": "px"
                 },
                 {
-                    "alias": "Diametro corpo",
                     "enabled": true,
-                    "hasMax": true,
-                    "hasMin": true,
+                    "hasMax": false,
+                    "hasMin": false,
                     "hasNominal": false,
                     "hasSampleScale": false,
                     "id": "measurement_3",
-                    "max": 21,
-                    "min": 20.5,
-                    "nominal": 20.75,
-                    "samplePixels": 450.170773130924,
+                    "label": {
+                        "custom": true,
+                        "x": 1421.0169491525423,
+                        "y": 388.1927710843373
+                    },
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 450.17690491069493,
                     "sampleValue": 0,
-                    "sourceAId": "line_14",
-                    "sourceBId": "line_13",
+                    "sourceAId": "line_13",
+                    "sourceBId": "line_14",
                     "type": "line_line_distance",
-                    "unit": "mm"
+                    "unit": "px"
                 },
                 {
-                    "alias": "Diametro gambo",
                     "enabled": true,
-                    "hasMax": true,
-                    "hasMin": true,
-                    "hasNominal": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
                     "hasSampleScale": false,
                     "id": "measurement_4",
-                    "max": 15,
-                    "min": 14.8,
-                    "nominal": 14.9,
-                    "samplePixels": 324.3052939116836,
+                    "label": {
+                        "custom": true,
+                        "x": 1416.677966101695,
+                        "y": 136.6265060240964
+                    },
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 324.31151690424286,
                     "sampleValue": 0,
-                    "sourceAId": "line_18",
-                    "sourceBId": "line_17",
+                    "sourceAId": "line_17",
+                    "sourceBId": "line_18",
                     "type": "line_line_distance",
-                    "unit": "mm"
+                    "unit": "px"
                 },
                 {
-                    "alias": "Altezza 1",
                     "enabled": true,
-                    "hasMax": true,
-                    "hasMin": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_5",
+                    "label": {
+                        "custom": true,
+                        "x": 1429.6949152542372,
+                        "y": 329.6385542168675
+                    },
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 158.02413732837152,
+                    "sampleValue": 0,
+                    "sourceAId": "line_21",
+                    "sourceBId": "line_22",
+                    "type": "line_line_distance",
+                    "unit": "px"
+                },
+                {
+                    "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
                     "hasNominal": false,
                     "hasSampleScale": false,
                     "id": "measurement_6",
                     "label": {
                         "custom": true,
-                        "x": 1442.7118644067796,
-                        "y": 1010.6024096385541
+                        "x": 1425.3559322033898,
+                        "y": 266.7469879518072
                     },
-                    "max": 14.5,
-                    "min": 14.45,
-                    "nominal": 14.475,
-                    "samplePixels": 314.89540264314803,
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 158.1508708861219,
                     "sampleValue": 0,
-                    "sourceAId": "line_3_midline_line_4",
-                    "sourceBId": "line_5_midline_line_6",
+                    "sourceAId": "line_23",
+                    "sourceBId": "line_27",
                     "type": "line_line_distance",
-                    "unit": "mm"
+                    "unit": "px"
                 },
                 {
                     "enabled": true,
@@ -956,13 +889,18 @@
                     "hasNominal": false,
                     "hasSampleScale": false,
                     "id": "measurement_7",
+                    "label": {
+                        "custom": true,
+                        "x": 1399.322033898305,
+                        "y": 778.5542168674698
+                    },
                     "max": 0,
                     "min": 0,
                     "nominal": 0,
-                    "samplePixels": 172.37645631955593,
+                    "samplePixels": 305.99235437791134,
                     "sampleValue": 0,
-                    "sourceAId": "line_3_midline_line_4",
-                    "sourceBId": "line_7_midline_line_8",
+                    "sourceAId": "line_9",
+                    "sourceBId": "line_10",
                     "type": "line_line_distance",
                     "unit": "px"
                 },
@@ -973,13 +911,18 @@
                     "hasNominal": false,
                     "hasSampleScale": false,
                     "id": "measurement_8",
+                    "label": {
+                        "custom": true,
+                        "x": 1434.0338983050847,
+                        "y": 73.73493975903614
+                    },
                     "max": 0,
                     "min": 0,
                     "nominal": 0,
-                    "samplePixels": 142.53002411392856,
+                    "samplePixels": 142.53846268473143,
                     "sampleValue": 0,
-                    "sourceAId": "line_7_midline_line_8",
-                    "sourceBId": "line_5_midline_line_6",
+                    "sourceAId": "line_5_midline_line_6",
+                    "sourceBId": "line_8_midline_line_7",
                     "type": "line_line_distance",
                     "unit": "px"
                 },
@@ -990,13 +933,18 @@
                     "hasNominal": false,
                     "hasSampleScale": false,
                     "id": "measurement_9",
+                    "label": {
+                        "custom": true,
+                        "x": 1421.0169491525423,
+                        "y": 837.1084337349397
+                    },
                     "max": 0,
                     "min": 0,
                     "nominal": 0,
-                    "samplePixels": 525.1702252015444,
+                    "samplePixels": 172.37645631955593,
                     "sampleValue": 0,
-                    "sourceAId": "line_3_midline_line_4",
-                    "sourceBId": "line_16_midline_line_15",
+                    "sourceAId": "line_8_midline_line_7",
+                    "sourceBId": "line_3_midline_line_4",
                     "type": "line_line_distance",
                     "unit": "px"
                 },
@@ -1007,51 +955,128 @@
                     "hasNominal": false,
                     "hasSampleScale": false,
                     "id": "measurement_10",
+                    "label": {
+                        "custom": true,
+                        "x": 1399.322033898305,
+                        "y": 895.6626506024096
+                    },
                     "max": 0,
                     "min": 0,
                     "nominal": 0,
-                    "samplePixels": 697.6587147845978,
+                    "samplePixels": 525.1884674976238,
                     "sampleValue": 0,
                     "sourceAId": "line_3_midline_line_4",
+                    "sourceBId": "line_15_midline_line_16",
+                    "type": "line_line_distance",
+                    "unit": "px"
+                },
+                {
+                    "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_11",
+                    "label": {
+                        "custom": true,
+                        "x": 1423.1864406779662,
+                        "y": 954.2168674698795
+                    },
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 172.50205846968316,
+                    "sampleValue": 0,
+                    "sourceAId": "line_15_midline_line_16",
                     "sourceBId": "line_19_midline_line_20",
                     "type": "line_line_distance",
                     "unit": "px"
                 },
                 {
-                    "alias": "Punta",
                     "enabled": true,
-                    "hasMax": true,
-                    "hasMin": true,
-                    "hasNominal": false,
-                    "hasSampleScale": false,
-                    "id": "measurement_11",
-                    "max": 7.35,
-                    "min": 7.2,
-                    "nominal": 7.275,
-                    "samplePixels": 158.1508708861219,
-                    "sampleValue": 0,
-                    "sourceAId": "line_23",
-                    "sourceBId": "line_27",
-                    "type": "line_line_distance",
-                    "unit": "mm"
-                },
-                {
-                    "alias": "Angolo punta",
-                    "enabled": true,
-                    "hasMax": true,
-                    "hasMin": true,
+                    "hasMax": false,
+                    "hasMin": false,
                     "hasNominal": false,
                     "hasSampleScale": false,
                     "id": "measurement_12",
-                    "max": 80,
-                    "min": 75,
-                    "nominal": 77.5,
-                    "samplePixels": 76.4236328486826,
+                    "label": {
+                        "custom": true,
+                        "x": 1423.1864406779662,
+                        "y": 1017.1084337349397
+                    },
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 663.9017439508963,
+                    "sampleValue": 0,
+                    "sourceAId": "line_25",
+                    "sourceBId": "line_19_midline_line_20",
+                    "type": "line_line_distance",
+                    "unit": "px"
+                },
+                {
+                    "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_13",
+                    "label": {
+                        "custom": true,
+                        "x": 1125.9661016949153,
+                        "y": 1019.2771084337348
+                    },
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 76.40473605583672,
                     "sampleValue": 0,
                     "sourceAId": "line_24",
                     "sourceBId": "line_26",
                     "type": "line_line_angle",
                     "unit": "deg"
+                },
+                {
+                    "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_14",
+                    "label": {
+                        "custom": true,
+                        "x": 930.7118644067797,
+                        "y": 82.40963855421687
+                    },
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 199.19207438638355,
+                    "sampleValue": 0,
+                    "sourceAId": "arc_2",
+                    "type": "circle_diameter",
+                    "unit": "px"
+                },
+                {
+                    "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_15",
+                    "label": {
+                        "custom": true,
+                        "x": 928.542372881356,
+                        "y": 145.3012048192771
+                    },
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 216.5177052256003,
+                    "sampleValue": 0,
+                    "sourceAId": "arc_3",
+                    "type": "circle_diameter",
+                    "unit": "px"
                 }
             ]
         },
@@ -1061,10 +1086,10 @@
                     "id": "massPca",
                     "label": "massPca",
                     "searchRoi": {
-                        "height": 788,
-                        "width": 1723,
-                        "x": 171,
-                        "y": 193
+                        "height": 823,
+                        "width": 1784,
+                        "x": 119,
+                        "y": 190
                     }
                 }
             },
@@ -1081,55 +1106,35 @@
             "enabled": true,
             "extractionRoi": {
                 "image": {
-                    "height": 244,
-                    "width": 554,
-                    "x": 1243,
-                    "y": 470
+                    "height": 270,
+                    "width": 548,
+                    "x": 1249,
+                    "y": 455
                 },
                 "part": {
-                    "height": 244,
-                    "width": 553,
+                    "height": 270,
+                    "width": 547,
                     "x": -831,
-                    "y": -115
+                    "y": -126
                 }
             },
             "filter": {
                 "maxSpeckAreaPx": 0,
-                "minSpeckAreaPx": 6,
+                "minSpeckAreaPx": 0,
                 "morphOpenRadius": 2,
                 "outlierRejectSigma": 2.5,
-                "profileSmoothRadius": 3,
+                "profileSmoothRadius": 1,
                 "thresholdMax": 80,
                 "thresholdMin": 0
             },
             "measurements": {
                 "major": {
-                    "enabled": true,
-                    "hasMax": true,
-                    "hasMin": true,
-                    "max": 9.27,
-                    "min": 9.18
                 },
                 "minor": {
-                    "enabled": true,
-                    "hasMax": true,
-                    "hasMin": true,
-                    "max": 7.495,
-                    "min": 7.48
                 },
                 "phase": {
-                    "enabled": true,
-                    "hasMax": true,
-                    "hasMin": true,
-                    "max": 3,
-                    "min": 0
                 },
                 "pitch": {
-                    "enabled": true,
-                    "hasMax": true,
-                    "hasMin": true,
-                    "max": 2.1,
-                    "min": 2
                 },
                 "pitchDiameter": {
                 }

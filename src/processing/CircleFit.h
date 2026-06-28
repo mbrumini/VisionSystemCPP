@@ -26,4 +26,5 @@ class CircleFit
 {
 public:
   static CircleFitResult fit(const std::vector<cv::Point>& points, const CircleFitSettings& settings = {});
+  static CircleFitResult fit(const std::vector<cv::Point2d>& points, const CircleFitSettings& settings = {});
 };

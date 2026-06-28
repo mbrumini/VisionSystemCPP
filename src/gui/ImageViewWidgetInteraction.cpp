@@ -91,6 +91,12 @@ void ImageViewWidget::mousePressEvent(QMouseEvent* event)
 
   if (m_drawingMode == DrawingMode::None && !m_circleBandEditing)
   {
+    if (m_imageClickedHandler)
+    {
+      m_imageClickedHandler(widgetToImageF(event->pos()));
+      update();
+      return;
+    }
     QWidget::mousePressEvent(event);
     return;
   }
@@ -226,6 +232,11 @@ void ImageViewWidget::mousePressEvent(QMouseEvent* event)
       setCursor(Qt::ClosedHandCursor);
       update();
     }
+    else if (m_imageClickedHandler)
+    {
+      m_imageClickedHandler(widgetToImageF(event->pos()));
+      update();
+    }
     return;
   }
 
@@ -259,6 +270,11 @@ void ImageViewWidget::mousePressEvent(QMouseEvent* event)
         setCursor(Qt::SizeFDiagCursor);
         return;
       }
+    }
+    if (m_imageClickedHandler)
+    {
+      m_imageClickedHandler(widgetToImageF(event->pos()));
+      update();
     }
     return;
   }

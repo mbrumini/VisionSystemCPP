@@ -60,6 +60,7 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
   }
   lineSelector->setCurrentIndex(qBound(0, m_activeLineIndexes.value(camera.id, 0), lineConfigs.size() - 1));
   auto* newLineButton = createTouchIconButton("new", tr("actions.newGeometryLine"), panel);
+  auto* editLineButton = createTouchIconButton("lineGeometry", tr("actions.editGeometry"), panel);
   auto* deleteLineButton = createTouchIconButton("delete", tr("actions.deleteGeometryLine"), panel);
 
   auto* bandHalfWidth = new QSlider(Qt::Horizontal, panel);
@@ -118,7 +119,8 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
   lineControlsLayout->addWidget(new QLabel(tr("labels.geometryLine"), lineControls), 0, 0);
   lineControlsLayout->addWidget(lineSelector, 0, 1);
   lineControlsLayout->addWidget(newLineButton, 0, 2);
-  lineControlsLayout->addWidget(deleteLineButton, 0, 3);
+  lineControlsLayout->addWidget(editLineButton, 0, 3);
+  lineControlsLayout->addWidget(deleteLineButton, 0, 4);
   lineControlsLayout->addWidget(new QLabel(tr("labels.geometryLineBand"), lineControls), 1, 0);
   lineControlsLayout->addWidget(bandHalfWidthValue, 1, 1);
   lineControlsLayout->addWidget(new QLabel(tr("labels.edgeSensitivity"), lineControls), 1, 2);
@@ -201,47 +203,45 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
   QObject::connect(deleteLineButton, &QPushButton::clicked, window(), [this, camera]() {
     removeActiveGeometryLine(camera);
   });
+  QObject::connect(editLineButton, &QPushButton::clicked, window(), [this, camera]() {
+    largeImage()->setGeometryOverlayPointEditingEnabled(true);
+    testConfiguredGeometryLines(camera);
+    updateGeometryLineOverlay(camera);
+  });
   QObject::connect(bandHalfWidth, &QSlider::valueChanged, window(), [this, camera, bandHalfWidthValue](int value) {
     bandHalfWidthValue->setText(QString("%1 px").arg(value));
     activeGeometryLineConfig(camera.id).bandHalfWidth = value;
     m_lineMouseControllers[camera.id].setBandHalfWidth(value);
     updateGeometryLineOverlay(camera);
-    saveGeometryLinesRecipe(camera);
     updateGeometryLineOverlay(camera);
   });
   QObject::connect(edgeSensitivity, &QSlider::valueChanged, window(), [this, camera, edgeSensitivityValue](int value) {
     edgeSensitivityValue->setText(QString::number(value));
     activeGeometryLineConfig(camera.id).edgeSensitivity = value;
-    saveGeometryLinesRecipe(camera);
     updateGeometryLineOverlay(camera);
   });
   QObject::connect(edgeCleanupDerivative, &QSlider::valueChanged, window(), [this, camera, edgeCleanupDerivativeValue](int value) {
     edgeCleanupDerivativeValue->setText(QString("%1 px").arg(value));
     activeGeometryLineConfig(camera.id).edgeCleanupDerivative = value;
-    saveGeometryLinesRecipe(camera);
     updateGeometryLineOverlay(camera);
   });
   QObject::connect(edgeStatisticalFilter, &QSlider::valueChanged, window(), [this, camera, edgeStatisticalFilterValue](int value) {
     edgeStatisticalFilterValue->setText(QString("%1 px").arg(value));
     activeGeometryLineConfig(camera.id).edgeStatisticalFilter = value;
-    saveGeometryLinesRecipe(camera);
     updateGeometryLineOverlay(camera);
   });
   QObject::connect(subpixelEdge, &QCheckBox::toggled, window(), [this, camera](bool checked) {
     activeGeometryLineConfig(camera.id).useSubpixel = checked;
-    saveGeometryLinesRecipe(camera);
     updateGeometryLineOverlay(camera);
   });
   QObject::connect(scanDirection, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
     activeGeometryLineConfig(camera.id).scanDirection =
       index == 1 ? EdgeLineScanDirection::NormalNegative : EdgeLineScanDirection::NormalPositive;
-    saveGeometryLinesRecipe(camera);
     updateGeometryLineOverlay(camera);
   });
   QObject::connect(edgeTransition, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
     activeGeometryLineConfig(camera.id).transition =
       index == 1 ? EdgeLineTransition::DarkToLight : EdgeLineTransition::LightToDark;
-    saveGeometryLinesRecipe(camera);
     updateGeometryLineOverlay(camera);
   });
   QObject::connect(edgePickMode, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
@@ -257,22 +257,27 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
     {
       activeGeometryLineConfig(camera.id).pickMode = EdgeLinePickMode::First;
     }
-    saveGeometryLinesRecipe(camera);
     updateGeometryLineOverlay(camera);
   });
   QObject::connect(aliasEdit, &QLineEdit::editingFinished, window(), [this, camera, aliasEdit]() {
     activeGeometryLineConfig(camera.id).alias = aliasEdit->text().trimmed();
-    saveGeometryLinesRecipe(camera);
     testConfiguredGeometryLines(camera);
     syncRuntimeGeometryLabels(camera);
     refreshMeasurementOverlay(camera);
   });
 
+  auto* saveButton = createTouchIconButton("saveSample", tr("actions.saveGeometry"), panel);
   auto* testButton = createTouchIconButton("start", tr("actions.testGeometry"), panel);
   auto* backButton = createTouchIconButton("back",
     GeometryPanelNavigation::backLabel(context(), camera, tr("commands.backToCameraTools")),
     panel);
 
+  QObject::connect(saveButton, &QPushButton::clicked, window(), [this, camera]() {
+    saveGeometryLinesRecipe(camera);
+    largeImage()->setGeometryOverlayPointEditingEnabled(true);
+    updateGeometryLineOverlay(camera);
+    refreshMeasurementOverlay(camera);
+  });
   QObject::connect(testButton, &QPushButton::clicked, window(), [this, camera]() { testGeometryLine(camera); });
   QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() {
     if (!GeometryPanelNavigation::returnToSetup(context(), camera))
@@ -286,8 +291,9 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
   buttonsLayout->setContentsMargins(0, 0, 0, 0);
   buttonsLayout->setHorizontalSpacing(8);
   buttonsLayout->setVerticalSpacing(8);
-  buttonsLayout->addWidget(testButton, 0, 0);
-  buttonsLayout->addWidget(backButton, 0, 1);
+  buttonsLayout->addWidget(saveButton, 0, 0);
+  buttonsLayout->addWidget(testButton, 0, 1);
+  buttonsLayout->addWidget(backButton, 1, 0, 1, 2);
   layout->addWidget(buttons);
   layout->addStretch(1);
 
@@ -301,7 +307,7 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
     *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Geometry;
     m_drawingTarget = DrawingTarget::Line;
     updateGeometryLineOverlay(camera);
-    largeImage()->setGeometryOverlayPointEditingEnabled(true);
+    largeImage()->setGeometryOverlayPointEditingEnabled(false);
     shouldRefreshLine = true;
   }
   else if (lineConfig.hasImageLine)
@@ -313,8 +319,28 @@ void MainWindowGeometryModule::showGeometryLinePanel(const CameraConfig& camera)
       lineConfig.bandHalfWidth);
     *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Geometry;
     m_drawingTarget = DrawingTarget::Line;
-    largeImage()->setGeometryOverlayPointEditingEnabled(true);
+    largeImage()->setGeometryOverlayPointEditingEnabled(false);
     shouldRefreshLine = true;
+  }
+  else
+  {
+    const GeometrySet& geometries = cameraRuntime()[camera.id].geometries();
+    for (const LineGeometry& runtimeLine : geometries.lines)
+    {
+      if (runtimeLine.meta.id == lineConfig.id)
+      {
+        LineGeometryMouseController& controller = m_lineMouseControllers[camera.id];
+        controller.setLine(
+          QPointF(runtimeLine.start.x, runtimeLine.start.y),
+          QPointF(runtimeLine.end.x, runtimeLine.end.y),
+          lineConfig.bandHalfWidth);
+        *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Geometry;
+        m_drawingTarget = DrawingTarget::Line;
+        largeImage()->setGeometryOverlayPointEditingEnabled(false);
+        shouldRefreshLine = true;
+        break;
+      }
+    }
   }
 
   toolsLayout()->addWidget(panel);

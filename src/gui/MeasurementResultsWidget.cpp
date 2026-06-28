@@ -33,6 +33,13 @@ QString measurementValue(const MeasurementResult& measurement)
   }
   if (measurement.hasRealValue)
   {
+    if (measurement.unit != "deg")
+    {
+      return QString("%1 %2 (%3 px)")
+        .arg(measurement.valueReal, 0, 'f', 3)
+        .arg(measurement.unit)
+        .arg(measurement.valuePixels, 0, 'f', 3);
+    }
     return QString("%1 %2").arg(measurement.valueReal, 0, 'f', 3).arg(measurement.unit);
   }
   const bool angleMeasurement =

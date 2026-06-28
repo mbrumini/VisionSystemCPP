@@ -85,7 +85,8 @@ void MainWindowMeasurementModule::createPointLineDistance(const CameraConfig& ca
 
 void MainWindowMeasurementModule::createLineLineDistance(const CameraConfig& camera,
                                                          const QString& lineAId,
-                                                         const QString& lineBId)
+                                                         const QString& lineBId,
+                                                         const QString& measurementType)
 {
   GeometrySet& set = cameraRuntime()[camera.id].geometries();
   const LineGeometry* lineA = findConstructedGeometryLineSource(set, lineAId);
@@ -102,13 +103,23 @@ void MainWindowMeasurementModule::createLineLineDistance(const CameraConfig& cam
   }
 
   double distancePixels = 0.0;
-  if (!MeasurementGeometryMath::parallelLineDistance(*lineA, *lineB, distancePixels))
+  MeasurementGeometryMath::ParallelLineDistanceMode mode = MeasurementGeometryMath::ParallelLineDistanceMode::Average;
+  if (measurementType == "line_line_distance_min")
+  {
+    mode = MeasurementGeometryMath::ParallelLineDistanceMode::Minimum;
+  }
+  else if (measurementType == "line_line_distance_max")
+  {
+    mode = MeasurementGeometryMath::ParallelLineDistanceMode::Maximum;
+  }
+
+  if (!MeasurementGeometryMath::parallelLineDistance(*lineA, *lineB, mode, distancePixels))
   {
     log(QString("%1: %2").arg(tr("log.measurementLineLineInvalid"), camera.id));
     return;
   }
 
-  if (!saveMeasurementRecipeAction(camera, "line_line_distance", lineA->meta.id, lineB->meta.id, distancePixels))
+  if (!saveMeasurementRecipeAction(camera, measurementType, lineA->meta.id, lineB->meta.id, distancePixels))
   {
     return;
   }

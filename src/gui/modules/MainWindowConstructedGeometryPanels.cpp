@@ -18,7 +18,9 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 
+#include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace
 {
@@ -83,6 +85,127 @@ void addPointSources(QComboBox* combo, const QVector<ConstructedGeometryPointSou
   }
 }
 
+bool setComboCurrentData(QComboBox* combo, const QString& id)
+{
+  if (!combo)
+  {
+    return false;
+  }
+  const int index = combo->findData(id);
+  if (index < 0)
+  {
+    return false;
+  }
+  combo->setCurrentIndex(index);
+  return true;
+}
+
+double pointDistance(const cv::Point2d& a, const cv::Point2d& b)
+{
+  const cv::Point2d delta = a - b;
+  return std::sqrt(delta.dot(delta));
+}
+
+double lineSegmentDistance(const LineGeometry& line, const cv::Point2d& point)
+{
+  const cv::Point2d segment = line.end - line.start;
+  const double lengthSquared = segment.dot(segment);
+  if (lengthSquared <= 0.000001)
+  {
+    return pointDistance(line.start, point);
+  }
+  const cv::Point2d delta = point - line.start;
+  const double t = std::clamp(delta.dot(segment) / lengthSquared, 0.0, 1.0);
+  return pointDistance(line.start + segment * t, point);
+}
+
+QString nearestPointSourceId(const QVector<ConstructedGeometryPointSource>& sources,
+                             const QPointF& imagePoint,
+                             double maxDistance = 28.0,
+                             double* bestDistanceOut = nullptr)
+{
+  const cv::Point2d target(imagePoint.x(), imagePoint.y());
+  QString bestId;
+  double bestDistance = maxDistance;
+  for (const ConstructedGeometryPointSource& source : sources)
+  {
+    if (!source.point)
+    {
+      continue;
+    }
+    const double distance = pointDistance(source.point->point, target);
+    if (distance <= bestDistance)
+    {
+      bestDistance = distance;
+      bestId = source.id;
+    }
+  }
+  if (bestDistanceOut)
+  {
+    *bestDistanceOut = bestId.isEmpty() ? std::numeric_limits<double>::infinity() : bestDistance;
+  }
+  return bestId;
+}
+
+QString nearestLineSourceId(const QVector<ConstructedGeometryLineSource>& sources,
+                            const QPointF& imagePoint,
+                            double maxDistance = 28.0,
+                            double* bestDistanceOut = nullptr)
+{
+  const cv::Point2d target(imagePoint.x(), imagePoint.y());
+  QString bestId;
+  double bestDistance = maxDistance;
+  for (const ConstructedGeometryLineSource& source : sources)
+  {
+    if (!source.line)
+    {
+      continue;
+    }
+    const double distance = lineSegmentDistance(*source.line, target);
+    if (distance <= bestDistance)
+    {
+      bestDistance = distance;
+      bestId = source.id;
+    }
+  }
+  if (bestDistanceOut)
+  {
+    *bestDistanceOut = bestId.isEmpty() ? std::numeric_limits<double>::infinity() : bestDistance;
+  }
+  return bestId;
+}
+
+QString nearestCircleSourceId(const GeometrySet& set,
+                              const QVector<ConstructedGeometryCircleSource>& sources,
+                              const QPointF& imagePoint,
+                              double maxDistance = 32.0,
+                              double* bestDistanceOut = nullptr)
+{
+  const cv::Point2d target(imagePoint.x(), imagePoint.y());
+  QString bestId;
+  double bestDistance = maxDistance;
+  for (const ConstructedGeometryCircleSource& source : sources)
+  {
+    CircleGeometry circle;
+    if (!constructedGeometryCircleSourceValue(set, source.id, circle) || circle.radius <= 0.0)
+    {
+      continue;
+    }
+    const double centerDistance = pointDistance(circle.center, target);
+    const double distance = std::min(std::abs(centerDistance - circle.radius), centerDistance);
+    if (distance <= bestDistance)
+    {
+      bestDistance = distance;
+      bestId = source.id;
+    }
+  }
+  if (bestDistanceOut)
+  {
+    *bestDistanceOut = bestId.isEmpty() ? std::numeric_limits<double>::infinity() : bestDistance;
+  }
+  return bestId;
+}
+
 void appendSelectionPoint(GeometryOverlay& overlay,
                           const PointGeometry& point,
                           const QString& label,
@@ -126,6 +249,126 @@ void appendSelectionCircle(GeometryOverlay& overlay,
 }
 }
 
+void MainWindowConstructedGeometryModule::handleImagePick(const CameraConfig& camera, const QPointF& imagePoint)
+{
+  if (m_imagePickMode == ImagePickMode::None || !m_pickPrimaryCombo)
+  {
+    return;
+  }
+
+  const GeometrySet& set = cameraRuntime()[camera.id].geometries();
+  const QHash<QString, QString> aliases = geometryAliasesForCamera(camera);
+  const QVector<ConstructedGeometryPointSource> pointSources = constructedGeometryPointSources(set, aliases);
+  const QVector<ConstructedGeometryLineSource> lineSources = constructedGeometryLineSources(set, aliases);
+  const QVector<ConstructedGeometryCircleSource> circleSources = constructedGeometryCircleSources(set, aliases);
+
+  if (m_imagePickMode == ImagePickMode::LineLine)
+  {
+    const QString id = nearestLineSourceId(lineSources, imagePoint);
+    QComboBox* target = (m_nextPickTarget % 2 == 0) ? m_pickPrimaryCombo.data() : m_pickSecondaryCombo.data();
+    if (!id.isEmpty() && setComboCurrentData(target, id))
+    {
+      ++m_nextPickTarget;
+    }
+    return;
+  }
+
+  if (m_imagePickMode == ImagePickMode::CircleCircle)
+  {
+    const QString id = nearestCircleSourceId(set, circleSources, imagePoint);
+    QComboBox* target = (m_nextPickTarget % 2 == 0) ? m_pickPrimaryCombo.data() : m_pickSecondaryCombo.data();
+    if (!id.isEmpty() && setComboCurrentData(target, id))
+    {
+      ++m_nextPickTarget;
+    }
+    return;
+  }
+
+  if (m_imagePickMode == ImagePickMode::PointPoint)
+  {
+    const QString id = nearestPointSourceId(pointSources, imagePoint);
+    QComboBox* target = (m_nextPickTarget % 2 == 0) ? m_pickPrimaryCombo.data() : m_pickSecondaryCombo.data();
+    if (!id.isEmpty() && setComboCurrentData(target, id))
+    {
+      ++m_nextPickTarget;
+    }
+    return;
+  }
+
+  if (m_imagePickMode == ImagePickMode::Line)
+  {
+    const QString id = nearestLineSourceId(lineSources, imagePoint);
+    if (!id.isEmpty())
+    {
+      setComboCurrentData(m_pickPrimaryCombo.data(), id);
+    }
+    return;
+  }
+
+  if (m_imagePickMode == ImagePickMode::Circle)
+  {
+    const QString id = nearestCircleSourceId(set, circleSources, imagePoint);
+    if (!id.isEmpty())
+    {
+      setComboCurrentData(m_pickPrimaryCombo.data(), id);
+    }
+    return;
+  }
+
+  if (m_imagePickMode == ImagePickMode::LineCircle)
+  {
+    double lineDistance = 0.0;
+    double circleDistance = 0.0;
+    const QString lineId = nearestLineSourceId(lineSources, imagePoint, 28.0, &lineDistance);
+    const QString circleId = nearestCircleSourceId(set, circleSources, imagePoint, 32.0, &circleDistance);
+    if (!lineId.isEmpty() && lineDistance <= circleDistance)
+    {
+      setComboCurrentData(m_pickPrimaryCombo.data(), lineId);
+      return;
+    }
+    if (!circleId.isEmpty())
+    {
+      setComboCurrentData(m_pickSecondaryCombo.data(), circleId);
+    }
+    return;
+  }
+
+  if (m_imagePickMode == ImagePickMode::PointCircle)
+  {
+    double pointDistance = 0.0;
+    double circleDistance = 0.0;
+    const QString pointId = nearestPointSourceId(pointSources, imagePoint, 28.0, &pointDistance);
+    const QString circleId = nearestCircleSourceId(set, circleSources, imagePoint, 32.0, &circleDistance);
+    if (!pointId.isEmpty() && pointDistance <= circleDistance)
+    {
+      setComboCurrentData(m_pickPrimaryCombo.data(), pointId);
+      return;
+    }
+    if (!circleId.isEmpty())
+    {
+      setComboCurrentData(m_pickSecondaryCombo.data(), circleId);
+    }
+    return;
+  }
+
+  if (m_imagePickMode == ImagePickMode::PointLine)
+  {
+    double pointDistance = 0.0;
+    double lineDistance = 0.0;
+    const QString pointId = nearestPointSourceId(pointSources, imagePoint, 28.0, &pointDistance);
+    const QString lineId = nearestLineSourceId(lineSources, imagePoint, 28.0, &lineDistance);
+    if (!pointId.isEmpty() && pointDistance <= lineDistance)
+    {
+      setComboCurrentData(m_pickPrimaryCombo.data(), pointId);
+      return;
+    }
+    if (!lineId.isEmpty())
+    {
+      setComboCurrentData(m_pickSecondaryCombo.data(), lineId);
+    }
+  }
+}
+
 void MainWindowConstructedGeometryModule::refreshConstructedGeometrySources(const CameraConfig& camera)
 {
   if (context().setup)
@@ -157,6 +400,10 @@ void MainWindowConstructedGeometryModule::showConstructedGeometryPanel(const Cam
 {
   context().deactivateImageDrawingTools();
   context().clearToolPanel();
+  m_imagePickMode = ImagePickMode::None;
+  m_pickPrimaryCombo = nullptr;
+  m_pickSecondaryCombo = nullptr;
+  m_nextPickTarget = 0;
   refreshConstructedGeometrySources(camera);
 
   auto* panel = createPanel(toolsContainer());
@@ -234,6 +481,7 @@ void MainWindowConstructedGeometryModule::showConstructedGeometryPanel(const Cam
 void MainWindowConstructedGeometryModule::showLineLineIntersectionPanel(const CameraConfig& camera)
 {
   context().clearToolPanel();
+  m_imagePickMode = ImagePickMode::None;
   refreshConstructedGeometrySources(camera);
 
   const QVector<ConstructedGeometryLineSource> lineSources =
@@ -271,6 +519,10 @@ void MainWindowConstructedGeometryModule::showLineLineIntersectionPanel(const Ca
   };
   QObject::connect(firstCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
   QObject::connect(secondCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  m_imagePickMode = ImagePickMode::LineLine;
+  m_pickPrimaryCombo = firstCombo;
+  m_pickSecondaryCombo = secondCombo;
+  m_nextPickTarget = 0;
 
   formLayout->addWidget(new QLabel(tr("labels.sourceLineA"), panel), 0, 0);
   formLayout->addWidget(firstCombo, 0, 1);
@@ -295,6 +547,7 @@ void MainWindowConstructedGeometryModule::showLineLineIntersectionPanel(const Ca
 void MainWindowConstructedGeometryModule::showLineCircleIntersectionPanel(const CameraConfig& camera)
 {
   context().clearToolPanel();
+  m_imagePickMode = ImagePickMode::None;
   refreshConstructedGeometrySources(camera);
 
   const GeometrySet& set = cameraRuntime()[camera.id].geometries();
@@ -333,6 +586,10 @@ void MainWindowConstructedGeometryModule::showLineCircleIntersectionPanel(const 
   };
   QObject::connect(lineCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
   QObject::connect(circleCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  m_imagePickMode = ImagePickMode::LineCircle;
+  m_pickPrimaryCombo = lineCombo;
+  m_pickSecondaryCombo = circleCombo;
+  m_nextPickTarget = 0;
 
   formLayout->addWidget(new QLabel(tr("labels.sourceLine"), panel), 0, 0);
   formLayout->addWidget(lineCombo, 0, 1);
@@ -357,6 +614,7 @@ void MainWindowConstructedGeometryModule::showLineCircleIntersectionPanel(const 
 void MainWindowConstructedGeometryModule::showCircleCircleIntersectionPanel(const CameraConfig& camera)
 {
   context().clearToolPanel();
+  m_imagePickMode = ImagePickMode::None;
   refreshConstructedGeometrySources(camera);
 
   const QVector<ConstructedGeometryCircleSource> circleSources =
@@ -395,6 +653,10 @@ void MainWindowConstructedGeometryModule::showCircleCircleIntersectionPanel(cons
   };
   QObject::connect(firstCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
   QObject::connect(secondCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  m_imagePickMode = ImagePickMode::CircleCircle;
+  m_pickPrimaryCombo = firstCombo;
+  m_pickSecondaryCombo = secondCombo;
+  m_nextPickTarget = 0;
 
   formLayout->addWidget(new QLabel(tr("labels.sourceCircleA"), panel), 0, 0);
   formLayout->addWidget(firstCombo, 0, 1);
@@ -419,6 +681,7 @@ void MainWindowConstructedGeometryModule::showCircleCircleIntersectionPanel(cons
 void MainWindowConstructedGeometryModule::showCircleCenterPanel(const CameraConfig& camera)
 {
   context().clearToolPanel();
+  m_imagePickMode = ImagePickMode::None;
   refreshConstructedGeometrySources(camera);
 
   const GeometrySet& set = cameraRuntime()[camera.id].geometries();
@@ -449,6 +712,10 @@ void MainWindowConstructedGeometryModule::showCircleCenterPanel(const CameraConf
     largeImage()->setGeometryOverlay(overlay);
   };
   QObject::connect(circleCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  m_imagePickMode = ImagePickMode::Circle;
+  m_pickPrimaryCombo = circleCombo;
+  m_pickSecondaryCombo = nullptr;
+  m_nextPickTarget = 0;
 
   formLayout->addWidget(new QLabel(tr("labels.sourceCircleOrArc"), panel), 0, 0);
   formLayout->addWidget(circleCombo, 0, 1);
@@ -471,6 +738,7 @@ void MainWindowConstructedGeometryModule::showCircleCenterPanel(const CameraConf
 void MainWindowConstructedGeometryModule::showMidpointPanel(const CameraConfig& camera)
 {
   context().clearToolPanel();
+  m_imagePickMode = ImagePickMode::None;
   refreshConstructedGeometrySources(camera);
 
   const QVector<ConstructedGeometryPointSource> pointSources =
@@ -508,6 +776,10 @@ void MainWindowConstructedGeometryModule::showMidpointPanel(const CameraConfig& 
   };
   QObject::connect(firstCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
   QObject::connect(secondCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  m_imagePickMode = ImagePickMode::PointPoint;
+  m_pickPrimaryCombo = firstCombo;
+  m_pickSecondaryCombo = secondCombo;
+  m_nextPickTarget = 0;
 
   formLayout->addWidget(new QLabel(tr("labels.sourcePointA"), panel), 0, 0);
   formLayout->addWidget(firstCombo, 0, 1);
@@ -532,6 +804,7 @@ void MainWindowConstructedGeometryModule::showMidpointPanel(const CameraConfig& 
 void MainWindowConstructedGeometryModule::showOffsetLinePanel(const CameraConfig& camera)
 {
   context().clearToolPanel();
+  m_imagePickMode = ImagePickMode::None;
   refreshConstructedGeometrySources(camera);
 
   const QVector<ConstructedGeometryLineSource> lineSources =
@@ -565,6 +838,10 @@ void MainWindowConstructedGeometryModule::showOffsetLinePanel(const CameraConfig
     largeImage()->setGeometryOverlay(overlay);
   };
   QObject::connect(lineCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  m_imagePickMode = ImagePickMode::Line;
+  m_pickPrimaryCombo = lineCombo;
+  m_pickSecondaryCombo = nullptr;
+  m_nextPickTarget = 0;
 
   formLayout->addWidget(new QLabel(tr("labels.sourceLine"), panel), 0, 0);
   formLayout->addWidget(lineCombo, 0, 1);
@@ -589,6 +866,7 @@ void MainWindowConstructedGeometryModule::showOffsetLinePanel(const CameraConfig
 void MainWindowConstructedGeometryModule::showMidlinePanel(const CameraConfig& camera)
 {
   context().clearToolPanel();
+  m_imagePickMode = ImagePickMode::None;
   refreshConstructedGeometrySources(camera);
 
   const QVector<ConstructedGeometryLineSource> lineSources =
@@ -626,6 +904,10 @@ void MainWindowConstructedGeometryModule::showMidlinePanel(const CameraConfig& c
   };
   QObject::connect(firstCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
   QObject::connect(secondCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  m_imagePickMode = ImagePickMode::LineLine;
+  m_pickPrimaryCombo = firstCombo;
+  m_pickSecondaryCombo = secondCombo;
+  m_nextPickTarget = 0;
   formLayout->addWidget(new QLabel(tr("labels.sourceLineA"), panel), 0, 0);
   formLayout->addWidget(firstCombo, 0, 1);
   formLayout->addWidget(new QLabel(tr("labels.sourceLineB"), panel), 1, 0);
@@ -649,6 +931,7 @@ void MainWindowConstructedGeometryModule::showMidlinePanel(const CameraConfig& c
 void MainWindowConstructedGeometryModule::showAngleBisectorPanel(const CameraConfig& camera)
 {
   context().clearToolPanel();
+  m_imagePickMode = ImagePickMode::None;
   refreshConstructedGeometrySources(camera);
 
   const QVector<ConstructedGeometryLineSource> lineSources =
@@ -686,6 +969,10 @@ void MainWindowConstructedGeometryModule::showAngleBisectorPanel(const CameraCon
   };
   QObject::connect(firstCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
   QObject::connect(secondCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  m_imagePickMode = ImagePickMode::LineLine;
+  m_pickPrimaryCombo = firstCombo;
+  m_pickSecondaryCombo = secondCombo;
+  m_nextPickTarget = 0;
 
   formLayout->addWidget(new QLabel(tr("labels.sourceLineA"), panel), 0, 0);
   formLayout->addWidget(firstCombo, 0, 1);
@@ -710,6 +997,7 @@ void MainWindowConstructedGeometryModule::showAngleBisectorPanel(const CameraCon
 void MainWindowConstructedGeometryModule::showTangentLinePanel(const CameraConfig& camera)
 {
   context().clearToolPanel();
+  m_imagePickMode = ImagePickMode::None;
   refreshConstructedGeometrySources(camera);
 
   const GeometrySet& set = cameraRuntime()[camera.id].geometries();
@@ -748,6 +1036,10 @@ void MainWindowConstructedGeometryModule::showTangentLinePanel(const CameraConfi
   };
   QObject::connect(pointCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
   QObject::connect(circleCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  m_imagePickMode = ImagePickMode::PointCircle;
+  m_pickPrimaryCombo = pointCombo;
+  m_pickSecondaryCombo = circleCombo;
+  m_nextPickTarget = 0;
 
   formLayout->addWidget(new QLabel(tr("labels.sourcePoint"), panel), 0, 0);
   formLayout->addWidget(pointCombo, 0, 1);
@@ -772,6 +1064,7 @@ void MainWindowConstructedGeometryModule::showTangentLinePanel(const CameraConfi
 void MainWindowConstructedGeometryModule::showProjectPointPanel(const CameraConfig& camera)
 {
   context().clearToolPanel();
+  m_imagePickMode = ImagePickMode::None;
   refreshConstructedGeometrySources(camera);
 
   const GeometrySet& set = cameraRuntime()[camera.id].geometries();
@@ -809,6 +1102,10 @@ void MainWindowConstructedGeometryModule::showProjectPointPanel(const CameraConf
   };
   QObject::connect(pointCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
   QObject::connect(lineCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  m_imagePickMode = ImagePickMode::PointLine;
+  m_pickPrimaryCombo = pointCombo;
+  m_pickSecondaryCombo = lineCombo;
+  m_nextPickTarget = 0;
 
   formLayout->addWidget(new QLabel(tr("labels.sourcePoint"), panel), 0, 0);
   formLayout->addWidget(pointCombo, 0, 1);

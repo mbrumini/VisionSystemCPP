@@ -21,7 +21,7 @@ void MainWindowGeometryModule::showGeometryArcPanel(const CameraConfig& camera)
   context().clearToolPanel();
   *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Geometry;
   m_drawingTarget = DrawingTarget::Arc;
-  largeImage()->setGeometryOverlayPointEditingEnabled(true);
+  largeImage()->setGeometryOverlayPointEditingEnabled(false);
   restoreCleanGeometryImage(camera);
   largeImage()->clearCircles();
   loadGeometryArcsRecipe(camera);
@@ -54,6 +54,7 @@ void MainWindowGeometryModule::showGeometryArcPanel(const CameraConfig& camera)
   }
   arcSelector->setCurrentIndex(qBound(0, m_activeArcIndexes.value(camera.id, 0), arcConfigs.size() - 1));
   auto* newArcButton = createTouchIconButton("arcGeometry", tr("actions.newGeometryArc"), panel);
+  auto* editArcButton = createTouchIconButton("arcGeometry", tr("actions.editGeometry"), panel);
   auto* deleteArcButton = createTouchIconButton("delete", tr("actions.deleteGeometryArc"), panel);
 
   auto* top = new QWidget(panel);
@@ -63,7 +64,8 @@ void MainWindowGeometryModule::showGeometryArcPanel(const CameraConfig& camera)
   topLayout->addWidget(new QLabel(tr("actions.arcGeometry"), top), 0, 0);
   topLayout->addWidget(arcSelector, 0, 1);
   topLayout->addWidget(newArcButton, 0, 2);
-  topLayout->addWidget(deleteArcButton, 0, 3);
+  topLayout->addWidget(editArcButton, 0, 3);
+  topLayout->addWidget(deleteArcButton, 0, 4);
   topLayout->setColumnStretch(1, 1);
   layout->addWidget(top);
 
@@ -186,77 +188,79 @@ void MainWindowGeometryModule::showGeometryArcPanel(const CameraConfig& camera)
   });
   QObject::connect(newArcButton, &QPushButton::clicked, window(), [this, camera]() {
     addGeometryArc(camera);
-    saveGeometryArcsRecipe(camera);
     showGeometryArcPanel(camera);
     activateGeometryArcDrawing(camera);
+  });
+  QObject::connect(editArcButton, &QPushButton::clicked, window(), [this, camera]() {
+    largeImage()->setGeometryOverlayPointEditingEnabled(true);
+    testConfiguredGeometryLines(camera);
+    showConfiguredGeometryArcs(camera);
   });
   QObject::connect(deleteArcButton, &QPushButton::clicked, window(), [this, camera]() { removeActiveGeometryArc(camera); });
   QObject::connect(innerBand, &QSlider::valueChanged, window(), [this, camera, innerBandValue](int value) {
     innerBandValue->setText(QString("%1 px").arg(value));
     activeGeometryArcConfig(camera.id).innerBand = value;
-    saveGeometryArcsRecipe(camera);
-    showConfiguredGeometryArcs(camera);
-    showConfiguredGeometryArcs(camera);
+    testGeometryArc(camera);
   });
   QObject::connect(outerBand, &QSlider::valueChanged, window(), [this, camera, outerBandValue](int value) {
     outerBandValue->setText(QString("%1 px").arg(value));
     activeGeometryArcConfig(camera.id).outerBand = value;
-    saveGeometryArcsRecipe(camera);
-    showConfiguredGeometryArcs(camera);
-    showConfiguredGeometryArcs(camera);
+    testGeometryArc(camera);
   });
   QObject::connect(sensitivity, &QSlider::valueChanged, window(), [this, camera, sensitivityValue](int value) {
     sensitivityValue->setText(QString::number(value));
     activeGeometryArcConfig(camera.id).edgeSensitivity = value;
-    saveGeometryArcsRecipe(camera);
-    showConfiguredGeometryArcs(camera);
+    testGeometryArc(camera);
   });
   QObject::connect(cleanup, &QSlider::valueChanged, window(), [this, camera, cleanupValue](int value) {
     cleanupValue->setText(QString("%1 px").arg(value));
     activeGeometryArcConfig(camera.id).edgeCleanupDerivative = value;
-    saveGeometryArcsRecipe(camera);
-    showConfiguredGeometryArcs(camera);
+    testGeometryArc(camera);
   });
   QObject::connect(statFilter, &QSlider::valueChanged, window(), [this, camera, statFilterValue](int value) {
     statFilterValue->setText(QString("%1 px").arg(value));
     activeGeometryArcConfig(camera.id).edgeStatisticalFilter = value;
-    saveGeometryArcsRecipe(camera);
-    showConfiguredGeometryArcs(camera);
+    testGeometryArc(camera);
   });
   QObject::connect(subpixel, &QCheckBox::toggled, window(), [this, camera](bool checked) {
     activeGeometryArcConfig(camera.id).useSubpixel = checked;
-    saveGeometryArcsRecipe(camera);
-    showConfiguredGeometryArcs(camera);
+    testGeometryArc(camera);
   });
   QObject::connect(scanDirection, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
     activeGeometryArcConfig(camera.id).scanDirection =
       index == 1 ? EdgeLineScanDirection::NormalNegative : EdgeLineScanDirection::NormalPositive;
-    saveGeometryArcsRecipe(camera);
-    showConfiguredGeometryArcs(camera);
+    testGeometryArc(camera);
   });
   QObject::connect(transition, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
     activeGeometryArcConfig(camera.id).transition = index == 1 ? EdgeLineTransition::DarkToLight : EdgeLineTransition::LightToDark;
-    saveGeometryArcsRecipe(camera);
-    showConfiguredGeometryArcs(camera);
+    testGeometryArc(camera);
   });
   QObject::connect(pickMode, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
     activeGeometryArcConfig(camera.id).pickMode = index == 1 ? EdgeLinePickMode::Last : (index == 2 ? EdgeLinePickMode::Best : EdgeLinePickMode::First);
-    saveGeometryArcsRecipe(camera);
-    showConfiguredGeometryArcs(camera);
+    testGeometryArc(camera);
   });
   QObject::connect(aliasEdit, &QLineEdit::editingFinished, window(), [this, camera, aliasEdit]() {
     activeGeometryArcConfig(camera.id).alias = aliasEdit->text().trimmed();
-    saveGeometryArcsRecipe(camera);
     syncRuntimeGeometryLabels(camera);
     showConfiguredGeometryArcs(camera);
     refreshMeasurementOverlay(camera);
   });
 
+  auto* saveButton = createTouchIconButton("saveSample", tr("actions.saveGeometry"), panel);
   auto* testButton = createTouchIconButton("testGeometry", tr("actions.testGeometry"), panel);
   auto* backButton = createTouchIconButton(
     "back",
     GeometryPanelNavigation::backLabel(context(), camera, tr("commands.backToCameraTools")),
     panel);
+  QObject::connect(saveButton, &QPushButton::clicked, window(), [this, camera]() {
+    saveGeometryArcsRecipe(camera);
+    largeImage()->setGeometryOverlayPointEditingEnabled(true);
+    showConfiguredGeometryArcs(camera);
+    if (context().updateMeasurementResults)
+    {
+      context().updateMeasurementResults();
+    }
+  });
   QObject::connect(testButton, &QPushButton::clicked, window(), [this, camera]() { testGeometryArc(camera); });
   QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() {
     if (!GeometryPanelNavigation::returnToSetup(context(), camera))
@@ -264,6 +268,7 @@ void MainWindowGeometryModule::showGeometryArcPanel(const CameraConfig& camera)
       showGeometryPanel(camera);
     }
   });
+  layout->addWidget(saveButton);
   layout->addWidget(testButton);
   layout->addWidget(backButton);
   layout->addStretch(1);

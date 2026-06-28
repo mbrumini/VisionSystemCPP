@@ -38,6 +38,182 @@
 #include <QVBoxLayout>
 
 #define NOMINMAX
+
+#include <algorithm>
+#include <cmath>
+
+namespace
+{
+constexpr double kMeasurementWarningErrorPx = 1.0;
+
+struct MeasurementHealth
+{
+  QString id;
+  QString type;
+  int total = 0;
+  int valid = 0;
+  int invalid = 0;
+  double sumValuePixels = 0.0;
+  double minValuePixels = 0.0;
+  double maxValuePixels = 0.0;
+  double sumBaselineErrorPixels = 0.0;
+  double maxBaselineErrorPixels = 0.0;
+  double sumRecipeErrorPixels = 0.0;
+  double maxRecipeErrorPixels = 0.0;
+  int baselineCount = 0;
+  int recipeCount = 0;
+  int worstBaselinePose = 0;
+  int worstRecipePose = 0;
+  int firstInvalidPose = 0;
+};
+
+QString measurementHealthStatus(const MeasurementHealth& health)
+{
+  if (health.invalid > 0 ||
+      health.maxBaselineErrorPixels > kMeasurementWarningErrorPx ||
+      health.maxRecipeErrorPixels > kMeasurementWarningErrorPx)
+  {
+    return "FAIL";
+  }
+  return "OK";
+}
+
+QVector<MeasurementHealth> buildMeasurementHealth(const QVector<TestResult>& results)
+{
+  QHash<QString, MeasurementHealth> byId;
+  for (const TestResult& result : results)
+  {
+    for (const TestMeasurementReading& reading : result.measurements)
+    {
+      MeasurementHealth& health = byId[reading.id];
+      if (health.id.isEmpty())
+      {
+        health.id = reading.id;
+        health.type = reading.type;
+        health.minValuePixels = reading.valuePixels;
+        health.maxValuePixels = reading.valuePixels;
+      }
+
+      ++health.total;
+      if (reading.valid)
+      {
+        ++health.valid;
+        health.sumValuePixels += reading.valuePixels;
+        health.minValuePixels = std::min(health.minValuePixels, reading.valuePixels);
+        health.maxValuePixels = std::max(health.maxValuePixels, reading.valuePixels);
+      }
+      else
+      {
+        ++health.invalid;
+        if (health.firstInvalidPose == 0)
+        {
+          health.firstInvalidPose = result.pose.poseIndex;
+        }
+      }
+
+      if (reading.valid && reading.hasExpectedBaseline)
+      {
+        ++health.baselineCount;
+        health.sumBaselineErrorPixels += reading.baselineErrorPixels;
+        if (reading.baselineErrorPixels > health.maxBaselineErrorPixels)
+        {
+          health.maxBaselineErrorPixels = reading.baselineErrorPixels;
+          health.worstBaselinePose = result.pose.poseIndex;
+        }
+      }
+      if (reading.valid && reading.hasExpectedRecipe)
+      {
+        ++health.recipeCount;
+        health.sumRecipeErrorPixels += reading.recipeErrorPixels;
+        if (reading.recipeErrorPixels > health.maxRecipeErrorPixels)
+        {
+          health.maxRecipeErrorPixels = reading.recipeErrorPixels;
+          health.worstRecipePose = result.pose.poseIndex;
+        }
+      }
+    }
+  }
+
+  QVector<MeasurementHealth> health;
+  health.reserve(byId.size());
+  for (auto it = byId.begin(); it != byId.end(); ++it)
+  {
+    health.append(it.value());
+  }
+  std::sort(health.begin(), health.end(), [](const MeasurementHealth& a, const MeasurementHealth& b) {
+    const QString statusA = measurementHealthStatus(a);
+    const QString statusB = measurementHealthStatus(b);
+    if (statusA != statusB)
+    {
+      return statusA == "FAIL";
+    }
+    return a.id < b.id;
+  });
+  return health;
+}
+
+QJsonArray measurementHealthToJson(const QVector<MeasurementHealth>& health)
+{
+  QJsonArray array;
+  for (const MeasurementHealth& item : health)
+  {
+    QJsonObject object;
+    object["id"] = item.id;
+    object["type"] = item.type;
+    object["status"] = measurementHealthStatus(item);
+    object["total"] = item.total;
+    object["valid"] = item.valid;
+    object["invalid"] = item.invalid;
+    object["invalidRate"] = item.total > 0 ? static_cast<double>(item.invalid) / item.total : 0.0;
+    object["valueMeanPixels"] = item.valid > 0 ? item.sumValuePixels / item.valid : 0.0;
+    object["valueMinPixels"] = item.valid > 0 ? item.minValuePixels : 0.0;
+    object["valueMaxPixels"] = item.valid > 0 ? item.maxValuePixels : 0.0;
+    object["baselineErrorMeanPixels"] =
+      item.baselineCount > 0 ? item.sumBaselineErrorPixels / item.baselineCount : 0.0;
+    object["baselineErrorMaxPixels"] = item.maxBaselineErrorPixels;
+    object["baselineErrorWorstPose"] = item.worstBaselinePose;
+    object["recipeErrorMeanPixels"] =
+      item.recipeCount > 0 ? item.sumRecipeErrorPixels / item.recipeCount : 0.0;
+    object["recipeErrorMaxPixels"] = item.maxRecipeErrorPixels;
+    object["recipeErrorWorstPose"] = item.worstRecipePose;
+    object["firstInvalidPose"] = item.firstInvalidPose;
+    array.append(object);
+  }
+  return array;
+}
+
+QStringList measurementHealthLines(const QVector<MeasurementHealth>& health)
+{
+  QStringList lines;
+  for (const MeasurementHealth& item : health)
+  {
+    QString line = QString("%1 %2: valid %3/%4")
+      .arg(measurementHealthStatus(item), item.id)
+      .arg(item.valid)
+      .arg(item.total);
+    if (item.invalid > 0)
+    {
+      line += QString(" | invalid %1 firstPose=%2").arg(item.invalid).arg(item.firstInvalidPose);
+    }
+    if (item.recipeCount > 0)
+    {
+      line += QString(" | recipe max/avg %1/%2 px pose=%3")
+        .arg(item.maxRecipeErrorPixels, 0, 'f', 3)
+        .arg(item.recipeCount > 0 ? item.sumRecipeErrorPixels / item.recipeCount : 0.0, 0, 'f', 3)
+        .arg(item.worstRecipePose);
+    }
+    if (item.baselineCount > 0)
+    {
+      line += QString(" | baseline max/avg %1/%2 px pose=%3")
+        .arg(item.maxBaselineErrorPixels, 0, 'f', 3)
+        .arg(item.baselineCount > 0 ? item.sumBaselineErrorPixels / item.baselineCount : 0.0, 0, 'f', 3)
+        .arg(item.worstBaselinePose);
+    }
+    lines.append(line);
+  }
+  return lines;
+}
+}
 #include <Windows.h>
 
 #include <opencv2/imgcodecs.hpp>
@@ -2743,6 +2919,21 @@ void TestVisionWindow::refreshMeasurementAnalysis(bool rebuildTable)
     {
       summary += QString(" | %1 max Δ=%2 px").arg(it.key()).arg(it.value(), 0, 'f', 3);
     }
+    const QVector<MeasurementHealth> health = buildMeasurementHealth(m_results);
+    int failCount = 0;
+    for (const MeasurementHealth& item : health)
+    {
+      if (measurementHealthStatus(item) == "FAIL")
+      {
+        ++failCount;
+      }
+    }
+    summary += QString(" | Diagnosi misure: %1 FAIL / %2").arg(failCount).arg(health.size());
+    if (failCount > 0)
+    {
+      const QStringList lines = measurementHealthLines(health);
+      summary += "\n" + lines.mid(0, std::min(8, static_cast<int>(lines.size()))).join("\n");
+    }
     if (m_measurementSummaryLabel)
     {
       m_measurementSummaryLabel->setText(summary);
@@ -2934,6 +3125,8 @@ void TestVisionWindow::saveReport()
       recipeNominals[it.key()] = it.value();
     }
     report["recipeMeasurementNominalsPx"] = recipeNominals;
+    const QVector<MeasurementHealth> health = buildMeasurementHealth(m_results);
+    report["measurementSummary"] = measurementHealthToJson(health);
     report["frames"] = frames;
     const QDir scenarioDir = QFileInfo(m_scenarioPath).dir();
     const QString path = scenarioDir.absoluteFilePath(m_scenario.value("output").toString());
@@ -2945,6 +3138,11 @@ void TestVisionWindow::saveReport()
       return;
     }
     appendLog("Report salvato: " + QDir::toNativeSeparators(versionedPath));
+    appendLog("Diagnosi misure:");
+    for (const QString& line : measurementHealthLines(health))
+    {
+      appendLog("  " + line);
+    }
   }
 
 void TestVisionWindow::appendLog(const QString& message)

@@ -10,6 +10,7 @@
 #include <QSet>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 
 namespace
@@ -92,25 +93,27 @@ const PointGeometry* findPointByMetaId(const GeometrySet& set, const QString& id
       return &point.point;
     }
   }
-  static thread_local PointGeometry circleCenterPoint;
+  static thread_local std::array<PointGeometry, 16> syntheticCenterPoints;
+  static thread_local std::size_t syntheticCenterPointIndex = 0;
+  auto nextSyntheticCenterPoint = [](const GeometryMeta& meta, const cv::Point2d& center) -> const PointGeometry* {
+    PointGeometry& point = syntheticCenterPoints[syntheticCenterPointIndex++ % syntheticCenterPoints.size()];
+    point.point = center;
+    point.meta = meta;
+    point.meta.valid = true;
+    return &point;
+  };
   for (const CircleGeometry& circle : set.circles)
   {
     if (circle.meta.id == metaId)
     {
-      circleCenterPoint.point = circle.center;
-      circleCenterPoint.meta = circle.meta;
-      circleCenterPoint.meta.valid = true;
-      return &circleCenterPoint;
+      return nextSyntheticCenterPoint(circle.meta, circle.center);
     }
   }
   for (const ArcGeometry& arc : set.arcs)
   {
     if (arc.meta.id == metaId)
     {
-      circleCenterPoint.point = arc.center;
-      circleCenterPoint.meta = arc.meta;
-      circleCenterPoint.meta.valid = true;
-      return &circleCenterPoint;
+      return nextSyntheticCenterPoint(arc.meta, arc.center);
     }
   }
   return nullptr;
@@ -232,6 +235,13 @@ QString measurementLabel(const MeasurementResult& measurement, const QString& un
   const QString prefix = name.isEmpty() ? QString() : name + ": ";
   if (measurement.hasRealValue)
   {
+    if (measurement.unit != "deg")
+    {
+      return prefix + QString("%1 %2 (%3 px)")
+        .arg(measurement.valueReal, 0, 'f', 3)
+        .arg(measurement.unit)
+        .arg(measurement.valuePixels, 0, 'f', 3);
+    }
     return prefix + QString("%1 %2").arg(measurement.valueReal, 0, 'f', 3).arg(measurement.unit);
   }
   return prefix + QString("%1 %2").arg(measurement.valuePixels, 0, 'f', 3).arg(unit);
@@ -456,14 +466,25 @@ void MainWindowMeasurementModule::appendMeasurementOverlay(
       continue;
     }
 
-    if (measurement.type == "line_line_distance")
+    if (measurement.type == "line_line_distance" ||
+        measurement.type == "line_line_distance_min" ||
+        measurement.type == "line_line_distance_max")
     {
       const LineGeometry* lineA = findLineByMetaId(set, measurement.sourceAId);
       const LineGeometry* lineB = findLineByMetaId(set, measurement.sourceBId);
       PointGeometry pointOnA;
       PointGeometry pointOnB;
       double distancePixels = 0.0;
-      if (!lineA || !lineB || !MeasurementGeometryMath::parallelLineDistance(*lineA, *lineB, distancePixels, &pointOnA, &pointOnB))
+      MeasurementGeometryMath::ParallelLineDistanceMode mode = MeasurementGeometryMath::ParallelLineDistanceMode::Average;
+      if (measurement.type == "line_line_distance_min")
+      {
+        mode = MeasurementGeometryMath::ParallelLineDistanceMode::Minimum;
+      }
+      else if (measurement.type == "line_line_distance_max")
+      {
+        mode = MeasurementGeometryMath::ParallelLineDistanceMode::Maximum;
+      }
+      if (!lineA || !lineB || !MeasurementGeometryMath::parallelLineDistance(*lineA, *lineB, mode, distancePixels, &pointOnA, &pointOnB))
       {
         continue;
       }

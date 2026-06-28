@@ -32,6 +32,8 @@ struct EdgeCircleDetectorResult : GeometryDetectorResult
   ArcGeometry arc;
   std::vector<cv::Point2d> edgePoints;
   std::vector<cv::Point2d> rawEdgePoints;
+  std::vector<cv::Point2d> sectorEdgePoints;
+  std::vector<cv::Point2d> statisticalEdgePoints;
 };
 
 class EdgeCircleDetector

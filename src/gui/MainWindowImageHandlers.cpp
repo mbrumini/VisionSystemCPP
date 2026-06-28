@@ -686,6 +686,21 @@ void MainWindow::setupLargeImageHandlers()
 
     m_measurement.setMeasurementLabelPosition(m_selectedCamera, measurementKey, imagePoint);
   });
+  m_largeImage->setImageClickedHandler([this](const QPointF& imagePoint) {
+    if (m_selectedCameraId.isEmpty())
+    {
+      return;
+    }
+
+    if (m_activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry &&
+        m_geometry.handleImagePick(m_selectedCamera, imagePoint))
+    {
+      return;
+    }
+
+    m_measurement.handleImagePick(m_selectedCamera, imagePoint);
+    m_constructedGeometry.handleImagePick(m_selectedCamera, imagePoint);
+  });
   m_largeImage->setGeometryAreaChangedHandler([this](const ImageRotatedRect& area) {
     if (m_selectedCameraId.isEmpty() || m_geometry.drawingTarget() != MainWindowGeometryModule::DrawingTarget::Line)
     {

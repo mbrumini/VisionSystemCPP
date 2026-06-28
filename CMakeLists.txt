@@ -294,6 +294,8 @@ add_executable(VisionSystemCPP
     src/processing/geometry/ThresholdLineDetector.cpp
     src/processing/geometry/EdgePointFilters.h
     src/processing/geometry/EdgePointFilters.cpp
+    src/processing/geometry/EdgeProfile.h
+    src/processing/geometry/EdgeProfile.cpp
     src/processing/geometry/EdgePointDetector.h
     src/processing/geometry/EdgePointDetector.cpp
     src/processing/geometry/EdgeLineDetector.h

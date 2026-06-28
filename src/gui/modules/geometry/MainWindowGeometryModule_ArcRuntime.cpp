@@ -27,6 +27,57 @@ using ArcGuideMath::pointOnArc;
 using ArcGuideMath::resolveArcGuide;
 using ArcGuideMath::syncArcPartAngles;
 
+bool containsNearbyEdgePoint(const std::vector<cv::Point2d>& points, const cv::Point2d& target)
+{
+  constexpr double kNearSquared = 0.25;
+  for (const cv::Point2d& point : points)
+  {
+    const cv::Point2d delta = point - target;
+    if ((delta.x * delta.x + delta.y * delta.y) <= kNearSquared)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+void appendEdgeFilterOverlay(GeometryOverlay& overlay,
+                             const EdgeCircleDetectorResult& result,
+                             const cv::Point2d& labelPoint)
+{
+  for (const cv::Point2d& point : result.sectorEdgePoints)
+  {
+    if (!containsNearbyEdgePoint(result.statisticalEdgePoints, point))
+    {
+      overlay.points.append({QPointF(point.x, point.y), QString(), QColor("#ff3b30"), 4.0, false});
+    }
+  }
+
+  for (const cv::Point2d& point : result.statisticalEdgePoints)
+  {
+    if (!containsNearbyEdgePoint(result.edgePoints, point))
+    {
+      overlay.points.append({QPointF(point.x, point.y), QString(), QColor("#ff8a00"), 3.5, false});
+    }
+  }
+
+  for (const cv::Point2d& point : result.edgePoints)
+  {
+    overlay.points.append({QPointF(point.x, point.y), QString(), QColor("#f5d547"), 3.0, false});
+  }
+
+  overlay.points.append({
+    QPointF(labelPoint.x, labelPoint.y),
+    QString("stat %1/%2  active %3")
+      .arg(result.statisticalEdgePoints.size())
+      .arg(result.sectorEdgePoints.size())
+      .arg(result.edgePoints.size()),
+    QColor("#ffffff"),
+    2.0,
+    false
+  });
+}
+
 bool arcGuideFromThreePoints(
   const QVector<QPoint>& points,
   cv::Point2d& center,
@@ -232,9 +283,11 @@ void MainWindowGeometryModule::handleGeometryArcPoints(const CameraConfig& camer
   largeImage()->setGeometryOverlayPointEditingEnabled(true);
   *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Geometry;
   m_drawingTarget = DrawingTarget::Arc;
-  saveGeometryArcsRecipe(camera);
   showConfiguredGeometryArcs(camera);
-  testGeometryArc(camera);
+  if (context().updateMeasurementResults)
+  {
+    context().updateMeasurementResults();
+  }
 }
 
 void MainWindowGeometryModule::handleGeometryArcHandleMoved(const CameraConfig& camera, int pointIndex, const QPointF& imagePoint)
@@ -313,9 +366,11 @@ void MainWindowGeometryModule::handleGeometryArcHandleMoved(const CameraConfig& 
     arc.hasArc = false;
   }
 
-  saveGeometryArcsRecipe(camera);
   showConfiguredGeometryArcs(camera);
-  testGeometryArc(camera);
+  if (context().updateMeasurementResults)
+  {
+    context().updateMeasurementResults();
+  }
 }
 
 void MainWindowGeometryModule::showConfiguredGeometryArcs(const CameraConfig& camera)
@@ -329,43 +384,54 @@ void MainWindowGeometryModule::showConfiguredGeometryArcs(const CameraConfig& ca
   {
     imageSize = frame.size();
   }
-  QVector<GeometryLineRuntimeConfig> lines;
-  QVector<GeometryPointRuntimeConfig> points;
-  QVector<GeometryCircleRuntimeConfig> circles;
-  QVector<GeometryArcRuntimeConfig> arcs = {arc};
-  GeometryGuideRuntime::syncPartGuidesFromImage(pose, lines, points, circles, arcs);
-  arc = arcs.first();
-  ResolvedArcGuide guide;
-  if (!resolveArcGuide(arc, pose, guide, guideReferenceSize(camera.id), imageSize))
-  {
-    GeometryOverlay overlay;
-    appendCurrentPartPoseOverlay(camera, overlay);
-    largeImage()->setGeometryOverlay(overlay);
-    return;
-  }
-
   GeometryOverlay overlay;
-  const double innerRadius = std::max(1.0, guide.radius - arc.innerBand);
-  const double outerRadius = guide.radius + arc.outerBand;
-  appendArcPolyline(overlay, guide.center, innerRadius, guide.startAngle, guide.endAngle, QColor(0, 210, 255, 90), 2);
-  appendArcPolyline(overlay, guide.center, guide.radius, guide.startAngle, guide.endAngle, QColor("#ff4fd8"), 5);
-  appendArcPolyline(overlay, guide.center, outerRadius, guide.startAngle, guide.endAngle, QColor(0, 210, 255, 90), 2);
-  appendGeometryArcSearchBandGuides(
-    overlay,
-    guide.center,
-    innerRadius,
-    outerRadius,
-    guide.startAngle,
-    guide.endAngle,
-    arc.scanDirection != EdgeLineScanDirection::NormalNegative,
-    QColor(0, 210, 255, 150),
-    2);
-  overlay.lines.append({QPointF(guide.start.x, guide.start.y), QPointF(guide.end.x, guide.end.y), QColor("#808a93"), 1});
-  const cv::Point2d radiusHandle = pointOnArc(guide.center, guide.radius, arcMidAngle(guide.startAngle, guide.endAngle));
-  overlay.points.append({QPointF(guide.center.x, guide.center.y), "C", QColor("#ff4fd8")});
-  overlay.points.append({QPointF(guide.start.x, guide.start.y), "1", QColor("#ff4fd8")});
-  overlay.points.append({QPointF(radiusHandle.x, radiusHandle.y), "R", QColor("#ff4fd8")});
-  overlay.points.append({QPointF(guide.end.x, guide.end.y), "2", QColor("#ff4fd8")});
+  QVector<GeometryArcRuntimeConfig>& arcList = m_arcConfigs[camera.id];
+  const int activeIndex = qBound(0, m_activeArcIndexes.value(camera.id, 0), arcList.size() - 1);
+  const QSize referenceSize = guideReferenceSize(camera.id);
+  for (int i = 0; i < arcList.size(); ++i)
+  {
+    GeometryArcRuntimeConfig& item = arcList[i];
+    QVector<GeometryLineRuntimeConfig> lines;
+    QVector<GeometryPointRuntimeConfig> points;
+    QVector<GeometryCircleRuntimeConfig> circles;
+    QVector<GeometryArcRuntimeConfig> arcs = {item};
+    GeometryGuideRuntime::syncPartGuidesFromImage(pose, lines, points, circles, arcs);
+    item = arcs.first();
+
+    ResolvedArcGuide guide;
+    if (!resolveArcGuide(item, pose, guide, referenceSize, imageSize))
+    {
+      continue;
+    }
+
+    const bool active = i == activeIndex;
+    const double innerRadius = std::max(1.0, guide.radius - item.innerBand);
+    const double outerRadius = guide.radius + item.outerBand;
+    appendArcPolyline(overlay, guide.center, innerRadius, guide.startAngle, guide.endAngle, QColor(0, 210, 255, active ? 90 : 35), active ? 2 : 1);
+    appendArcPolyline(overlay, guide.center, guide.radius, guide.startAngle, guide.endAngle, active ? QColor("#ff4fd8") : QColor(170, 205, 220, 170), active ? 5 : 2);
+    appendArcPolyline(overlay, guide.center, outerRadius, guide.startAngle, guide.endAngle, QColor(0, 210, 255, active ? 90 : 35), active ? 2 : 1);
+    if (!active)
+    {
+      continue;
+    }
+
+    appendGeometryArcSearchBandGuides(
+      overlay,
+      guide.center,
+      innerRadius,
+      outerRadius,
+      guide.startAngle,
+      guide.endAngle,
+      item.scanDirection != EdgeLineScanDirection::NormalNegative,
+      QColor(0, 210, 255, 150),
+      2);
+    overlay.lines.append({QPointF(guide.start.x, guide.start.y), QPointF(guide.end.x, guide.end.y), QColor("#808a93"), 1});
+    const cv::Point2d radiusHandle = pointOnArc(guide.center, guide.radius, arcMidAngle(guide.startAngle, guide.endAngle));
+    overlay.points.append({QPointF(guide.center.x, guide.center.y), "C", QColor("#ff4fd8")});
+    overlay.points.append({QPointF(guide.start.x, guide.start.y), "1", QColor("#ff4fd8")});
+    overlay.points.append({QPointF(radiusHandle.x, radiusHandle.y), "R", QColor("#ff4fd8")});
+    overlay.points.append({QPointF(guide.end.x, guide.end.y), "2", QColor("#ff4fd8")});
+  }
   appendCurrentPartPoseOverlay(camera, overlay);
   largeImage()->setGeometryOverlay(overlay);
 }
@@ -485,13 +551,17 @@ void MainWindowGeometryModule::testGeometryArc(const CameraConfig& camera)
       3);
   }
   const cv::Point2d guideRadiusHandle = pointOnArc(guide.center, guide.radius, arcMidAngle(guide.startAngle, guide.endAngle));
+  appendEdgeFilterOverlay(arcOverlay, result, guideRadiusHandle);
   arcOverlay.points.append({QPointF(guide.center.x, guide.center.y), "C", QColor("#ff4fd8")});
   arcOverlay.points.append({QPointF(guide.start.x, guide.start.y), "1", QColor("#ff4fd8")});
   arcOverlay.points.append({QPointF(guideRadiusHandle.x, guideRadiusHandle.y), "R", QColor("#ff4fd8")});
   arcOverlay.points.append({QPointF(guide.end.x, guide.end.y), "2", QColor("#ff4fd8")});
   appendCurrentPartPoseOverlay(camera, arcOverlay);
   largeImage()->setGeometryOverlay(arcOverlay);
-  refreshMeasurementOverlay(camera);
+  if (context().updateMeasurementResults)
+  {
+    context().updateMeasurementResults();
+  }
   log(QString("%1: %2 cx=%3 cy=%4 r=%5")
               .arg(tr("log.geometryArcFound"))
               .arg(camera.id)

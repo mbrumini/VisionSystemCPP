@@ -1,6 +1,7 @@
 #include "processing/geometry/EdgeCircleDetectorExperimental.h"
 
 #include "processing/CircleFit.h"
+#include "processing/geometry/EdgeProfile.h"
 #include "processing/SurfaceProcessingUtils.h"
 
 #include <opencv2/imgproc.hpp>
@@ -13,28 +14,6 @@
 
 namespace
 {
-constexpr double kEpsilon = 0.000001;
-
-bool pointInsideImage(const cv::Mat& image, const cv::Point2d& point)
-{
-  return point.x >= 0.0 && point.y >= 0.0 && point.x < image.cols && point.y < image.rows;
-}
-
-double sampledGrayBilinear(const cv::Mat& gray, const cv::Point2d& point)
-{
-  const double x = std::clamp(point.x, 0.0, static_cast<double>(gray.cols - 1));
-  const double y = std::clamp(point.y, 0.0, static_cast<double>(gray.rows - 1));
-  const int x0 = static_cast<int>(std::floor(x));
-  const int y0 = static_cast<int>(std::floor(y));
-  const int x1 = std::min(x0 + 1, gray.cols - 1);
-  const int y1 = std::min(y0 + 1, gray.rows - 1);
-  const double tx = x - static_cast<double>(x0);
-  const double ty = y - static_cast<double>(y0);
-  const double top = gray.at<uchar>(y0, x0) * (1.0 - tx) + gray.at<uchar>(y0, x1) * tx;
-  const double bottom = gray.at<uchar>(y1, x0) * (1.0 - tx) + gray.at<uchar>(y1, x1) * tx;
-  return top * (1.0 - ty) + bottom * ty;
-}
-
 double median(std::vector<double> values)
 {
   if (values.empty())
@@ -106,70 +85,31 @@ std::vector<RadialCandidate> scanCircleEdgeCandidates(const cv::Mat& gray,
   {
     const double angle = startAngle + span * static_cast<double>(i) / static_cast<double>(std::max(1, angleSamples - 1));
     const cv::Point2d radial(std::cos(angle), std::sin(angle));
-    cv::Point2d previousPoint = config.guideCenter + radial * (config.guideRadius + startOffset);
-    if (!pointInsideImage(gray, previousPoint))
+    const cv::Point2d profileStart = config.guideCenter + radial * (config.guideRadius + startOffset);
+    const cv::Point2d profileEnd = config.guideCenter + radial * (config.guideRadius + endOffset);
+    if (!EdgeProfileSampler::pointInsideImage(gray, profileStart))
     {
       continue;
     }
 
-    double previousValue = sampledGrayBilinear(gray, previousPoint);
-    bool found = false;
-    RadialCandidate best;
-    for (int step = 1; step <= steps; ++step)
+    const std::vector<EdgeProfileSample> profile = EdgeProfileSampler::sampleLine(gray, profileStart, profileEnd, steps);
+    const EdgeProfileCandidate located = SubpixelEdgeLocator::locate(
+      profile,
+      config.transition,
+      config.pickMode,
+      gradientThreshold,
+      config.useSubpixel);
+    if (located.found)
     {
-      const double offset = startOffset + (endOffset - startOffset) * static_cast<double>(step) / static_cast<double>(steps);
-      const cv::Point2d currentPoint = config.guideCenter + radial * (config.guideRadius + offset);
-      if (!pointInsideImage(gray, currentPoint))
-      {
-        previousPoint = currentPoint;
-        continue;
-      }
-
-      const double currentValue = sampledGrayBilinear(gray, currentPoint);
-      const double delta = currentValue - previousValue;
-      const bool matchesTransition =
-        (config.transition == EdgeLineTransition::DarkToLight && delta >= gradientThreshold) ||
-        (config.transition == EdgeLineTransition::LightToDark && delta <= -gradientThreshold);
-      if (matchesTransition)
-      {
-        const double target = (previousValue + currentValue) * 0.5;
-        const double t = std::abs(delta) > kEpsilon
-          ? std::clamp((target - previousValue) / delta, 0.0, 1.0)
-          : 1.0;
-        const cv::Point2d candidatePoint = previousPoint + (currentPoint - previousPoint) * t;
-        const double strength = std::abs(delta);
-        RadialCandidate candidate;
-        candidate.point = candidatePoint;
-        candidate.strength = strength;
-        candidate.radius = cv::norm(candidatePoint - config.guideCenter);
-        candidate.sector = std::clamp(
-          static_cast<int>(std::floor(static_cast<double>(i) * sectors / std::max(1, angleSamples))),
-          0,
-          sectors - 1);
-
-        if (config.pickMode == EdgeLinePickMode::First)
-        {
-          candidates.push_back(candidate);
-          found = true;
-          break;
-        }
-
-        if (!found ||
-            config.pickMode == EdgeLinePickMode::Last ||
-            candidate.strength > best.strength)
-        {
-          best = candidate;
-          found = true;
-        }
-      }
-
-      previousPoint = currentPoint;
-      previousValue = currentValue;
-    }
-
-    if (found && config.pickMode != EdgeLinePickMode::First)
-    {
-      candidates.push_back(best);
+      RadialCandidate candidate;
+      candidate.point = located.point;
+      candidate.strength = located.strength;
+      candidate.radius = cv::norm(located.point - config.guideCenter);
+      candidate.sector = std::clamp(
+        static_cast<int>(std::floor(static_cast<double>(i) * sectors / std::max(1, angleSamples))),
+        0,
+        sectors - 1);
+      candidates.push_back(candidate);
     }
   }
 
@@ -251,16 +191,9 @@ CircleFitResult fitCircleFromDoublePoints(const std::vector<cv::Point2d>& points
     return {};
   }
 
-  std::vector<cv::Point> integerPoints;
-  integerPoints.reserve(points.size());
-  for (const cv::Point2d& point : points)
-  {
-    integerPoints.push_back(surfacePoint(point));
-  }
-
   CircleFitSettings settings;
   settings.minPoints = minPoints;
-  return CircleFit::fit(integerPoints, settings);
+  return CircleFit::fit(points, settings);
 }
 
 std::vector<cv::Point2d> filterByFitResidual(const std::vector<cv::Point2d>& points,
@@ -293,9 +226,119 @@ std::vector<cv::Point2d> filterByFitResidual(const std::vector<cv::Point2d>& poi
   return filtered;
 }
 
+bool containsNearbyPoint(const std::vector<cv::Point2d>& points, const cv::Point2d& target)
+{
+  constexpr double kNearSquared = 0.25;
+  for (const cv::Point2d& point : points)
+  {
+    const cv::Point2d delta = point - target;
+    if ((delta.x * delta.x + delta.y * delta.y) <= kNearSquared)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+double pointAngleInConfiguredSpan(const EdgeCircleDetectorConfig& config, const cv::Point2d& point)
+{
+  double angle = std::atan2(point.y - config.guideCenter.y, point.x - config.guideCenter.x);
+  if (!config.useArc)
+  {
+    while (angle < 0.0)
+    {
+      angle += 2.0 * CV_PI;
+    }
+    return angle;
+  }
+
+  const double start = config.startAngleRadians;
+  while (angle < start)
+  {
+    angle += 2.0 * CV_PI;
+  }
+  return angle - start;
+}
+
+void drawStatisticalFilterChart(cv::Mat& image,
+                                const EdgeCircleDetectorConfig& config,
+                                const std::vector<cv::Point2d>& statisticalInput,
+                                const std::vector<cv::Point2d>& statisticalOutput)
+{
+  if (image.empty() || statisticalInput.size() < 3 || config.edgeStatisticalFilter <= 0)
+  {
+    return;
+  }
+
+  std::vector<double> radii;
+  radii.reserve(statisticalInput.size());
+  for (const cv::Point2d& point : statisticalInput)
+  {
+    radii.push_back(cv::norm(point - config.guideCenter));
+  }
+
+  const double centerRadius = median(radii);
+  const double limit = static_cast<double>(config.edgeStatisticalFilter);
+  double maxAbsDeviation = limit;
+  for (double radius : radii)
+  {
+    maxAbsDeviation = std::max(maxAbsDeviation, std::abs(radius - centerRadius));
+  }
+  maxAbsDeviation = std::max(maxAbsDeviation, 1.0);
+
+  const int margin = 14;
+  const int chartWidth = std::min(420, std::max(220, image.cols - 2 * margin));
+  const int chartHeight = 118;
+  const int x0 = margin;
+  const int y0 = std::max(margin, image.rows - chartHeight - margin);
+  const cv::Rect chartRect(x0, y0, chartWidth, chartHeight);
+  cv::rectangle(image, chartRect, cv::Scalar(24, 24, 24), -1, cv::LINE_AA);
+  cv::rectangle(image, chartRect, cv::Scalar(230, 230, 230), 1, cv::LINE_AA);
+
+  const int left = x0 + 32;
+  const int right = x0 + chartWidth - 10;
+  const int top = y0 + 24;
+  const int bottom = y0 + chartHeight - 20;
+  const int mid = (top + bottom) / 2;
+  cv::line(image, cv::Point(left, mid), cv::Point(right, mid), cv::Scalar(150, 150, 150), 1, cv::LINE_AA);
+
+  const auto yForDeviation = [&](double deviation) {
+    const double normalized = std::clamp(deviation / maxAbsDeviation, -1.0, 1.0);
+    return static_cast<int>(std::round(static_cast<double>(mid) - normalized * static_cast<double>(bottom - top) * 0.5));
+  };
+
+  const int yUpper = yForDeviation(limit);
+  const int yLower = yForDeviation(-limit);
+  cv::line(image, cv::Point(left, yUpper), cv::Point(right, yUpper), cv::Scalar(0, 220, 255), 1, cv::LINE_AA);
+  cv::line(image, cv::Point(left, yLower), cv::Point(right, yLower), cv::Scalar(0, 220, 255), 1, cv::LINE_AA);
+
+  const double span = configuredArcSpanRadians(config);
+  for (const cv::Point2d& point : statisticalInput)
+  {
+    const double angleInSpan = pointAngleInConfiguredSpan(config, point);
+    const double xNorm = span > 0.0 ? std::clamp(angleInSpan / span, 0.0, 1.0) : 0.0;
+    const double deviation = cv::norm(point - config.guideCenter) - centerRadius;
+    const int x = left + static_cast<int>(std::round(xNorm * static_cast<double>(right - left)));
+    const int y = yForDeviation(deviation);
+    const bool kept = containsNearbyPoint(statisticalOutput, point);
+    const cv::Scalar color = kept ? cv::Scalar(70, 230, 70) : cv::Scalar(70, 70, 255);
+    cv::circle(image, cv::Point(x, y), kept ? 3 : 4, color, kept ? -1 : 1, cv::LINE_AA);
+  }
+
+  const std::string title = QString("STAT filter +/- %1 px  kept=%2/%3")
+    .arg(config.edgeStatisticalFilter)
+    .arg(statisticalOutput.size())
+    .arg(statisticalInput.size())
+    .toStdString();
+  cv::putText(image, title, cv::Point(x0 + 8, y0 + 16), cv::FONT_HERSHEY_SIMPLEX, 0.42, cv::Scalar(255, 255, 255), 1, cv::LINE_AA);
+  cv::putText(image, "+/-", cv::Point(x0 + 6, yUpper + 4), cv::FONT_HERSHEY_SIMPLEX, 0.32, cv::Scalar(0, 220, 255), 1, cv::LINE_AA);
+}
+
 void drawDiagnostics(cv::Mat& image,
                      const EdgeCircleDetectorConfig& config,
                      const std::vector<cv::Point2d>& rawPoints,
+                     const std::vector<cv::Point2d>& statisticalInput,
+                     const std::vector<cv::Point2d>& statisticalOutput,
                      const std::vector<cv::Point2d>& filteredPoints,
                      const CircleFitResult& fit)
 {
@@ -321,6 +364,22 @@ void drawDiagnostics(cv::Mat& image,
   {
     cv::circle(image, surfacePoint(point), 1, cv::Scalar(0, 120, 255), -1, cv::LINE_AA);
   }
+  for (const cv::Point2d& point : statisticalInput)
+  {
+    if (!containsNearbyPoint(statisticalOutput, point))
+    {
+      const cv::Point imagePoint = surfacePoint(point);
+      cv::line(image, imagePoint + cv::Point(-3, -3), imagePoint + cv::Point(3, 3), cv::Scalar(70, 70, 255), 1, cv::LINE_AA);
+      cv::line(image, imagePoint + cv::Point(-3, 3), imagePoint + cv::Point(3, -3), cv::Scalar(70, 70, 255), 1, cv::LINE_AA);
+    }
+  }
+  for (const cv::Point2d& point : statisticalOutput)
+  {
+    if (!containsNearbyPoint(filteredPoints, point))
+    {
+      cv::circle(image, surfacePoint(point), 3, cv::Scalar(255, 120, 0), 1, cv::LINE_AA);
+    }
+  }
   for (const cv::Point2d& point : filteredPoints)
   {
     const cv::Point imagePoint = surfacePoint(point);
@@ -330,8 +389,10 @@ void drawDiagnostics(cv::Mat& image,
 
   const cv::Point legendAnchor = surfacePoint(config.guideCenter + cv::Point2d(-config.guideRadius, -config.guideRadius));
   const cv::Point textPoint(legendAnchor.x + 12, legendAnchor.y - 28);
-  const std::string label = QString("ROBUST  raw=%1  active=%2")
+  const std::string label = QString("ROBUST  raw=%1  stat=%2/%3  active=%4")
     .arg(rawPoints.size())
+    .arg(statisticalOutput.size())
+    .arg(statisticalInput.size())
     .arg(filteredPoints.size())
     .toStdString();
   cv::putText(image, label, textPoint, cv::FONT_HERSHEY_SIMPLEX, 0.55, cv::Scalar(16, 16, 16), 3, cv::LINE_AA);
@@ -347,6 +408,12 @@ void drawDiagnostics(cv::Mat& image,
   cv::putText(image, "active", activePoint + cv::Point(10, 5), cv::FONT_HERSHEY_SIMPLEX, 0.45, cv::Scalar(16, 16, 16), 3, cv::LINE_AA);
   cv::putText(image, "active", activePoint + cv::Point(10, 5), cv::FONT_HERSHEY_SIMPLEX, 0.45, cv::Scalar(0, 255, 255), 1, cv::LINE_AA);
 
+  const cv::Point rejectedPoint(activePoint.x + 116, activePoint.y);
+  cv::line(image, rejectedPoint + cv::Point(-3, -3), rejectedPoint + cv::Point(3, 3), cv::Scalar(70, 70, 255), 1, cv::LINE_AA);
+  cv::line(image, rejectedPoint + cv::Point(-3, 3), rejectedPoint + cv::Point(3, -3), cv::Scalar(70, 70, 255), 1, cv::LINE_AA);
+  cv::putText(image, "stat reject", rejectedPoint + cv::Point(10, 5), cv::FONT_HERSHEY_SIMPLEX, 0.45, cv::Scalar(16, 16, 16), 3, cv::LINE_AA);
+  cv::putText(image, "stat reject", rejectedPoint + cv::Point(10, 5), cv::FONT_HERSHEY_SIMPLEX, 0.45, cv::Scalar(70, 70, 255), 1, cv::LINE_AA);
+
   if (fit.found)
   {
     if (config.useArc)
@@ -360,6 +427,8 @@ void drawDiagnostics(cv::Mat& image,
       cv::circle(image, surfacePoint(fit.center), static_cast<int>(std::round(fit.radius)), cv::Scalar(255, 255, 0), 2, cv::LINE_AA);
     }
   }
+
+  drawStatisticalFilterChart(image, config, statisticalInput, statisticalOutput);
 }
 }
 
@@ -448,41 +517,43 @@ EdgeCircleDetectorResult EdgeCircleDetectorExperimental::detect(const cv::Mat& i
     result.rawEdgePoints.push_back(candidate.point);
   }
 
-  std::vector<cv::Point2d> edgePoints = keepBestPerSector(candidates);
-  edgePoints = filterByGuideMedianRadius(edgePoints, config);
+  const std::vector<cv::Point2d> sectorPoints = keepBestPerSector(candidates);
+  const std::vector<cv::Point2d> statisticalPoints = filterByGuideMedianRadius(sectorPoints, config);
+  result.sectorEdgePoints = sectorPoints;
+  result.statisticalEdgePoints = statisticalPoints;
   const double span = configuredArcSpanRadians(config);
   const int requiredMinPoints = config.useArc
     ? std::max(8, static_cast<int>(std::round(static_cast<double>(config.minPoints) * span / (2.0 * CV_PI))))
     : config.minPoints;
 
   result.processed = true;
-  if (static_cast<int>(edgePoints.size()) < requiredMinPoints)
+  if (static_cast<int>(statisticalPoints.size()) < requiredMinPoints)
   {
-    result.edgePoints = edgePoints;
-    drawDiagnostics(result.diagnosticImage, config, result.rawEdgePoints, result.edgePoints, {});
-    result.message = QString("Punti edge cerchio sperimentale insufficienti: %1/%2").arg(edgePoints.size()).arg(requiredMinPoints);
+    result.edgePoints = statisticalPoints;
+    drawDiagnostics(result.diagnosticImage, config, result.rawEdgePoints, sectorPoints, statisticalPoints, result.edgePoints, {});
+    result.message = QString("Punti edge cerchio sperimentale insufficienti: %1/%2").arg(statisticalPoints.size()).arg(requiredMinPoints);
     return result;
   }
 
-  CircleFitResult initialFit = fitCircleFromDoublePoints(edgePoints, requiredMinPoints);
+  CircleFitResult initialFit = fitCircleFromDoublePoints(statisticalPoints, requiredMinPoints);
   if (!initialFit.found)
   {
-    result.edgePoints = edgePoints;
-    drawDiagnostics(result.diagnosticImage, config, result.rawEdgePoints, result.edgePoints, {});
+    result.edgePoints = statisticalPoints;
+    drawDiagnostics(result.diagnosticImage, config, result.rawEdgePoints, sectorPoints, statisticalPoints, result.edgePoints, {});
     result.message = "Fit cerchio edge sperimentale fallito";
     return result;
   }
 
   const double residualLimit = std::max(2.0, static_cast<double>(config.edgeCleanupDerivative));
-  result.edgePoints = filterByFitResidual(edgePoints, initialFit, residualLimit);
+  result.edgePoints = filterByFitResidual(statisticalPoints, initialFit, residualLimit);
   CircleFitResult fit = fitCircleFromDoublePoints(result.edgePoints, requiredMinPoints);
   if (!fit.found)
   {
     fit = initialFit;
-    result.edgePoints = edgePoints;
+    result.edgePoints = statisticalPoints;
   }
 
-  drawDiagnostics(result.diagnosticImage, config, result.rawEdgePoints, result.edgePoints, fit);
+  drawDiagnostics(result.diagnosticImage, config, result.rawEdgePoints, sectorPoints, statisticalPoints, result.edgePoints, fit);
 
   result.found = fit.found;
   result.circle.meta.id = config.id;

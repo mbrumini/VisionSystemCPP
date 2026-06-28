@@ -58,6 +58,7 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
   }
   pointSelector->setCurrentIndex(qBound(0, m_activePointIndexes.value(camera.id, 0), pointConfigs.size() - 1));
   auto* newPointButton = createTouchIconButton("new", tr("actions.newGeometryPoint"), panel);
+  auto* editPointButton = createTouchIconButton("pointGeometry", tr("actions.editGeometry"), panel);
   auto* deletePointButton = createTouchIconButton("delete", tr("actions.deleteGeometryPoint"), panel);
 
   auto* pointControls = new QWidget(panel);
@@ -68,7 +69,8 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
   pointControlsLayout->addWidget(new QLabel(tr("actions.pointGeometry"), pointControls), 0, 0);
   pointControlsLayout->addWidget(pointSelector, 0, 1);
   pointControlsLayout->addWidget(newPointButton, 0, 2);
-  pointControlsLayout->addWidget(deletePointButton, 0, 3);
+  pointControlsLayout->addWidget(editPointButton, 0, 3);
+  pointControlsLayout->addWidget(deletePointButton, 0, 4);
   pointControlsLayout->setColumnStretch(1, 1);
   layout->addWidget(pointControls);
 
@@ -140,22 +142,24 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
   QObject::connect(deletePointButton, &QPushButton::clicked, window(), [this, camera]() {
     removeActiveGeometryPoint(camera);
   });
+  QObject::connect(editPointButton, &QPushButton::clicked, window(), [this, camera]() {
+    largeImage()->setGeometryOverlayPointEditingEnabled(true);
+    testConfiguredGeometryLines(camera);
+    updateGeometryPointOverlay(camera);
+  });
 
   QObject::connect(edgeSensitivity, &QSlider::valueChanged, window(), [this, camera, edgeSensitivityValue](int value) {
     edgeSensitivityValue->setText(QString::number(value));
     activeGeometryPointConfig(camera.id).edgeSensitivity = value;
-    saveGeometryPointRecipe(camera);
     updateGeometryPointOverlay(camera);
   });
   QObject::connect(subpixelEdge, &QCheckBox::toggled, window(), [this, camera](bool checked) {
     activeGeometryPointConfig(camera.id).useSubpixel = checked;
-    saveGeometryPointRecipe(camera);
     updateGeometryPointOverlay(camera);
   });
   QObject::connect(edgeTransition, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
     activeGeometryPointConfig(camera.id).transition =
       index == 1 ? EdgeLineTransition::DarkToLight : EdgeLineTransition::LightToDark;
-    saveGeometryPointRecipe(camera);
     updateGeometryPointOverlay(camera);
   });
   QObject::connect(edgePickMode, qOverload<int>(&QComboBox::currentIndexChanged), window(), [this, camera](int index) {
@@ -171,22 +175,27 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
     {
       activeGeometryPointConfig(camera.id).pickMode = EdgeLinePickMode::First;
     }
-    saveGeometryPointRecipe(camera);
     updateGeometryPointOverlay(camera);
   });
   QObject::connect(aliasEdit, &QLineEdit::editingFinished, window(), [this, camera, aliasEdit]() {
     activeGeometryPointConfig(camera.id).alias = aliasEdit->text().trimmed();
-    saveGeometryPointRecipe(camera);
     testGeometryPoint(camera);
     syncRuntimeGeometryLabels(camera);
     refreshMeasurementOverlay(camera);
   });
 
+  auto* saveButton = createTouchIconButton("saveSample", tr("actions.saveGeometry"), panel);
   auto* testButton = createTouchIconButton("start", tr("actions.testGeometry"), panel);
   auto* backButton = createTouchIconButton("back",
     GeometryPanelNavigation::backLabel(context(), camera, tr("commands.backToCameraTools")),
     panel);
 
+  QObject::connect(saveButton, &QPushButton::clicked, window(), [this, camera]() {
+    saveGeometryPointRecipe(camera);
+    largeImage()->setGeometryOverlayPointEditingEnabled(true);
+    updateGeometryPointOverlay(camera);
+    refreshMeasurementOverlay(camera);
+  });
   QObject::connect(testButton, &QPushButton::clicked, window(), [this, camera]() { testGeometryPoint(camera); });
   QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() {
     if (!GeometryPanelNavigation::returnToSetup(context(), camera))
@@ -200,8 +209,9 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
   buttonsLayout->setContentsMargins(0, 0, 0, 0);
   buttonsLayout->setHorizontalSpacing(8);
   buttonsLayout->setVerticalSpacing(8);
-  buttonsLayout->addWidget(testButton, 0, 0);
-  buttonsLayout->addWidget(backButton, 0, 1);
+  buttonsLayout->addWidget(saveButton, 0, 0);
+  buttonsLayout->addWidget(testButton, 0, 1);
+  buttonsLayout->addWidget(backButton, 1, 0, 1, 2);
   layout->addWidget(buttons);
   layout->addStretch(1);
 
@@ -215,7 +225,7 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
       3.0);
     *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Geometry;
     m_drawingTarget = DrawingTarget::Point;
-    largeImage()->setGeometryOverlayPointEditingEnabled(true);
+    largeImage()->setGeometryOverlayPointEditingEnabled(false);
     updateGeometryPointOverlay(camera);
   }
   else if (pointConfig.hasImageGuide)
@@ -226,7 +236,7 @@ void MainWindowGeometryModule::showGeometryPointPanel(const CameraConfig& camera
       3.0);
     *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Geometry;
     m_drawingTarget = DrawingTarget::Point;
-    largeImage()->setGeometryOverlayPointEditingEnabled(true);
+    largeImage()->setGeometryOverlayPointEditingEnabled(false);
     updateGeometryPointOverlay(camera);
   }
   else

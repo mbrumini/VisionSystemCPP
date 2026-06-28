@@ -61,6 +61,7 @@ public:
   void activateGeometryLineDrawing(const CameraConfig& camera);
   void handleGeometryLinePoint(const CameraConfig& camera, const QPointF& imagePoint);
   void handleGeometryLineHandleMoved(const CameraConfig& camera, int pointIndex, const QPointF& imagePoint);
+  bool handleImagePick(const CameraConfig& camera, const QPointF& imagePoint);
   GeometryOverlay configuredGeometryLinesOverlay(const CameraConfig& camera, bool includeActive) const;
   void updateGeometryLineOverlay(const CameraConfig& camera, const GeometryOverlay& extraOverlay = {});
   void restoreCleanGeometryImage(const CameraConfig& camera);
@@ -91,7 +92,7 @@ public:
   void activateGeometryCircleDrawing(const CameraConfig& camera);
   void handleGeometryCirclePoints(const CameraConfig& camera, const QVector<QPoint>& points);
   void handleGeometryCircleBandChanged(const CameraConfig& camera, const QVector<ImageCircle>& circles, int changedRadiusIndex);
-  void showConfiguredGeometryCircles(const CameraConfig& camera);
+  void showConfiguredGeometryCircles(const CameraConfig& camera, bool editable = false);
   void testGeometryCircle(const CameraConfig& camera);
 
   void loadGeometryArcsRecipe(const CameraConfig& camera);

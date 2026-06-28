@@ -7,9 +7,69 @@
 
 #include "gui/geometry/GeometryDiagnosticDrawing.h"
 #include "gui/geometry/GeometryDisplayNames.h"
+#include "gui/geometry/GeometryGuideRuntime.h"
 #include "gui/geometry/GeometryOverlayPrimitives.h"
 
 #include <QColor>
+
+#include <algorithm>
+#include <cmath>
+
+namespace
+{
+double pointDistance(const QPointF& a, const QPointF& b)
+{
+  return std::hypot(a.x() - b.x(), a.y() - b.y());
+}
+
+double pointSegmentDistance(const QPointF& point, const QPointF& start, const QPointF& end)
+{
+  const QPointF segment = end - start;
+  const double lengthSquared = segment.x() * segment.x() + segment.y() * segment.y();
+  if (lengthSquared <= 1e-9)
+  {
+    return pointDistance(point, start);
+  }
+
+  const QPointF relative = point - start;
+  const double t = std::clamp(
+    (relative.x() * segment.x() + relative.y() * segment.y()) / lengthSquared,
+    0.0,
+    1.0);
+  return pointDistance(point, start + segment * t);
+}
+
+double normalizedRadians(double angle)
+{
+  constexpr double twoPi = 6.28318530717958647692;
+  while (angle < 0.0)
+  {
+    angle += twoPi;
+  }
+  while (angle >= twoPi)
+  {
+    angle -= twoPi;
+  }
+  return angle;
+}
+
+bool angleOnArc(double angle, double start, double end)
+{
+  constexpr double twoPi = 6.28318530717958647692;
+  angle = normalizedRadians(angle);
+  start = normalizedRadians(start);
+  end = normalizedRadians(end);
+  if (end < start)
+  {
+    end += twoPi;
+  }
+  if (angle < start)
+  {
+    angle += twoPi;
+  }
+  return angle >= start && angle <= end;
+}
+}
 
 QHash<QString, QString> MainWindowGeometryModule::geometryAliasMap(const QString& cameraId) const
 {
@@ -213,11 +273,261 @@ void MainWindowGeometryModule::refreshMeasurementOverlay(const CameraConfig& cam
     return;
   }
 
-  showRuntimeGeometryOverlay(camera);
+  const bool editingArc =
+    context().activeDrawingRecipe &&
+    *context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry &&
+    m_drawingTarget == DrawingTarget::Arc;
+  if (!editingArc)
+  {
+    showRuntimeGeometryOverlay(camera);
+  }
 
   if (context().updateMeasurementResults)
   {
     context().updateMeasurementResults();
   }
+}
+
+bool MainWindowGeometryModule::handleImagePick(const CameraConfig& camera, const QPointF& imagePoint)
+{
+  if (camera.id != selectedCameraId())
+  {
+    return false;
+  }
+
+  const PartPose& pose = cameraRuntime()[camera.id].currentPose();
+  const cv::Mat& frame = cameraRuntime()[camera.id].currentFrame();
+  const cv::Size imageSize = frame.empty() ? cv::Size() : frame.size();
+  const QSize referenceSize = guideReferenceSize(camera.id);
+  constexpr double kPickTolerance = 18.0;
+  int bestIndex = -1;
+  double bestDistance = kPickTolerance;
+
+  if (m_drawingTarget == DrawingTarget::Line)
+  {
+    const QVector<GeometryLineRuntimeConfig>& lines = m_lineConfigs[camera.id];
+    for (int i = 0; i < lines.size(); ++i)
+    {
+      const GeometryLineRuntimeConfig& line = lines[i];
+      const bool usePart = GeometryGuideRuntime::shouldUsePartGuide(
+        pose.valid, line.hasLine, line.hasImageLine, line.anchorInImageSpace, referenceSize, imageSize);
+      QPointF start;
+      QPointF end;
+      if (usePart || line.hasImageLine)
+      {
+        const cv::Point2d imageStart = GeometryGuideRuntime::resolveImagePoint(
+          pose, usePart, line.partStart, line.imageStart, referenceSize, imageSize);
+        const cv::Point2d imageEnd = GeometryGuideRuntime::resolveImagePoint(
+          pose, usePart, line.partEnd, line.imageEnd, referenceSize, imageSize);
+        start = QPointF(imageStart.x, imageStart.y);
+        end = QPointF(imageEnd.x, imageEnd.y);
+      }
+      else
+      {
+        bool foundRuntimeLine = false;
+        const GeometrySet& geometries = cameraRuntime()[camera.id].geometries();
+        for (const LineGeometry& runtimeLine : geometries.lines)
+        {
+          if (runtimeLine.meta.id == line.id)
+          {
+            start = QPointF(runtimeLine.start.x, runtimeLine.start.y);
+            end = QPointF(runtimeLine.end.x, runtimeLine.end.y);
+            foundRuntimeLine = true;
+            break;
+          }
+        }
+        if (!foundRuntimeLine)
+        {
+          continue;
+        }
+      }
+
+      const double distance = pointSegmentDistance(imagePoint, start, end);
+      if (distance < bestDistance)
+      {
+        bestDistance = distance;
+        bestIndex = i;
+      }
+    }
+
+    if (bestIndex >= 0)
+    {
+      m_activeLineIndexes[camera.id] = bestIndex;
+      GeometryLineRuntimeConfig& line = activeGeometryLineConfig(camera.id);
+      const bool usePart = GeometryGuideRuntime::shouldUsePartGuide(
+        pose.valid, line.hasLine, line.hasImageLine, line.anchorInImageSpace, referenceSize, imageSize);
+      QPointF start;
+      QPointF end;
+      bool resolved = false;
+      if (usePart || line.hasImageLine)
+      {
+        const cv::Point2d imageStart = GeometryGuideRuntime::resolveImagePoint(
+          pose, usePart, line.partStart, line.imageStart, referenceSize, imageSize);
+        const cv::Point2d imageEnd = GeometryGuideRuntime::resolveImagePoint(
+          pose, usePart, line.partEnd, line.imageEnd, referenceSize, imageSize);
+        start = QPointF(imageStart.x, imageStart.y);
+        end = QPointF(imageEnd.x, imageEnd.y);
+        resolved = true;
+      }
+      else
+      {
+        const GeometrySet& geometries = cameraRuntime()[camera.id].geometries();
+        for (const LineGeometry& runtimeLine : geometries.lines)
+        {
+          if (runtimeLine.meta.id == line.id)
+          {
+            start = QPointF(runtimeLine.start.x, runtimeLine.start.y);
+            end = QPointF(runtimeLine.end.x, runtimeLine.end.y);
+            resolved = true;
+            break;
+          }
+        }
+      }
+
+      if (resolved)
+      {
+        m_lineMouseControllers[camera.id].setLine(start, end, line.bandHalfWidth);
+      }
+      *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Geometry;
+      m_drawingTarget = DrawingTarget::Line;
+      largeImage()->setGeometryOverlayPointEditingEnabled(true);
+      updateGeometryLineOverlay(camera);
+      return true;
+    }
+  }
+  else if (m_drawingTarget == DrawingTarget::Point)
+  {
+    const QVector<GeometryPointRuntimeConfig>& points = m_pointConfigs[camera.id];
+    for (int i = 0; i < points.size(); ++i)
+    {
+      const GeometryPointRuntimeConfig& point = points[i];
+      const bool usePart = GeometryGuideRuntime::shouldUsePartGuide(
+        pose.valid, point.hasGuide, point.hasImageGuide, point.anchorInImageSpace, referenceSize, imageSize);
+      if (!usePart && !point.hasImageGuide)
+      {
+        continue;
+      }
+
+      const cv::Point2d start = GeometryGuideRuntime::resolveImagePoint(
+        pose, usePart, point.partStart, point.imageStart, referenceSize, imageSize);
+      const cv::Point2d end = GeometryGuideRuntime::resolveImagePoint(
+        pose, usePart, point.partEnd, point.imageEnd, referenceSize, imageSize);
+      const double distance = pointSegmentDistance(imagePoint, QPointF(start.x, start.y), QPointF(end.x, end.y));
+      if (distance < bestDistance)
+      {
+        bestDistance = distance;
+        bestIndex = i;
+      }
+    }
+
+    if (bestIndex >= 0)
+    {
+      m_activePointIndexes[camera.id] = bestIndex;
+      GeometryPointRuntimeConfig& point = activeGeometryPointConfig(camera.id);
+      const bool usePart = GeometryGuideRuntime::shouldUsePartGuide(
+        pose.valid, point.hasGuide, point.hasImageGuide, point.anchorInImageSpace, referenceSize, imageSize);
+      if (usePart || point.hasImageGuide)
+      {
+        const cv::Point2d imageStart = GeometryGuideRuntime::resolveImagePoint(
+          pose, usePart, point.partStart, point.imageStart, referenceSize, imageSize);
+        const cv::Point2d imageEnd = GeometryGuideRuntime::resolveImagePoint(
+          pose, usePart, point.partEnd, point.imageEnd, referenceSize, imageSize);
+        m_pointMouseControllers[camera.id].setLine(
+          QPointF(imageStart.x, imageStart.y),
+          QPointF(imageEnd.x, imageEnd.y),
+          3.0);
+      }
+      *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Geometry;
+      m_drawingTarget = DrawingTarget::Point;
+      largeImage()->setGeometryOverlayPointEditingEnabled(true);
+      updateGeometryPointOverlay(camera);
+      return true;
+    }
+  }
+  else if (m_drawingTarget == DrawingTarget::Circle)
+  {
+    const QVector<GeometryCircleRuntimeConfig>& circles = m_circleConfigs[camera.id];
+    for (int i = 0; i < circles.size(); ++i)
+    {
+      const GeometryCircleRuntimeConfig& circle = circles[i];
+      const bool usePart = GeometryGuideRuntime::shouldUsePartGuide(
+        pose.valid, circle.hasCircle, circle.hasImageCircle, circle.anchorInImageSpace, referenceSize, imageSize);
+      if (!usePart && !circle.hasImageCircle)
+      {
+        continue;
+      }
+
+      const cv::Point2d center = GeometryGuideRuntime::resolveImagePoint(
+        pose, usePart, circle.partCenter, circle.imageCenter, referenceSize, imageSize);
+      const double radius = usePart
+        ? circle.radius
+        : GeometryGuideRuntime::mapImageGuideRadius(circle.radius, referenceSize, imageSize);
+      const double distance = std::abs(pointDistance(imagePoint, QPointF(center.x, center.y)) - radius);
+      if (distance < bestDistance)
+      {
+        bestDistance = distance;
+        bestIndex = i;
+      }
+    }
+
+    if (bestIndex >= 0)
+    {
+      m_activeCircleIndexes[camera.id] = bestIndex;
+      *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Geometry;
+      m_drawingTarget = DrawingTarget::Circle;
+      showConfiguredGeometryCircles(camera, true);
+      return true;
+    }
+  }
+  else if (m_drawingTarget == DrawingTarget::Arc)
+  {
+    const QVector<GeometryArcRuntimeConfig>& arcs = m_arcConfigs[camera.id];
+    for (int i = 0; i < arcs.size(); ++i)
+    {
+      const GeometryArcRuntimeConfig& arc = arcs[i];
+      const bool usePart = GeometryGuideRuntime::shouldUsePartGuide(
+        pose.valid, arc.hasArc, arc.hasImageArc, arc.anchorInImageSpace, referenceSize, imageSize);
+      if (!usePart && !arc.hasImageArc)
+      {
+        continue;
+      }
+
+      const cv::Point2d center = GeometryGuideRuntime::resolveImagePoint(
+        pose, usePart, arc.partCenter, arc.imageCenter, referenceSize, imageSize);
+      const cv::Point2d start = GeometryGuideRuntime::resolveImagePoint(
+        pose, usePart, arc.partStart, arc.imageStart, referenceSize, imageSize);
+      const cv::Point2d end = GeometryGuideRuntime::resolveImagePoint(
+        pose, usePart, arc.partEnd, arc.imageEnd, referenceSize, imageSize);
+      const double radius = usePart
+        ? std::hypot(start.x - center.x, start.y - center.y)
+        : GeometryGuideRuntime::mapImageGuideRadius(arc.radius, referenceSize, imageSize);
+      const double angle = std::atan2(imagePoint.y() - center.y, imagePoint.x() - center.x);
+      const double startAngle = std::atan2(start.y - center.y, start.x - center.x);
+      const double endAngle = std::atan2(end.y - center.y, end.x - center.x);
+      if (!angleOnArc(angle, startAngle, endAngle))
+      {
+        continue;
+      }
+
+      const double distance = std::abs(pointDistance(imagePoint, QPointF(center.x, center.y)) - radius);
+      if (distance < bestDistance)
+      {
+        bestDistance = distance;
+        bestIndex = i;
+      }
+    }
+
+    if (bestIndex >= 0)
+    {
+      m_activeArcIndexes[camera.id] = bestIndex;
+      *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::Geometry;
+      m_drawingTarget = DrawingTarget::Arc;
+      largeImage()->setGeometryOverlayPointEditingEnabled(true);
+      showConfiguredGeometryArcs(camera);
+      return true;
+    }
+  }
+
+  return false;
 }
 

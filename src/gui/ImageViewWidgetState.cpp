@@ -284,6 +284,13 @@ void ImageViewWidget::setGeometryOverlayPointEditingEnabled(bool enabled)
 {
   m_drawingMode = enabled ? DrawingMode::GeometryOverlayPointEdit : DrawingMode::None;
   setCursor(enabled ? Qt::OpenHandCursor : Qt::ArrowCursor);
+  if (enabled)
+  {
+    m_hasGeometryArea = false;
+    m_geometryArea = {};
+    m_geometryPoints.clear();
+    m_geometryLines.clear();
+  }
   m_dragging = false;
   m_movingRoi = false;
   m_resizingRoi = false;
@@ -448,6 +455,11 @@ void ImageViewWidget::setGeometryOverlayPointMovedHandler(std::function<void(int
 void ImageViewWidget::setGeometryOverlayDimensionLabelMovedHandler(std::function<void(const QString&, const QPointF&)> handler)
 {
   m_geometryOverlayDimensionLabelMovedHandler = std::move(handler);
+}
+
+void ImageViewWidget::setImageClickedHandler(std::function<void(const QPointF&)> handler)
+{
+  m_imageClickedHandler = std::move(handler);
 }
 
 void ImageViewWidget::setTwoPointLineHandler(std::function<void(const QVector<QPoint>&)> handler)

@@ -2,7 +2,7 @@
     "executionProfile": {
         "angleMaxDeg": 5,
         "angleMinDeg": -5,
-        "angleStepDeg": 1,
+        "angleStepDeg": 0.2,
         "cameraId": "CAM01",
         "canvasBackground": 240,
         "canvasHeight": 1080,
@@ -10,7 +10,7 @@
         "frameDeliveryMode": "collectResults",
         "intervalMs": 100,
         "passes": 2,
-        "pixelSizeMm": 0.046,
+        "pixelSizeMm": 0.051000000000000004,
         "recipeId": "stress_test",
         "sendOnly": false,
         "shapeId": "stress_all_tools",

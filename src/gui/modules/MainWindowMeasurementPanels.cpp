@@ -15,7 +15,9 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 
+#include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace
 {
@@ -54,6 +56,127 @@ void applySecondarySourceDefault(QComboBox* secondaryCombo, int sourceCount)
   {
     secondaryCombo->setCurrentIndex(1);
   }
+}
+
+bool setComboCurrentData(QComboBox* combo, const QString& id)
+{
+  if (!combo)
+  {
+    return false;
+  }
+  const int index = combo->findData(id);
+  if (index < 0)
+  {
+    return false;
+  }
+  combo->setCurrentIndex(index);
+  return true;
+}
+
+double pointDistance(const cv::Point2d& a, const cv::Point2d& b)
+{
+  const cv::Point2d delta = a - b;
+  return std::sqrt(delta.dot(delta));
+}
+
+double lineSegmentDistance(const LineGeometry& line, const cv::Point2d& point)
+{
+  const cv::Point2d segment = line.end - line.start;
+  const double lengthSquared = segment.dot(segment);
+  if (lengthSquared <= 0.000001)
+  {
+    return pointDistance(line.start, point);
+  }
+  const cv::Point2d delta = point - line.start;
+  const double t = std::clamp(delta.dot(segment) / lengthSquared, 0.0, 1.0);
+  return pointDistance(line.start + segment * t, point);
+}
+
+QString nearestPointSourceId(const QVector<ConstructedGeometryPointSource>& sources,
+                             const QPointF& imagePoint,
+                             double maxDistance = 28.0,
+                             double* bestDistanceOut = nullptr)
+{
+  const cv::Point2d target(imagePoint.x(), imagePoint.y());
+  QString bestId;
+  double bestDistance = maxDistance;
+  for (const ConstructedGeometryPointSource& source : sources)
+  {
+    if (!source.point)
+    {
+      continue;
+    }
+    const double distance = pointDistance(source.point->point, target);
+    if (distance <= bestDistance)
+    {
+      bestDistance = distance;
+      bestId = source.id;
+    }
+  }
+  if (bestDistanceOut)
+  {
+    *bestDistanceOut = bestId.isEmpty() ? std::numeric_limits<double>::infinity() : bestDistance;
+  }
+  return bestId;
+}
+
+QString nearestLineSourceId(const QVector<ConstructedGeometryLineSource>& sources,
+                            const QPointF& imagePoint,
+                            double maxDistance = 28.0,
+                            double* bestDistanceOut = nullptr)
+{
+  const cv::Point2d target(imagePoint.x(), imagePoint.y());
+  QString bestId;
+  double bestDistance = maxDistance;
+  for (const ConstructedGeometryLineSource& source : sources)
+  {
+    if (!source.line)
+    {
+      continue;
+    }
+    const double distance = lineSegmentDistance(*source.line, target);
+    if (distance <= bestDistance)
+    {
+      bestDistance = distance;
+      bestId = source.id;
+    }
+  }
+  if (bestDistanceOut)
+  {
+    *bestDistanceOut = bestId.isEmpty() ? std::numeric_limits<double>::infinity() : bestDistance;
+  }
+  return bestId;
+}
+
+QString nearestCircleSourceId(const GeometrySet& set,
+                              const QVector<ConstructedGeometryCircleSource>& sources,
+                              const QPointF& imagePoint,
+                              double maxDistance = 32.0,
+                              double* bestDistanceOut = nullptr)
+{
+  const cv::Point2d target(imagePoint.x(), imagePoint.y());
+  QString bestId;
+  double bestDistance = maxDistance;
+  for (const ConstructedGeometryCircleSource& source : sources)
+  {
+    CircleGeometry circle;
+    if (!constructedGeometryCircleSourceValue(set, source.id, circle) || circle.radius <= 0.0)
+    {
+      continue;
+    }
+    const double centerDistance = pointDistance(circle.center, target);
+    const double distance = std::min(std::abs(centerDistance - circle.radius), centerDistance);
+    if (distance <= bestDistance)
+    {
+      bestDistance = distance;
+      bestId = source.id;
+    }
+  }
+  if (bestDistanceOut)
+  {
+    *bestDistanceOut = bestId.isEmpty() ? std::numeric_limits<double>::infinity() : bestDistance;
+  }
+  return bestId;
 }
 
 QVBoxLayout* createMeasurementPage(QWidget* panel, const QString& titleText)
@@ -170,9 +293,78 @@ void appendSelectionCircle(GeometryOverlay& overlay,
 }
 }
 
+void MainWindowMeasurementModule::handleImagePick(const CameraConfig& camera, const QPointF& imagePoint)
+{
+  if (m_imagePickMode == ImagePickMode::None || !m_pickPrimaryCombo)
+  {
+    return;
+  }
+
+  const GeometrySet& set = cameraRuntime()[camera.id].geometries();
+  if (m_imagePickMode == ImagePickMode::PointPoint)
+  {
+    const QVector<ConstructedGeometryPointSource> sources =
+      constructedGeometryPointSources(set, geometryAliasesForCamera(camera));
+    const QString id = nearestPointSourceId(sources, imagePoint);
+    QComboBox* target = (m_nextPickTarget % 2 == 0) ? m_pickPrimaryCombo.data() : m_pickSecondaryCombo.data();
+    if (!id.isEmpty() && setComboCurrentData(target, id))
+    {
+      ++m_nextPickTarget;
+    }
+    return;
+  }
+
+  if (m_imagePickMode == ImagePickMode::PointLine)
+  {
+    const QVector<ConstructedGeometryPointSource> pointSources =
+      constructedGeometryPointSources(set, geometryAliasesForCamera(camera));
+    const QVector<ConstructedGeometryLineSource> lineSources =
+      constructedGeometryLineSources(set, geometryAliasesForCamera(camera));
+    double pointDistance = 0.0;
+    double lineDistance = 0.0;
+    const QString pointId = nearestPointSourceId(pointSources, imagePoint, 28.0, &pointDistance);
+    const QString lineId = nearestLineSourceId(lineSources, imagePoint, 28.0, &lineDistance);
+    if (!pointId.isEmpty() && pointDistance <= lineDistance)
+    {
+      setComboCurrentData(m_pickPrimaryCombo.data(), pointId);
+      return;
+    }
+    if (!lineId.isEmpty())
+    {
+      setComboCurrentData(m_pickSecondaryCombo.data(), lineId);
+    }
+    return;
+  }
+
+  if (m_imagePickMode == ImagePickMode::LineLineDistance || m_imagePickMode == ImagePickMode::LineLineAngle)
+  {
+    const QVector<ConstructedGeometryLineSource> sources =
+      constructedGeometryLineSources(set, geometryAliasesForCamera(camera));
+    const QString id = nearestLineSourceId(sources, imagePoint);
+    QComboBox* target = (m_nextPickTarget % 2 == 0) ? m_pickPrimaryCombo.data() : m_pickSecondaryCombo.data();
+    if (!id.isEmpty() && setComboCurrentData(target, id))
+    {
+      ++m_nextPickTarget;
+    }
+    return;
+  }
+
+  if (m_imagePickMode == ImagePickMode::CircleDiameter)
+  {
+    const QVector<ConstructedGeometryCircleSource> sources =
+      constructedGeometryCircleSources(set, geometryAliasesForCamera(camera));
+    const QString id = nearestCircleSourceId(set, sources, imagePoint);
+    if (!id.isEmpty())
+    {
+      setComboCurrentData(m_pickPrimaryCombo.data(), id);
+    }
+  }
+}
+
 void MainWindowMeasurementModule::showPointPointDistancePanel(const CameraConfig& camera)
 {
   context().clearToolPanel();
+  m_imagePickMode = ImagePickMode::None;
   refreshMeasurementSources(camera);
 
   const GeometrySet& set = cameraRuntime()[camera.id].geometries();
@@ -216,6 +408,10 @@ void MainWindowMeasurementModule::showPointPointDistancePanel(const CameraConfig
   };
   QObject::connect(pointACombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
   QObject::connect(pointBCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  m_imagePickMode = ImagePickMode::PointPoint;
+  m_pickPrimaryCombo = pointACombo;
+  m_pickSecondaryCombo = pointBCombo;
+  m_nextPickTarget = 0;
 
   formLayout->addWidget(new QLabel(tr("labels.sourcePointA"), form), 0, 0);
   formLayout->addWidget(pointACombo, 0, 1);
@@ -255,6 +451,7 @@ void MainWindowMeasurementModule::showPointPointDistancePanel(const CameraConfig
 void MainWindowMeasurementModule::showPointLineDistancePanel(const CameraConfig& camera)
 {
   context().clearToolPanel();
+  m_imagePickMode = ImagePickMode::None;
   refreshMeasurementSources(camera);
 
   const GeometrySet& set = cameraRuntime()[camera.id].geometries();
@@ -298,6 +495,10 @@ void MainWindowMeasurementModule::showPointLineDistancePanel(const CameraConfig&
   };
   QObject::connect(pointCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
   QObject::connect(lineCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  m_imagePickMode = ImagePickMode::PointLine;
+  m_pickPrimaryCombo = pointCombo;
+  m_pickSecondaryCombo = lineCombo;
+  m_nextPickTarget = 0;
 
   formLayout->addWidget(new QLabel(tr("labels.sourcePoint"), form), 0, 0);
   formLayout->addWidget(pointCombo, 0, 1);
@@ -327,6 +528,7 @@ void MainWindowMeasurementModule::showPointLineDistancePanel(const CameraConfig&
 void MainWindowMeasurementModule::showLineLineDistancePanel(const CameraConfig& camera)
 {
   context().clearToolPanel();
+  m_imagePickMode = ImagePickMode::None;
   refreshMeasurementSources(camera);
 
   const GeometrySet& set = cameraRuntime()[camera.id].geometries();
@@ -369,6 +571,10 @@ void MainWindowMeasurementModule::showLineLineDistancePanel(const CameraConfig& 
   };
   QObject::connect(lineACombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
   QObject::connect(lineBCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  m_imagePickMode = ImagePickMode::LineLineDistance;
+  m_pickPrimaryCombo = lineACombo;
+  m_pickSecondaryCombo = lineBCombo;
+  m_nextPickTarget = 0;
 
   formLayout->addWidget(new QLabel(tr("labels.sourceLineA"), form), 0, 0);
   formLayout->addWidget(lineACombo, 0, 1);
@@ -383,13 +589,35 @@ void MainWindowMeasurementModule::showLineLineDistancePanel(const CameraConfig& 
 
   const auto refreshPanel = [this, camera]() { showLineLineDistancePanel(camera); };
   auto* saveButton = createSaveMeasurementButton(panel, tr("actions.saveMeasurement"));
+  auto* saveMinButton = createSaveMeasurementButton(panel, tr("actions.saveMeasurement") + " MIN");
+  auto* saveMaxButton = createSaveMeasurementButton(panel, tr("actions.saveMeasurement") + " MAX");
   saveButton->setEnabled(lineSources.size() >= 2);
+  saveMinButton->setEnabled(lineSources.size() >= 2);
+  saveMaxButton->setEnabled(lineSources.size() >= 2);
   QObject::connect(saveButton, &QPushButton::clicked, window(), [this, camera, lineACombo, lineBCombo, refreshPanel]() {
     createLineLineDistance(camera, lineACombo->currentData().toString(), lineBCombo->currentData().toString());
     refreshPanel();
   });
+  QObject::connect(saveMinButton, &QPushButton::clicked, window(), [this, camera, lineACombo, lineBCombo, refreshPanel]() {
+    createLineLineDistance(
+      camera,
+      lineACombo->currentData().toString(),
+      lineBCombo->currentData().toString(),
+      "line_line_distance_min");
+    refreshPanel();
+  });
+  QObject::connect(saveMaxButton, &QPushButton::clicked, window(), [this, camera, lineACombo, lineBCombo, refreshPanel]() {
+    createLineLineDistance(
+      camera,
+      lineACombo->currentData().toString(),
+      lineBCombo->currentData().toString(),
+      "line_line_distance_max");
+    refreshPanel();
+  });
   appendMeasurementListControls(panel, layout, camera, refreshPanel);
   layout->addWidget(saveButton);
+  layout->addWidget(saveMinButton);
+  layout->addWidget(saveMaxButton);
 
   auto* backButton = createTouchIconButton("back", tr("tools.measurements"), panel);
   QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() { showMeasurementPanel(camera); });
@@ -403,6 +631,7 @@ void MainWindowMeasurementModule::showLineLineDistancePanel(const CameraConfig& 
 void MainWindowMeasurementModule::showCircleDiameterPanel(const CameraConfig& camera)
 {
   context().clearToolPanel();
+  m_imagePickMode = ImagePickMode::None;
   refreshMeasurementSources(camera);
 
   const GeometrySet& set = cameraRuntime()[camera.id].geometries();
@@ -438,6 +667,10 @@ void MainWindowMeasurementModule::showCircleDiameterPanel(const CameraConfig& ca
     largeImage()->setGeometryOverlay(overlay);
   };
   QObject::connect(circleCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  m_imagePickMode = ImagePickMode::CircleDiameter;
+  m_pickPrimaryCombo = circleCombo;
+  m_pickSecondaryCombo = nullptr;
+  m_nextPickTarget = 0;
 
   formLayout->addWidget(new QLabel(tr("labels.sourceCircle"), form), 0, 0);
   formLayout->addWidget(circleCombo, 0, 1);
@@ -465,6 +698,7 @@ void MainWindowMeasurementModule::showCircleDiameterPanel(const CameraConfig& ca
 void MainWindowMeasurementModule::showLineLineAnglePanel(const CameraConfig& camera)
 {
   context().clearToolPanel();
+  m_imagePickMode = ImagePickMode::None;
   refreshMeasurementSources(camera);
 
   const GeometrySet& set = cameraRuntime()[camera.id].geometries();
@@ -507,6 +741,10 @@ void MainWindowMeasurementModule::showLineLineAnglePanel(const CameraConfig& cam
   };
   QObject::connect(lineACombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
   QObject::connect(lineBCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  m_imagePickMode = ImagePickMode::LineLineAngle;
+  m_pickPrimaryCombo = lineACombo;
+  m_pickSecondaryCombo = lineBCombo;
+  m_nextPickTarget = 0;
 
   formLayout->addWidget(new QLabel(tr("labels.sourceLineA"), form), 0, 0);
   formLayout->addWidget(lineACombo, 0, 1);
