@@ -17,7 +17,16 @@ QString appRootPath()
     return runtimeRoot;
   }
 
-  return QString::fromUtf8(PROJECT_SOURCE_DIR);
+  const QString sourceRoot = QString::fromUtf8(PROJECT_SOURCE_DIR);
+  const QString cleanRuntimeRoot = QDir::cleanPath(runtimeRoot);
+  const QString cleanSourceBuildRoot = QDir::cleanPath(QDir(sourceRoot).filePath("build"));
+  if (cleanRuntimeRoot == cleanSourceBuildRoot ||
+      cleanRuntimeRoot.startsWith(cleanSourceBuildRoot + QDir::separator()))
+  {
+    return sourceRoot;
+  }
+
+  return runtimeRoot;
 }
 
 QString appPath(const QString& relativePath)
