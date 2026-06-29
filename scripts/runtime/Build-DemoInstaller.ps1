@@ -95,7 +95,7 @@ AppId={{7B2A5690-A781-40A2-92C9-273318C86C3D}
 AppName=$AppName
 AppVersion={#AppVersion}
 AppPublisher=$Publisher
-DefaultDirName={autopf}\VisionSystemCPP
+DefaultDirName=C:\VisionSystemCPP
 DefaultGroupName=VisionSystemCPP
 DisableProgramGroupPage=yes
 OutputDir=$(Escape-Iss $OutputDir)
@@ -105,7 +105,7 @@ SolidCompression=yes
 WizardStyle=modern
 ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
-PrivilegesRequired=lowest
+PrivilegesRequired=admin
 UninstallDisplayName=$AppName
 SetupLogging=yes
 

@@ -31,6 +31,50 @@ if ([string]::IsNullOrWhiteSpace($OutputDir)) {
   $OutputDir = Join-Path $projectRoot "dist"
 }
 
+function Copy-DirectoryFiltered {
+  param(
+    [Parameter(Mandatory = $true)][string]$SourceDir,
+    [Parameter(Mandatory = $true)][string]$TargetDir,
+    [string[]]$ExcludedDirectoryNames = @(),
+    [string[]]$ExcludedFileExtensions = @(),
+    [string[]]$ExcludedFileNames = @()
+  )
+
+  $sourceRoot = (Resolve-Path $SourceDir).Path
+  New-Item -ItemType Directory -Force -Path $TargetDir | Out-Null
+
+  Get-ChildItem -Path $sourceRoot -Recurse -Force | ForEach-Object {
+    $relativePath = $_.FullName.Substring($sourceRoot.Length).TrimStart('\', '/')
+    if ([string]::IsNullOrWhiteSpace($relativePath)) {
+      return
+    }
+
+    $parts = $relativePath -split '[\\/]'
+    foreach ($part in $parts) {
+      if ($ExcludedDirectoryNames -contains $part) {
+        return
+      }
+    }
+
+    $destination = Join-Path $TargetDir $relativePath
+    if ($_.PSIsContainer) {
+      New-Item -ItemType Directory -Force -Path $destination | Out-Null
+      return
+    }
+
+    if ($ExcludedFileExtensions -contains $_.Extension.ToLowerInvariant()) {
+      return
+    }
+    if ($ExcludedFileNames -contains $_.Name.ToLowerInvariant()) {
+      return
+    }
+
+    $destinationDir = Split-Path -Parent $destination
+    New-Item -ItemType Directory -Force -Path $destinationDir | Out-Null
+    Copy-Item -Force $_.FullName $destination
+  }
+}
+
 $stagingRoot = Join-Path $OutputDir "runtime_staging"
 $packageRoot = Join-Path $stagingRoot "VisionSystemCPP"
 $zipPath = Join-Path $OutputDir ("VisionSystemCPP-runtime-{0}.zip" -f $version)
@@ -76,8 +120,12 @@ if ($IncludeRecipes) {
   $recipesSource = Join-Path $projectRoot "recipes"
   if (Test-Path $recipesSource) {
     $recipesTarget = Join-Path $packageRoot "recipes"
-    New-Item -ItemType Directory -Force -Path $recipesTarget | Out-Null
-    Copy-Item -Recurse -Force (Join-Path $recipesSource "*") $recipesTarget
+    Copy-DirectoryFiltered `
+      -SourceDir $recipesSource `
+      -TargetDir $recipesTarget `
+      -ExcludedDirectoryNames @("datasets", "models", "ai", "__pycache__") `
+      -ExcludedFileExtensions @(".pyc") `
+      -ExcludedFileNames @("results.png", "confusion_matrix.png", "confusion_matrix_normalized.png", "train_batch0.jpg", "train_batch1.jpg", "train_batch2.jpg", "val_batch0_labels.jpg", "val_batch0_pred.jpg", "val_batch1_labels.jpg", "val_batch1_pred.jpg", "val_batch2_labels.jpg", "val_batch2_pred.jpg")
   }
 }
 
