@@ -418,10 +418,6 @@ target_include_directories(VisionSystemCPP PRIVATE
     src
 )
 
-target_compile_definitions(VisionSystemCPP PRIVATE
-    PROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
-)
-
 if(VIMBAX_INCLUDE_DIR AND VIMBAX_CPP_LIBRARY)
     target_include_directories(VisionSystemCPP PRIVATE ${VIMBAX_INCLUDE_DIR})
     target_link_libraries(VisionSystemCPP PRIVATE ${VIMBAX_CPP_LIBRARY})

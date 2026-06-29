@@ -1,5 +1,7 @@
 #include "gui/IconCatalog.h"
 
+#include "config/RecipeJsonUtils.h"
+
 #include <QColor>
 #include <QDir>
 #include <QFile>
@@ -59,7 +61,7 @@ IconSetDefinition iconSetDefinition(const QString& iconSet)
 
 QString iconSettingsPath()
 {
-  return QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath("config/vision_ui.ini");
+  return RecipeJsonUtils::appPath("config/vision_ui.ini");
 }
 
 QSettings iconSettings()
@@ -95,9 +97,8 @@ QString themedIconPath(const QString& id)
     return path;
   }
 
-  const QString filePath = QDir(QString::fromUtf8(PROJECT_SOURCE_DIR))
-    .filePath(QString("vision_icon_pack/%1/%2.%3")
-      .arg(definition.resourceFolder, themedIconName(id), definition.extension));
+  const QString filePath = RecipeJsonUtils::appPath(QString("vision_icon_pack/%1/%2.%3")
+    .arg(definition.resourceFolder, themedIconName(id), definition.extension));
   return QFile::exists(filePath) ? filePath : QString();
 }
 

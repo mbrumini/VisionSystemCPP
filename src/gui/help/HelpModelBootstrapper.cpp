@@ -1,6 +1,7 @@
 #include "gui/help/HelpModelBootstrapper.h"
 
-#include <QCoreApplication>
+#include "config/RecipeJsonUtils.h"
+
 #include <QDir>
 #include <QFileInfo>
 #include <QProcess>
@@ -14,12 +15,7 @@ namespace
 {
 QString sourceRoot()
 {
-  return QString::fromUtf8(PROJECT_SOURCE_DIR);
-}
-
-QString appRoot()
-{
-  return QCoreApplication::applicationDirPath();
+  return RecipeJsonUtils::appRootPath();
 }
 }
 
@@ -189,12 +185,6 @@ QString HelpModelBootstrapper::ollamaProgram() const
 
 QString HelpModelBootstrapper::modelDirectory() const
 {
-  const QString appModelDir = QDir(appRoot()).filePath(QStringLiteral("ollama/vision-help"));
-  if (QFileInfo::exists(QDir(appModelDir).filePath(QStringLiteral("Modelfile"))))
-  {
-    return appModelDir;
-  }
-
   const QString sourceModelDir = QDir(sourceRoot()).filePath(QStringLiteral("ollama/vision-help"));
   if (QFileInfo::exists(QDir(sourceModelDir).filePath(QStringLiteral("Modelfile"))))
   {

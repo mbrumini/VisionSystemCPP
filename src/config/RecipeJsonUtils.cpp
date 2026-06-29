@@ -2,7 +2,6 @@
 
 #include <QDir>
 #include <QFile>
-#include <QFileInfo>
 #include <QJsonDocument>
 #include <QCoreApplication>
 
@@ -10,23 +9,7 @@ namespace RecipeJsonUtils
 {
 QString appRootPath()
 {
-  const QString runtimeRoot = QCoreApplication::applicationDirPath();
-  if (QFile::exists(QDir(runtimeRoot).filePath("config/cameras.json")) ||
-      QFileInfo::exists(QDir(runtimeRoot).filePath("recipes")))
-  {
-    return runtimeRoot;
-  }
-
-  const QString sourceRoot = QString::fromUtf8(PROJECT_SOURCE_DIR);
-  const QString cleanRuntimeRoot = QDir::cleanPath(runtimeRoot);
-  const QString cleanSourceBuildRoot = QDir::cleanPath(QDir(sourceRoot).filePath("build"));
-  if (cleanRuntimeRoot == cleanSourceBuildRoot ||
-      cleanRuntimeRoot.startsWith(cleanSourceBuildRoot + QDir::separator()))
-  {
-    return sourceRoot;
-  }
-
-  return runtimeRoot;
+  return QCoreApplication::applicationDirPath();
 }
 
 QString appPath(const QString& relativePath)

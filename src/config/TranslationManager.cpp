@@ -1,6 +1,7 @@
 #include "TranslationManager.h"
 
-#include <QCoreApplication>
+#include "RecipeJsonUtils.h"
+
 #include <QDir>
 #include <QFile>
 #include <QJsonDocument>
@@ -10,14 +11,7 @@ namespace
 QString translationPath(const QString& languageCode)
 {
   const QString fileName = "translations/" + languageCode + ".json";
-  const QString runtimePath = QDir(QCoreApplication::applicationDirPath()).filePath(fileName);
-
-  if (QFile::exists(runtimePath))
-  {
-    return runtimePath;
-  }
-
-  return QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath(fileName);
+  return RecipeJsonUtils::appPath(fileName);
 }
 }
 

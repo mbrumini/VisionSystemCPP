@@ -1,6 +1,7 @@
 #include "gui/MainWindow.h"
 
 #include "calibration/CalibrationRecipe.h"
+#include "config/RecipeJsonUtils.h"
 #include "gui/CheckerboardCalibrationDialog.h"
 #include "util/AsyncExecutor.h"
 
@@ -31,7 +32,12 @@ namespace
 {
 QString configPath()
 {
-  return QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath("config/cameras.json");
+  return RecipeJsonUtils::appPath("config/cameras.json");
+}
+
+QString appPath(const QString& relativePath)
+{
+  return RecipeJsonUtils::appPath(relativePath);
 }
 
 QString profileLabel(const CameraConfig& camera)
@@ -584,7 +590,7 @@ void MainWindow::showCheckerboardCalibrationDialog()
     return;
   }
 
-  QDir projectDir(QString::fromUtf8(PROJECT_SOURCE_DIR));
+  QDir projectDir(RecipeJsonUtils::appRootPath());
   projectDir.mkpath("calibrations");
   const QString relativeFile = QString("calibrations/%1_checkerboard.json").arg(result.model.cameraId);
   const QString absoluteFile = projectDir.filePath(relativeFile);
@@ -672,7 +678,7 @@ void MainWindow::setDetailedLogEnabled(bool enabled)
   }
 
   QString error;
-  const QString logRoot = QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath("logs");
+  const QString logRoot = appPath("logs");
   if (!m_detailedLogger.setEnabled(true, logRoot, &error))
   {
     appendLog(error, true);

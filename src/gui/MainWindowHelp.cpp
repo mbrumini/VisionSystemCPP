@@ -1,5 +1,6 @@
 #include "gui/MainWindow.h"
 
+#include "config/RecipeJsonUtils.h"
 #include "gui/help/HelpDialog.h"
 
 #include <QDir>
@@ -56,7 +57,7 @@ QString helpCameraRoleSummary(const CameraConfig& camera)
 void MainWindow::showHelp()
 {
   const QString language = m_translations.languageCode().isEmpty() ? QStringLiteral("it") : m_translations.languageCode();
-  const QString helpPath = QDir(QString::fromUtf8(PROJECT_SOURCE_DIR)).filePath(QString("docs/help/%1/index.txt").arg(language));
+  const QString helpPath = RecipeJsonUtils::appPath(QString("docs/help/%1/index.txt").arg(language));
   QFile file(helpPath);
   QString text;
   if (file.open(QIODevice::ReadOnly | QIODevice::Text))

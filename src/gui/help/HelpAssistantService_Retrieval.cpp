@@ -1,6 +1,7 @@
 #include "gui/help/HelpAssistantService.h"
 
-#include <QCoreApplication>
+#include "config/RecipeJsonUtils.h"
+
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -21,12 +22,7 @@ constexpr qsizetype kMaxConversationContextChars = 1200;
 
 QString projectRoot()
 {
-  const QString appDocs = QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("docs/help"));
-  if (QDir(appDocs).exists())
-  {
-    return QCoreApplication::applicationDirPath();
-  }
-  return QString::fromUtf8(PROJECT_SOURCE_DIR);
+  return RecipeJsonUtils::appRootPath();
 }
 
 QString normalizeText(QString text)
