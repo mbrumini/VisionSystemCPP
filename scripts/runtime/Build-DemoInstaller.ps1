@@ -25,8 +25,12 @@ function Find-Iscc {
   $candidates = @(
     "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
     "C:\Program Files\Inno Setup 6\ISCC.exe",
+    "D:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+    "D:\Program Files\Inno Setup 6\ISCC.exe",
     "C:\Program Files (x86)\Inno Setup 5\ISCC.exe",
-    "C:\Program Files\Inno Setup 5\ISCC.exe"
+    "C:\Program Files\Inno Setup 5\ISCC.exe",
+    "D:\Program Files (x86)\Inno Setup 5\ISCC.exe",
+    "D:\Program Files\Inno Setup 5\ISCC.exe"
   )
   foreach ($candidate in $candidates) {
     if (Test-Path $candidate) {
