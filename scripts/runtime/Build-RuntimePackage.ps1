@@ -59,19 +59,57 @@ $runtimeDirs = @("translations", "resources", "tools", "docs", "ollama")
 foreach ($dirName in $runtimeDirs) {
   $source = Join-Path $projectRoot $dirName
   if (Test-Path $source) {
-    Copy-Item -Recurse -Force $source (Join-Path $packageRoot $dirName)
+    $target = Join-Path $packageRoot $dirName
+    New-Item -ItemType Directory -Force -Path $target | Out-Null
+    Copy-Item -Recurse -Force (Join-Path $source "*") $target
   }
 }
 
 $configSource = Join-Path $projectRoot "config"
 if (Test-Path $configSource) {
-  Copy-Item -Recurse -Force $configSource (Join-Path $packageRoot "config")
+  $configTarget = Join-Path $packageRoot "config"
+  New-Item -ItemType Directory -Force -Path $configTarget | Out-Null
+  Copy-Item -Recurse -Force (Join-Path $configSource "*") $configTarget
 }
 
 if ($IncludeRecipes) {
   $recipesSource = Join-Path $projectRoot "recipes"
   if (Test-Path $recipesSource) {
-    Copy-Item -Recurse -Force $recipesSource (Join-Path $packageRoot "recipes")
+    $recipesTarget = Join-Path $packageRoot "recipes"
+    New-Item -ItemType Directory -Force -Path $recipesTarget | Out-Null
+    Copy-Item -Recurse -Force (Join-Path $recipesSource "*") $recipesTarget
+  }
+}
+
+$msvcRuntimeNames = @(
+  "vcruntime140.dll",
+  "vcruntime140_1.dll",
+  "msvcp140.dll",
+  "concrt140.dll"
+)
+$msvcSearchDirs = @(
+  $buildDir,
+  (Join-Path $env:WINDIR "System32"),
+  (Join-Path $env:WINDIR "SysWOW64")
+) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) -and (Test-Path $_) }
+
+foreach ($runtimeName in $msvcRuntimeNames) {
+  if (Test-Path (Join-Path $packageRoot $runtimeName)) {
+    continue
+  }
+  $runtimeFile = $null
+  foreach ($searchDir in $msvcSearchDirs) {
+    $candidate = Join-Path $searchDir $runtimeName
+    if (Test-Path $candidate) {
+      $runtimeFile = $candidate
+      break
+    }
+  }
+  if ($runtimeFile) {
+    Copy-Item -Force $runtimeFile (Join-Path $packageRoot $runtimeName)
+  }
+  else {
+    Write-Host "Runtime MSVC non trovato localmente: $runtimeName"
   }
 }
 

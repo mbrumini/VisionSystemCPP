@@ -13,6 +13,7 @@ Portare il progetto VisionSystemCPP su un altro PC Windows e poter:
 INSTALLAZIONE CONSIGLIATA PER PC PRODUZIONE
 -------------------------------------------
 Sul PC produzione NON serve compilatore.
+Sul PC produzione NON servono Visual Studio, Qt SDK, vcpkg o CMake.
 
 Sul PC sviluppo creare prima il pacchetto runtime:
 
@@ -48,6 +49,61 @@ Update:
 Nota importante:
 questa modalita' non installa Visual Studio, Qt SDK o vcpkg sul PC destinazione.
 Installa solo il runtime gia' pronto e le dipendenze Python AI se richieste.
+
+PACCHETTO DEMO / INSTALLER
+--------------------------
+Per preparare una demo cliente con ricette incluse:
+
+cd /d D:\dev\VisionSystemCPP
+Build_Demo_Installer.bat
+
+Lo script:
+- compila o usa la build Release;
+- crea dist\VisionSystemCPP-runtime-<versione>.zip;
+- valida che nel pacchetto ci siano DLL Qt, plugin Qt, OpenCV, traduzioni,
+  configurazioni e runtime MSVC;
+- genera dist\installer\VisionSystemCPP_Demo.iss;
+- se Inno Setup e' installato, crea anche:
+
+dist\VisionSystemCPP-demo-setup-<versione>.exe
+
+Se Inno Setup non e' installato, lo zip runtime resta comunque utilizzabile:
+1) copiare dist\VisionSystemCPP-runtime-<versione>.zip sul PC destinazione;
+2) estrarlo;
+3) avviare Install_Runtime.bat dalla cartella estratta.
+
+Per creare l'installer .exe installare Inno Setup 6 sul PC sviluppo e rilanciare
+Build_Demo_Installer.bat.
+
+VALIDAZIONE PACCHETTO
+---------------------
+Prima di consegnare una demo, validare il runtime:
+
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\runtime\Validate-RuntimePackage.ps1 -PackageRoot dist\runtime_staging\VisionSystemCPP
+
+La validazione fallisce se mancano componenti critici come:
+- platforms\qwindows.dll;
+- imageformats\qsvg.dll;
+- iconengines\qsvgicon.dll;
+- Qt6Core/Gui/Widgets/Svg;
+- DLL OpenCV principali;
+- vcruntime140.dll, vcruntime140_1.dll, msvcp140.dll;
+- config e traduzioni.
+
+TELECAMERE ALLIED VISION
+------------------------
+Se il PC destinazione usa telecamere Allied Vision, installare prima Vimba X
+SDK/runtime per Windows 64 bit dal sito Allied Vision.
+
+Sequenza consigliata:
+1) installare Vimba X sul PC destinazione;
+2) collegare la camera Allied Vision;
+3) aprire Vimba X Viewer e verificare che la camera acquisisca immagini;
+4) installare VisionSystemCPP con lo zip runtime o con l'installer demo;
+5) avviare VisionSystemCPP.
+
+Se Vimba X Viewer non vede la camera, anche VisionSystemCPP non potra' usarla:
+risolvere prima driver, alimentazione, rete/USB, permessi o configurazione camera.
 
 Nota icone Qt:
 se su un altro PC l'app si avvia ma spariscono le icone, controllare prima i plugin Qt SVG.
