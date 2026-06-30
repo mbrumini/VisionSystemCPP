@@ -111,6 +111,18 @@ QString defaultVimbaExternalTriggerLine(const QString& modelName, const QString&
   }
   return "Line1";
 }
+
+QJsonObject defaultVimbaAcquisitionObject(QJsonObject acquisitionObject = {})
+{
+  acquisitionObject["autoExposure"] = false;
+  acquisitionObject["autoGain"] = false;
+  acquisitionObject["autoWhiteBalance"] = true;
+  if (!acquisitionObject.contains("frameIntervalMs"))
+  {
+    acquisitionObject["frameIntervalMs"] = CameraAcquisitionConfig().frameIntervalMs;
+  }
+  return acquisitionObject;
+}
 }
 
 bool AppConfig::load(const QString& filePath, QString* errorMessage)
@@ -280,6 +292,8 @@ bool AppConfig::saveVimbaCameraAssignment(
       continue;
     }
 
+    const bool wasVimba = cameraObject.value("type").toString() == "vimba";
+
     cameraObject["slot"] = slot;
     cameraObject["id"] = cameraId;
     cameraObject["displayName"] = displayName.isEmpty() ? QString("Camera %1").arg(slot) : displayName;
@@ -294,6 +308,14 @@ bool AppConfig::saveVimbaCameraAssignment(
     cameraObject["interfaceId"] = interfaceId;
     cameraObject.remove("folder");
     cameraObject.remove("usbIndex");
+
+    QJsonObject acquisitionObject = defaultVimbaAcquisitionObject(cameraObject.value("acquisition").toObject());
+    if (!wasVimba)
+    {
+      acquisitionObject.remove("exposure");
+      acquisitionObject.remove("gain");
+    }
+    cameraObject["acquisition"] = acquisitionObject;
 
     QJsonObject triggerObject;
     triggerObject["mode"] = "external";
@@ -328,6 +350,7 @@ bool AppConfig::saveVimbaCameraAssignment(
     cameraObject["modelName"] = modelName;
     cameraObject["interfaceId"] = interfaceId;
     cameraObject["processingProfile"] = "default";
+    cameraObject["acquisition"] = defaultVimbaAcquisitionObject();
 
     QJsonObject triggerObject;
     triggerObject["mode"] = "external";

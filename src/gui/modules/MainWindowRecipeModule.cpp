@@ -12,6 +12,21 @@
 #include <QLineEdit>
 #include <QMessageBox>
 
+namespace
+{
+QStringList operatorVisibleRecipes(const QStringList& recipes, bool isGuru)
+{
+  if (isGuru)
+  {
+    return recipes;
+  }
+
+  QStringList visible = recipes;
+  visible.removeAll(RecipeManager::defaultRecipeTemplateId());
+  return visible;
+}
+}
+
 MainWindowRecipeModule::MainWindowRecipeModule(MainWindowContext& context)
   : MainWindowModuleBase(context)
 {
@@ -19,7 +34,9 @@ MainWindowRecipeModule::MainWindowRecipeModule(MainWindowContext& context)
 
 void MainWindowRecipeModule::selectRecipe()
 {
-  const QStringList available = RecipeManager::availableRecipes();
+  const QStringList available = operatorVisibleRecipes(
+    RecipeManager::availableRecipes(),
+    context().isGuru && context().isGuru());
   if (available.isEmpty())
   {
     QMessageBox::information(window(), tr("menu.recipes"), tr("messages.noRecipes"));

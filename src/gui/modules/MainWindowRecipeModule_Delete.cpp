@@ -7,6 +7,18 @@
 
 namespace
 {
+QStringList operatorVisibleRecipes(const QStringList& recipes, bool isGuru)
+{
+  if (isGuru)
+  {
+    return recipes;
+  }
+
+  QStringList visible = recipes;
+  visible.removeAll(RecipeManager::defaultRecipeTemplateId());
+  return visible;
+}
+
 QString fallbackRecipeAfterDelete(const QString& deletedRecipeId)
 {
   const QStringList recipes = RecipeManager::availableRecipes();
@@ -24,7 +36,9 @@ QString fallbackRecipeAfterDelete(const QString& deletedRecipeId)
 
 void MainWindowRecipeModule::deleteRecipe()
 {
-  const QStringList available = RecipeManager::availableRecipes();
+  const QStringList available = operatorVisibleRecipes(
+    RecipeManager::availableRecipes(),
+    context().isGuru && context().isGuru());
   if (available.isEmpty())
   {
     QMessageBox::information(window(), tr("menu.recipes"), tr("messages.noRecipes"));

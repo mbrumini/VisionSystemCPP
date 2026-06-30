@@ -275,6 +275,7 @@ void MainWindow::bindModules()
 
   m_ctx.trText = [this](const QString& key) { return trText(key); };
   m_ctx.isDetailedLogEnabled = [this]() { return isDetailedLogEnabled(); };
+  m_ctx.isGuru = [this]() { return m_accessSession.role() == AccessRole::Guru; };
   m_ctx.appendLog = [this](const QString& message) { appendLog(message); };
   m_ctx.updateLargePreview = [this]() { updateLargePreview(); };
   m_ctx.updateMeasurementResults = [this]() { scheduleMeasurementResultsUpdate(); };

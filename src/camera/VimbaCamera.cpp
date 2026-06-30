@@ -134,6 +134,7 @@ void setOptionalEnumFeature(const VmbCPP::CameraPtr& camera, const char* name, c
 bool setRequiredDoubleFeature(
   const VmbCPP::CameraPtr& camera,
   const char* name,
+  bool hasRequestedValue,
   double requestedValue,
   QString& errorMessage)
 {
@@ -153,7 +154,9 @@ bool setRequiredDoubleFeature(
     return false;
   }
 
-  const double appliedValue = std::clamp(requestedValue, minimum, maximum);
+  const double appliedValue = hasRequestedValue
+    ? std::clamp(requestedValue, minimum, maximum)
+    : minimum;
   error = feature->SetValue(appliedValue);
   if (error != VmbErrorSuccess)
   {
@@ -465,9 +468,14 @@ bool VimbaCamera::applyAcquisitionSettings()
   {
     return false;
   }
-  if (!acquisition.autoExposure && acquisition.hasExposure)
+  if (!acquisition.autoExposure)
   {
-    if (!setRequiredDoubleFeature(m_camera, "ExposureTime", acquisition.exposure, m_lastError))
+    if (!setRequiredDoubleFeature(
+          m_camera,
+          "ExposureTime",
+          acquisition.hasExposure,
+          acquisition.exposure,
+          m_lastError))
     {
       return false;
     }
@@ -482,9 +490,14 @@ bool VimbaCamera::applyAcquisitionSettings()
   {
     return false;
   }
-  if (!acquisition.autoGain && acquisition.hasGain)
+  if (!acquisition.autoGain)
   {
-    if (!setRequiredDoubleFeature(m_camera, "Gain", acquisition.gain, m_lastError))
+    if (!setRequiredDoubleFeature(
+          m_camera,
+          "Gain",
+          acquisition.hasGain,
+          acquisition.gain,
+          m_lastError))
     {
       return false;
     }

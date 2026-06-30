@@ -100,7 +100,7 @@ void MainWindowSetupModule::showCameraAcquisitionPanel(const CameraConfig& camer
   auto* autoExposure = new QCheckBox(tr("labels.automatic"), exposureBox);
   autoExposure->setChecked(acquisition.autoExposure);
   auto* exposure = createNumericControl(
-    acquisition.hasExposure ? acquisition.exposure : (camera.type == "vimba" ? 8000.0 : -6.0),
+    acquisition.hasExposure ? acquisition.exposure : (camera.type == "vimba" ? 1.0 : -6.0),
     camera.type == "vimba" ? 1.0 : -20.0,
     camera.type == "vimba" ? 1000000.0 : 20.0,
     camera.type == "vimba" ? " us" : "",

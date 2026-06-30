@@ -109,6 +109,7 @@ struct MainWindowContext
   std::function<void(const QString&)> publishSimulatorResult;
   std::function<void(const QString&)> appendLog;
   std::function<bool()> isDetailedLogEnabled;
+  std::function<bool()> isGuru;
   std::function<void()> updateLargePreview;
   std::function<void()> updateMeasurementResults;
   std::function<void(const QString&)> updateMeasurementStatistics;

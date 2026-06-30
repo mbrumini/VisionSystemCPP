@@ -97,12 +97,6 @@ bool RecipeManager::createRecipe(const QString& recipeId, QString* errorMessage)
     return false;
   }
 
-  const QString templateId = defaultRecipeTemplateId();
-  if (availableRecipes().contains(templateId))
-  {
-    return duplicateRecipe(templateId, normalizedId, errorMessage);
-  }
-
   QDir recipeDir;
 
   if (!recipeDir.mkpath(recipePath + "/cameras"))
