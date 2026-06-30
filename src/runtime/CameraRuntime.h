@@ -14,6 +14,12 @@
 class CameraRuntime
 {
 public:
+  enum class RunMode
+  {
+    SetupSoftwareTimed,
+    ProductionExternal
+  };
+
   enum class Status
   {
     Ready,
@@ -22,7 +28,11 @@ public:
     Error
   };
 
-  bool start(const CameraConfig& camera, const QString& resolvedFolder, QString* errorMessage = nullptr);
+  bool start(
+    const CameraConfig& camera,
+    const QString& resolvedFolder,
+    QString* errorMessage = nullptr,
+    RunMode runMode = RunMode::SetupSoftwareTimed);
   void stop();
   bool step(const CameraConfig& camera, const QString& resolvedFolder, QString* errorMessage = nullptr);
   bool grabFrame(const CameraConfig& camera, const QString& resolvedFolder, cv::Mat& frame, SimulatorFrameMetadata& metadata, QString& error);
@@ -54,7 +64,11 @@ public:
   void clearGeometries();
 
 private:
-  bool ensureSource(const CameraConfig& camera, const QString& resolvedFolder, QString* errorMessage);
+  bool ensureSource(
+    const CameraConfig& camera,
+    const QString& resolvedFolder,
+    QString* errorMessage,
+    RunMode runMode = RunMode::SetupSoftwareTimed);
 
   bool m_running = false;
   bool m_loop = true;
@@ -70,5 +84,6 @@ private:
   QString m_sourceFolder;
   QString m_sourceDeviceId;
   int m_sourceUsbIndex = -1;
+  RunMode m_sourceRunMode = RunMode::SetupSoftwareTimed;
   mutable std::mutex m_sourceMutex;
 };

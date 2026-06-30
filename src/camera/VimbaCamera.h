@@ -39,6 +39,7 @@ private:
   bool m_systemStarted = false;
   bool m_captureStarted = false;
   bool m_acquisitionStarted = false;
+  bool m_softwareTrigger = true;
 #else
   CameraConfig m_config;
 #endif

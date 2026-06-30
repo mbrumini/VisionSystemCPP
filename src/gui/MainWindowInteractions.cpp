@@ -928,7 +928,7 @@ void MainWindow::startMachine()
     }
     else
     {
-      m_setup.startCameraSimulation(camera, false);
+      m_setup.startCameraSimulation(camera, false, CameraRuntime::RunMode::ProductionExternal);
     }
   }
   if (m_systemStatus)

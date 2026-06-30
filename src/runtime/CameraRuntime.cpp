@@ -5,11 +5,44 @@
 #include "camera/UsbCamera.h"
 #include "camera/VimbaCamera.h"
 
-bool CameraRuntime::start(const CameraConfig& camera, const QString& resolvedFolder, QString* errorMessage)
+namespace
+{
+CameraConfig cameraForRunMode(const CameraConfig& camera, CameraRuntime::RunMode runMode)
+{
+  CameraConfig effective = camera;
+  if (CameraFactory::sourceKind(effective) != "vimba")
+  {
+    return effective;
+  }
+
+  if (runMode == CameraRuntime::RunMode::ProductionExternal)
+  {
+    effective.trigger.mode = "external";
+    effective.trigger.source = effective.trigger.source.trimmed().isEmpty()
+      ? QString("ioBoard")
+      : effective.trigger.source;
+    effective.trigger.cameraLine = effective.trigger.cameraLine.trimmed().isEmpty()
+      ? QString("Line1")
+      : effective.trigger.cameraLine;
+    return effective;
+  }
+
+  effective.trigger.mode = "software";
+  effective.trigger.source = "camera";
+  effective.trigger.cameraLine.clear();
+  return effective;
+}
+}
+
+bool CameraRuntime::start(
+  const CameraConfig& camera,
+  const QString& resolvedFolder,
+  QString* errorMessage,
+  RunMode runMode)
 {
   stop();
 
-  if (!ensureSource(camera, resolvedFolder, errorMessage))
+  if (!ensureSource(camera, resolvedFolder, errorMessage, runMode))
   {
     m_status = Status::Error;
     return false;
@@ -41,6 +74,7 @@ void CameraRuntime::stop()
   m_sourceFolder.clear();
   m_sourceDeviceId.clear();
   m_sourceUsbIndex = -1;
+  m_sourceRunMode = RunMode::SetupSoftwareTimed;
   m_currentSimulatorFrame = {};
 
   m_status = Status::Stopped;
@@ -100,7 +134,7 @@ bool CameraRuntime::applyAcquisitionSettings(
 
 bool CameraRuntime::step(const CameraConfig& camera, const QString& resolvedFolder, QString* errorMessage)
 {
-  if (!ensureSource(camera, resolvedFolder, errorMessage))
+  if (!ensureSource(camera, resolvedFolder, errorMessage, m_sourceRunMode))
   {
     m_running = false;
     m_status = Status::Error;
@@ -245,10 +279,15 @@ void CameraRuntime::clearGeometries()
   m_geometries.clear();
 }
 
-bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& resolvedFolder, QString* errorMessage)
+bool CameraRuntime::ensureSource(
+  const CameraConfig& camera,
+  const QString& resolvedFolder,
+  QString* errorMessage,
+  RunMode runMode)
 {
   std::lock_guard<std::mutex> lock(m_sourceMutex);
-  const QString sourceKind = CameraFactory::sourceKind(camera);
+  const CameraConfig effectiveCamera = cameraForRunMode(camera, runMode);
+  const QString sourceKind = CameraFactory::sourceKind(effectiveCamera);
   if (sourceKind != "file" && sourceKind != "usb" &&
       sourceKind != "vimba" && sourceKind != "simulator" && sourceKind != "svs")
   {
@@ -259,11 +298,11 @@ bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& reso
     return false;
   }
 
-  const QString sourceIdentity = CameraFactory::sourceIdentity(camera, resolvedFolder);
+  const QString sourceIdentity = CameraFactory::sourceIdentity(effectiveCamera, resolvedFolder);
   const bool sameUsbSource =
     sourceKind == "usb" &&
     m_sourceType == sourceKind &&
-    m_sourceUsbIndex == camera.usbIndex;
+    m_sourceUsbIndex == effectiveCamera.usbIndex;
   const bool sameFileSource =
     sourceKind == "file" &&
     m_sourceType == sourceKind &&
@@ -279,7 +318,10 @@ bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& reso
 
   if (m_source && (sameUsbSource || sameFileSource || sameVimbaSource || sameSimulatorSource))
   {
-    return true;
+    if (m_sourceRunMode == runMode)
+    {
+      return true;
+    }
   }
 
   if (m_source)
@@ -292,7 +334,7 @@ bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& reso
     m_sourceUsbIndex = -1;
   }
 
-  m_source = CameraFactory::create(camera, resolvedFolder, m_loop, errorMessage);
+  m_source = CameraFactory::create(effectiveCamera, resolvedFolder, m_loop, errorMessage);
   if (!m_source)
   {
     return false;
@@ -312,8 +354,8 @@ bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& reso
     if (errorMessage)
     {
       *errorMessage = sourceError.isEmpty()
-        ? QString("Avvio camera fallito: %1 source=%2").arg(camera.id, sourceKind)
-        : QString("Avvio camera fallito: %1 source=%2 - %3").arg(camera.id, sourceKind, sourceError);
+        ? QString("Avvio camera fallito: %1 source=%2").arg(effectiveCamera.id, sourceKind)
+        : QString("Avvio camera fallito: %1 source=%2 - %3").arg(effectiveCamera.id, sourceKind, sourceError);
     }
     return false;
   }
@@ -323,13 +365,14 @@ bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& reso
   m_sourceDeviceId = (sourceKind == "vimba" || sourceKind == "simulator" || sourceKind == "svs")
     ? sourceIdentity
     : QString();
-  m_sourceUsbIndex = sourceKind == "usb" ? camera.usbIndex : -1;
+  m_sourceUsbIndex = sourceKind == "usb" ? effectiveCamera.usbIndex : -1;
+  m_sourceRunMode = runMode;
   return true;
 }
 
 bool CameraRuntime::grabFrame(const CameraConfig& camera, const QString& resolvedFolder, cv::Mat& frame, SimulatorFrameMetadata& metadata, QString& error)
 {
-  if (!ensureSource(camera, resolvedFolder, &error))
+  if (!ensureSource(camera, resolvedFolder, &error, m_sourceRunMode))
   {
     return false;
   }

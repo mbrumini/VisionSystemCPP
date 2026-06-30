@@ -57,7 +57,10 @@ public:
   void showAiPlaceholderPanel(const CameraConfig& camera, const QString& toolId);
   void showCameraAcquisitionPanel(const CameraConfig& camera);
   void stopAiClassificationCapture();
-  void startCameraSimulation(const CameraConfig& camera, bool refreshSetupPanel = true);
+  void startCameraSimulation(
+    const CameraConfig& camera,
+    bool refreshSetupPanel = true,
+    CameraRuntime::RunMode runMode = CameraRuntime::RunMode::SetupSoftwareTimed);
   void stopCameraSimulation(const CameraConfig& camera, bool refreshSetupPanel = true);
   void showCameraSampleImage(const CameraConfig& camera);
   void stepCameraSimulation(const CameraConfig& camera);

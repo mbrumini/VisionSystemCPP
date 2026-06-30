@@ -17,7 +17,10 @@
 
 #include <opencv2/core.hpp>
 
-void MainWindowSetupModule::startCameraSimulation(const CameraConfig& camera, bool refreshSetupPanel)
+void MainWindowSetupModule::startCameraSimulation(
+  const CameraConfig& camera,
+  bool refreshSetupPanel,
+  CameraRuntime::RunMode runMode)
 {
   const CameraConfig effectiveCamera = currentConfiguredCamera(config(), camera);
 
@@ -41,7 +44,7 @@ void MainWindowSetupModule::startCameraSimulation(const CameraConfig& camera, bo
   runtime.setIntervalMs(effectiveCamera.acquisition.frameIntervalMs);
   QString error;
   const QString testFolder = context().imaging->cameraTestImagesFolder(effectiveCamera);
-  if (!runtime.start(effectiveCamera, testFolder, &error))
+  if (!runtime.start(effectiveCamera, testFolder, &error, runMode))
   {
     log(error.isEmpty() ? tr("log.cameraStartFailed") + ": " + effectiveCamera.id : error);
     if (refreshSetupPanel)

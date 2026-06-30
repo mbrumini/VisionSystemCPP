@@ -239,7 +239,8 @@ bool VimbaCamera::open()
 
   VimbaTriggerController trigger(m_camera);
   QString triggerError;
-  const bool triggerConfigured = isSoftwareTriggerMode(m_config.trigger)
+  m_softwareTrigger = isSoftwareTriggerMode(m_config.trigger);
+  const bool triggerConfigured = m_softwareTrigger
     ? trigger.configureSoftware(&triggerError)
     : trigger.configureExternal(m_config.trigger, &triggerError);
   if (!triggerConfigured)
@@ -296,7 +297,7 @@ bool VimbaCamera::getFrame(cv::Mat& frame)
 
   VimbaTriggerController trigger(m_camera);
   QString triggerError;
-  if (!trigger.sendSoftwareTrigger(&triggerError))
+  if (m_softwareTrigger && !trigger.sendSoftwareTrigger(&triggerError))
   {
     m_lastError = triggerError.isEmpty() ? "TriggerSoftware fallito" : triggerError;
     return false;
@@ -307,7 +308,9 @@ bool VimbaCamera::getFrame(cv::Mat& frame)
   {
     m_camera->FlushQueue();
     m_camera->QueueFrame(m_frame);
-    m_lastError = QString("Timeout frame Vimba dopo %1 ms dal TriggerSoftware").arg(kFrameTimeoutMs);
+    m_lastError = m_softwareTrigger
+      ? QString("Timeout frame Vimba dopo %1 ms dal TriggerSoftware").arg(kFrameTimeoutMs)
+      : QString("Timeout frame Vimba dopo %1 ms in attesa di trigger esterno").arg(kFrameTimeoutMs);
     return false;
   }
 
