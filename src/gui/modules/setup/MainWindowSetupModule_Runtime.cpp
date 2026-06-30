@@ -209,19 +209,19 @@ void MainWindowSetupModule::advanceCameraFrame(const CameraConfig& camera)
       runtimePtr->updateStateAfterGrab(grabResult.frame, grabResult.metadata);
 
       log(QString("pipeline frame begin: %1 frame=%2").arg(effectiveCamera.id).arg(runtimePtr->frameIndex()));
-      const QPixmap framePreview =
+      const QPixmap tilePreview =
         context().imaging->matToPixmap(runtimePtr->currentFrame(), QSize(1920, 1080));
       for (CameraTileWidget* tile : *context().tiles)
       {
         if (tile->camera().id == effectiveCamera.id)
         {
-          tile->setPreview(framePreview);
+          tile->setPreview(tilePreview);
           break;
         }
       }
       if (effectiveCamera.id == selectedCamera().id)
       {
-        selectedPreview() = framePreview;
+        selectedPreview() = context().imaging->matToPixmap(runtimePtr->currentFrame());
         largeImage()->setImage(selectedPreview());
       }
       QElapsedTimer scanTimer;
