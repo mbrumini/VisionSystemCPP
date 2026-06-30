@@ -168,8 +168,11 @@ $installScripts = Join-Path $packageRoot "installer"
 New-Item -ItemType Directory -Force -Path $installScripts | Out-Null
 Copy-Item -Force (Join-Path $projectRoot "scripts\runtime\Install-Runtime.ps1") $installScripts
 Copy-Item -Force (Join-Path $projectRoot "scripts\runtime\Uninstall-Runtime.ps1") $installScripts
+Copy-Item -Force (Join-Path $projectRoot "scripts\runtime\Install-VisionAI.ps1") $installScripts
 Copy-Item -Force (Join-Path $projectRoot "Install_Runtime.bat") $packageRoot
 Copy-Item -Force (Join-Path $projectRoot "Uninstall_Runtime.bat") $packageRoot
+Copy-Item -Force (Join-Path $projectRoot "VisionAI_CPU.bat") $packageRoot
+Copy-Item -Force (Join-Path $projectRoot "VisionAI_GPU.bat") $packageRoot
 
 # Rimuove cache Python accidentalmente copiate.
 Get-ChildItem -Path $packageRoot -Recurse -Directory -Filter "__pycache__" | Remove-Item -Recurse -Force

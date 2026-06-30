@@ -231,7 +231,25 @@ Percorso atteso dall'app:
 
 .venv-ai\Scripts\python.exe
 
-Creazione:
+Installazione automatica consigliata dopo avere installato VisionSystemCPP:
+
+CPU universale:
+
+C:\VisionSystemCPP\VisionAI_CPU.bat
+
+GPU NVIDIA/CUDA:
+
+C:\VisionSystemCPP\VisionAI_GPU.bat
+
+Gli script creano C:\VisionSystemCPP\.venv-ai, installano PyTorch, Ultralytics,
+OpenCV Python e NumPy, poi verificano import e disponibilita' CUDA per il profilo GPU.
+
+Log:
+
+C:\VisionSystemCPP\logs\vision_ai_cpu_install.log
+C:\VisionSystemCPP\logs\vision_ai_gpu_install.log
+
+Creazione manuale equivalente:
 
 cd /d D:\dev\VisionSystemCPP
 py -3.11 -m venv .venv-ai
