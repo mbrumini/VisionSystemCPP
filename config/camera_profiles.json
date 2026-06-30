@@ -117,7 +117,8 @@
                 "gain": "Gain",
                 "triggerMode": "TriggerMode",
                 "triggerSource": "TriggerSource",
-                "softwareTrigger": "TriggerSoftware"
+                "softwareTrigger": "TriggerSoftware",
+                "defaultHardwareTriggerLine": "Line3"
             }
         },
         {

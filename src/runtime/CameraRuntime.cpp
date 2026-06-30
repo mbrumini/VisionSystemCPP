@@ -7,6 +7,17 @@
 
 namespace
 {
+QString defaultExternalTriggerLine(const CameraConfig& camera)
+{
+  const QString model = camera.modelName.trimmed().toLower();
+  const QString profile = camera.cameraProfileId.trimmed().toLower();
+  if (model.contains("alvium") || profile.contains("alvium"))
+  {
+    return "Line3";
+  }
+  return "Line1";
+}
+
 CameraConfig cameraForRunMode(const CameraConfig& camera, CameraRuntime::RunMode runMode)
 {
   CameraConfig effective = camera;
@@ -22,7 +33,7 @@ CameraConfig cameraForRunMode(const CameraConfig& camera, CameraRuntime::RunMode
       ? QString("ioBoard")
       : effective.trigger.source;
     effective.trigger.cameraLine = effective.trigger.cameraLine.trimmed().isEmpty()
-      ? QString("Line1")
+      ? defaultExternalTriggerLine(effective)
       : effective.trigger.cameraLine;
     return effective;
   }

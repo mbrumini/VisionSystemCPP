@@ -100,6 +100,17 @@ QString defaultCameraProfileForBackend(const QString& backend)
   }
   return {};
 }
+
+QString defaultVimbaExternalTriggerLine(const QString& modelName, const QString& cameraProfileId = {})
+{
+  const QString model = modelName.trimmed().toLower();
+  const QString profile = cameraProfileId.trimmed().toLower();
+  if (model.contains("alvium") || profile.contains("alvium"))
+  {
+    return "Line3";
+  }
+  return "Line1";
+}
 }
 
 bool AppConfig::load(const QString& filePath, QString* errorMessage)
@@ -288,7 +299,7 @@ bool AppConfig::saveVimbaCameraAssignment(
     triggerObject["mode"] = "external";
     triggerObject["source"] = "ioBoard";
     triggerObject["ioOutput"] = "";
-    triggerObject["cameraLine"] = "Line1";
+    triggerObject["cameraLine"] = defaultVimbaExternalTriggerLine(modelName, cameraObject.value("cameraProfile").toString());
     cameraObject["trigger"] = triggerObject;
 
     if (!cameraObject.contains("processingProfile"))
@@ -322,7 +333,7 @@ bool AppConfig::saveVimbaCameraAssignment(
     triggerObject["mode"] = "external";
     triggerObject["source"] = "ioBoard";
     triggerObject["ioOutput"] = "";
-    triggerObject["cameraLine"] = "Line1";
+    triggerObject["cameraLine"] = defaultVimbaExternalTriggerLine(modelName, cameraObject.value("cameraProfile").toString());
     cameraObject["trigger"] = triggerObject;
     cameras.append(cameraObject);
   }
