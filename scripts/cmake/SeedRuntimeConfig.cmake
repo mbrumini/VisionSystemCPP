@@ -1,0 +1,23 @@
+if(NOT DEFINED SOURCE_CONFIG_DIR OR NOT DEFINED TARGET_CONFIG_DIR)
+  message(FATAL_ERROR "SOURCE_CONFIG_DIR and TARGET_CONFIG_DIR are required")
+endif()
+
+file(MAKE_DIRECTORY "${TARGET_CONFIG_DIR}")
+
+file(GLOB CONFIG_FILES "${SOURCE_CONFIG_DIR}/*")
+foreach(CONFIG_FILE IN LISTS CONFIG_FILES)
+  if(IS_DIRECTORY "${CONFIG_FILE}")
+    continue()
+  endif()
+
+  get_filename_component(CONFIG_NAME "${CONFIG_FILE}" NAME)
+  set(TARGET_FILE "${TARGET_CONFIG_DIR}/${CONFIG_NAME}")
+
+  if(CONFIG_NAME STREQUAL "cameras.json")
+    if(NOT EXISTS "${TARGET_FILE}")
+      file(COPY_FILE "${CONFIG_FILE}" "${TARGET_FILE}")
+    endif()
+  else()
+    file(COPY_FILE "${CONFIG_FILE}" "${TARGET_FILE}" ONLY_IF_DIFFERENT)
+  endif()
+endforeach()

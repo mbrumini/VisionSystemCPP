@@ -460,9 +460,10 @@ add_custom_command(TARGET VisionSystemCPP POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${QT6_PLUGINS_DIR}/iconengines/qsvgicon.dll"
         "$<TARGET_FILE_DIR:VisionSystemCPP>/iconengines/qsvgicon.dll"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${CMAKE_SOURCE_DIR}/config"
-        "$<TARGET_FILE_DIR:VisionSystemCPP>/config"
+    COMMAND ${CMAKE_COMMAND}
+        -D "SOURCE_CONFIG_DIR=${CMAKE_SOURCE_DIR}/config"
+        -D "TARGET_CONFIG_DIR=$<TARGET_FILE_DIR:VisionSystemCPP>/config"
+        -P "${CMAKE_SOURCE_DIR}/scripts/cmake/SeedRuntimeConfig.cmake"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_SOURCE_DIR}/translations"
         "$<TARGET_FILE_DIR:VisionSystemCPP>/translations"
