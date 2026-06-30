@@ -83,7 +83,11 @@ void MainWindowSurfaceModule::testSurfaceAnnulusLocalization(const CameraConfig&
 
   const QVector<QRect> exclusionRects = recipes().loadSurfaceDefectExclusionRects(camera.id);
 
-  const bool createDiagnosticImage = camera.id == selectedCameraId() && *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry;
+  const bool liveMode = cameraRuntime()[camera.id].running();
+  const bool createDiagnosticImage =
+    camera.id == selectedCameraId() &&
+    !liveMode &&
+    *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry;
 
   auto job = [input, processorConfig, exclusionRects, annulus, createDiagnosticImage]() -> SurfaceDefectResult {
     SurfaceDefectProcessor processor;
@@ -96,7 +100,7 @@ void MainWindowSurfaceModule::testSurfaceAnnulusLocalization(const CameraConfig&
   const QString __pendingCameraId_testSurfaceAnnulus = camera.id;
   const int setupFrameIndex = cameraRuntime()[camera.id].frameIndex();
   context().incPendingJobs(__pendingCameraId_testSurfaceAnnulus);
-  runAsyncTask(decltype(job)(job), window(), [this, camera, annulus, exclusionRects, __pendingCameraId_testSurfaceAnnulus, setupFrameIndex](const SurfaceDefectResult& result) {
+  runAsyncTask(decltype(job)(job), window(), [this, camera, annulus, exclusionRects, liveMode, __pendingCameraId_testSurfaceAnnulus, setupFrameIndex](const SurfaceDefectResult& result) {
     auto __dec_guard = std::shared_ptr<void>(nullptr, [this, __pendingCameraId_testSurfaceAnnulus](void*) { context().decPendingJobs(__pendingCameraId_testSurfaceAnnulus); });
     if (*context().setupCameraId == camera.id && cameraRuntime()[camera.id].frameIndex() != setupFrameIndex)
     {
@@ -106,7 +110,7 @@ void MainWindowSurfaceModule::testSurfaceAnnulusLocalization(const CameraConfig&
     const bool updateView =
       camera.id == selectedCameraId() &&
       *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry;
-    if (!result.processed || (updateView && result.diagnosticImage.empty()))
+    if (!result.processed || (updateView && !liveMode && result.diagnosticImage.empty()))
     {
       log(tr("log.surfaceFailed") + ": " + camera.id);
       return;
@@ -114,8 +118,16 @@ void MainWindowSurfaceModule::testSurfaceAnnulusLocalization(const CameraConfig&
 
     if (updateView)
     {
-      selectedPreview() = context().imaging->matToPixmap(result.diagnosticImage);
-      largeImage()->setImage(selectedPreview());
+      const cv::Mat& liveFrame = cameraRuntime()[camera.id].currentFrame();
+      const cv::Mat& displayImage =
+        liveMode && !liveFrame.empty()
+          ? liveFrame
+          : result.diagnosticImage;
+      if (!displayImage.empty())
+      {
+        selectedPreview() = context().imaging->matToPixmap(displayImage);
+        largeImage()->setImage(selectedPreview());
+      }
       largeImage()->setExclusionRects(exclusionRects);
       if (*context().setupCameraId != camera.id)
       {
@@ -237,7 +249,11 @@ void MainWindowSurfaceModule::testSurfaceLocalization(const CameraConfig& camera
   const std::vector<cv::Point> cvSearchPolygon = toCvPoints(searchPolygon);
   const bool useSearchPolygon = hasPolygon;
 
-  const bool createDiagnosticImage = camera.id == selectedCameraId() && *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry;
+  const bool liveMode = cameraRuntime()[camera.id].running();
+  const bool createDiagnosticImage =
+    camera.id == selectedCameraId() &&
+    !liveMode &&
+    *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry;
 
   auto job = [input, searchRect, cvSearchPolygon, useSearchPolygon, exclusionRects, thresholdSettings, createDiagnosticImage]() -> SurfaceDefectResult {
     SurfaceDefectProcessor processor;
@@ -260,13 +276,14 @@ void MainWindowSurfaceModule::testSurfaceLocalization(const CameraConfig& camera
 
   const QString __pendingCameraId_testSurfaceLocalization = camera.id;
   context().incPendingJobs(__pendingCameraId_testSurfaceLocalization);
-  runAsyncTask(decltype(job)(job), window(), [this, camera, roi, searchPolygon, exclusionRects, thresholdSettings, usingSampleImage, __pendingCameraId_testSurfaceLocalization](const SurfaceDefectResult& result) {
+  runAsyncTask(decltype(job)(job), window(), [this, camera, roi, searchPolygon, exclusionRects, thresholdSettings, usingSampleImage, liveMode, __pendingCameraId_testSurfaceLocalization](const SurfaceDefectResult& result) {
     auto __dec_guard = std::shared_ptr<void>(nullptr, [this, __pendingCameraId_testSurfaceLocalization](void*) { context().decPendingJobs(__pendingCameraId_testSurfaceLocalization); });
     const bool runMode = context().machineRunning != nullptr && *context().machineRunning;
+    const bool liveDisplayMode = runMode || liveMode;
     const bool updateView =
       camera.id == selectedCameraId() &&
       *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry;
-    if (!result.processed || (updateView && !runMode && result.diagnosticImage.empty()))
+    if (!result.processed || (updateView && !liveDisplayMode && result.diagnosticImage.empty()))
     {
       log(tr("log.surfaceFailed") + ": " + camera.id);
       return;
@@ -276,7 +293,7 @@ void MainWindowSurfaceModule::testSurfaceLocalization(const CameraConfig& camera
     {
       const cv::Mat& liveFrame = cameraRuntime()[camera.id].currentFrame();
       const cv::Mat& displayImage =
-        runMode && !liveFrame.empty()
+        liveDisplayMode && !liveFrame.empty()
           ? liveFrame
           : result.diagnosticImage;
       if (!displayImage.empty())
@@ -508,7 +525,11 @@ void MainWindowSurfaceModule::testSurfaceEdgePcaLocalization(const CameraConfig&
   const bool resolveAmbiguity =
     annulus.pcaResolveAmbiguity || recipeSettings.pcaResolveAmbiguity;
 
-  const bool createDiagnosticImage = camera.id == selectedCameraId() && *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry;
+  const bool liveMode = cameraRuntime()[camera.id].running();
+  const bool createDiagnosticImage =
+    camera.id == selectedCameraId() &&
+    !liveMode &&
+    *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry;
 
   auto job = [input, searchRect, cvSearchPolygon, useSearchPolygon, exclusionRects, annulus, resolveAmbiguity, createDiagnosticImage]() -> SurfaceDefectResult {
     SurfaceDefectProcessor processor;
@@ -534,7 +555,7 @@ void MainWindowSurfaceModule::testSurfaceEdgePcaLocalization(const CameraConfig&
   const QString __pendingCameraId_testSurfaceEdgePca = camera.id;
   const int setupFrameIndex = cameraRuntime()[camera.id].frameIndex();
   context().incPendingJobs(__pendingCameraId_testSurfaceEdgePca);
-  runAsyncTask(decltype(job)(job), window(), [this, camera, roi, searchPolygon, exclusionRects, __pendingCameraId_testSurfaceEdgePca, setupFrameIndex](const SurfaceDefectResult& result) {
+  runAsyncTask(decltype(job)(job), window(), [this, camera, roi, searchPolygon, exclusionRects, liveMode, __pendingCameraId_testSurfaceEdgePca, setupFrameIndex](const SurfaceDefectResult& result) {
     auto __dec_guard = std::shared_ptr<void>(nullptr, [this, __pendingCameraId_testSurfaceEdgePca](void*) { context().decPendingJobs(__pendingCameraId_testSurfaceEdgePca); });
     if (*context().setupCameraId == camera.id && cameraRuntime()[camera.id].frameIndex() != setupFrameIndex)
     {
@@ -544,7 +565,7 @@ void MainWindowSurfaceModule::testSurfaceEdgePcaLocalization(const CameraConfig&
     const bool updateView =
       camera.id == selectedCameraId() &&
       *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry;
-    if (!result.processed || (updateView && result.diagnosticImage.empty()))
+    if (!result.processed || (updateView && !liveMode && result.diagnosticImage.empty()))
     {
       context().lastSurfaceLocalizationResults->remove(camera.id);
       cameraRuntime()[camera.id].clearCurrentPose(camera.id);
@@ -558,8 +579,16 @@ void MainWindowSurfaceModule::testSurfaceEdgePcaLocalization(const CameraConfig&
 
     if (updateView)
     {
-      selectedPreview() = context().imaging->matToPixmap(result.diagnosticImage);
-      largeImage()->setImage(selectedPreview());
+      const cv::Mat& liveFrame = cameraRuntime()[camera.id].currentFrame();
+      const cv::Mat& displayImage =
+        liveMode && !liveFrame.empty()
+          ? liveFrame
+          : result.diagnosticImage;
+      if (!displayImage.empty())
+      {
+        selectedPreview() = context().imaging->matToPixmap(displayImage);
+        largeImage()->setImage(selectedPreview());
+      }
       if (*context().setupCameraId != camera.id)
       {
         largeImage()->clearRoi();
