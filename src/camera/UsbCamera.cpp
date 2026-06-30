@@ -1,7 +1,5 @@
 #include "camera/UsbCamera.h"
 
-#include "camera/UsbCameraDiscovery.h"
-
 UsbCamera::UsbCamera(CameraConfig config)
   : m_config(std::move(config))
 {
@@ -19,16 +17,12 @@ bool UsbCamera::open()
   }
 
   applyAcquisitionSettings();
-  // The automatic path deliberately asks the driver for the largest accepted
-  // format; manual width/height keeps setup repeatable for metrology tests.
+  // Resolution discovery is done only during USB assignment; runtime reuses
+  // saved dimensions so opening a camera does not probe every candidate mode.
   if (m_config.acquisition.frameWidth > 0 && m_config.acquisition.frameHeight > 0)
   {
     m_capture.set(cv::CAP_PROP_FRAME_WIDTH, m_config.acquisition.frameWidth);
     m_capture.set(cv::CAP_PROP_FRAME_HEIGHT, m_config.acquisition.frameHeight);
-  }
-  else
-  {
-    UsbCameraDiscovery::probeBestResolution(m_capture);
   }
   return true;
 #else
@@ -41,10 +35,6 @@ bool UsbCamera::open()
   {
     m_capture.set(cv::CAP_PROP_FRAME_WIDTH, m_config.acquisition.frameWidth);
     m_capture.set(cv::CAP_PROP_FRAME_HEIGHT, m_config.acquisition.frameHeight);
-  }
-  else
-  {
-    UsbCameraDiscovery::probeBestResolution(m_capture);
   }
   return true;
 #endif
@@ -84,10 +74,6 @@ bool UsbCamera::setAcquisitionSettings(const CameraAcquisitionConfig& acquisitio
   {
     m_capture.set(cv::CAP_PROP_FRAME_WIDTH, m_config.acquisition.frameWidth);
     m_capture.set(cv::CAP_PROP_FRAME_HEIGHT, m_config.acquisition.frameHeight);
-  }
-  else
-  {
-    UsbCameraDiscovery::probeBestResolution(m_capture);
   }
   return true;
 }

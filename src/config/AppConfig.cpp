@@ -347,6 +347,8 @@ bool AppConfig::saveUsbCameraAssignment(
   int slot,
   int usbIndex,
   const QString& displayName,
+  int frameWidth,
+  int frameHeight,
   bool enabled,
   QString* errorMessage)
 {
@@ -379,6 +381,17 @@ bool AppConfig::saveUsbCameraAssignment(
     cameraObject["cameraProfile"] = "opencv_usb_generic";
     cameraObject["usbIndex"] = usbIndex;
     cameraObject["deviceId"] = QString("usb:%1").arg(usbIndex);
+    QJsonObject acquisitionObject = cameraObject.value("acquisition").toObject();
+    if (frameWidth > 0 && frameHeight > 0)
+    {
+      acquisitionObject["frameWidth"] = frameWidth;
+      acquisitionObject["frameHeight"] = frameHeight;
+    }
+    if (!acquisitionObject.contains("frameIntervalMs"))
+    {
+      acquisitionObject["frameIntervalMs"] = CameraAcquisitionConfig().frameIntervalMs;
+    }
+    cameraObject["acquisition"] = acquisitionObject;
     cameraObject.remove("folder");
     cameraObject.remove("serial");
     cameraObject.remove("modelName");
@@ -415,6 +428,17 @@ bool AppConfig::saveUsbCameraAssignment(
     cameraObject["usbIndex"] = usbIndex;
     cameraObject["deviceId"] = QString("usb:%1").arg(usbIndex);
     cameraObject["processingProfile"] = "default";
+    QJsonObject acquisitionObject;
+    acquisitionObject["autoExposure"] = true;
+    acquisitionObject["autoGain"] = true;
+    acquisitionObject["autoWhiteBalance"] = true;
+    acquisitionObject["frameIntervalMs"] = CameraAcquisitionConfig().frameIntervalMs;
+    if (frameWidth > 0 && frameHeight > 0)
+    {
+      acquisitionObject["frameWidth"] = frameWidth;
+      acquisitionObject["frameHeight"] = frameHeight;
+    }
+    cameraObject["acquisition"] = acquisitionObject;
 
     QJsonObject triggerObject;
     triggerObject["mode"] = "software";

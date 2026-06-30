@@ -95,6 +95,8 @@ public:
     int slot,
     int usbIndex,
     const QString& displayName,
+    int frameWidth,
+    int frameHeight,
     bool enabled,
     QString* errorMessage = nullptr);
   bool saveCameraAcquisitionSettings(

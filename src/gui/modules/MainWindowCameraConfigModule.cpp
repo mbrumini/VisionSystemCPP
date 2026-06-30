@@ -282,6 +282,8 @@ void MainWindowCameraConfigModule::configureUsbCameraSlot(int currentSlot, const
         dialog.selectedSlot(),
         device.index,
         dialog.displayName(),
+        device.width,
+        device.height,
         dialog.cameraEnabled(),
         &error))
   {
