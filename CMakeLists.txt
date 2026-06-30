@@ -76,6 +76,10 @@ add_executable(VisionSystemCPP
     src/calibration/CalibrationRecipe.cpp
     src/camera/ICamera.h
     src/camera/CameraDeviceInfo.h
+    src/camera/CameraFactory.h
+    src/camera/CameraFactory.cpp
+    src/camera/CameraProfileCatalog.h
+    src/camera/CameraProfileCatalog.cpp
     src/camera/FileCamera.h
     src/camera/FileCamera.cpp
     src/camera/SimulatedCamera.h
@@ -456,6 +460,9 @@ add_custom_command(TARGET VisionSystemCPP POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${QT6_PLUGINS_DIR}/iconengines/qsvgicon.dll"
         "$<TARGET_FILE_DIR:VisionSystemCPP>/iconengines/qsvgicon.dll"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/config"
+        "$<TARGET_FILE_DIR:VisionSystemCPP>/config"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_SOURCE_DIR}/translations"
         "$<TARGET_FILE_DIR:VisionSystemCPP>/translations"

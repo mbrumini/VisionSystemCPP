@@ -53,6 +53,36 @@ QString profileLabel(const CameraConfig& camera)
   return camera.processingProfileId;
 }
 
+QString defaultCameraBackendForType(const QString& type)
+{
+  if (type == "vimba")
+  {
+    return "vimbax";
+  }
+  if (type == "usb")
+  {
+    return "opencv_usb";
+  }
+  return type;
+}
+
+QString defaultCameraProfileForBackend(const QString& backend)
+{
+  if (backend == "vimbax")
+  {
+    return "allied_vimbax_generic";
+  }
+  if (backend == "opencv_usb")
+  {
+    return "opencv_usb_generic";
+  }
+  if (backend == "file" || backend == "simulator")
+  {
+    return "file_simulated";
+  }
+  return {};
+}
+
 QTableWidgetItem* readOnlyItem(const QString& text)
 {
   auto* item = new QTableWidgetItem(text);
@@ -513,6 +543,8 @@ void MainWindow::showCameraSystemSettings()
     if (auto* typeCombo = qobject_cast<QComboBox*>(table->cellWidget(row, 5)))
     {
       camera.type = typeCombo->currentText();
+      camera.backend = defaultCameraBackendForType(camera.type);
+      camera.cameraProfileId = defaultCameraProfileForBackend(camera.backend);
     }
     if (camera.type == "simulator")
     {

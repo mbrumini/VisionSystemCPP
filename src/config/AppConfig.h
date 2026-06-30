@@ -54,6 +54,8 @@ struct CameraConfig
   bool exists = false;
   bool enabled = false;
   QString type;
+  QString backend;
+  QString cameraProfileId;
   QString folder;
   int usbIndex = -1;
   QString serial;

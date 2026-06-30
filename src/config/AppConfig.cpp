@@ -66,6 +66,40 @@ QStringList toStringList(const QJsonArray& values)
 
   return result;
 }
+
+QString defaultBackendForType(const QString& type)
+{
+  if (type == "vimba")
+  {
+    return "vimbax";
+  }
+  if (type == "usb")
+  {
+    return "opencv_usb";
+  }
+  return type;
+}
+
+QString defaultCameraProfileForBackend(const QString& backend)
+{
+  if (backend == "vimbax")
+  {
+    return "allied_vimbax_generic";
+  }
+  if (backend == "opencv_usb")
+  {
+    return "opencv_usb_generic";
+  }
+  if (backend == "file" || backend == "simulator")
+  {
+    return "file_simulated";
+  }
+  if (backend == "svs")
+  {
+    return "svs_vistek_gige_generic";
+  }
+  return {};
+}
 }
 
 bool AppConfig::load(const QString& filePath, QString* errorMessage)
@@ -107,6 +141,9 @@ bool AppConfig::load(const QString& filePath, QString* errorMessage)
     camera.exists = cameraObject.value("exists").toBool();
     camera.enabled = cameraObject.value("enabled").toBool();
     camera.type = cameraObject.value("type").toString();
+    camera.backend = cameraObject.value("backend").toString(defaultBackendForType(camera.type));
+    camera.cameraProfileId = cameraObject.value("cameraProfile").toString(
+      defaultCameraProfileForBackend(camera.backend));
     camera.folder = cameraObject.value("folder").toString();
     camera.usbIndex = cameraObject.value("usbIndex").toInt(-1);
     camera.serial = cameraObject.value("serial").toString();
@@ -174,6 +211,8 @@ bool AppConfig::saveCameraSource(
     }
 
     cameraObject["type"] = type;
+    cameraObject["backend"] = defaultBackendForType(type);
+    cameraObject["cameraProfile"] = defaultCameraProfileForBackend(cameraObject.value("backend").toString());
     cameraObject["folder"] = folder;
     cameraObject.remove("usbIndex");
     cameraObject.remove("serial");
@@ -236,6 +275,8 @@ bool AppConfig::saveVimbaCameraAssignment(
     cameraObject["exists"] = true;
     cameraObject["enabled"] = enabled;
     cameraObject["type"] = "vimba";
+    cameraObject["backend"] = "vimbax";
+    cameraObject["cameraProfile"] = "allied_vimbax_generic";
     cameraObject["deviceId"] = deviceId;
     cameraObject["serial"] = serial;
     cameraObject["modelName"] = modelName;
@@ -269,6 +310,8 @@ bool AppConfig::saveVimbaCameraAssignment(
     cameraObject["exists"] = true;
     cameraObject["enabled"] = enabled;
     cameraObject["type"] = "vimba";
+    cameraObject["backend"] = "vimbax";
+    cameraObject["cameraProfile"] = "allied_vimbax_generic";
     cameraObject["deviceId"] = deviceId;
     cameraObject["serial"] = serial;
     cameraObject["modelName"] = modelName;
@@ -321,6 +364,8 @@ bool AppConfig::saveUsbCameraAssignment(
     cameraObject["exists"] = true;
     cameraObject["enabled"] = enabled;
     cameraObject["type"] = "usb";
+    cameraObject["backend"] = "opencv_usb";
+    cameraObject["cameraProfile"] = "opencv_usb_generic";
     cameraObject["usbIndex"] = usbIndex;
     cameraObject["deviceId"] = QString("usb:%1").arg(usbIndex);
     cameraObject.remove("folder");
@@ -354,6 +399,8 @@ bool AppConfig::saveUsbCameraAssignment(
     cameraObject["exists"] = true;
     cameraObject["enabled"] = enabled;
     cameraObject["type"] = "usb";
+    cameraObject["backend"] = "opencv_usb";
+    cameraObject["cameraProfile"] = "opencv_usb_generic";
     cameraObject["usbIndex"] = usbIndex;
     cameraObject["deviceId"] = QString("usb:%1").arg(usbIndex);
     cameraObject["processingProfile"] = "default";
@@ -494,6 +541,18 @@ bool AppConfig::saveCameraSystemSettings(
     if (!camera.type.isEmpty())
     {
       cameraObject["type"] = camera.type;
+    }
+    const QString backend = camera.backend.isEmpty() ? defaultBackendForType(camera.type) : camera.backend;
+    if (!backend.isEmpty())
+    {
+      cameraObject["backend"] = backend;
+    }
+    const QString cameraProfile = camera.cameraProfileId.isEmpty()
+      ? defaultCameraProfileForBackend(backend)
+      : camera.cameraProfileId;
+    if (!cameraProfile.isEmpty())
+    {
+      cameraObject["cameraProfile"] = cameraProfile;
     }
     if (camera.type == "simulator")
     {

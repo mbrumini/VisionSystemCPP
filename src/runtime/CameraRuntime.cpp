@@ -1,6 +1,6 @@
 #include "CameraRuntime.h"
 
-#include "camera/FileCamera.h"
+#include "camera/CameraFactory.h"
 #include "camera/SimulatedCamera.h"
 #include "camera/UsbCamera.h"
 #include "camera/VimbaCamera.h"
@@ -111,7 +111,7 @@ bool CameraRuntime::step(const CameraConfig& camera, const QString& resolvedFold
   if (!m_source->getFrame(frame))
   {
     const bool transientLiveGrabFailure =
-      (camera.type == "vimba" || camera.type == "simulator") && m_running;
+      (CameraFactory::sourceKind(camera) == "vimba" || CameraFactory::sourceKind(camera) == "simulator") && m_running;
     if (!transientLiveGrabFailure)
     {
       m_running = false;
@@ -248,32 +248,34 @@ void CameraRuntime::clearGeometries()
 bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& resolvedFolder, QString* errorMessage)
 {
   std::lock_guard<std::mutex> lock(m_sourceMutex);
-  if (camera.type != "file" && camera.type != "usb" &&
-      camera.type != "vimba" && camera.type != "simulator")
+  const QString sourceKind = CameraFactory::sourceKind(camera);
+  if (sourceKind != "file" && sourceKind != "usb" &&
+      sourceKind != "vimba" && sourceKind != "simulator" && sourceKind != "svs")
   {
     if (errorMessage)
     {
-      *errorMessage = "Sorgente camera non supportata: " + camera.type;
+      *errorMessage = "Sorgente camera non supportata: " + sourceKind;
     }
     return false;
   }
 
+  const QString sourceIdentity = CameraFactory::sourceIdentity(camera, resolvedFolder);
   const bool sameUsbSource =
-    camera.type == "usb" &&
-    m_sourceType == camera.type &&
+    sourceKind == "usb" &&
+    m_sourceType == sourceKind &&
     m_sourceUsbIndex == camera.usbIndex;
   const bool sameFileSource =
-    camera.type == "file" &&
-    m_sourceType == camera.type &&
+    sourceKind == "file" &&
+    m_sourceType == sourceKind &&
     m_sourceFolder == resolvedFolder;
   const bool sameVimbaSource =
-    camera.type == "vimba" &&
-    m_sourceType == camera.type &&
-    m_sourceDeviceId == camera.deviceId;
+    sourceKind == "vimba" &&
+    m_sourceType == sourceKind &&
+    m_sourceDeviceId == sourceIdentity;
   const bool sameSimulatorSource =
-    camera.type == "simulator" &&
-    m_sourceType == camera.type &&
-    m_sourceDeviceId == (camera.simulatorChannel.isEmpty() ? camera.id : camera.simulatorChannel);
+    sourceKind == "simulator" &&
+    m_sourceType == sourceKind &&
+    m_sourceDeviceId == sourceIdentity;
 
   if (m_source && (sameUsbSource || sameFileSource || sameVimbaSource || sameSimulatorSource))
   {
@@ -290,37 +292,16 @@ bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& reso
     m_sourceUsbIndex = -1;
   }
 
-  if (camera.type == "usb")
+  m_source = CameraFactory::create(camera, resolvedFolder, m_loop, errorMessage);
+  if (!m_source)
   {
-    if (camera.usbIndex < 0)
-    {
-      if (errorMessage)
-      {
-        *errorMessage = "Indice camera USB non valido: " + camera.id;
-      }
-      return false;
-    }
-
-    m_source = std::make_shared<UsbCamera>(camera);
-  }
-  else if (camera.type == "vimba")
-  {
-    m_source = std::make_shared<VimbaCamera>(camera);
-  }
-  else if (camera.type == "simulator")
-  {
-    m_source = std::make_shared<SimulatedCamera>(
-      camera.simulatorChannel.isEmpty() ? camera.id : camera.simulatorChannel);
-  }
-  else
-  {
-    m_source = std::make_shared<FileCamera>(resolvedFolder.toStdString(), m_loop);
+    return false;
   }
 
   if (!m_source->open())
   {
     const QString sourceError =
-      camera.type == "vimba"
+      sourceKind == "vimba"
         ? static_cast<VimbaCamera*>(m_source.get())->lastError()
         : QString();
     m_source.reset();
@@ -331,21 +312,18 @@ bool CameraRuntime::ensureSource(const CameraConfig& camera, const QString& reso
     if (errorMessage)
     {
       *errorMessage = sourceError.isEmpty()
-        ? QString("Avvio camera fallito: %1 type=%2").arg(camera.id, camera.type)
-        : QString("Avvio camera fallito: %1 type=%2 - %3").arg(camera.id, camera.type, sourceError);
+        ? QString("Avvio camera fallito: %1 source=%2").arg(camera.id, sourceKind)
+        : QString("Avvio camera fallito: %1 source=%2 - %3").arg(camera.id, sourceKind, sourceError);
     }
     return false;
   }
 
-  m_sourceType = camera.type;
-  m_sourceFolder = camera.type == "file" ? resolvedFolder : QString();
-  m_sourceDeviceId =
-    camera.type == "vimba"
-      ? camera.deviceId
-      : (camera.type == "simulator"
-          ? (camera.simulatorChannel.isEmpty() ? camera.id : camera.simulatorChannel)
-          : QString());
-  m_sourceUsbIndex = camera.type == "usb" ? camera.usbIndex : -1;
+  m_sourceType = sourceKind;
+  m_sourceFolder = sourceKind == "file" ? resolvedFolder : QString();
+  m_sourceDeviceId = (sourceKind == "vimba" || sourceKind == "simulator" || sourceKind == "svs")
+    ? sourceIdentity
+    : QString();
+  m_sourceUsbIndex = sourceKind == "usb" ? camera.usbIndex : -1;
   return true;
 }
 
