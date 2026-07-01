@@ -7,13 +7,8 @@
       "generator": "Visual Studio 17 2022",
       "architecture": "x64",
       "binaryDir": "${sourceDir}/build",
-      "environment": {
-        "PATH": "$penv{QT_DIR}/bin;$penv{PATH}"
-      },
       "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "$penv{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-        "CMAKE_PREFIX_PATH": "$penv{QT_DIR}",
-        "CMAKE_BUILD_TYPE": "Release"
+        "CMAKE_TOOLCHAIN_FILE": "E:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake"
       }
     }
   ],

@@ -199,6 +199,8 @@
     "constructedGeometryNote": "Create calculated geometries from edge-measured geometries.",
     "sourceLineA": "Line A",
     "sourceLineB": "Line B",
+    "sourceArcA": "Arc A",
+    "sourceArcB": "Arc B",
     "sourceLine": "Line",
     "sourceCircle": "Circle",
     "sourceCircleA": "Circle A",
@@ -414,6 +416,9 @@
     "measurementLineLineMissing": "Line-line measurement unavailable: choose 2 distinct found lines",
     "measurementLineLineInvalid": "Line-line measurement unavailable: lines are not parallel or are invalid",
     "measurementLineLineCreated": "Line-line distance created",
+    "measurementArcArcMissing": "Arc-arc distance unavailable: choose two detected arcs",
+    "measurementArcArcInvalid": "Arc-arc distance unavailable: invalid arcs",
+    "measurementArcArcCreated": "Minimum arc-arc distance created",
     "measurementCircleDiameterMissing": "Diameter measurement unavailable: choose a found circle",
     "measurementCircleDiameterInvalid": "Diameter measurement unavailable: invalid circle",
     "measurementCircleDiameterCreated": "Circle diameter created",
@@ -525,6 +530,7 @@
     "pointPointDistance": "Point-point distance",
     "pointLineDistance": "Point-line distance",
     "lineLineDistance": "Line-line distance",
+    "arcArcDistance": "Arc-arc distance MIN",
     "circleDiameterMeasure": "Circle diameter",
     "lineLineAngle": "Line-line angle",
     "searchRoi": "Search AOE",
@@ -627,6 +633,7 @@
   "hints": {
     "measurementNoPointSources": "No points available. Create edge points, constructed geometry (centers, intersections), or detected circles/arcs.",
     "measurementNoPointSourcesUseLines": "No points on this camera. You only have lines: use line-line distance or add points/constructed geometry.",
-    "measurementNoLineSources": "At least two detected or constructed lines are required for this measurement."
+    "measurementNoLineSources": "At least two detected or constructed lines are required for this measurement.",
+    "measurementNoArcSources": "At least two detected arcs are required for this measurement.",
   }
 }

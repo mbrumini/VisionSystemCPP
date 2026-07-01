@@ -405,6 +405,10 @@ void MainWindowConstructedGeometryModule::showConstructedGeometryPanel(const Cam
   m_pickSecondaryCombo = nullptr;
   m_nextPickTarget = 0;
   refreshConstructedGeometrySources(camera);
+  if (context().geometry)
+  {
+    context().geometry->showRuntimeGeometryOverlay(camera);
+  }
 
   auto* panel = createPanel(toolsContainer());
   auto* layout = createPanelLayout(panel);

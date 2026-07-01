@@ -20,6 +20,7 @@
     <file alias="measure-point-point.svg">icons/measure-point-point.svg</file>
     <file alias="measure-point-line.svg">icons/measure-point-line.svg</file>
     <file alias="measure-line-line.svg">icons/measure-line-line.svg</file>
+    <file alias="measure-arc-arc.svg">icons/measure-arc-arc.svg</file>
     <file alias="measure-diameter.svg">icons/measure-diameter.svg</file>
     <file alias="measure-angle.svg">icons/measure-angle.svg</file>
     <file alias="constructed-intersection.svg">icons/constructed-intersection.svg</file>

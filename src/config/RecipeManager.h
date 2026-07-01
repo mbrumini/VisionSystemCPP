@@ -4,12 +4,15 @@
 #include <QRect>
 #include <QPoint>
 #include <QPointF>
-#include <QSize>
+#include <QSizeF>
 #include <QString>
 #include <QStringList>
 #include <QVector>
 
+#include <limits>
+
 struct PartPose;
+struct CameraAcquisitionConfig;
 
 struct LocalizationSettings
 {
@@ -24,6 +27,14 @@ struct SurfaceDefectSettings
   bool pcaResolveAmbiguity = false;
   bool hasReferenceHalfPlane = false;
   bool referencePositiveHalfPlane = false;
+};
+
+struct RecipeRotatedRoi
+{
+  QPointF center;
+  QSizeF size;
+  double angleDegrees = 0.0;
+  bool valid = false;
 };
 
 struct SurfaceStrategyFeatureConfig
@@ -78,8 +89,11 @@ struct SurfaceModelConfig
   double angleStartDegrees = -180.0;
   double angleEndDegrees = 180.0;
   double angleStepDegrees = 5.0;
+  bool hasReferenceAngle = false;
+  double referenceAngleDegrees = 0.0;
   bool useConvexHull = false;
   bool modelUseEdges = true;
+  QString modelType = "shape";
 };
 
 struct GeometryLineRecipeConfig
@@ -278,11 +292,13 @@ public:
   bool saveLocalizationExclusionRects(const QString& cameraId, const QVector<QRect>& rects, QString* errorMessage = nullptr) const;
   bool clearLocalizationExclusionRects(const QString& cameraId, QString* errorMessage = nullptr) const;
   bool loadSurfaceDefectRoi(const QString& cameraId, QRect& roi) const;
+  bool loadSurfaceDefectRotatedRoi(const QString& cameraId, RecipeRotatedRoi& roi) const;
   QRect effectiveSurfaceSearchRect(const QString& cameraId, const QSize& imageSize) const;
   QVector<QPoint> loadSurfaceDefectPolygon(const QString& cameraId) const;
   SurfaceDefectSettings loadSurfaceDefectSettings(const QString& cameraId) const;
   QVector<QRect> loadSurfaceDefectExclusionRects(const QString& cameraId) const;
   bool saveSurfaceDefectRoi(const QString& cameraId, const QRect& roi, QString* errorMessage = nullptr) const;
+  bool saveSurfaceDefectRotatedRoi(const QString& cameraId, const RecipeRotatedRoi& roi, QString* errorMessage = nullptr) const;
   bool saveSurfaceDefectPolygon(const QString& cameraId, const QVector<QPoint>& polygon, QString* errorMessage = nullptr) const;
   bool clearSurfaceDefectRoi(const QString& cameraId, QString* errorMessage = nullptr) const;
   bool clearSurfaceDefectPolygon(const QString& cameraId, QString* errorMessage = nullptr) const;
@@ -293,6 +309,7 @@ public:
   bool saveSurfaceDefectExclusionRects(const QString& cameraId, const QVector<QRect>& rects, QString* errorMessage = nullptr) const;
   bool clearSurfaceDefectExclusionRects(const QString& cameraId, QString* errorMessage = nullptr) const;
   bool clearSurfaceLocalizationGeometry(const QString& cameraId, QString* errorMessage = nullptr) const;
+  bool hasSurfaceLocalizationSetup(const QString& cameraId) const;
   SurfaceLocalizationStrategyConfig loadSurfaceLocalizationStrategy(const QString& cameraId) const;
   bool saveSurfaceLocalizationStrategy(const QString& cameraId, const SurfaceLocalizationStrategyConfig& config, QString* errorMessage = nullptr) const;
   bool saveSurfaceStrategyCircle(const QString& cameraId, const QString& featureId, const QPoint& center, int radius, QString* errorMessage = nullptr) const;
@@ -306,13 +323,14 @@ public:
   bool saveSurfaceEdgeFitMaxError(const QString& cameraId, int maxError, QString* errorMessage = nullptr) const;
   bool saveSurfacePcaResolveAmbiguity(const QString& cameraId, bool resolve, QString* errorMessage = nullptr) const;
   SurfaceModelConfig loadSurfaceModel(const QString& cameraId) const;
-  bool saveSurfaceModel(const QString& cameraId, const QRect& searchRoi, const QVector<QPoint>& contour, const QString& templateImagePath, QString* errorMessage = nullptr) const;
+  bool saveSurfaceModel(const QString& cameraId, const QRect& searchRoi, const QVector<QPoint>& contour, const QString& templateImagePath, QString* errorMessage = nullptr, double referenceAngleDegrees = std::numeric_limits<double>::quiet_NaN()) const;
   bool saveSurfaceModelEdgeSensitivity(const QString& cameraId, int sensitivity, QString* errorMessage = nullptr) const;
   bool saveSurfaceModelMaxShapeDistance(const QString& cameraId, double distance, QString* errorMessage = nullptr) const;
   bool saveSurfaceModelMinTemplateScore(const QString& cameraId, double score, QString* errorMessage = nullptr) const;
   bool saveSurfaceModelAngleRange(const QString& cameraId, double startDegrees, double endDegrees, double stepDegrees, QString* errorMessage = nullptr) const;
   bool saveSurfaceModelUseConvexHull(const QString& cameraId, bool useConvexHull, QString* errorMessage = nullptr) const;
   bool saveSurfaceModelUseEdges(const QString& cameraId, bool useEdges, QString* errorMessage = nullptr) const;
+  bool saveSurfaceModelType(const QString& cameraId, const QString& modelType, QString* errorMessage = nullptr) const;
   QString surfaceModelTemplateImagePath(const QString& cameraId) const;
   QVector<GeometryLineRecipeConfig> loadGeometryLines(const QString& cameraId) const;
   bool saveGeometryLines(const QString& cameraId, const QVector<GeometryLineRecipeConfig>& configs, QString* errorMessage = nullptr) const;
@@ -334,6 +352,13 @@ public:
   QVector<MeasurementRecipeConfig> loadMeasurements(const QString& cameraId) const;
   bool saveMeasurements(const QString& cameraId, const QVector<MeasurementRecipeConfig>& configs, QString* errorMessage = nullptr) const;
   bool appendMeasurement(const QString& cameraId, const MeasurementRecipeConfig& config, QString* errorMessage = nullptr) const;
+
+  bool hasCameraAcquisitionSettings(const QString& cameraId) const;
+  bool loadCameraAcquisitionSettings(const QString& cameraId, CameraAcquisitionConfig& acquisition) const;
+  bool saveCameraAcquisitionSettings(
+    const QString& cameraId,
+    const CameraAcquisitionConfig& acquisition,
+    QString* errorMessage = nullptr) const;
 
   ThreadInspectionSettings loadThreadInspectionSettings(const QString& cameraId) const;
   bool saveThreadInspectionSettings(const QString& cameraId, const ThreadInspectionSettings& settings, QString* errorMessage = nullptr) const;

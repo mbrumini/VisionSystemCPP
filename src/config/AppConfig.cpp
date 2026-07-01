@@ -629,6 +629,48 @@ bool AppConfig::saveCameraSystemSettings(
     {
       cameraObject.remove("simulatorChannel");
     }
+    if (camera.type == "vimba")
+    {
+      cameraObject["deviceId"] = camera.deviceId;
+      cameraObject["serial"] = camera.serial;
+      cameraObject["modelName"] = camera.modelName;
+      cameraObject["interfaceId"] = camera.interfaceId;
+      cameraObject.remove("folder");
+      cameraObject.remove("usbIndex");
+
+      QJsonObject triggerObject;
+      triggerObject["mode"] = camera.trigger.mode.isEmpty() ? QString("software") : camera.trigger.mode;
+      triggerObject["source"] = camera.trigger.source.isEmpty() ? QString("camera") : camera.trigger.source;
+      triggerObject["ioOutput"] = camera.trigger.ioOutput;
+      triggerObject["cameraLine"] = camera.trigger.cameraLine;
+      cameraObject["trigger"] = triggerObject;
+    }
+    else if (camera.type == "usb")
+    {
+      cameraObject["usbIndex"] = camera.usbIndex;
+      cameraObject["deviceId"] = QString("usb:%1").arg(camera.usbIndex);
+      cameraObject.remove("folder");
+      cameraObject.remove("serial");
+      cameraObject.remove("modelName");
+      cameraObject.remove("interfaceId");
+
+      QJsonObject triggerObject;
+      triggerObject["mode"] = camera.trigger.mode.isEmpty() ? QString("software") : camera.trigger.mode;
+      triggerObject["source"] = camera.trigger.source.isEmpty() ? QString("usbCamera") : camera.trigger.source;
+      triggerObject["ioOutput"] = camera.trigger.ioOutput;
+      triggerObject["cameraLine"] = camera.trigger.cameraLine;
+      cameraObject["trigger"] = triggerObject;
+    }
+    else if (camera.type == "file")
+    {
+      cameraObject["folder"] = camera.folder;
+      cameraObject.remove("usbIndex");
+      cameraObject.remove("serial");
+      cameraObject.remove("deviceId");
+      cameraObject.remove("modelName");
+      cameraObject.remove("interfaceId");
+      cameraObject.remove("trigger");
+    }
     cameraObject["processingProfile"] = camera.processingProfileId.isEmpty()
       ? QString("default")
       : camera.processingProfileId;
@@ -663,14 +705,6 @@ bool AppConfig::saveCameraSystemSettings(
     }
     acquisitionObject["frameIntervalMs"] = camera.acquisition.frameIntervalMs;
     cameraObject["acquisition"] = acquisitionObject;
-    if (!camera.modelName.isEmpty())
-    {
-      cameraObject["modelName"] = camera.modelName;
-    }
-    if (!camera.interfaceId.isEmpty())
-    {
-      cameraObject["interfaceId"] = camera.interfaceId;
-    }
     cameras[i] = cameraObject;
   }
 

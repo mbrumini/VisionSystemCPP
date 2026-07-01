@@ -94,7 +94,8 @@ void MainWindowSetupModule::showCameraSetupPanel(const CameraConfig& camera)
     [this, camera](int value) {
       CameraRuntime& runtime = cameraRuntime()[camera.id];
       runtime.setIntervalMs(value);
-      CameraAcquisitionConfig acquisition = camera.acquisition;
+      const CameraConfig effectiveCamera = currentConfiguredCamera(config(), camera);
+      CameraAcquisitionConfig acquisition = effectiveCamera.acquisition;
       acquisition.frameIntervalMs = value;
       config().updateCameraAcquisitionSettings(camera.id, acquisition);
       QString error;

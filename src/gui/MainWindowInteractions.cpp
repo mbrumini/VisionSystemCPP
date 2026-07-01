@@ -276,11 +276,21 @@ void MainWindow::handleSimulatorSampleAvailable(const SimulatorFrame& frame)
   }
   m_cameraRuntime[camera.id].stop();
   m_cameraRuntime[camera.id].setCurrentFrame(frame.image);
+  m_cameraRuntime[camera.id].clearCurrentPose(camera.id);
+  m_cameraRuntime[camera.id].clearGeometries();
+  m_thread.clearThreadOverlays(camera.id);
+  deactivateImageDrawingTools();
   m_selectedPreview = m_imaging.matToPixmap(frame.image);
   m_selectedImagePath = samplePath;
   m_largeImage->setImage(m_selectedPreview);
-  m_largeImage->clearGeometryOverlay();
   m_largeImage->clearRoi();
+  m_largeImage->clearExclusionRects();
+  m_largeImage->clearCircles();
+  m_largeImage->clearGeometryArea();
+  m_largeImage->clearGeometryPoints();
+  m_largeImage->clearGeometryLines();
+  m_largeImage->clearGeometryOverlay();
+  m_largeImage->clearDetectedCircle();
   updateLargePreview();
   appendLog(QString("Campione simulatore ricevuto: %1 channel=%2")
     .arg(camera.id, frame.metadata.channel));
@@ -563,7 +573,8 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
   const bool createDiagnosticImage = (camera.id == m_selectedCameraId);
   const bool drawContours = !m_machineRunning;
   auto job = [
-      input, searchRect, exclusions, localization, thresholdSettings,
+      this, input, searchRect, exclusions, localization, thresholdSettings,
+      cameraId = camera.id,
       requestedStrategy, model, templateImage, twoCirclesConfig, createDiagnosticImage, drawContours]() {
     try
     {
@@ -647,7 +658,7 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
         return converted;
       }
 
-      if (requestedStrategy == "shapeModel")
+      if (requestedStrategy == "shapeModel" || (requestedStrategy == "model" && model.modelType != "template"))
       {
         SurfaceShapeMatchConfig config;
         config.searchRoi = cv::Rect(0, 0, input.cols, input.rows);
@@ -669,6 +680,21 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
       config.angleStartDegrees = model.angleStartDegrees;
       config.angleEndDegrees = model.angleEndDegrees;
       config.angleStepDegrees = model.angleStepDegrees;
+      config.useEdges = model.modelUseEdges;
+      if (model.hasReferenceAngle)
+      {
+        config.hasReferenceAngle = true;
+        config.referenceAngleDegrees = model.referenceAngleDegrees;
+      }
+      else
+      {
+        RecipeRotatedRoi roi;
+        if (m_recipeManager.loadSurfaceDefectRotatedRoi(cameraId, roi) && roi.valid)
+        {
+          config.hasReferenceAngle = true;
+          config.referenceAngleDegrees = roi.angleDegrees;
+        }
+      }
       return processor.locateByTemplateMatching(
         input, config, SurfaceLocalizationAdapters::toCvRects(exclusions), createDiagnosticImage, drawContours);
     }
@@ -1080,7 +1106,10 @@ void MainWindow::selectCamera(const CameraConfig& camera)
     m_largeImage->setExclusionRects(m_recipeManager.loadSurfaceDefectExclusionRects(camera.id));
     m_largeImage->clearCircles();
     GeometryOverlay overlay;
-    m_geometry.appendCurrentPartPoseOverlay(camera, overlay);
+    if (m_recipeManager.hasSurfaceLocalizationSetup(camera.id))
+    {
+      m_geometry.appendCurrentPartPoseOverlay(camera, overlay);
+    }
     m_largeImage->setGeometryOverlay(overlay);
     m_thread.syncExtractionRoiOverlay(camera);
   }

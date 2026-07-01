@@ -130,6 +130,8 @@ struct SurfaceTemplateMatchConfig
   double angleStartDegrees = -180.0;
   double angleEndDegrees = 180.0;
   double angleStepDegrees = 5.0;
+  bool hasReferenceAngle = false;
+  double referenceAngleDegrees = 0.0;
   bool useEdges = true;
 };
 

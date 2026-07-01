@@ -60,8 +60,14 @@ void MainWindowSurfaceModule::showModelLocalizationPanel(const CameraConfig& cam
   QObject::connect(previewButton, &QPushButton::clicked, window(), [this, camera]() { previewSurfaceModel(camera); });
   QObject::connect(acquireButton, &QPushButton::clicked, window(), [this, camera]() { acquireSurfaceModel(camera); });
   QObject::connect(poseAxesButton, &QPushButton::clicked, window(), [this, camera]() { showSamplePoseOverlay(camera); });
-  QObject::connect(shapeButton, &QPushButton::clicked, window(), [this, camera]() { testSurfaceShapeModel(camera); });
-  QObject::connect(templateButton, &QPushButton::clicked, window(), [this, camera]() { testSurfaceTemplateModel(camera); });
+  QObject::connect(shapeButton, &QPushButton::clicked, window(), [this, camera]() {
+    recipes().saveSurfaceModelType(camera.id, "shape");
+    testSurfaceShapeModel(camera);
+  });
+  QObject::connect(templateButton, &QPushButton::clicked, window(), [this, camera]() {
+    recipes().saveSurfaceModelType(camera.id, "template");
+    testSurfaceTemplateModel(camera);
+  });
   buttonsLayout->addWidget(roiButton, 0, 0);
   buttonsLayout->addWidget(polygonButton, 0, 1);
   buttonsLayout->addWidget(previewButton, 0, 2);

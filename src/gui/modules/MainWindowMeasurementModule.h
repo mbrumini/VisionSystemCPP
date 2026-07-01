@@ -25,6 +25,7 @@ public:
   void showLineLineDistancePanel(const CameraConfig& camera);
   void showCircleDiameterPanel(const CameraConfig& camera);
   void showLineLineAnglePanel(const CameraConfig& camera);
+  void showArcArcDistancePanel(const CameraConfig& camera);
   void showTolerancesDialog(const CameraConfig& camera);
   void showMeasurementRealValuesPanel(const CameraConfig& camera);
   void rebuildMeasurementRecipe(const CameraConfig& camera);
@@ -43,6 +44,7 @@ private:
                               const QString& criterion = "average");
   void createCircleDiameter(const CameraConfig& camera, const QString& circleId);
   void createLineLineAngle(const CameraConfig& camera, const QString& lineAId, const QString& lineBId);
+  void createArcArcDistanceMin(const CameraConfig& camera, const QString& arcAId, const QString& arcBId);
   void saveMeasurementRealSettings(const CameraConfig& camera, const MeasurementRecipeConfig& config);
   bool saveMeasurementRecipeAction(const CameraConfig& camera,
                                    const QString& type,
@@ -73,7 +75,8 @@ private:
     PointLine,
     LineLineDistance,
     CircleDiameter,
-    LineLineAngle
+    LineLineAngle,
+    ArcArcDistance
   };
   ImagePickMode m_imagePickMode = ImagePickMode::None;
   QPointer<QComboBox> m_pickPrimaryCombo;

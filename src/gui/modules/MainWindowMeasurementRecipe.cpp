@@ -1,7 +1,9 @@
 #include "gui/modules/MainWindowMeasurementModule.h"
 
 #include "gui/geometry/GeometryOverlay.h"
+#include "gui/modules/ConstructedGeometryCircleSource.h"
 #include "gui/modules/MainWindowGeometryModule.h"
+#include "geometry/ArcGeometry.h"
 #include "measurement/MeasurementGeometryMath.h"
 #include "processing/GeometryMeasurementPipeline.h"
 #include "runtime/CameraRuntime.h"
@@ -582,6 +584,27 @@ void MainWindowMeasurementModule::appendMeasurementOverlay(
         overlay.points.append({toPointF(center), "V", QColor("#ff8a00")});
       }
       continue;
+    }
+
+    if (measurement.type == "arc_arc_distance_min")
+    {
+      const ArcGeometry* arcA = findArcByMetaId(set, measurement.sourceAId);
+      const ArcGeometry* arcB = findArcByMetaId(set, measurement.sourceBId);
+      PointGeometry pointOnA;
+      PointGeometry pointOnB;
+      double distancePixels = 0.0;
+      if (!arcA || !arcB || !MeasurementGeometryMath::arcArcMinimumDistance(*arcA, *arcB, distancePixels, &pointOnA, &pointOnB))
+      {
+        continue;
+      }
+
+      overlay.dimensions.append(
+        measurementDimension(toPointF(pointOnA.point), toPointF(pointOnB.point), measurement, selectedDimWidth));
+      if (!compact || selectedOnly)
+      {
+        overlay.points.append({toPointF(pointOnA.point), "A", QColor("#ff8a00")});
+        overlay.points.append({toPointF(pointOnB.point), "B", QColor("#ff8a00")});
+      }
     }
   }
 }

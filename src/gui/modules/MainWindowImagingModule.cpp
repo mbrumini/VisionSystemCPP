@@ -175,7 +175,14 @@ void MainWindowImagingModule::restoreSampleWorkspace(const CameraConfig& camera)
   reloadCameraReferenceImage(camera);
   if (camera.id == selectedCameraId() && largeImage())
   {
+    largeImage()->clearRoi();
+    largeImage()->clearExclusionRects();
+    largeImage()->clearCircles();
+    largeImage()->clearGeometryArea();
+    largeImage()->clearGeometryPoints();
+    largeImage()->clearGeometryLines();
     largeImage()->clearGeometryOverlay();
+    largeImage()->clearDetectedCircle();
   }
 }
 

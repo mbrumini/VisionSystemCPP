@@ -223,6 +223,56 @@ inline cv::Point2d surfaceLongAxisFromContour(const std::vector<cv::Point>& cont
   return cv::Point2d(longEdge.x / length, longEdge.y / length);
 }
 
+inline bool isElongatedContour(const std::vector<cv::Point>& contour, double ratioThreshold = 1.08)
+{
+  if (contour.size() < 3)
+  {
+    return false;
+  }
+
+  const cv::RotatedRect fitted = cv::minAreaRect(contour);
+  const double width = fitted.size.width;
+  const double height = fitted.size.height;
+  if (width <= 1e-3 || height <= 1e-3)
+  {
+    return false;
+  }
+
+  const double longer = std::max(width, height);
+  const double shorter = std::min(width, height);
+  return longer / shorter > ratioThreshold;
+}
+
+inline void assignLocalizationAxesLongSideOnY(
+  double& angleRadians,
+  cv::Point2d& xDirection,
+  cv::Point2d& yDirection,
+  const std::vector<cv::Point>& contour)
+{
+  const double xLength = std::hypot(xDirection.x, xDirection.y);
+  if (xLength <= 1e-6)
+  {
+    xDirection = cv::Point2d(1.0, 0.0);
+  }
+  else
+  {
+    xDirection.x /= xLength;
+    xDirection.y /= xLength;
+  }
+
+  yDirection = cv::Point2d(-xDirection.y, xDirection.x);
+  if (!isElongatedContour(contour))
+  {
+    angleRadians = std::atan2(xDirection.y, xDirection.x);
+    return;
+  }
+
+  const cv::Point2d longDirection = surfaceLongAxisFromContour(contour);
+  yDirection = longDirection;
+  xDirection = cv::Point2d(-longDirection.y, longDirection.x);
+  angleRadians = std::atan2(xDirection.y, xDirection.x);
+}
+
 inline cv::Point2d orientAxisTowardMassAsymmetry(
   const cv::Point2d& geometricCenter,
   cv::Point2d axisDirection,

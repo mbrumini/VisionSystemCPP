@@ -158,7 +158,7 @@ QColor iconColor(const QString& id)
       id == "distance" || id == "angle" ||
       id == "pointPointDistance" || id == "pointLineDistance" ||
       id == "lineLineDistance" || id == "circleDiameterMeasure" ||
-      id == "lineLineAngle" || id == "threadInspection" ||
+      id == "lineLineAngle" || id == "arcArcDistance" || id == "threadInspection" ||
       id == "threadExtractionRoi" || id == "testThreadExtraction")
   {
     return measurement;
@@ -247,7 +247,7 @@ QIcon IconCatalog::icon(const QString& id)
     {"roi", ":/icons/scan.svg"},
     {"polygon", ":/icons/shapes.svg"},
     {"saveSample", ":/icons/save.svg"},
-    {"sampleImage", ":/icons/image.svg"},
+    {"sampleImage", ":/icons/action-import.svg"},
     {"aiSample", ":/icons/database.svg"},
     {"tolerances", ":/icons/gauge.svg"},
     {"surfaceLocalization", ":/icons/scan-search.svg"},
@@ -270,7 +270,7 @@ QIcon IconCatalog::icon(const QString& id)
     {"aiModel", ":/icons/tool-ai.svg"},
     {"ai", ":/icons/tool-ai.svg"},
     {"aiClassification", ":/icons/tags.svg"},
-    {"aiLocalization", ":/icons/localization.svg"},
+    {"aiLocalization", ":/icons/crosshair.svg"},
     {"aiAnomaly", ":/icons/sparkles.svg"},
     {"aiSegmentation", ":/icons/shapes.svg"},
     {"aiTrain", ":/icons/play.svg"},
@@ -321,6 +321,7 @@ QIcon IconCatalog::icon(const QString& id)
     ,{"pointPointDistance", ":/icons/measure-point-point.svg"}
     ,{"pointLineDistance", ":/icons/measure-point-line.svg"}
     ,{"lineLineDistance", ":/icons/measure-line-line.svg"}
+    ,{"arcArcDistance", ":/icons/measure-arc-arc.svg"}
     ,{"circleDiameterMeasure", ":/icons/measure-diameter.svg"}
     ,{"lineLineAngle", ":/icons/measure-angle.svg"}
     ,{"threadInspection", ":/icons/geometry-line.svg"}

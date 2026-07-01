@@ -13,3 +13,9 @@ struct ArcGeometry
 };
 
 double arcSpanRadians(const ArcGeometry& arc);
+double arcNormalizedAngle(double angleRadians);
+cv::Point2d arcPointAt(const cv::Point2d& center, double radius, double angleRadians);
+bool arcAngleOnSpan(double startAngleRadians, double endAngleRadians, double angleRadians);
+cv::Point2d arcStartPoint(const ArcGeometry& arc);
+cv::Point2d arcEndPoint(const ArcGeometry& arc);
+cv::Point2d closestPointOnArc(const ArcGeometry& arc, const cv::Point2d& point);

@@ -7,10 +7,144 @@
 #include <QJsonObject>
 #include <QPolygon>
 
+#include <opencv2/imgproc.hpp>
+
 
 #include "RecipeJsonUtils.h"
 
 using namespace RecipeJsonUtils;
+
+namespace
+{
+RecipeRotatedRoi rotatedRoiFromSearchJson(const QJsonObject& searchRoi)
+{
+  RecipeRotatedRoi roi;
+  if (searchRoi.isEmpty())
+  {
+    return roi;
+  }
+
+  if (searchRoi.contains("centerX") && searchRoi.contains("centerY"))
+  {
+    roi.center = QPointF(searchRoi.value("centerX").toDouble(), searchRoi.value("centerY").toDouble());
+    roi.size = QSizeF(searchRoi.value("width").toDouble(), searchRoi.value("height").toDouble());
+    roi.angleDegrees = searchRoi.value("angleDegrees").toDouble(0.0);
+    roi.valid = roi.size.width() > 2.0 && roi.size.height() > 2.0;
+    return roi;
+  }
+
+  const QRect rect = rectFromJson(searchRoi).normalized();
+  if (!rect.isValid())
+  {
+    return roi;
+  }
+
+  roi.center = rect.center() + QPointF(0.5, 0.5);
+  roi.size = rect.size();
+  roi.angleDegrees = searchRoi.value("angleDegrees").toDouble(0.0);
+  roi.valid = true;
+  return roi;
+}
+
+QJsonObject searchJsonFromRotatedRoi(const RecipeRotatedRoi& roi)
+{
+  QJsonObject result;
+  result["centerX"] = roi.center.x();
+  result["centerY"] = roi.center.y();
+  result["width"] = roi.size.width();
+  result["height"] = roi.size.height();
+  result["angleDegrees"] = roi.angleDegrees;
+
+  const cv::RotatedRect fitted(
+    cv::Point2f(static_cast<float>(roi.center.x()), static_cast<float>(roi.center.y())),
+    cv::Size2f(static_cast<float>(roi.size.width()), static_cast<float>(roi.size.height())),
+    static_cast<float>(roi.angleDegrees));
+  const QRect bounds(
+    fitted.boundingRect().x,
+    fitted.boundingRect().y,
+    fitted.boundingRect().width,
+    fitted.boundingRect().height);
+  result["x"] = bounds.x();
+  result["y"] = bounds.y();
+  return result;
+}
+}
+
+bool RecipeManager::loadSurfaceDefectRotatedRoi(const QString& cameraId, RecipeRotatedRoi& roi) const
+{
+  QJsonObject root;
+  if (!loadJsonObject(cameraRecipePath(cameraId), root))
+  {
+    return false;
+  }
+
+  const QJsonObject surfaceLocalization = root.value("tools").toObject()
+    .value("surfaceLocalization").toObject();
+  const QString method = normalizedSurfaceLocalizationMethod(surfaceLocalization.value("method").toString("threshold"));
+  const QJsonObject methodAoe = surfaceLocalization.value("aoes").toObject()
+    .value(method).toObject();
+  QJsonObject searchRoi = methodAoe.value("searchRoi").toObject();
+  if (searchRoi.isEmpty())
+  {
+    searchRoi = surfaceLocalization.value("searchRoi").toObject();
+  }
+
+  roi = rotatedRoiFromSearchJson(searchRoi);
+  return roi.valid;
+}
+
+bool RecipeManager::saveSurfaceDefectRotatedRoi(
+  const QString& cameraId,
+  const RecipeRotatedRoi& roi,
+  QString* errorMessage) const
+{
+  if (!roi.valid)
+  {
+    if (errorMessage)
+    {
+      *errorMessage = "ROI ruotato non valido";
+    }
+    return false;
+  }
+
+  const QString path = cameraRecipePath(cameraId);
+  QJsonObject root;
+  loadJsonObject(path, root);
+  root["cameraId"] = cameraId;
+
+  QJsonObject tools = root.value("tools").toObject();
+  QJsonObject surfaceDefects = tools.value("surfaceLocalization").toObject();
+  surfaceDefects["enabled"] = true;
+  const QString method = normalizedSurfaceLocalizationMethod(surfaceDefects.value("method").toString("threshold"));
+  pruneSurfaceLocalizationForMethod(surfaceDefects, method);
+
+  QJsonObject aoes = surfaceDefects.value("aoes").toObject();
+  QJsonObject methodAoe = aoes.value(method).toObject();
+  methodAoe["id"] = method;
+  methodAoe["label"] = method;
+  methodAoe["searchRoi"] = searchJsonFromRotatedRoi(roi);
+  methodAoe.remove("searchPolygon");
+  aoes[method] = methodAoe;
+  surfaceDefects["aoes"] = aoes;
+
+  if (method == "threshold" || method == "massPca")
+  {
+    QJsonObject threshold = surfaceDefects.value("threshold").toObject();
+    if (!threshold.contains("min"))
+    {
+      threshold["min"] = SurfaceDefectSettings().thresholdMin;
+    }
+    if (!threshold.contains("max"))
+    {
+      threshold["max"] = SurfaceDefectSettings().thresholdMax;
+    }
+    surfaceDefects["threshold"] = threshold;
+  }
+
+  tools["surfaceLocalization"] = surfaceDefects;
+  root["tools"] = tools;
+  return saveJsonObject(path, root, errorMessage);
+}
 
 bool RecipeManager::loadSurfaceDefectRoi(const QString& cameraId, QRect& roi) const
 {

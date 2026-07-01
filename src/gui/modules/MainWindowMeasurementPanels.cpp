@@ -4,6 +4,7 @@
 #include "gui/modules/ConstructedGeometryLineSource.h"
 #include "gui/modules/ConstructedGeometryPointSource.h"
 #include "gui/modules/MainWindowGeometryModule.h"
+#include "geometry/ArcGeometry.h"
 #include "gui/geometry/GeometryOverlay.h"
 #include "gui/TouchIconButton.h"
 #include "runtime/CameraRuntime.h"
@@ -291,6 +292,63 @@ void appendSelectionCircle(GeometryOverlay& overlay,
   }
   overlay.points.append({toPointF(circle.center), label, color, 8.0});
 }
+
+void appendSelectionArc(GeometryOverlay& overlay,
+                        const ArcGeometry& arc,
+                        const QString& label,
+                        const QColor& color)
+{
+  const int samples = std::max(12, static_cast<int>(std::ceil(arcSpanRadians(arc) * 24.0)));
+  const double span = arcSpanRadians(arc);
+  QPointF previous;
+  for (int index = 0; index <= samples; ++index)
+  {
+    const double angle = arc.startAngleRadians + span * static_cast<double>(index) / static_cast<double>(samples);
+    const cv::Point2d point = arcPointAt(arc.center, arc.radius, angle);
+    const QPointF current(point.x, point.y);
+    if (index > 0)
+    {
+      overlay.lines.append({previous, current, color, 7});
+    }
+    previous = current;
+  }
+  overlay.points.append({toPointF(arcStartPoint(arc)), label, color, 8.0});
+}
+
+QString nearestArcSourceId(const GeometrySet& set,
+                           const QVector<ConstructedGeometryCircleSource>& sources,
+                           const QPointF& imagePoint,
+                           double maxDistance = 32.0,
+                           double* bestDistanceOut = nullptr)
+{
+  const cv::Point2d target(imagePoint.x(), imagePoint.y());
+  QString bestId;
+  double bestDistance = maxDistance;
+  for (const ConstructedGeometryCircleSource& source : sources)
+  {
+    if (!source.arcSource)
+    {
+      continue;
+    }
+    const ArcGeometry* arc = findArcByMetaId(set, source.id);
+    if (!arc || arc->radius <= 0.0)
+    {
+      continue;
+    }
+    const cv::Point2d closest = closestPointOnArc(*arc, target);
+    const double distance = pointDistance(closest, target);
+    if (distance <= bestDistance)
+    {
+      bestDistance = distance;
+      bestId = source.id;
+    }
+  }
+  if (bestDistanceOut)
+  {
+    *bestDistanceOut = bestId.isEmpty() ? std::numeric_limits<double>::infinity() : bestDistance;
+  }
+  return bestId;
+}
 }
 
 void MainWindowMeasurementModule::handleImagePick(const CameraConfig& camera, const QPointF& imagePoint)
@@ -341,6 +399,19 @@ void MainWindowMeasurementModule::handleImagePick(const CameraConfig& camera, co
     const QVector<ConstructedGeometryLineSource> sources =
       constructedGeometryLineSources(set, geometryAliasesForCamera(camera));
     const QString id = nearestLineSourceId(sources, imagePoint);
+    QComboBox* target = (m_nextPickTarget % 2 == 0) ? m_pickPrimaryCombo.data() : m_pickSecondaryCombo.data();
+    if (!id.isEmpty() && setComboCurrentData(target, id))
+    {
+      ++m_nextPickTarget;
+    }
+    return;
+  }
+
+  if (m_imagePickMode == ImagePickMode::ArcArcDistance)
+  {
+    const QVector<ConstructedGeometryCircleSource> sources =
+      constructedGeometryArcSources(set, geometryAliasesForCamera(camera));
+    const QString id = nearestArcSourceId(set, sources, imagePoint);
     QComboBox* target = (m_nextPickTarget % 2 == 0) ? m_pickPrimaryCombo.data() : m_pickSecondaryCombo.data();
     if (!id.isEmpty() && setComboCurrentData(target, id))
     {
@@ -757,6 +828,88 @@ void MainWindowMeasurementModule::showLineLineAnglePanel(const CameraConfig& cam
   saveButton->setEnabled(lineSources.size() >= 2);
   QObject::connect(saveButton, &QPushButton::clicked, window(), [this, camera, lineACombo, lineBCombo, refreshPanel]() {
     createLineLineAngle(camera, lineACombo->currentData().toString(), lineBCombo->currentData().toString());
+    refreshPanel();
+  });
+  appendMeasurementListControls(panel, layout, camera, refreshPanel);
+  layout->addWidget(saveButton);
+
+  auto* backButton = createTouchIconButton("back", tr("tools.measurements"), panel);
+  QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() { showMeasurementPanel(camera); });
+  layout->addWidget(backButton);
+  layout->addStretch(1);
+
+  toolsLayout()->addWidget(panel);
+  updateSourceOverlay();
+}
+
+void MainWindowMeasurementModule::showArcArcDistancePanel(const CameraConfig& camera)
+{
+  context().clearToolPanel();
+  m_imagePickMode = ImagePickMode::None;
+  refreshMeasurementSources(camera);
+
+  const GeometrySet& set = cameraRuntime()[camera.id].geometries();
+  const QVector<ConstructedGeometryCircleSource> arcSources =
+    constructedGeometryArcSources(set, geometryAliasesForCamera(camera));
+
+  auto* panel = new QWidget(toolsContainer());
+  auto* layout = createMeasurementPage(panel, QString("%1 | %2").arg(tr("actions.arcArcDistance"), camera.id));
+
+  auto* form = new QWidget(panel);
+  auto* formLayout = new QGridLayout(form);
+  formLayout->setContentsMargins(0, 0, 0, 0);
+  formLayout->setHorizontalSpacing(8);
+  formLayout->setVerticalSpacing(8);
+
+  auto* arcACombo = new QComboBox(form);
+  auto* arcBCombo = new QComboBox(form);
+  addSources(arcACombo, arcSources);
+  addSources(arcBCombo, arcSources);
+  applySecondarySourceDefault(arcBCombo, arcSources.size());
+
+  const auto updateSourceOverlay = [this, camera, arcACombo, arcBCombo]() {
+    if (!context().geometry || !largeImage())
+    {
+      return;
+    }
+    context().geometry->showRuntimeGeometryOverlay(camera);
+    const GeometrySet& refreshedSet = cameraRuntime()[camera.id].geometries();
+    GeometryOverlay overlay = largeImage()->geometryOverlay();
+    const QString arcAId = arcACombo->currentData().toString();
+    if (const ArcGeometry* arc = findArcByMetaId(refreshedSet, arcAId))
+    {
+      appendSelectionArc(overlay, *arc, QStringLiteral("A %1").arg(arcAId), QColor("#ffcc00"));
+    }
+    const QString arcBId = arcBCombo->currentData().toString();
+    if (const ArcGeometry* arc = findArcByMetaId(refreshedSet, arcBId))
+    {
+      appendSelectionArc(overlay, *arc, QStringLiteral("B %1").arg(arcBId), QColor("#00e5ff"));
+    }
+    largeImage()->setGeometryOverlay(overlay);
+  };
+  QObject::connect(arcACombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  QObject::connect(arcBCombo, qOverload<int>(&QComboBox::currentIndexChanged), window(), updateSourceOverlay);
+  m_imagePickMode = ImagePickMode::ArcArcDistance;
+  m_pickPrimaryCombo = arcACombo;
+  m_pickSecondaryCombo = arcBCombo;
+  m_nextPickTarget = 0;
+
+  formLayout->addWidget(new QLabel(tr("labels.sourceArcA"), form), 0, 0);
+  formLayout->addWidget(arcACombo, 0, 1);
+  formLayout->addWidget(new QLabel(tr("labels.sourceArcB"), form), 1, 0);
+  formLayout->addWidget(arcBCombo, 1, 1);
+  layout->addWidget(form);
+
+  if (arcSources.size() < 2)
+  {
+    appendMeasurementHint(panel, layout, tr("hints.measurementNoArcSources"));
+  }
+
+  const auto refreshPanel = [this, camera]() { showArcArcDistancePanel(camera); };
+  auto* saveButton = createSaveMeasurementButton(panel, tr("actions.saveMeasurement") + " MIN");
+  saveButton->setEnabled(arcSources.size() >= 2);
+  QObject::connect(saveButton, &QPushButton::clicked, window(), [this, camera, arcACombo, arcBCombo, refreshPanel]() {
+    createArcArcDistanceMin(camera, arcACombo->currentData().toString(), arcBCombo->currentData().toString());
     refreshPanel();
   });
   appendMeasurementListControls(panel, layout, camera, refreshPanel);

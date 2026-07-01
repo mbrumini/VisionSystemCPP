@@ -1,5 +1,6 @@
 #pragma once
 
+#include "geometry/ArcGeometry.h"
 #include "geometry/CircleGeometry.h"
 #include "geometry/LineGeometry.h"
 #include "geometry/PointGeometry.h"
@@ -29,6 +30,11 @@ bool parallelLineDistance(const LineGeometry& lineA,
                           PointGeometry* pointOnLineA = nullptr,
                           PointGeometry* pointOnLineB = nullptr);
 bool circleDiameterPixels(const CircleGeometry& circle, double& diameterPixels);
+bool arcArcMinimumDistance(const ArcGeometry& arcA,
+                           const ArcGeometry& arcB,
+                           double& distancePixels,
+                           PointGeometry* pointOnA = nullptr,
+                           PointGeometry* pointOnB = nullptr);
 bool lineLineAngleDegrees(const LineGeometry& lineA, const LineGeometry& lineB, double& angleDegrees);
 
 // Corner angle at intersection with oriented rays for overlay.

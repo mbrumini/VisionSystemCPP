@@ -5,6 +5,13 @@
 void ImageViewWidget::setImage(const QPixmap& image)
 {
   m_image = image;
+  m_circleBandEditing = false;
+  m_movingCircleBandCenter = false;
+  m_selectedCircleBandRadius = -1;
+  m_circles.clear();
+  m_hasDetectedCircle = false;
+  m_detectedCircle = {};
+  m_threePointCirclePoints.clear();
   update();
 }
 

@@ -589,6 +589,8 @@ void MainWindow::deactivateImageDrawingTools()
   }
 
   m_largeImage->setRoiDrawingEnabled(false);
+  m_largeImage->setPolygonDrawingEnabled(false);
+  m_largeImage->setGeometryAreaEditingEnabled(false);
   m_largeImage->setExclusionDrawingEnabled(false);
   m_largeImage->setOuterCircleDrawingEnabled(false);
   m_largeImage->setInnerCircleDrawingEnabled(false);

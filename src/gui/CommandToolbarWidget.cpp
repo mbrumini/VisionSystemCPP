@@ -31,6 +31,10 @@ CommandToolbarWidget::CommandToolbarWidget(QWidget* parent)
   layout->addWidget(m_helpButton);
   layout->addStretch(1);
 
+  m_versionLabel = new QLabel(this);
+  m_versionLabel->setObjectName("toolbarVersion");
+  layout->addWidget(m_versionLabel);
+
   m_recipeLabel = new QLabel(this);
   m_recipeLabel->setObjectName("toolbarRecipe");
   layout->addWidget(m_recipeLabel);
@@ -74,6 +78,11 @@ void CommandToolbarWidget::setStatusText(const QString& text)
 void CommandToolbarWidget::setRecipeText(const QString& text)
 {
   m_recipeLabel->setText(text);
+}
+
+void CommandToolbarWidget::setVersionText(const QString& text)
+{
+  m_versionLabel->setText(text);
 }
 
 void CommandToolbarWidget::setStartHandler(std::function<void()> handler)

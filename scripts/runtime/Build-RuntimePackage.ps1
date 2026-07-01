@@ -8,24 +8,40 @@ param(
 $ErrorActionPreference = "Stop"
 
 $projectRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
-if ([string]::IsNullOrWhiteSpace($QtBin) -and $env:QT_DIR) {
-  $QtBin = Join-Path $env:QT_DIR "bin"
-}
-if ([string]::IsNullOrWhiteSpace($QtBin)) {
-  throw "Qt non configurato. Imposta QT_DIR oppure passa -QtBin."
-}
 $versionPath = Join-Path $projectRoot "VERSION.txt"
 $version = if (Test-Path $versionPath) { (Get-Content $versionPath -Raw).Trim() } else { "0.0.0" }
 $buildDir = Join-Path $projectRoot "build\$Configuration"
 $buildExe = Join-Path $buildDir "VisionSystemCPP.exe"
-$windeployqt = Join-Path $QtBin "windeployqt.exe"
 
 if (-not (Test-Path $buildExe)) {
   throw "Eseguibile non trovato: $buildExe. Compila sul PC sviluppo prima di creare il pacchetto."
 }
-if (-not (Test-Path $windeployqt)) {
-  throw "windeployqt non trovato: $windeployqt"
+
+function Find-WindeployQt {
+  param([string]$QtBin)
+  if ($QtBin -and (Test-Path (Join-Path $QtBin "windeployqt.exe"))) {
+    return Join-Path $QtBin "windeployqt.exe"
+  }
+  if ($env:QT_DIR) {
+    $candidate = Join-Path $env:QT_DIR "bin\windeployqt.exe"
+    if (Test-Path $candidate) { return $candidate }
+  }
+  $candidates = @(
+    (Join-Path $projectRoot "build\vcpkg_installed\x64-windows\tools\Qt6\bin\windeployqt.exe"),
+    (Join-Path $projectRoot "build\vcpkg_installed\x64-windows\bin\windeployqt.exe")
+  )
+  foreach ($candidate in $candidates) {
+    if (Test-Path $candidate) { return $candidate }
+  }
+  $fromPath = Get-Command windeployqt.exe -ErrorAction SilentlyContinue
+  if ($fromPath) { return $fromPath.Source }
+  return $null
 }
+
+if ([string]::IsNullOrWhiteSpace($QtBin) -and $env:QT_DIR) {
+  $QtBin = Join-Path $env:QT_DIR "bin"
+}
+$windeployqtPath = Find-WindeployQt $QtBin
 
 if ([string]::IsNullOrWhiteSpace($OutputDir)) {
   $OutputDir = Join-Path $projectRoot "dist"
@@ -88,18 +104,29 @@ New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 
 Copy-Item -Force $buildExe (Join-Path $packageRoot "VisionSystemCPP.exe")
 
-& $windeployqt `
-  --release `
-  --compiler-runtime `
-  --dir $packageRoot `
-  (Join-Path $packageRoot "VisionSystemCPP.exe")
+if ($windeployqtPath) {
+  & $windeployqtPath `
+    --release `
+    --compiler-runtime `
+    --dir $packageRoot `
+    (Join-Path $packageRoot "VisionSystemCPP.exe")
+} else {
+  Write-Host "windeployqt non trovato: uso le DLL e i plugin di build/Release."
+  # Copia le cartelle dei plugin Qt gia' presenti in build
+  foreach ($pluginDir in @("platforms", "imageformats", "iconengines", "styles")) {
+    $source = Join-Path $buildDir $pluginDir
+    if (Test-Path $source) {
+      Copy-Item -Recurse -Force $source (Join-Path $packageRoot $pluginDir)
+    }
+  }
+}
 
 # Copia DLL native gia' presenti accanto alla build, incluse OpenCV e runtime non gestiti da windeployqt.
 Get-ChildItem -Path (Join-Path $buildDir "*.dll") -File | ForEach-Object {
   Copy-Item -Force $_.FullName (Join-Path $packageRoot $_.Name)
 }
 
-$runtimeDirs = @("translations", "resources", "tools", "docs", "ollama")
+$runtimeDirs = @("translations", "resources", "vision_icon_pack", "tools", "docs", "ollama")
 foreach ($dirName in $runtimeDirs) {
   $source = Join-Path $projectRoot $dirName
   if (Test-Path $source) {

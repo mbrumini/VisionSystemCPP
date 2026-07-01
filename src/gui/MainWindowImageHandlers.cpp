@@ -702,7 +702,42 @@ void MainWindow::setupLargeImageHandlers()
     m_constructedGeometry.handleImagePick(m_selectedCamera, imagePoint);
   });
   m_largeImage->setGeometryAreaChangedHandler([this](const ImageRotatedRect& area) {
-    if (m_selectedCameraId.isEmpty() || m_geometry.drawingTarget() != MainWindowGeometryModule::DrawingTarget::Line)
+    if (m_selectedCameraId.isEmpty())
+    {
+      return;
+    }
+
+    if (m_activeDrawingRecipe == MainWindowActiveDrawingRecipe::SurfaceDefects)
+    {
+      RecipeRotatedRoi roi;
+      roi.center = area.center;
+      roi.size = area.size;
+      roi.angleDegrees = area.angleDegrees;
+      roi.valid = area.size.width() > 2.0 && area.size.height() > 2.0;
+      if (!roi.valid)
+      {
+        return;
+      }
+
+      QString error;
+      if (!m_recipeManager.saveSurfaceDefectRotatedRoi(m_selectedCameraId, roi, &error))
+      {
+        appendLog(error);
+        return;
+      }
+
+      appendLog(QString("%1: %2 cx=%3 cy=%4 w=%5 h=%6 ang=%7")
+                  .arg(trText("log.surfaceRoiSaved"))
+                  .arg(m_selectedCameraId)
+                  .arg(roi.center.x(), 0, 'f', 1)
+                  .arg(roi.center.y(), 0, 'f', 1)
+                  .arg(roi.size.width(), 0, 'f', 1)
+                  .arg(roi.size.height(), 0, 'f', 1)
+                  .arg(roi.angleDegrees, 0, 'f', 1));
+      return;
+    }
+
+    if (m_geometry.drawingTarget() != MainWindowGeometryModule::DrawingTarget::Line)
     {
       return;
     }

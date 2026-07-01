@@ -574,6 +574,18 @@ void MainWindowThreadModule::testThreadExtraction(const CameraConfig& camera)
         .arg(result.columns.size()));
 }
 
+void MainWindowThreadModule::clearThreadOverlays(const QString& cameraId)
+{
+  if (cameraId.isEmpty())
+  {
+    m_stableThreadOverlay.clear();
+  }
+  else
+  {
+    m_stableThreadOverlay.remove(cameraId);
+  }
+}
+
 void MainWindowThreadModule::showThreadInspectionPanel(const CameraConfig& camera)
 {
   m_threadPanelActive = true;

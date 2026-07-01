@@ -238,6 +238,12 @@ void MainWindowSetupModule::showCameraAcquisitionPanel(const CameraConfig& camer
       return;
     }
 
+    if (!recipes().saveCameraAcquisitionSettings(camera.id, updated, &error))
+    {
+      log(error);
+      return;
+    }
+
     CameraConfig updatedCamera = camera;
     updatedCamera.acquisition = updated;
     if (selectedCameraId() == camera.id)

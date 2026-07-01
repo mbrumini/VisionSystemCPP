@@ -1,6 +1,13 @@
 cmake_minimum_required(VERSION 3.20)
 
+if(DEFINED CMAKE_TOOLCHAIN_FILE)
+    message(STATUS "CMake toolchain file: ${CMAKE_TOOLCHAIN_FILE}")
+endif()
+
 project(VisionSystemCPP LANGUAGES CXX)
+
+include("${CMAKE_SOURCE_DIR}/cmake/AppVersion.cmake")
+vision_generate_app_version(FALSE)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -32,6 +39,8 @@ find_library(VIMBAX_CPP_LIBRARY
 
 add_executable(VisionSystemCPP
     src/main.cpp
+    src/app/AppVersion.h
+    src/app/AppVersion.cpp
     src/access/AccessTypes.h
     src/access/AccessTypes.cpp
     src/access/AccessPolicy.h
@@ -51,6 +60,7 @@ add_executable(VisionSystemCPP
     src/config/GeometryRecipeJson.h
     src/config/GeometryRecipeJson.cpp
     src/config/RecipeManagerMeasurement.cpp
+    src/config/RecipeManagerAcquisition.cpp
     src/config/RecipeManagerSurfaceDefect.cpp
     src/config/RecipeManagerThreadInspection.cpp
     src/config/RecipeManagerSurfaceLocalization.cpp
@@ -420,7 +430,42 @@ add_test(NAME mask_pose_estimator COMMAND VisionSystemProcessingTests)
 
 target_include_directories(VisionSystemCPP PRIVATE
     src
+    "${CMAKE_BINARY_DIR}/generated"
 )
+
+add_custom_command(TARGET VisionSystemCPP PRE_BUILD
+    COMMAND ${CMAKE_COMMAND}
+        -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
+        -DBINARY_DIR=${CMAKE_BINARY_DIR}
+        -P ${CMAKE_SOURCE_DIR}/cmake/BumpAppVersion.cmake
+    COMMENT "Aggiorna versione applicazione"
+)
+
+set_target_properties(VisionSystemCPP PROPERTIES
+    VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:VisionSystemCPP>"
+)
+
+set(VISION_RUNTIME_RESOURCE_DIRS
+    config
+    recipes
+    translations
+    vision_icon_pack
+    resources
+    calibrations
+    data
+    docs
+    ollama
+)
+
+foreach(VISION_RUNTIME_RESOURCE_DIR IN LISTS VISION_RUNTIME_RESOURCE_DIRS)
+    if(EXISTS "${CMAKE_SOURCE_DIR}/${VISION_RUNTIME_RESOURCE_DIR}")
+        add_custom_command(TARGET VisionSystemCPP POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${CMAKE_SOURCE_DIR}/${VISION_RUNTIME_RESOURCE_DIR}"
+                "$<TARGET_FILE_DIR:VisionSystemCPP>/${VISION_RUNTIME_RESOURCE_DIR}"
+        )
+    endif()
+endforeach()
 
 if(VIMBAX_INCLUDE_DIR AND VIMBAX_CPP_LIBRARY)
     target_include_directories(VisionSystemCPP PRIVATE ${VIMBAX_INCLUDE_DIR})

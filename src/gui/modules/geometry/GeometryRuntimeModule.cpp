@@ -205,6 +205,15 @@ void MainWindowGeometryModule::showRuntimeGeometryOverlay(const CameraConfig& ca
     return;
   }
 
+  if (context().constructedGeometry)
+  {
+    context().constructedGeometry->rebuildConstructedGeometryRecipe(camera);
+  }
+  if (context().measurement)
+  {
+    context().measurement->rebuildMeasurementRecipe(camera);
+  }
+
   const GeometrySet& geometries = cameraRuntime()[camera.id].geometries();
   const bool compact = context().machineRunning != nullptr && *context().machineRunning;
   const int lineWidth = compact ? 2 : 6;
@@ -237,6 +246,15 @@ void MainWindowGeometryModule::showRuntimeGeometryOverlay(const CameraConfig& ca
   for (const ConstructedPointGeometry& constructed : geometries.constructedPoints)
   {
     GeometryDiagnosticDrawing::appendOrangePointCross(overlay, constructed.point.point, compact);
+    overlay.points.append({
+      QPointF(constructed.point.point.x, constructed.point.point.y),
+      GeometryDisplayNames::resolvedLabel(
+        constructed.point.meta.id,
+        constructed.point.meta.label,
+        geometryAliasMap(camera.id)),
+      QColor("#ff8a00"),
+      compact ? 5.0 : 8.0
+    });
   }
   for (const CircleGeometry& circle : geometries.circles)
   {
@@ -254,13 +272,8 @@ void MainWindowGeometryModule::showRuntimeGeometryOverlay(const CameraConfig& ca
       arcWidth);
   }
   appendCurrentPartPoseOverlay(camera, overlay);
-  if (context().constructedGeometry)
-  {
-    context().constructedGeometry->rebuildConstructedGeometryRecipe(camera);
-  }
   if (context().measurement)
   {
-    context().measurement->rebuildMeasurementRecipe(camera);
     context().measurement->appendMeasurementOverlay(camera, overlay, compact);
   }
   largeImage()->setGeometryOverlay(overlay);

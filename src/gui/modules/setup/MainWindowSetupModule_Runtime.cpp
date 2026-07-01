@@ -311,7 +311,14 @@ void MainWindowSetupModule::processCurrentCameraFrame(const CameraConfig& camera
     if (model.hasModel)
     {
       log(QString("pipeline surface model begin: %1").arg(camera.id));
-      context().surface->testSurfaceShapeModel(camera);
+      if (model.modelType == "template")
+      {
+        context().surface->testSurfaceTemplateModel(camera);
+      }
+      else
+      {
+        context().surface->testSurfaceShapeModel(camera);
+      }
       return;
     }
     log(QString("pipeline surface model missing setup: %1").arg(camera.id));
@@ -437,9 +444,17 @@ void MainWindowSetupModule::refreshPoseForCurrentFrame(const CameraConfig& camer
 
   if (annulus.method == "model")
   {
-    if (recipes().loadSurfaceModel(camera.id).hasModel)
+    const SurfaceModelConfig model = recipes().loadSurfaceModel(camera.id);
+    if (model.hasModel)
     {
-      context().surface->testSurfaceShapeModel(camera);
+      if (model.modelType == "template")
+      {
+        context().surface->testSurfaceTemplateModel(camera);
+      }
+      else
+      {
+        context().surface->testSurfaceShapeModel(camera);
+      }
     }
     return;
   }

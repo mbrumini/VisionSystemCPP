@@ -5,7 +5,9 @@
 
 #include <opencv2/imgproc.hpp>
 
+#include <cmath>
 #include <limits>
+#include <vector>
 
 namespace
 {
@@ -87,6 +89,13 @@ bool contourPose(const std::vector<cv::Point>& points, cv::Point2d& center, doub
   }
 
   angleRadians = std::atan2(e1.y, e1.x);
+  if (isElongatedContour(points))
+  {
+    cv::Point2d xDirection;
+    cv::Point2d yDirection;
+    assignLocalizationAxesLongSideOnY(angleRadians, xDirection, yDirection, points);
+    angleRadians = std::atan2(xDirection.y, xDirection.x);
+  }
   return std::isfinite(center.x) && std::isfinite(center.y) && std::isfinite(angleRadians);
 }
 
@@ -158,8 +167,13 @@ RotatedTemplate rotateTemplate(const cv::Mat& image, double angleDegrees)
   rotation.at<double>(0, 2) += bounds.width * 0.5 - center.x;
   rotation.at<double>(1, 2) += bounds.height * 0.5 - center.y;
 
+  double borderVal = 0.0;
+  if (!image.empty())
+  {
+    borderVal = static_cast<double>(image.at<uchar>(0, 0));
+  }
   cv::Mat rotated;
-  cv::warpAffine(image, rotated, rotation, bounds.size(), cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0));
+  cv::warpAffine(image, rotated, rotation, bounds.size(), cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(borderVal));
 
   std::vector<cv::Point> nonZero;
   cv::findNonZero(rotated, nonZero);
@@ -181,6 +195,255 @@ RotatedTemplate rotateTemplate(const cv::Mat& image, double angleDegrees)
       rotation.at<double>(1, 2) -
       contentBounds.y);
   return result;
+}
+
+struct TemplateAngleMatch
+{
+  double score = -1.0;
+  double angle = 0.0;
+  cv::Point location;
+  cv::Size size;
+  cv::Point2d sourceCenter;
+
+  bool valid() const { return score >= 0.0 && !size.empty(); }
+};
+
+struct AngleStepPlan
+{
+  double coarseStep = 5.0;
+  double refineStep = 1.0;
+};
+
+AngleStepPlan planAngleSteps(double angleStart, double angleEnd, double requestedStep)
+{
+  AngleStepPlan plan;
+  const double span = std::max(1.0, angleEnd - angleStart);
+  constexpr int kMaxCoarseAngles = 32;
+  plan.coarseStep = std::max(requestedStep, std::ceil(span / static_cast<double>(kMaxCoarseAngles)));
+  plan.refineStep = std::max(1.0, std::min(requestedStep, plan.coarseStep * 0.5));
+  return plan;
+}
+
+struct AngleSearchPhase
+{
+  double start = 0.0;
+  double end = 0.0;
+};
+
+std::vector<AngleSearchPhase> buildAngleSearchPhases(
+  double fullStart,
+  double fullEnd,
+  bool hasReferenceAngle,
+  double referenceAngleDegrees)
+{
+  const double span = fullEnd - fullStart;
+  if (!hasReferenceAngle || span <= 90.0)
+  {
+    return {{fullStart, fullEnd}};
+  }
+
+  const double margin = std::min(45.0, span * 0.125);
+  const double narrowStart = std::max(fullStart, referenceAngleDegrees - margin);
+  const double narrowEnd = std::min(fullEnd, referenceAngleDegrees + margin);
+  if (narrowEnd - narrowStart < planAngleSteps(narrowStart, narrowEnd, 1.0).coarseStep)
+  {
+    return {{fullStart, fullEnd}};
+  }
+
+  return {{narrowStart, narrowEnd}, {fullStart, fullEnd}};
+}
+
+std::vector<cv::Mat> buildGaussianPyramid(const cv::Mat& image, int maxLevels = 4, int minSide = 32)
+{
+  std::vector<cv::Mat> pyramid;
+  pyramid.push_back(image);
+  while (static_cast<int>(pyramid.size()) < maxLevels)
+  {
+    const cv::Mat& current = pyramid.back();
+    if (current.cols < minSide || current.rows < minSide)
+    {
+      break;
+    }
+
+    cv::Mat next;
+    cv::pyrDown(current, next);
+    if (next.cols < 4 || next.rows < 4)
+    {
+      break;
+    }
+    pyramid.push_back(next);
+  }
+  return pyramid;
+}
+
+bool evaluateTemplateAtLevel(
+  const cv::Mat& searchLevel,
+  const cv::Mat& modelLevel,
+  double angle,
+  const cv::Point* locationHint,
+  int localPad,
+  TemplateAngleMatch& best)
+{
+  const RotatedTemplate rotatedTemplate = rotateTemplate(modelLevel, angle);
+  if (rotatedTemplate.image.cols < 4 || rotatedTemplate.image.rows < 4)
+  {
+    return false;
+  }
+
+  cv::Mat searchRegion;
+  cv::Point regionOrigin(0, 0);
+
+  if (locationHint != nullptr)
+  {
+    cv::Rect localSearchRoi(
+      locationHint->x - localPad,
+      locationHint->y - localPad,
+      rotatedTemplate.image.cols + 2 * localPad,
+      rotatedTemplate.image.rows + 2 * localPad);
+
+    const int x1 = std::clamp(localSearchRoi.x, 0, searchLevel.cols);
+    const int y1 = std::clamp(localSearchRoi.y, 0, searchLevel.rows);
+    const int x2 = std::clamp(localSearchRoi.x + localSearchRoi.width, 0, searchLevel.cols);
+    const int y2 = std::clamp(localSearchRoi.y + localSearchRoi.height, 0, searchLevel.rows);
+
+    if (x2 - x1 < rotatedTemplate.image.cols || y2 - y1 < rotatedTemplate.image.rows)
+    {
+      return false;
+    }
+
+    const cv::Rect clampedRoi(x1, y1, x2 - x1, y2 - y1);
+    searchRegion = searchLevel(clampedRoi);
+    regionOrigin = clampedRoi.tl();
+  }
+  else
+  {
+    if (rotatedTemplate.image.cols > searchLevel.cols || rotatedTemplate.image.rows > searchLevel.rows)
+    {
+      return false;
+    }
+    searchRegion = searchLevel;
+  }
+
+  cv::Mat response;
+  cv::matchTemplate(searchRegion, rotatedTemplate.image, response, cv::TM_CCOEFF_NORMED);
+
+  double minValue = 0.0;
+  double maxValue = 0.0;
+  cv::Point minLocation;
+  cv::Point maxLocation;
+  cv::minMaxLoc(response, &minValue, &maxValue, &minLocation, &maxLocation);
+
+  if (maxValue > best.score)
+  {
+    best.score = maxValue;
+    best.angle = angle;
+    best.location = regionOrigin + maxLocation;
+    best.size = rotatedTemplate.image.size();
+    best.sourceCenter = rotatedTemplate.sourceCenter;
+    return true;
+  }
+
+  return false;
+}
+
+TemplateAngleMatch runPyramidTemplateAngleSearch(
+  const cv::Mat& search,
+  const cv::Mat& modelToMatch,
+  double angleStart,
+  double angleEnd,
+  const AngleStepPlan& plan)
+{
+  TemplateAngleMatch best;
+  const double coarseStep = plan.coarseStep;
+  const double refineStep = plan.refineStep;
+
+  const std::vector<cv::Mat> searchPyramid = buildGaussianPyramid(search);
+  const std::vector<cv::Mat> modelPyramid = buildGaussianPyramid(modelToMatch);
+  const int topLevel = static_cast<int>(searchPyramid.size()) - 1;
+
+  for (double angle = angleStart; angle <= angleEnd; angle += coarseStep)
+  {
+    evaluateTemplateAtLevel(searchPyramid[topLevel], modelPyramid[topLevel], angle, nullptr, 0, best);
+  }
+
+  if (!best.valid())
+  {
+    return best;
+  }
+
+  if (topLevel == 0)
+  {
+    TemplateAngleMatch refineBest;
+    refineBest.score = -1.0;
+    const double refineStart = std::max(angleStart, best.angle - coarseStep);
+    const double refineEnd = std::min(angleEnd, best.angle + coarseStep);
+    for (double angle = refineStart; angle <= refineEnd; angle += refineStep)
+    {
+      evaluateTemplateAtLevel(searchPyramid[0], modelPyramid[0], angle, &best.location, coarseStep + 4, refineBest);
+    }
+    if (refineBest.valid())
+    {
+      best = refineBest;
+    }
+    return best;
+  }
+
+  cv::Point locationHint = best.location;
+  double angleHint = best.angle;
+
+  for (int level = topLevel - 1; level >= 0; --level)
+  {
+    locationHint.x = best.location.x * 2;
+    locationHint.y = best.location.y * 2;
+    angleHint = best.angle;
+
+    const int levelsAbove = topLevel - level;
+    const double angleWindow = coarseStep / static_cast<double>(levelsAbove + 1);
+    const double levelStep = (level == 0) ? refineStep : std::max(refineStep, coarseStep * 0.5);
+    const int localPad = 6 + (1 << levelsAbove);
+
+    TemplateAngleMatch levelBest;
+    levelBest.score = -1.0;
+
+    const double refineStart = std::max(angleStart, angleHint - angleWindow);
+    const double refineEnd = std::min(angleEnd, angleHint + angleWindow);
+    for (double angle = refineStart; angle <= refineEnd; angle += levelStep)
+    {
+      evaluateTemplateAtLevel(searchPyramid[level], modelPyramid[level], angle, &locationHint, localPad, levelBest);
+    }
+
+    if (levelBest.valid())
+    {
+      best = levelBest;
+    }
+    else
+    {
+      best.location = locationHint;
+    }
+  }
+
+  if (topLevel > 0 && best.valid())
+  {
+    const int finalPad = static_cast<int>(std::ceil(coarseStep)) + 4;
+    TemplateAngleMatch finalBest;
+    finalBest.score = -1.0;
+    if (evaluateTemplateAtLevel(searchPyramid[0], modelPyramid[0], best.angle, &best.location, finalPad, finalBest))
+    {
+      best = finalBest;
+    }
+  }
+
+  return best;
+}
+
+TemplateAngleMatch runTemplateAngleSearch(
+  const cv::Mat& search,
+  const cv::Mat& modelToMatch,
+  double angleStart,
+  double angleEnd,
+  const AngleStepPlan& plan)
+{
+  return runPyramidTemplateAngleSearch(search, modelToMatch, angleStart, angleEnd, plan);
 }
 }
 
@@ -466,181 +729,34 @@ SurfaceDefectResult SurfaceModelStrategy::locateByTemplateMatching(
   cv::Point bestLocation;
   cv::Size bestSize;
   cv::Point2d bestSourceCenter;
-  const double step = std::max(1.0, std::abs(config.angleStepDegrees));
+  const double requestedStep = std::max(1.0, std::abs(config.angleStepDegrees));
+  int angleEvaluations = 0;
 
-  // Determine scale factor dynamically based on size
-  int scale = 1;
-  if (search.cols >= 800 || search.rows >= 800)
-  {
-    scale = 4;
-  }
-  else if (search.cols >= 300 || search.rows >= 300)
-  {
-    scale = 2;
-  }
+  const auto phases = buildAngleSearchPhases(
+    config.angleStartDegrees,
+    config.angleEndDegrees,
+    config.hasReferenceAngle,
+    config.referenceAngleDegrees);
 
-  // Ensure downscaled model image is not too small
-  if (scale > 1)
+  for (const AngleSearchPhase& phase : phases)
   {
-    if (modelToMatch.cols / scale < 10 || modelToMatch.rows / scale < 10)
+    const AngleStepPlan plan = planAngleSteps(phase.start, phase.end, requestedStep);
+    angleEvaluations += static_cast<int>((phase.end - phase.start) / plan.coarseStep) + 1;
+
+    const TemplateAngleMatch match =
+      runTemplateAngleSearch(search, modelToMatch, phase.start, phase.end, plan);
+    if (match.valid() && match.score > bestScore)
     {
-      scale = 1;
-    }
-  }
-
-  if (scale > 1)
-  {
-    cv::Mat searchSmall;
-    cv::Mat modelSmall;
-    cv::resize(search, searchSmall, cv::Size(), 1.0 / scale, 1.0 / scale, cv::INTER_LINEAR);
-    cv::resize(modelToMatch, modelSmall, cv::Size(), 1.0 / scale, 1.0 / scale, cv::INTER_LINEAR);
-
-    double coarseBestScore = -1.0;
-    double coarseBestAngle = 0.0;
-    cv::Point coarseBestLocationSmall;
-    cv::Size coarseBestSizeSmall;
-    cv::Point2d coarseBestSourceCenterSmall;
-
-    auto evaluateAngleSmall = [&](double angle) {
-      const RotatedTemplate rotatedTemplate = rotateTemplate(modelSmall, angle);
-      if (rotatedTemplate.image.cols < 4 || rotatedTemplate.image.rows < 4 ||
-          rotatedTemplate.image.cols > searchSmall.cols || rotatedTemplate.image.rows > searchSmall.rows)
-      {
-        return;
-      }
-
-      cv::Mat response;
-      cv::matchTemplate(searchSmall, rotatedTemplate.image, response, cv::TM_CCOEFF_NORMED);
-
-      double minValue = 0.0;
-      double maxValue = 0.0;
-      cv::Point minLocation;
-      cv::Point maxLocation;
-      cv::minMaxLoc(response, &minValue, &maxValue, &minLocation, &maxLocation);
-
-      if (maxValue > coarseBestScore)
-      {
-        coarseBestScore = maxValue;
-        coarseBestAngle = angle;
-        coarseBestLocationSmall = maxLocation;
-        coarseBestSizeSmall = rotatedTemplate.image.size();
-        coarseBestSourceCenterSmall = rotatedTemplate.sourceCenter;
-      }
-    };
-
-    // Coarse search on downscaled images
-    for (double angle = config.angleStartDegrees; angle <= config.angleEndDegrees; angle += step)
-    {
-      evaluateAngleSmall(angle);
+      bestScore = match.score;
+      bestAngle = match.angle;
+      bestLocation = match.location;
+      bestSize = match.size;
+      bestSourceCenter = match.sourceCenter;
     }
 
-    if (coarseBestScore >= 0.0 && !coarseBestSizeSmall.empty())
+    if (bestScore >= config.minScore)
     {
-      // Refine on full-resolution search image around the coarse location
-      const double coarseBestAngleVal = coarseBestAngle;
-      const double refineStart = std::max(config.angleStartDegrees, coarseBestAngleVal - step);
-      const double refineEnd = std::min(config.angleEndDegrees, coarseBestAngleVal + step);
-
-      const cv::Point coarseBestLocation(coarseBestLocationSmall.x * scale, coarseBestLocationSmall.y * scale);
-      const int pad = scale * 2 + 4;
-
-      auto evaluateAngleFull = [&](double angle) {
-        const RotatedTemplate rotatedTemplate = rotateTemplate(modelToMatch, angle);
-        if (rotatedTemplate.image.cols < 4 || rotatedTemplate.image.rows < 4)
-        {
-          return;
-        }
-
-        // Local search area centered at the coarse match location
-        cv::Rect localSearchRoi(
-          coarseBestLocation.x - pad,
-          coarseBestLocation.y - pad,
-          rotatedTemplate.image.cols + 2 * pad,
-          rotatedTemplate.image.rows + 2 * pad
-        );
-
-        // Clamp to search boundaries
-        int x1 = std::clamp(localSearchRoi.x, 0, search.cols);
-        int y1 = std::clamp(localSearchRoi.y, 0, search.rows);
-        int x2 = std::clamp(localSearchRoi.x + localSearchRoi.width, 0, search.cols);
-        int y2 = std::clamp(localSearchRoi.y + localSearchRoi.height, 0, search.rows);
-
-        if (x2 - x1 < rotatedTemplate.image.cols || y2 - y1 < rotatedTemplate.image.rows)
-        {
-          return;
-        }
-        cv::Rect clampedLocalSearchRoi(x1, y1, x2 - x1, y2 - y1);
-        cv::Mat searchLocal = search(clampedLocalSearchRoi);
-
-        cv::Mat response;
-        cv::matchTemplate(searchLocal, rotatedTemplate.image, response, cv::TM_CCOEFF_NORMED);
-
-        double minValue = 0.0;
-        double maxValue = 0.0;
-        cv::Point minLocation;
-        cv::Point maxLocation;
-        cv::minMaxLoc(response, &minValue, &maxValue, &minLocation, &maxLocation);
-
-        if (maxValue > bestScore)
-        {
-          bestScore = maxValue;
-          bestAngle = angle;
-          bestLocation = cv::Point(clampedLocalSearchRoi.x + maxLocation.x, clampedLocalSearchRoi.y + maxLocation.y);
-          bestSize = rotatedTemplate.image.size();
-          bestSourceCenter = rotatedTemplate.sourceCenter;
-        }
-      };
-
-      for (double angle = refineStart; angle <= refineEnd; angle += 1.0)
-      {
-        evaluateAngleFull(angle);
-      }
-    }
-  }
-  else
-  {
-    // Fallback: standard search on original scale
-    auto evaluateAngle = [&](double angle) {
-      const RotatedTemplate rotatedTemplate = rotateTemplate(modelToMatch, angle);
-      if (rotatedTemplate.image.cols < 4 || rotatedTemplate.image.rows < 4 ||
-          rotatedTemplate.image.cols > search.cols || rotatedTemplate.image.rows > search.rows)
-      {
-        return;
-      }
-
-      cv::Mat response;
-      cv::matchTemplate(search, rotatedTemplate.image, response, cv::TM_CCOEFF_NORMED);
-
-      double minValue = 0.0;
-      double maxValue = 0.0;
-      cv::Point minLocation;
-      cv::Point maxLocation;
-      cv::minMaxLoc(response, &minValue, &maxValue, &minLocation, &maxLocation);
-
-      if (maxValue > bestScore)
-      {
-        bestScore = maxValue;
-        bestAngle = angle;
-        bestLocation = maxLocation;
-        bestSize = rotatedTemplate.image.size();
-        bestSourceCenter = rotatedTemplate.sourceCenter;
-      }
-    };
-
-    for (double angle = config.angleStartDegrees; angle <= config.angleEndDegrees; angle += step)
-    {
-      evaluateAngle(angle);
-    }
-
-    if (bestScore >= 0.0 && step > 1.0)
-    {
-      const double coarseBestAngle = bestAngle;
-      const double refineStart = std::max(config.angleStartDegrees, coarseBestAngle - step);
-      const double refineEnd = std::min(config.angleEndDegrees, coarseBestAngle + step);
-      for (double angle = refineStart; angle <= refineEnd; angle += 1.0)
-      {
-        evaluateAngle(angle);
-      }
+      break;
     }
   }
 
@@ -668,7 +784,7 @@ SurfaceDefectResult SurfaceModelStrategy::locateByTemplateMatching(
   result.localization.angleRadians = bestAngle * CV_PI / 180.0;
   result.localization.score = bestScore;
   result.localization.usedPoints = 1;
-  result.localization.inputPoints = static_cast<int>((config.angleEndDegrees - config.angleStartDegrees) / step) + 1;
+  result.localization.inputPoints = angleEvaluations;
   // getRotationMatrix2D uses mathematical positive angles while image Y grows
   // downwards. Keep the reported test angle positive, but draw the image axes
   // with the corresponding visual rotation.

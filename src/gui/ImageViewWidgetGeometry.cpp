@@ -397,14 +397,7 @@ namespace
 QFont measurementLabelFont(const QFont& baseFont)
 {
   QFont labelFont = baseFont;
-  if (labelFont.pointSize() > 0)
-  {
-    labelFont.setPointSize(labelFont.pointSize() + 4);
-  }
-  else
-  {
-    labelFont.setPixelSize(std::max(18, labelFont.pixelSize() + 5));
-  }
+  labelFont.setPixelSize(std::max(18, QFontMetrics(baseFont).height() + 5));
   labelFont.setBold(true);
   return labelFont;
 }

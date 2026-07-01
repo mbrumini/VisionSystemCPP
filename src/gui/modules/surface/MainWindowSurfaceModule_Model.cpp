@@ -5,6 +5,8 @@
 #include "gui/modules/MainWindowSetupModule.h"
 #include "gui/modules/MainWindowContext.h"
 
+#include "gui/ImagePrimitives.h"
+
 #include "gui/geometry/GeometryOverlay.h"
 #include "gui/SurfaceLocalizationAdapters.h"
 #include "processing/SurfaceModelTrainer.h"
@@ -31,6 +33,65 @@ QRect fullImageRoi(const cv::Mat& image)
 cv::Rect toCvRect(const QRect& rect)
 {
   return cv::Rect(rect.x(), rect.y(), rect.width(), rect.height());
+}
+
+cv::RotatedRect toCvRotatedRect(const RecipeRotatedRoi& roi)
+{
+  return cv::RotatedRect(
+    cv::Point2f(static_cast<float>(roi.center.x()), static_cast<float>(roi.center.y())),
+    cv::Size2f(static_cast<float>(roi.size.width()), static_cast<float>(roi.size.height())),
+    static_cast<float>(roi.angleDegrees));
+}
+
+ImageRotatedRect toImageRotatedRect(const RecipeRotatedRoi& roi)
+{
+  return ImageRotatedRect{roi.center, roi.size, roi.angleDegrees};
+}
+
+RecipeRotatedRoi loadModelSearchRoi(const RecipeManager& recipes, const QString& cameraId)
+{
+  RecipeRotatedRoi roi;
+  if (recipes.loadSurfaceDefectRotatedRoi(cameraId, roi))
+  {
+    return roi;
+  }
+
+  QRect box;
+  if (recipes.loadSurfaceDefectRoi(cameraId, box))
+  {
+    roi.center = box.center() + QPointF(0.5, 0.5);
+    roi.size = box.size();
+    roi.valid = true;
+  }
+  return roi;
+}
+
+QRect boundingRectFromRotatedRoi(const RecipeRotatedRoi& roi)
+{
+  const cv::RotatedRect fitted = toCvRotatedRect(roi);
+  const cv::Rect bounds = fitted.boundingRect();
+  return QRect(bounds.x, bounds.y, bounds.width, bounds.height);
+}
+
+void applyTemplateMatchAngleReference(
+  SurfaceTemplateMatchConfig& config,
+  const SurfaceModelConfig& model,
+  const RecipeManager& recipes,
+  const QString& cameraId)
+{
+  if (model.hasReferenceAngle)
+  {
+    config.hasReferenceAngle = true;
+    config.referenceAngleDegrees = model.referenceAngleDegrees;
+    return;
+  }
+
+  RecipeRotatedRoi roi;
+  if (recipes.loadSurfaceDefectRotatedRoi(cameraId, roi) && roi.valid)
+  {
+    config.hasReferenceAngle = true;
+    config.referenceAngleDegrees = roi.angleDegrees;
+  }
 }
 
 std::vector<cv::Point> toCvPoints(const QVector<QPoint>& points)
@@ -243,8 +304,8 @@ void MainWindowSurfaceModule::acquireSurfaceModel(const CameraConfig& camera)
     return;
   }
 
-  QRect roi;
-  if (!recipes().loadSurfaceDefectRoi(camera.id, roi))
+  const RecipeRotatedRoi searchRoi = loadModelSearchRoi(recipes(), camera.id);
+  if (!searchRoi.valid)
   {
     log(tr("log.surfaceRoiMissing") + ": " + camera.id);
     return;
@@ -261,9 +322,9 @@ void MainWindowSurfaceModule::acquireSurfaceModel(const CameraConfig& camera)
   const SurfaceModelConfig current = recipes().loadSurfaceModel(camera.id);
   const QVector<QRect> exclusionRects = recipes().loadSurfaceDefectExclusionRects(camera.id);
   SurfaceModelTrainer trainer;
-  const SurfaceModelTrainingResult training = trainer.trainFromRoi(
+  const SurfaceModelTrainingResult training = trainer.trainFromRotatedRoi(
     input,
-    cv::Rect(roi.x(), roi.y(), roi.width(), roi.height()),
+    toCvRotatedRect(searchRoi),
     toCvRects(exclusionRects),
     current.edgeSensitivity,
     current.useConvexHull);
@@ -290,7 +351,8 @@ void MainWindowSurfaceModule::acquireSurfaceModel(const CameraConfig& camera)
   }
 
   QString error;
-  if (!recipes().saveSurfaceModel(camera.id, roi, contour, templatePath, &error))
+  const QRect modelBounds = boundingRectFromRotatedRoi(searchRoi);
+  if (!recipes().saveSurfaceModel(camera.id, modelBounds, contour, templatePath, &error, searchRoi.angleDegrees))
   {
     log(error);
     return;
@@ -298,7 +360,8 @@ void MainWindowSurfaceModule::acquireSurfaceModel(const CameraConfig& camera)
 
   selectedPreview() = context().imaging->matToPixmap(training.diagnosticImage);
   largeImage()->setImage(selectedPreview());
-  largeImage()->setRoi(roi);
+  largeImage()->clearRoi();
+  largeImage()->setGeometryArea(toImageRotatedRect(searchRoi));
   largeImage()->setExclusionRects(exclusionRects);
   showSamplePoseOverlay(camera);
   log(QString("%1: %2 points=%3").arg(tr("actions.acquireModel")).arg(camera.id).arg(contour.size()));
@@ -312,7 +375,7 @@ bool MainWindowSurfaceModule::restoreSurfaceModelPoseFromSample(const CameraConf
   }
 
   const SurfaceModelConfig model = recipes().loadSurfaceModel(camera.id);
-  if (!model.hasModel || model.contour.isEmpty())
+  if (!model.hasModel)
   {
     return false;
   }
@@ -326,10 +389,45 @@ bool MainWindowSurfaceModule::restoreSurfaceModelPoseFromSample(const CameraConf
 
   const QVector<QRect> exclusionRects = recipes().loadSurfaceDefectExclusionRects(camera.id);
   SurfaceDefectProcessor processor;
-  const SurfaceDefectResult result = processor.locateByShapeMatching(
-    input,
-    shapeMatchConfigFromModel(model, input),
-    toCvRects(exclusionRects));
+  SurfaceDefectResult result;
+
+  if (model.modelType == "template")
+  {
+    const QString templatePath = recipes().surfaceModelTemplateImagePath(camera.id);
+    const cv::Mat templateImage = cv::imread(templatePath.toStdString(), cv::IMREAD_COLOR);
+    if (templateImage.empty())
+    {
+      return false;
+    }
+
+    SurfaceTemplateMatchConfig config;
+    config.searchRoi = sampleSearchRect(camera, input, recipes());
+    config.modelImage = templateImage;
+    config.edgeSensitivity = model.edgeSensitivity;
+    config.minScore = model.minTemplateScore;
+    config.angleStartDegrees = model.angleStartDegrees;
+    config.angleEndDegrees = model.angleEndDegrees;
+    config.angleStepDegrees = model.angleStepDegrees;
+    config.useEdges = model.modelUseEdges;
+    applyTemplateMatchAngleReference(config, model, recipes(), camera.id);
+
+    result = processor.locateByTemplateMatching(
+      input,
+      config,
+      toCvRects(exclusionRects));
+  }
+  else
+  {
+    if (model.contour.isEmpty())
+    {
+      return false;
+    }
+
+    result = processor.locateByShapeMatching(
+      input,
+      shapeMatchConfigFromModel(model, input),
+      toCvRects(exclusionRects));
+  }
 
   if (!result.processed || !result.localization.found)
   {
@@ -349,8 +447,8 @@ void MainWindowSurfaceModule::previewSurfaceModel(const CameraConfig& camera)
     return;
   }
 
-  QRect roi;
-  if (!recipes().loadSurfaceDefectRoi(camera.id, roi))
+  const RecipeRotatedRoi searchRoi = loadModelSearchRoi(recipes(), camera.id);
+  if (!searchRoi.valid)
   {
     log(tr("log.surfaceRoiMissing") + ": " + camera.id);
     return;
@@ -367,9 +465,9 @@ void MainWindowSurfaceModule::previewSurfaceModel(const CameraConfig& camera)
   const SurfaceModelConfig current = recipes().loadSurfaceModel(camera.id);
   const QVector<QRect> exclusionRects = recipes().loadSurfaceDefectExclusionRects(camera.id);
   SurfaceModelTrainer trainer;
-  const SurfaceModelTrainingResult training = trainer.trainFromRoi(
+  const SurfaceModelTrainingResult training = trainer.trainFromRotatedRoi(
     input,
-    cv::Rect(roi.x(), roi.y(), roi.width(), roi.height()),
+    toCvRotatedRect(searchRoi),
     toCvRects(exclusionRects),
     current.edgeSensitivity,
     current.useConvexHull);
@@ -382,7 +480,8 @@ void MainWindowSurfaceModule::previewSurfaceModel(const CameraConfig& camera)
 
   selectedPreview() = context().imaging->matToPixmap(training.diagnosticImage);
   largeImage()->setImage(selectedPreview());
-  largeImage()->setRoi(roi);
+  largeImage()->clearRoi();
+  largeImage()->setGeometryArea(toImageRotatedRect(searchRoi));
   largeImage()->setExclusionRects(exclusionRects);
   showSamplePoseOverlay(camera);
   log(QString("%1: %2 points=%3")
@@ -499,9 +598,10 @@ void MainWindowSurfaceModule::testSurfaceTemplateModel(const CameraConfig& camer
     return;
   }
 
+  const cv::Rect cvSearchRoi = sampleSearchRect(camera, input, recipes());
+  const QRect searchRoi(cvSearchRoi.x, cvSearchRoi.y, cvSearchRoi.width, cvSearchRoi.height);
   SurfaceTemplateMatchConfig config;
-  const QRect searchRoi = fullImageRoi(input);
-  config.searchRoi = toCvRect(searchRoi);
+  config.searchRoi = cvSearchRoi;
   config.modelImage = modelImage;
   config.edgeSensitivity = model.edgeSensitivity;
   config.minScore = model.minTemplateScore;
@@ -509,6 +609,7 @@ void MainWindowSurfaceModule::testSurfaceTemplateModel(const CameraConfig& camer
   config.angleEndDegrees = model.angleEndDegrees;
   config.angleStepDegrees = model.angleStepDegrees;
   config.useEdges = model.modelUseEdges;
+  applyTemplateMatchAngleReference(config, model, recipes(), camera.id);
 
   const QVector<QRect> exclusionRects = recipes().loadSurfaceDefectExclusionRects(camera.id);
 

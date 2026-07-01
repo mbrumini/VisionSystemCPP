@@ -9,7 +9,28 @@ namespace RecipeJsonUtils
 {
 QString appRootPath()
 {
-  return QCoreApplication::applicationDirPath();
+  const QDir executableDir(QCoreApplication::applicationDirPath());
+  if (QFileInfo(executableDir.filePath("config/cameras.json")).exists())
+  {
+    return executableDir.absolutePath();
+  }
+
+  QDir probe = executableDir;
+  for (int i = 0; i < 4; ++i)
+  {
+    if (QFileInfo(probe.filePath("config/cameras.json")).exists() &&
+        QFileInfo(probe.filePath("recipes")).exists())
+    {
+      return probe.absolutePath();
+    }
+
+    if (!probe.cdUp())
+    {
+      break;
+    }
+  }
+
+  return executableDir.absolutePath();
 }
 
 QString appPath(const QString& relativePath)

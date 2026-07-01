@@ -76,6 +76,19 @@ const PointGeometry* findPointByMetaId(const GeometrySet& set, const QString& id
   return nullptr;
 }
 
+const ArcGeometry* findArcByMetaId(const GeometrySet& set, const QString& id)
+{
+  const QString metaId = resolveGeometryMetaId(id);
+  for (const ArcGeometry& arc : set.arcs)
+  {
+    if (arc.meta.id == metaId)
+    {
+      return &arc;
+    }
+  }
+  return nullptr;
+}
+
 bool findCircleLikeByMetaId(const GeometrySet& set, const QString& id, CircleGeometry& result)
 {
   const QString metaId = resolveGeometryMetaId(id);
@@ -490,6 +503,22 @@ void rebuildMeasurements(GeometrySet& set,
       if (lineA && lineB && MeasurementGeometryMath::lineLineAngleDegrees(*lineA, *lineB, angleDegrees))
       {
         appendMeasurementResult(set, config, calibration, lineA->meta.id, lineB->meta.id, angleDegrees);
+      }
+      else
+      {
+        appendFailedMeasurementResult(set, config);
+      }
+      continue;
+    }
+
+    if (config.type == "arc_arc_distance_min")
+    {
+      const ArcGeometry* arcA = findArcByMetaId(set, config.sourceAId);
+      const ArcGeometry* arcB = findArcByMetaId(set, config.sourceBId);
+      double distancePixels = 0.0;
+      if (arcA && arcB && MeasurementGeometryMath::arcArcMinimumDistance(*arcA, *arcB, distancePixels))
+      {
+        appendMeasurementResult(set, config, calibration, arcA->meta.id, arcB->meta.id, distancePixels);
       }
       else
       {

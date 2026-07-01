@@ -3,6 +3,7 @@
 #include "gui/modules/ConstructedGeometryCircleSource.h"
 #include "gui/modules/ConstructedGeometryLineSource.h"
 #include "gui/modules/ConstructedGeometryPointSource.h"
+#include "geometry/ArcGeometry.h"
 #include "measurement/MeasurementGeometryMath.h"
 #include "runtime/CameraRuntime.h"
 
@@ -203,4 +204,44 @@ void MainWindowMeasurementModule::createLineLineAngle(const CameraConfig& camera
       .arg(lineA->meta.id)
       .arg(lineB->meta.id)
       .arg(angleDegrees, 0, 'f', 3));
+}
+
+void MainWindowMeasurementModule::createArcArcDistanceMin(const CameraConfig& camera,
+                                                          const QString& arcAId,
+                                                          const QString& arcBId)
+{
+  GeometrySet& set = cameraRuntime()[camera.id].geometries();
+  const ArcGeometry* arcA = findArcByMetaId(set, arcAId);
+  const ArcGeometry* arcB = findArcByMetaId(set, arcBId);
+  if (!arcA || !arcB)
+  {
+    log(QString("%1: %2").arg(tr("log.measurementArcArcMissing"), camera.id));
+    return;
+  }
+  if (arcA->meta.id == arcB->meta.id)
+  {
+    log(QString("%1: %2").arg(tr("log.measurementSameSourceSelected"), camera.id));
+    return;
+  }
+
+  double distancePixels = 0.0;
+  if (!MeasurementGeometryMath::arcArcMinimumDistance(*arcA, *arcB, distancePixels))
+  {
+    log(QString("%1: %2").arg(tr("log.measurementArcArcInvalid"), camera.id));
+    return;
+  }
+
+  if (!saveMeasurementRecipeAction(camera, "arc_arc_distance_min", arcA->meta.id, arcB->meta.id, distancePixels, "min"))
+  {
+    return;
+  }
+
+  finalizeMeasurementCreate(
+    camera,
+    QString("%1: %2 %3/%4 px=%5")
+      .arg(tr("log.measurementArcArcCreated"))
+      .arg(camera.id)
+      .arg(arcA->meta.id)
+      .arg(arcB->meta.id)
+      .arg(distancePixels, 0, 'f', 3));
 }

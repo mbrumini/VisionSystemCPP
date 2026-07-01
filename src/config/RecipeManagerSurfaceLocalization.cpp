@@ -7,6 +7,8 @@
 #include <QJsonObject>
 #include <QPolygon>
 
+#include <cmath>
+
 #include "RecipeJsonUtils.h"
 
 using namespace RecipeJsonUtils;
@@ -32,6 +34,18 @@ bool RecipeManager::clearSurfaceLocalizationGeometry(const QString& cameraId, QS
 
   return saveJsonObject(path, root, errorMessage);
 }
+
+bool RecipeManager::hasSurfaceLocalizationSetup(const QString& cameraId) const
+{
+  QJsonObject root;
+  if (!loadJsonObject(cameraRecipePath(cameraId), root))
+  {
+    return false;
+  }
+
+  return root.value("tools").toObject().contains("surfaceLocalization");
+}
+
 SurfaceLocalizationStrategyConfig RecipeManager::loadSurfaceLocalizationStrategy(const QString& cameraId) const
 {
   SurfaceLocalizationStrategyConfig config;
@@ -442,11 +456,17 @@ SurfaceModelConfig RecipeManager::loadSurfaceModel(const QString& cameraId) cons
   config.minTemplateScore = model.value("minTemplateScore").toDouble(config.minTemplateScore);
   config.useConvexHull = model.value("useConvexHull").toBool(config.useConvexHull);
   config.modelUseEdges = model.value("modelUseEdges").toBool(config.modelUseEdges);
+  config.modelType = model.value("modelType").toString("shape");
 
   const QJsonObject angleRange = model.value("angleRange").toObject();
   config.angleStartDegrees = angleRange.value("start").toDouble(config.angleStartDegrees);
   config.angleEndDegrees = angleRange.value("end").toDouble(config.angleEndDegrees);
   config.angleStepDegrees = angleRange.value("step").toDouble(config.angleStepDegrees);
+  if (angleRange.contains("reference"))
+  {
+    config.referenceAngleDegrees = angleRange.value("reference").toDouble(0.0);
+    config.hasReferenceAngle = true;
+  }
 
   const QJsonArray contour = model.value("contour").toArray();
   for (const QJsonValue& value : contour)
@@ -454,11 +474,18 @@ SurfaceModelConfig RecipeManager::loadSurfaceModel(const QString& cameraId) cons
     config.contour.append(pointFromJson(value.toObject()));
   }
 
-  config.hasModel = config.searchRoi.isValid() && !config.contour.isEmpty() && !config.templateImagePath.isEmpty();
+  if (config.modelType == "template")
+  {
+    config.hasModel = config.searchRoi.isValid() && !config.templateImagePath.isEmpty();
+  }
+  else
+  {
+    config.hasModel = config.searchRoi.isValid() && !config.contour.isEmpty();
+  }
   return config;
 }
 
-bool RecipeManager::saveSurfaceModel(const QString& cameraId, const QRect& searchRoi, const QVector<QPoint>& contour, const QString& templateImagePath, QString* errorMessage) const
+bool RecipeManager::saveSurfaceModel(const QString& cameraId, const QRect& searchRoi, const QVector<QPoint>& contour, const QString& templateImagePath, QString* errorMessage, double referenceAngleDegrees) const
 {
   const QString path = cameraRecipePath(cameraId);
   QJsonObject root;
@@ -499,6 +526,10 @@ bool RecipeManager::saveSurfaceModel(const QString& cameraId, const QRect& searc
   {
     angleRange["step"] = SurfaceModelConfig().angleStepDegrees;
   }
+  if (!std::isnan(referenceAngleDegrees))
+  {
+    angleRange["reference"] = referenceAngleDegrees;
+  }
   model["angleRange"] = angleRange;
 
   QJsonArray contourArray;
@@ -507,6 +538,28 @@ bool RecipeManager::saveSurfaceModel(const QString& cameraId, const QRect& searc
     contourArray.append(pointToJson(point));
   }
   model["contour"] = contourArray;
+
+  surfaceLocalization["model"] = model;
+  tools["surfaceLocalization"] = surfaceLocalization;
+  root["tools"] = tools;
+
+  return saveJsonObject(path, root, errorMessage);
+}
+
+bool RecipeManager::saveSurfaceModelType(const QString& cameraId, const QString& modelType, QString* errorMessage) const
+{
+  const QString path = cameraRecipePath(cameraId);
+  QJsonObject root;
+  loadJsonObject(path, root);
+
+  root["cameraId"] = cameraId;
+
+  QJsonObject tools = root.value("tools").toObject();
+  QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
+  pruneSurfaceLocalizationForMethod(surfaceLocalization, "model");
+
+  QJsonObject model = surfaceLocalization.value("model").toObject();
+  model["modelType"] = modelType;
 
   surfaceLocalization["model"] = model;
   tools["surfaceLocalization"] = surfaceLocalization;

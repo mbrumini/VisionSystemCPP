@@ -45,6 +45,11 @@ QString measurementItemLabel(const MeasurementRecipeConfig& config)
     type = "line_line_distance";
     criterion = "max";
   }
+  else if (type == "arc_arc_distance_min")
+  {
+    type = "arc_arc_distance";
+    criterion = "min";
+  }
   const QString criterionLabel = criterion == "min" ? "MIN" : (criterion == "max" ? "MAX" : "MEDIA");
   return QString("%1 | %2 | %3").arg(name, type, criterionLabel);
 }
@@ -679,6 +684,10 @@ void MainWindowMeasurementModule::showMeasurementPanel(const CameraConfig& camer
   m_pickSecondaryCombo = nullptr;
   m_nextPickTarget = 0;
   refreshMeasurementSources(camera);
+  if (context().geometry)
+  {
+    context().geometry->showRuntimeGeometryOverlay(camera);
+  }
 
   auto* panel = new QWidget(toolsContainer());
   auto* layout = new QVBoxLayout(panel);
@@ -695,6 +704,9 @@ void MainWindowMeasurementModule::showMeasurementPanel(const CameraConfig& camer
   auto* buttonLayout = new QGridLayout(buttonGrid);
   buttonLayout->setContentsMargins(0, 0, 0, 0);
   buttonLayout->setSpacing(6);
+  buttonLayout->setColumnStretch(0, 1);
+  buttonLayout->setColumnStretch(1, 1);
+  buttonLayout->setColumnStretch(2, 1);
 
   auto* pointPointButton = createTouchIconButton("pointPointDistance", tr("actions.pointPointDistance"), panel);
   QObject::connect(pointPointButton, &QPushButton::clicked, window(), [this, camera]() {
@@ -714,23 +726,29 @@ void MainWindowMeasurementModule::showMeasurementPanel(const CameraConfig& camer
   });
   buttonLayout->addWidget(lineLineButton, 0, 2);
 
-  auto* circleDiameterButton = createTouchIconButton("circleDiameterMeasure", tr("actions.circleDiameterMeasure"), panel);
-  QObject::connect(circleDiameterButton, &QPushButton::clicked, window(), [this, camera]() {
-    showCircleDiameterPanel(camera);
-  });
-  buttonLayout->addWidget(circleDiameterButton, 0, 3);
-
   auto* lineAngleButton = createTouchIconButton("lineLineAngle", tr("actions.lineLineAngle"), panel);
   QObject::connect(lineAngleButton, &QPushButton::clicked, window(), [this, camera]() {
     showLineLineAnglePanel(camera);
   });
   buttonLayout->addWidget(lineAngleButton, 1, 0);
 
+  auto* arcArcButton = createTouchIconButton("arcArcDistance", tr("actions.arcArcDistance"), panel);
+  QObject::connect(arcArcButton, &QPushButton::clicked, window(), [this, camera]() {
+    showArcArcDistancePanel(camera);
+  });
+  buttonLayout->addWidget(arcArcButton, 1, 1);
+
+  auto* circleDiameterButton = createTouchIconButton("circleDiameterMeasure", tr("actions.circleDiameterMeasure"), panel);
+  QObject::connect(circleDiameterButton, &QPushButton::clicked, window(), [this, camera]() {
+    showCircleDiameterPanel(camera);
+  });
+  buttonLayout->addWidget(circleDiameterButton, 1, 2);
+
   auto* realValuesButton = createTouchIconButton("tolerances", tr("tools.tolerances"), panel);
   QObject::connect(realValuesButton, &QPushButton::clicked, window(), [this, camera]() {
     showTolerancesDialog(camera);
   });
-  buttonLayout->addWidget(realValuesButton, 1, 1);
+  buttonLayout->addWidget(realValuesButton, 2, 0);
 
   auto* backButton = createTouchIconButton("back",
     GeometryPanelNavigation::backLabel(context(), camera, tr("commands.backToCameraTools")),
@@ -741,7 +759,7 @@ void MainWindowMeasurementModule::showMeasurementPanel(const CameraConfig& camer
       context().showCameraToolList(camera);
     }
   });
-  buttonLayout->addWidget(backButton, 1, 2);
+  buttonLayout->addWidget(backButton, 2, 1);
   layout->addWidget(buttonGrid);
   layout->addStretch(1);
 

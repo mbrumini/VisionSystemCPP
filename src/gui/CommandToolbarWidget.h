@@ -20,6 +20,7 @@ public:
                  const QString& help);
   void setStatusText(const QString& text);
   void setRecipeText(const QString& text);
+  void setVersionText(const QString& text);
 
   void setStartHandler(std::function<void()> handler);
   void setStopHandler(std::function<void()> handler);
@@ -39,4 +40,5 @@ private:
   QToolButton* m_helpButton = nullptr;
   QLabel* m_statusLabel = nullptr;
   QLabel* m_recipeLabel = nullptr;
+  QLabel* m_versionLabel = nullptr;
 };

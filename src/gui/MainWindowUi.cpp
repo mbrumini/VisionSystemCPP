@@ -1,5 +1,6 @@
 #include "gui/MainWindow.h"
 
+#include "app/AppVersion.h"
 #include "gui/modules/MainWindowCameraProfile.h"
 
 #include "gui/SurfaceLocalizationPanelWidget.h"
@@ -54,7 +55,8 @@ void MainWindow::resizeEvent(QResizeEvent* event)
 
 void MainWindow::buildUi()
 {
-  setWindowTitle("VisionSystemCPP");
+  const QString appVersion = AppVersion::displayString();
+  setWindowTitle(QString("VisionSystemCPP %1").arg(appVersion));
   resize(1600, 900);
   buildMenu();
   if (!m_simulationTimer)
@@ -90,6 +92,7 @@ void MainWindow::buildUi()
   m_commandToolbar->setReloadHandler([this]() { loadConfiguration(); });
   m_commandToolbar->setFullscreenHandler([this]() { toggleFullScreen(); });
   m_commandToolbar->setHelpHandler([this]() { showHelp(); });
+  m_commandToolbar->setVersionText(QString("v%1").arg(AppVersion::displayString()));
   rootLayout->addWidget(m_commandToolbar, 0, 0, 1, 2);
 
   m_gridPage = new QWidget(root);
@@ -207,6 +210,10 @@ void MainWindow::buildUi()
   auto* panelLayout = new QVBoxLayout(panel);
   panelLayout->setContentsMargins(10, 10, 10, 10);
   panelLayout->setSpacing(8);
+
+  auto* versionLine = new QLabel(QString("VisionSystemCPP v%1").arg(appVersion), panel);
+  versionLine->setObjectName("appVersionLabel");
+  panelLayout->addWidget(versionLine);
 
   m_systemStatus = new QLabel(trText("status.systemReady"), panel);
   m_systemStatus->setObjectName("panelStatus");

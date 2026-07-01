@@ -4,6 +4,8 @@
 #include "gui/modules/MainWindowGeometryModule.h"
 #include "gui/modules/MainWindowContext.h"
 
+#include "gui/ImagePrimitives.h"
+
 #include "gui/SurfaceLocalizationPanelWidget.h"
 #include "gui/SurfaceLocalizationStrategies.h"
 #include "gui/TouchIconButton.h"
@@ -16,12 +18,48 @@
 #include <QSlider>
 #include <QSpinBox>
 
+#include <algorithm>
+#include <cmath>
 #include <functional>
+
+namespace
+{
+ImageRotatedRect defaultSurfaceSearchArea(const QPixmap& preview)
+{
+  if (preview.isNull())
+  {
+    return ImageRotatedRect{QPointF(320.0, 240.0), QSizeF(420.0, 280.0), 0.0};
+  }
+
+  const double width = std::max(120.0, preview.width() * 0.55);
+  const double height = std::max(80.0, preview.height() * 0.45);
+  return ImageRotatedRect{
+    QPointF(preview.width() * 0.5, preview.height() * 0.5),
+    QSizeF(width, height),
+    0.0};
+}
+
+ImageRotatedRect imageAreaFromRecipeRotatedRoi(const RecipeRotatedRoi& roi)
+{
+  return ImageRotatedRect{roi.center, roi.size, roi.angleDegrees};
+}
+
+RecipeRotatedRoi recipeRotatedRoiFromImageArea(const ImageRotatedRect& area)
+{
+  RecipeRotatedRoi roi;
+  roi.center = area.center;
+  roi.size = area.size;
+  roi.angleDegrees = area.angleDegrees;
+  roi.valid = area.size.width() > 2.0 && area.size.height() > 2.0;
+  return roi;
+}
+}
 
 MainWindowSurfaceModule::MainWindowSurfaceModule(MainWindowContext& context)
   : MainWindowModuleBase(context)
 {
 }
+
 void MainWindowSurfaceModule::showSurfaceLocalizationStrategyPanel(const CameraConfig& camera, const QString& strategyId)
 {
   context().deactivateImageDrawingTools();
@@ -141,7 +179,30 @@ void MainWindowSurfaceModule::activateSurfaceDefectRoiDrawing(const CameraConfig
   }
 
   showStoredSurfaceDefectAoe(camera);
-  largeImage()->setRoiDrawingEnabled(true);
+  RecipeRotatedRoi storedRoi;
+  ImageRotatedRect area;
+  if (recipes().loadSurfaceDefectRotatedRoi(camera.id, storedRoi))
+  {
+    area = imageAreaFromRecipeRotatedRoi(storedRoi);
+  }
+  else
+  {
+    QRect roi;
+    if (recipes().loadSurfaceDefectRoi(camera.id, roi))
+    {
+      area.center = roi.center() + QPointF(0.5, 0.5);
+      area.size = roi.size();
+      area.angleDegrees = 0.0;
+    }
+    else
+    {
+      area = defaultSurfaceSearchArea(selectedPreview());
+    }
+  }
+
+  largeImage()->clearRoi();
+  largeImage()->setGeometryArea(area);
+  largeImage()->setGeometryAreaEditingEnabled(true);
   *context().activeDrawingRecipe = MainWindowActiveDrawingRecipe::SurfaceDefects;
   log(tr("log.surfaceRoiDrawing") + ": " + camera.id);
 }
@@ -298,13 +359,21 @@ void MainWindowSurfaceModule::showStoredSurfaceDefectAoe(const CameraConfig& cam
   }
 
   QRect roi;
-  if (recipes().loadSurfaceDefectRoi(camera.id, roi))
+  RecipeRotatedRoi rotatedRoi;
+  if (recipes().loadSurfaceDefectRotatedRoi(camera.id, rotatedRoi))
   {
+    largeImage()->clearRoi();
+    largeImage()->setGeometryArea(imageAreaFromRecipeRotatedRoi(rotatedRoi));
+  }
+  else if (recipes().loadSurfaceDefectRoi(camera.id, roi))
+  {
+    largeImage()->clearGeometryArea();
     largeImage()->setRoi(roi);
   }
   else
   {
     largeImage()->clearRoi();
+    largeImage()->clearGeometryArea();
   }
 
   largeImage()->setSearchPolygon(recipes().loadSurfaceDefectPolygon(camera.id));

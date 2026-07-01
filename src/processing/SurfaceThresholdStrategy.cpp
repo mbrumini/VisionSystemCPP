@@ -224,10 +224,11 @@ void applyThresholdLocalization(
   result.localization.referencePositiveHalfPlane =
     finalHalfPlane.positiveMass > finalHalfPlane.negativeMass;
 
-  const double angle = std::atan2(xDirection.y, xDirection.x);
+  double angle = std::atan2(xDirection.y, xDirection.x);
 
-  const cv::Point2d xDir(std::cos(angle), std::sin(angle));
-  const cv::Point2d yDir(-xDir.y, xDir.x);
+  cv::Point2d xDir(std::cos(angle), std::sin(angle));
+  cv::Point2d yDir(-xDir.y, xDir.x);
+  assignLocalizationAxesLongSideOnY(angle, xDir, yDir, mainBlob.contour);
   const cv::Rect bounding = mainBlob.boundingRect;
   const double axisLength = std::max(20.0, 0.55 * std::max(bounding.width, bounding.height));
   result.localization.angleRadians = angle;

@@ -20,4 +20,5 @@ public:
   void ensureRecipeCameraFolders();
   void setActiveRecipe(const QString& recipeId);
   void refreshSelectedCameraRecipeData();
+  void applyRecipeAcquisitionSettings();
 };

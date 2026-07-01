@@ -68,6 +68,10 @@ QString measurementName(const MeasurementResult& measurement)
       name += " MEDIA";
     }
   }
+  else if (measurement.type == "arc_arc_distance_min")
+  {
+    name += " MIN";
+  }
   return name;
 }
 

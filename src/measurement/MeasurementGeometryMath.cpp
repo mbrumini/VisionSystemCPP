@@ -1,9 +1,11 @@
 #include "measurement/MeasurementGeometryMath.h"
 
+#include "geometry/ArcGeometry.h"
 #include "geometry/ConstructedGeometryMath.h"
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 namespace MeasurementGeometryMath
 {
 namespace
@@ -262,6 +264,85 @@ bool circleDiameterPixels(const CircleGeometry& circle, double& diameterPixels)
   }
   diameterPixels = circle.radius * 2.0;
   return true;
+}
+
+bool arcArcMinimumDistance(const ArcGeometry& arcA,
+                           const ArcGeometry& arcB,
+                           double& distancePixels,
+                           PointGeometry* pointOnA,
+                           PointGeometry* pointOnB)
+{
+  if (arcA.radius <= kEpsilon || arcB.radius <= kEpsilon || !arcA.meta.valid || !arcB.meta.valid)
+  {
+    return false;
+  }
+
+  auto considerPair = [&](const cv::Point2d& pointA, const cv::Point2d& pointB) {
+    const cv::Point2d delta = pointA - pointB;
+    const double distance = std::sqrt(delta.dot(delta));
+    if (distance >= distancePixels)
+    {
+      return;
+    }
+
+    distancePixels = distance;
+    const double score = std::min(arcA.meta.score, arcB.meta.score);
+    if (pointOnA)
+    {
+      fillMeasurementPoint(*pointOnA,
+                           pointA,
+                           QString("%1_distance_anchor_%2").arg(arcA.meta.id, arcB.meta.id),
+                           "measurement_arc_arc_anchor",
+                           score,
+                           true);
+    }
+    if (pointOnB)
+    {
+      fillMeasurementPoint(*pointOnB,
+                           pointB,
+                           QString("%1_distance_foot_%2").arg(arcA.meta.id, arcB.meta.id),
+                           "measurement_arc_arc_projection",
+                           score,
+                           true);
+    }
+  };
+
+  auto evaluatePointOnA = [&](const cv::Point2d& pointA) {
+    const cv::Point2d pointB = closestPointOnArc(arcB, pointA);
+    considerPair(pointA, pointB);
+  };
+
+  auto evaluatePointOnB = [&](const cv::Point2d& pointB) {
+    const cv::Point2d pointA = closestPointOnArc(arcA, pointB);
+    considerPair(pointA, pointB);
+  };
+
+  distancePixels = std::numeric_limits<double>::infinity();
+  evaluatePointOnA(arcStartPoint(arcA));
+  evaluatePointOnA(arcEndPoint(arcA));
+  evaluatePointOnB(arcStartPoint(arcB));
+  evaluatePointOnB(arcEndPoint(arcB));
+
+  constexpr int kSamplesPerArc = 64;
+  const double spanA = arcSpanRadians(arcA);
+  const double spanB = arcSpanRadians(arcB);
+  for (int sample = 0; sample <= kSamplesPerArc; ++sample)
+  {
+    const double angleA = arcA.startAngleRadians + spanA * static_cast<double>(sample) / static_cast<double>(kSamplesPerArc);
+    evaluatePointOnA(arcPointAt(arcA.center, arcA.radius, angleA));
+  }
+  for (int sample = 0; sample <= kSamplesPerArc; ++sample)
+  {
+    const double angleB = arcB.startAngleRadians + spanB * static_cast<double>(sample) / static_cast<double>(kSamplesPerArc);
+    evaluatePointOnB(arcPointAt(arcB.center, arcB.radius, angleB));
+  }
+
+  if (!std::isfinite(distancePixels))
+  {
+    return false;
+  }
+
+  return distancePixels >= 0.0;
 }
 
 bool lineLineAngleDegrees(const LineGeometry& lineA, const LineGeometry& lineB, double& angleDegrees)

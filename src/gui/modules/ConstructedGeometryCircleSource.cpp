@@ -1,7 +1,9 @@
 #include "gui/modules/ConstructedGeometryCircleSource.h"
 
 #include "geometry/GeometrySet.h"
+#include "geometry/ArcGeometry.h"
 #include "gui/geometry/GeometryDisplayNames.h"
+#include "measurement/MeasurementGeometryMath.h"
 
 QVector<ConstructedGeometryCircleSource> constructedGeometryCircleSources(const QVector<CircleGeometry>& circles)
 {
@@ -84,4 +86,41 @@ bool constructedGeometryCircleSourceValue(const GeometrySet& set, const QString&
   }
 
   return false;
+}
+
+const ArcGeometry* findArcByMetaId(const GeometrySet& set, const QString& id)
+{
+  const QString metaId = MeasurementGeometryMath::geometrySourceMetaId(id);
+  for (const ArcGeometry& arc : set.arcs)
+  {
+    if (arc.meta.id == metaId)
+    {
+      return &arc;
+    }
+  }
+  return nullptr;
+}
+
+QVector<ConstructedGeometryCircleSource> constructedGeometryArcSources(const GeometrySet& set,
+                                                                       const QHash<QString, QString>& aliases)
+{
+  QVector<ConstructedGeometryCircleSource> sources;
+  sources.reserve(set.arcs.size());
+
+  for (const ArcGeometry& arc : set.arcs)
+  {
+    CircleGeometry circle;
+    circle.meta = arc.meta;
+    circle.center = arc.center;
+    circle.radius = arc.radius;
+    circle.meanError = arc.meanError;
+
+    ConstructedGeometryCircleSource source;
+    source.id = arc.meta.id;
+    source.label = GeometryDisplayNames::circleSourceLabel(circle, aliases, true);
+    source.arcSource = true;
+    sources.append(source);
+  }
+
+  return sources;
 }

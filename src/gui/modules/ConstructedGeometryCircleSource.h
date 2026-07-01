@@ -1,6 +1,7 @@
 #pragma once
 
 #include "geometry/CircleGeometry.h"
+#include "geometry/ArcGeometry.h"
 #include "geometry/GeometrySet.h"
 
 #include <QHash>
@@ -24,3 +25,7 @@ QVector<ConstructedGeometryCircleSource> constructedGeometryCircleSources(
   const QHash<QString, QString>& aliases = QHash<QString, QString>());
 const CircleGeometry* findConstructedGeometryCircleSource(const QVector<CircleGeometry>& circles, const QString& id);
 bool constructedGeometryCircleSourceValue(const GeometrySet& set, const QString& id, CircleGeometry& result);
+const ArcGeometry* findArcByMetaId(const GeometrySet& set, const QString& id);
+QVector<ConstructedGeometryCircleSource> constructedGeometryArcSources(
+  const GeometrySet& set,
+  const QHash<QString, QString>& aliases = QHash<QString, QString>());

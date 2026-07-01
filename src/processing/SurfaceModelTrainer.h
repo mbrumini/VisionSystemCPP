@@ -22,4 +22,11 @@ public:
     const std::vector<cv::Rect>& exclusionRects = {},
     int edgeSensitivity = 60,
     bool useConvexHull = false) const;
+
+  SurfaceModelTrainingResult trainFromRotatedRoi(
+    const cv::Mat& input,
+    const cv::RotatedRect& searchRoi,
+    const std::vector<cv::Rect>& exclusionRects = {},
+    int edgeSensitivity = 60,
+    bool useConvexHull = false) const;
 };

@@ -5,6 +5,7 @@
 #include "gui/UsbCameraAssignmentDialog.h"
 #include "gui/modules/MainWindowImagingModule.h"
 #include "gui/modules/MainWindowSetupModule.h"
+#include "gui/modules/MainWindowThreadModule.h"
 
 #include <QDir>
 #include <QFileDialog>
@@ -428,11 +429,30 @@ void MainWindowCameraConfigModule::acquireCameraSampleImage(const CameraConfig& 
     return;
   }
 
+  cameraRuntime()[camera.id].clearCurrentPose(camera.id);
+  cameraRuntime()[camera.id].clearGeometries();
+  if (context().thread)
+  {
+    context().thread->clearThreadOverlays(camera.id);
+  }
+  if (context().deactivateImageDrawingTools)
+  {
+    context().deactivateImageDrawingTools();
+  }
+
   if (camera.id == selectedCameraId())
   {
     selectedImagePath() = samplePath;
     selectedPreview() = imaging.matToPixmap(sample);
     largeImage()->setImage(selectedPreview());
+    largeImage()->clearRoi();
+    largeImage()->clearExclusionRects();
+    largeImage()->clearCircles();
+    largeImage()->clearGeometryArea();
+    largeImage()->clearGeometryPoints();
+    largeImage()->clearGeometryLines();
+    largeImage()->clearGeometryOverlay();
+    largeImage()->clearDetectedCircle();
     if (context().setup)
     {
       context().setup->showCameraSetupPanel(camera);

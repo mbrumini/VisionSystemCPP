@@ -103,6 +103,11 @@ void MainWindowLocalizationModule::testLocalization(const CameraConfig& camera)
         selectedPreview() = context().imaging->matToPixmap(result.diagnosticImage);
         largeImage()->setImage(selectedPreview());
         largeImage()->setRoi(roi);
+        largeImage()->clearCircles();
+        largeImage()->clearDetectedCircle();
+        largeImage()->clearGeometryArea();
+        largeImage()->clearGeometryPoints();
+        largeImage()->clearGeometryLines();
       }
       context().lastLocalizationResults->insert(camera.id, result);
 

@@ -1,10 +1,12 @@
 #include "gui/modules/MainWindowRecipeModule.h"
 
+#include "config/RecipeJsonUtils.h"
 #include "gui/geometry/GeometryOverlay.h"
 #include "gui/modules/MainWindowCameraProfile.h"
 #include "gui/modules/MainWindowGeometryModule.h"
 #include "gui/modules/MainWindowImagingModule.h"
 #include "gui/modules/MainWindowSetupModule.h"
+#include "gui/modules/MainWindowThreadModule.h"
 #include "runtime/CameraRuntime.h"
 
 #include <QFileDialog>
@@ -211,6 +213,11 @@ void MainWindowRecipeModule::setActiveRecipe(const QString& recipeId)
   for (const CameraConfig& camera : config().activeCameras())
   {
     cameraRuntime()[camera.id].clearCurrentPose(camera.id);
+    cameraRuntime()[camera.id].clearGeometries();
+  }
+  if (context().thread)
+  {
+    context().thread->clearThreadOverlays();
   }
   if (!selectedCameraId().isEmpty() && context().imaging)
   {
@@ -233,6 +240,7 @@ void MainWindowRecipeModule::setActiveRecipe(const QString& recipeId)
   }
   log(tr("log.activeRecipe") + ": " + recipes().recipeId());
   ensureRecipeCameraFolders();
+  applyRecipeAcquisitionSettings();
   refreshSelectedCameraRecipeData();
   if (!selectedCameraId().isEmpty() && context().setup)
   {
@@ -263,7 +271,7 @@ void MainWindowRecipeModule::refreshSelectedCameraRecipeData()
     largeImage()->setSearchPolygon(recipes().loadSurfaceDefectPolygon(selectedCameraId()));
     largeImage()->clearCircles();
     GeometryOverlay overlay;
-    if (context().geometry)
+    if (context().geometry && recipes().hasSurfaceLocalizationSetup(selectedCameraId()))
     {
       context().geometry->appendCurrentPartPoseOverlay(selectedCamera(), overlay);
     }
@@ -283,4 +291,43 @@ void MainWindowRecipeModule::refreshSelectedCameraRecipeData()
 
   largeImage()->setExclusionRects(recipes().loadLocalizationExclusionRects(selectedCameraId()));
   largeImage()->clearSearchPolygon();
+}
+
+void MainWindowRecipeModule::applyRecipeAcquisitionSettings()
+{
+  const QString camerasConfigPath = RecipeJsonUtils::appPath("config/cameras.json");
+
+  for (const CameraConfig& camera : config().activeCameras())
+  {
+    CameraAcquisitionConfig acquisition = camera.acquisition;
+    if (!recipes().loadCameraAcquisitionSettings(camera.id, acquisition))
+    {
+      continue;
+    }
+
+    config().updateCameraAcquisitionSettings(camera.id, acquisition);
+
+    QString error;
+    if (!config().saveCameraAcquisitionSettings(camerasConfigPath, camera.id, acquisition, &error))
+    {
+      log(error);
+      continue;
+    }
+
+    CameraRuntime& runtime = cameraRuntime()[camera.id];
+    runtime.setIntervalMs(acquisition.frameIntervalMs);
+    if (!runtime.applyAcquisitionSettings(acquisition, &error) && !error.isEmpty())
+    {
+      log(error);
+    }
+
+    if (selectedCameraId() == camera.id)
+    {
+      selectedCamera().acquisition = acquisition;
+      if (runtime.running() && context().simulationTimer)
+      {
+        context().simulationTimer->start(runtime.intervalMs());
+      }
+    }
+  }
 }

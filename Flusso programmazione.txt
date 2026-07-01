@@ -1,0 +1,88 @@
+Flusso programmazione ricetta
+=============================
+
+Premessa: per modalita live si intende acquisizione temporizzata con trigger software.
+
+Regola generale sul live:
+- il live e' attivo di default solo nella pagina Acquisizione camera, dove serve per regolare gain e shutter;
+- fuori da Acquisizione camera il live e' spento di default;
+- fuori da Acquisizione camera il live si attiva solo con pulsante esplicito;
+- un grab singolo non modifica il campione salvato;
+- il pulsante Acquisisci campione salva esplicitamente l'immagine campione;
+- nelle fasi di prova su altri pezzi si puo' usare il live, ma quando si salva o si finisce si torna sempre al pezzo campione salvato.
+
+Nuova ricetta
+-------------
+
+1. Inserisco il nome dell'articolo.
+2. Seleziono una telecamera. Il flusso e' uguale per tutte.
+3. Vado in Setup, poi seleziono Acquisizione camera per aggiustare gain e shutter.
+4. In Acquisizione camera il live e' abilitato di default.
+5. Quando tutto e' a posto premo Salva:
+   - si disattiva la modalita live;
+   - si torna alla pagina precedente;
+   - l'ultima immagine acquisita resta a schermo.
+6. Qui posso fare un grab singolo.
+7. Posso premere Acquisisci campione per salvare il campione della ricetta.
+8. Posso impostare AOI se mi interessa; altrimenti tutta l'immagine e' AOI.
+9. Anche se faccio altri grab, l'immagine campione resta sempre quella salvata.
+
+Localizzazione
+--------------
+
+1. Premo Localizzazione.
+2. Seleziono la modalita che funziona meglio con il pezzo.
+3. Imposto la strategia.
+4. Durante gli aggiustamenti devo vedere un responso grafico:
+   - contorno, se previsto dalla strategia;
+   - assi centro X/Y quando la localizzazione trova il pezzo.
+5. Se tutto va bene salvo e confermo.
+6. Se non va bene cancello e provo un'altra strategia.
+7. Se cancello o non salvo, non deve rimanere in memoria nessuna localizzazione provvisoria.
+8. Dopo il salvataggio di una strategia valida, gli assi X/Y devono essere sempre visibili nelle schermate di programmazione.
+9. Se non c'e' una strategia di localizzazione valida, il sistema deve mostrare un avviso.
+
+Prova live in localizzazione:
+- fino a qui si lavora sul pezzo campione;
+- se voglio provare la strategia su altri pezzi posso far partire il live con pulsante esplicito;
+- durante il live posso vedere contorno e assi sul pezzo corrente;
+- quando ho finito e premo Salva o esco dalla prova, il sistema torna sempre sul pezzo campione salvato.
+
+Geometrie
+---------
+
+1. Procedo con le geometrie sempre sul pezzo campione.
+2. Se la localizzazione e' salvata e valida:
+   - visualizzo sempre gli assi X/Y della localizzazione;
+   - le geometrie sono legate a centro massa e orientamento;
+   - in prova live le geometrie seguono il pezzo localizzato.
+3. Se la localizzazione non e' salvata o non e' valida:
+   - posso comunque costruire geometrie;
+   - compare un avviso;
+   - le geometrie sono in coordinate immagine fisse;
+   - le scansioni avvengono sempre nello stesso punto immagine.
+4. Quando costruisco una geometria deve rimanere segnata nella grafica.
+5. Deve essere chiaro se ho gia' fatto una linea, un cerchio, un arco o un edge, per evitare di rifarlo due volte.
+6. Anche qui posso andare in live con pulsante esplicito per vedere come si comportano le geometrie su altri pezzi.
+7. Quando salvo o finisco la prova live, il sistema torna sempre al pezzo campione.
+
+Approccio alle modifiche software
+---------------------------------
+
+Procedere passo passo.
+Non modificare tutto in blocco.
+Ogni modifica deve essere piccola, provabile e confermata prima di passare alla successiva.
+
+Segnalazioni da test
+--------------------
+
+Test passo 1 - nuova ricetta "test passo 1" con pezzo campione da simulatore:
+- all'avvio era caricato un articolo precedente;
+- creato nuovo articolo;
+- prima dell'arrivo immagine il sistema era "NO IMAGE";
+- dopo invio del pezzo campione dal simulatore si vede il pezzo nuovo;
+- restano pero' rimasugli grafici/overlay del pezzo precedente;
+- entrando in Filettatura e cancellando l'overlay, i rimasugli spariscono;
+- rimaneva comunque un cerchio da qualche parte;
+- ipotesi: al cambio articolo/campione restano in memoria oggetti runtime o overlay della ricetta precedente;
+- da verificare dopo: pulizia completa di overlay, geometrie runtime, pose, filettatura, cerchi e stato editor quando cambia articolo o viene acquisito un nuovo campione.

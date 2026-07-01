@@ -191,6 +191,12 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
   }
   const double angle = std::atan2(xDirection.y, xDirection.x);
 
+  cv::Point2d xDir(std::cos(angle), std::sin(angle));
+  cv::Point2d yDir(-xDir.y, xDir.x);
+  double orientedAngle = angle;
+  assignLocalizationAxesLongSideOnY(orientedAngle, xDir, yDir, edgePixels);
+  xDirection = xDir;
+
   if (createDiagnosticImage && drawContours && selectedInternalContourIndex >= 0)
   {
     cv::drawContours(
@@ -200,9 +206,6 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
       cv::Scalar(0, 165, 255),
       2);
   }
-
-  const cv::Point2d xDir(std::cos(angle), std::sin(angle));
-  const cv::Point2d yDir(-xDir.y, xDir.x);
 
   const cv::Rect bounding = cv::boundingRect(edgePixels);
   const double axisLength = std::max(20.0, 0.55 * std::max(bounding.width, bounding.height));
@@ -221,7 +224,7 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
   result.localization.found = true;
   result.localization.method = "edge_pca";
   result.localization.center = center;
-  result.localization.angleRadians = angle;
+  result.localization.angleRadians = orientedAngle;
   result.localization.score = std::min(1.0, static_cast<double>(edgePixels.size()) / static_cast<double>(std::max(1, roi.area()) / 20));
   result.localization.inputPoints = static_cast<int>(edgePixels.size());
   result.localization.usedPoints = static_cast<int>(edgePixels.size());
@@ -416,6 +419,12 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
   }
   const double angle = std::atan2(xDirection.y, xDirection.x);
 
+  cv::Point2d xDir(std::cos(angle), std::sin(angle));
+  cv::Point2d yDir(-xDir.y, xDir.x);
+  double orientedAngle = angle;
+  assignLocalizationAxesLongSideOnY(orientedAngle, xDir, yDir, edgePixels);
+  xDirection = xDir;
+
   if (createDiagnosticImage && drawContours && selectedInternalContourIndex >= 0)
   {
     cv::drawContours(
@@ -425,9 +434,6 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
       cv::Scalar(0, 165, 255),
       2);
   }
-
-  const cv::Point2d xDir(std::cos(angle), std::sin(angle));
-  const cv::Point2d yDir(-xDir.y, xDir.x);
 
   const cv::Rect bounding = cv::boundingRect(edgePixels);
   const double axisLength = std::max(20.0, 0.55 * std::max(bounding.width, bounding.height));
@@ -446,7 +452,7 @@ SurfaceDefectResult SurfacePcaStrategy::locateByEdgePca(
   result.localization.found = true;
   result.localization.method = "edge_polygon_pca";
   result.localization.center = center;
-  result.localization.angleRadians = angle;
+  result.localization.angleRadians = orientedAngle;
   result.localization.score = std::min(1.0, static_cast<double>(edgePixels.size()) / static_cast<double>(std::max(1, roi.area()) / 20));
   result.localization.inputPoints = static_cast<int>(edgePixels.size());
   result.localization.usedPoints = static_cast<int>(edgePixels.size());

@@ -199,6 +199,8 @@
     "constructedGeometryNote": "Crea geometrie calcolate partendo dalle geometrie misurate dagli edge.",
     "sourceLineA": "Linea A",
     "sourceLineB": "Linea B",
+    "sourceArcA": "Arco A",
+    "sourceArcB": "Arco B",
     "sourceLine": "Linea",
     "sourceCircle": "Cerchio",
     "sourceCircleA": "Cerchio A",
@@ -414,6 +416,9 @@
     "measurementLineLineMissing": "Misura linea-linea non disponibile: scegli 2 linee distinte trovate",
     "measurementLineLineInvalid": "Misura linea-linea non disponibile: linee non parallele o non valide",
     "measurementLineLineCreated": "Distanza linea-linea creata",
+    "measurementArcArcMissing": "Misura arco-arco non disponibile: scegli due archi trovati",
+    "measurementArcArcInvalid": "Misura arco-arco non disponibile: archi non validi",
+    "measurementArcArcCreated": "Distanza minima arco-arco creata",
     "measurementCircleDiameterMissing": "Misura diametro non disponibile: scegli un cerchio trovato",
     "measurementCircleDiameterInvalid": "Misura diametro non disponibile: cerchio non valido",
     "measurementCircleDiameterCreated": "Diametro cerchio creato",
@@ -525,6 +530,7 @@
     "pointPointDistance": "Distanza punto-punto",
     "pointLineDistance": "Distanza punto-linea",
     "lineLineDistance": "Distanza linea-linea",
+    "arcArcDistance": "Distanza arco-arco MIN",
     "circleDiameterMeasure": "Diametro cerchio",
     "lineLineAngle": "Angolo linea-linea",
     "searchRoi": "AOE ricerca",
@@ -627,6 +633,7 @@
   "hints": {
     "measurementNoPointSources": "Nessun punto disponibile. Crea punti edge, geometria costruita (centri, intersezioni) o cerchi/archi rilevati.",
     "measurementNoPointSourcesUseLines": "Nessun punto su questa camera. Hai solo linee: usa Distanza linea-linea oppure aggiungi punti/geometria costruita.",
-    "measurementNoLineSources": "Servono almeno due linee rilevate o costruite per questa misura."
+    "measurementNoLineSources": "Servono almeno due linee rilevate o costruite per questa misura.",
+    "measurementNoArcSources": "Servono almeno due archi rilevati per questa misura.",
   }
 }

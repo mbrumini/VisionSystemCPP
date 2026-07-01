@@ -40,10 +40,12 @@ void MainWindow::applyApplicationStyle()
     "QHeaderView::section{background:#1d2731;color:#eef2f6;border:0;padding:4px;font-weight:600;}"
     "#commandToolbar,#cameraStrip,#measurementResults,#toolIconBar{background:#151c23;border:1px solid #303a45;border-radius:6px;}"
     "#toolbarRecipe{color:#cdd6df;font-weight:600;padding-right:12px;}"
+    "#toolbarVersion{color:#d7dee6;font-weight:700;padding-right:12px;}"
     "#toolbarStatus{color:#35c46a;font-weight:700;}"
     "#measurementResultsTitle{font-weight:700;color:#f4f7fb;}"
     "#largeTitle{font-size:20px;font-weight:700;color:#f4f7fb;}"
     "#panelStatus{font-size:17px;font-weight:700;color:#f4f7fb;}"
+    "#appVersionLabel{font-size:14px;font-weight:700;color:#4d9cff;}"
     "#toolPanelTitle{font-size:15px;font-weight:700;color:#f4f7fb;}"
     "#toolPanelNote{color:#9aa4ad;}"
   );

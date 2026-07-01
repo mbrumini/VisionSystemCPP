@@ -1,5 +1,7 @@
 #include "LocalizationProcessor.h"
 
+#include "processing/SurfaceProcessingUtils.h"
+
 #include <opencv2/imgproc.hpp>
 #include <algorithm>
 #include <cmath>
@@ -144,9 +146,11 @@ LocalizationResult LocalizationProcessor::locateDarkObjectOnLightBackground(
   result.contour = contour;
   result.angleRadians = 0.5 * std::atan2(2.0 * moments.mu11, moments.mu20 - moments.mu02);
 
+  cv::Point2d xDirection(std::cos(result.angleRadians), std::sin(result.angleRadians));
+  cv::Point2d yDirection(-xDirection.y, xDirection.x);
+  assignLocalizationAxesLongSideOnY(result.angleRadians, xDirection, yDirection, contour);
+
   const double axisLength = std::max(40.0, std::max(result.boundingRect.width, result.boundingRect.height) * 0.35);
-  const cv::Point2d xDirection(std::cos(result.angleRadians), std::sin(result.angleRadians));
-  const cv::Point2d yDirection(-xDirection.y, xDirection.x);
   result.xAxisStart = result.center - xDirection * axisLength;
   result.xAxisEnd = result.center + xDirection * axisLength;
   result.yAxisStart = result.center - yDirection * axisLength;

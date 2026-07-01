@@ -26,6 +26,12 @@ bool isMachineRunMode(const MainWindowContext& context)
   return context.machineRunning != nullptr && *context.machineRunning;
 }
 
+bool shouldShowConfiguredGeometryView(const MainWindowContext& context)
+{
+  return context.activeDrawingRecipe == nullptr ||
+         *context.activeDrawingRecipe != MainWindowActiveDrawingRecipe::Localization;
+}
+
 void applyGeometryPromotions(const PartPose& pose,
                              QVector<GeometryLineRuntimeConfig>& lines,
                              QVector<GeometryPointRuntimeConfig>& points,
@@ -148,7 +154,7 @@ void MainWindowGeometryModule::testConfiguredGeometryLinesAsync(const CameraConf
       }
 
       applyGeometryPipelineResult(camera, result);
-      if (camera.id == selectedCameraId())
+      if (camera.id == selectedCameraId() && shouldShowConfiguredGeometryView(context()))
       {
         showRuntimeGeometryOverlay(camera);
       }
@@ -187,6 +193,7 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
 
   const bool updateView = camera.id == selectedCameraId();
   const bool runMode = isMachineRunMode(context());
+  const bool showGeometryView = shouldShowConfiguredGeometryView(context());
   const ConfiguredGeometryDetectInput detectInput = buildConfiguredGeometryInput(
     camera,
     context(),
@@ -197,20 +204,20 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
     circles,
     arcs,
     guideReferenceSize(camera.id),
-    !runMode,
-    !runMode && updateView);
+    !runMode && showGeometryView,
+    !runMode && updateView && showGeometryView);
   const ConfiguredGeometryDetectOutput result = detectConfiguredGeometries(detectInput);
   applyConfiguredGeometryDetectionResult(camera, result);
 
   GeometryOverlay detectedOverlay = result.guideOverlay;
 
-  if (updateView && runMode)
+  if (updateView && runMode && showGeometryView)
   {
     showRuntimeGeometryOverlay(camera);
     return;
   }
 
-  if (updateView && !result.diagnostic.empty())
+  if (updateView && showGeometryView && !result.diagnostic.empty())
   {
     selectedPreview() = context().imaging->matToPixmap(result.diagnostic);
     largeImage()->setImage(selectedPreview());
@@ -219,6 +226,7 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
   }
 
   if (updateView &&
+      showGeometryView &&
       *context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry &&
       m_drawingTarget == DrawingTarget::Line)
   {
@@ -261,6 +269,7 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
   }
 
   if (updateView &&
+      showGeometryView &&
       *context().activeDrawingRecipe == MainWindowActiveDrawingRecipe::Geometry &&
       m_drawingTarget == DrawingTarget::Point)
   {
@@ -268,7 +277,7 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
     return;
   }
 
-  if (updateView)
+  if (updateView && showGeometryView)
   {
     GeometryOverlay setupOverlay = detectedOverlay;
     appendCurrentPartPoseOverlay(camera, setupOverlay);
