@@ -1,0 +1,27 @@
+Titolo: Label misura trascinabile
+Area: Misure
+Parole chiave: quota, numero, label, trascinare, sovrapposizione, posizione fissa
+
+Le label delle misure possono sovrapporsi quando piu' quote hanno geometrie vicine, ad esempio due diametri concentrici o quasi concentrici.
+
+Comportamento desiderato:
+- il valore della misura deve aggiornarsi a ogni frame;
+- il numero deve poter essere trascinato dall'operatore;
+- la posizione scelta deve restare fissa sull'immagine;
+- la label non deve seguire rotazione o traslazione del pezzo.
+
+Procedura:
+1. Creare la misura.
+2. Cliccare sul numero della quota.
+3. Trascinarlo in una zona libera dell'immagine.
+4. Rilasciare.
+5. Verificare che al refresh il numero resti nella posizione scelta.
+
+Regola:
+La posizione label e' una posizione immagine salvata in ricetta. Non e' una coordinata pezzo.
+
+Quando usarla:
+- diametri con numeri sovrapposti;
+- quote parallele vicine;
+- overlay affollati;
+- controlli dove il numero copre un bordo importante.

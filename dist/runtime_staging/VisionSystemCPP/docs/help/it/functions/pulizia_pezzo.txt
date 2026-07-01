@@ -1,0 +1,20 @@
+Titolo: Pulizia pezzo
+Area: Produzione / Immagine
+Parole chiave: sporco, olio, polvere, pezzo, falsi difetti
+
+Sporco, olio o polvere sul pezzo possono sembrare difetti o cambiare gli edge.
+
+Sintomi:
+- macchie casuali;
+- difetti superficiali non ripetibili;
+- edge disturbati;
+- AI che segnala falsi NOK.
+
+Azioni:
+- pulire pezzi campione e test;
+- verificare se il problema segue il pezzo;
+- distinguere sporco accettabile da difetto reale;
+- includere condizioni reali nel dataset se lo sporco e' normale in produzione.
+
+Regola:
+Il sistema vede cio' che c'e' davvero nell'immagine, anche se non e' un difetto di prodotto.

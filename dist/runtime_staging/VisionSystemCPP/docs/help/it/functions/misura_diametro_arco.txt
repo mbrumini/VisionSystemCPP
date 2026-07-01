@@ -1,0 +1,27 @@
+Titolo: Misura diametro da arco
+Area: Misure
+Parole chiave: diametro, arco, cerchio parziale, raggio, centro, misura
+
+Un arco rilevato puo' essere usato per misurare il diametro del cerchio stimato.
+
+Quando usarla:
+- il bordo circolare e' visibile solo in parte;
+- il cerchio completo e' disturbato;
+- una porzione del foro o della sede e' coperta;
+- interessa usare solo il tratto piu' stabile.
+
+Geometrie necessarie:
+- un arco valido con centro e raggio.
+
+Procedura:
+1. Creare e testare arco edge.
+2. Verificare che centro e raggio siano stabili.
+3. Aprire misura diametro.
+4. Selezionare l'arco tra le sorgenti disponibili.
+5. Verificare valore e ripetibilita'.
+
+Nota:
+La misura diametro da arco usa il raggio stimato dell'arco, quindi equivale al diametro del cerchio da cui l'arco deriva.
+
+Regola:
+Se l'arco e' corto o rumoroso, il raggio puo' essere instabile. Aumentare la porzione utile oppure preferire un cerchio completo quando disponibile.

@@ -1,0 +1,27 @@
+Titolo: Misura foro-bordo su superficie
+Area: Misure / Superficie
+Parole chiave: foro bordo, distanza foro bordo, superficie, centro foro, linea bordo, luce diretta, geometrie costruite
+
+La misura foro-bordo combina un riferimento superficiale, il foro, con un bordo o una linea di riferimento.
+
+Geometrie tipiche:
+- cerchio foro per ottenere centro e diametro;
+- linea bordo se il bordo e' visibile nell'immagine;
+- linea costruita se il riferimento deve essere teorico o derivato da altri edge;
+- proiezione del centro foro sulla linea per una distanza perpendicolare.
+
+Illuminazione:
+- usare luce diretta per vedere il foro sulla superficie;
+- usare diffusa o coassiale se il pezzo riflette;
+- usare anulare se il bordo foro risponde bene da piu' direzioni;
+- usare retroilluminazione solo se il bordo di riferimento e' un profilo esterno e non serve vedere la faccia.
+
+Procedura:
+1. Localizzare il pezzo.
+2. Trovare il cerchio del foro.
+3. Trovare la linea bordo o costruire il riferimento.
+4. Creare la misura punto-linea usando il centro foro e la linea.
+5. Controllare in Setup che foro e bordo siano disponibili sullo stesso frame.
+
+Regola:
+Se foro e bordo richiedono luci diverse, scegliere la luce che rende stabile la misura finale oppure valutare una seconda camera/stazione.

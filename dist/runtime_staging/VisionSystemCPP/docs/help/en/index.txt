@@ -1,0 +1,12 @@
+VisionSystemCPP HELP
+
+This section will become the operational manual for the application.
+
+Recommended flow for programming a part:
+1. Setup: acquire or import the sample image and configure localization.
+2. Edge detection: configure points, lines, circles and arcs to detect.
+3. Constructed geometries: create intersections, tangents, offsets and projections.
+4. Measurements: create dimensional checks from detected or constructed geometries.
+5. Tolerances: assign nominal values, limits and OK/NOK rules.
+
+The next help files will describe individual commands and camera controls.

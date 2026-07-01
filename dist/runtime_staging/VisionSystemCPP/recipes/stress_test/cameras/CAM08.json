@@ -1,0 +1,1122 @@
+﻿{
+    "cameraId": "CAM08",
+    "tools": {
+        "geometries": {
+            "arcs": [
+                {
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "endAngleRadians": 3.151903591322616,
+                    "id": "arc_2",
+                    "imageCenter": {
+                        "x": 691.0564202334631,
+                        "y": 268.02140077821014
+                    },
+                    "imageEnd": {
+                        "x": 592,
+                        "y": 267
+                    },
+                    "imageStart": {
+                        "x": 687,
+                        "y": 367.00000000000006
+                    },
+                    "imageThrough": {
+                        "x": 619.2367539345346,
+                        "y": 336.25008376219216
+                    },
+                    "innerBand": 20,
+                    "outerBand": 20,
+                    "partCenter": {
+                        "x": 274.44357976653697,
+                        "y": 329.9785992217898
+                    },
+                    "partEnd": {
+                        "x": 373.50000000000006,
+                        "y": 330.99999999999994
+                    },
+                    "partEndAngleRadians": 0.010310937732822894,
+                    "partStart": {
+                        "x": 278.5,
+                        "y": 230.99999999999991
+                    },
+                    "partStartAngleRadians": 4.753348859695222,
+                    "partThrough": {
+                        "x": 346.26324606546547,
+                        "y": 261.7499162378078
+                    },
+                    "pickMode": "best",
+                    "radius": 99.06168608002875,
+                    "scanDirection": "normal_positive",
+                    "startAngleRadians": 1.6117562061054294,
+                    "transition": "light_to_dark",
+                    "type": "edge_arc",
+                    "useSubpixel": true
+                },
+                {
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "endAngleRadians": 4.51789215545825,
+                    "id": "arc_3",
+                    "imageCenter": {
+                        "x": 705.8044953350297,
+                        "y": 929.6899915182358
+                    },
+                    "imageEnd": {
+                        "x": 684,
+                        "y": 819
+                    },
+                    "imageStart": {
+                        "x": 593,
+                        "y": 928
+                    },
+                    "imageThrough": {
+                        "x": 619.2011172698351,
+                        "y": 857.3880887298624
+                    },
+                    "innerBand": 20,
+                    "outerBand": 20,
+                    "partCenter": {
+                        "x": 259.6955046649702,
+                        "y": -331.6899915182359
+                    },
+                    "partEnd": {
+                        "x": 281.5,
+                        "y": -221.00000000000003
+                    },
+                    "partEndAngleRadians": 1.3762995018684563,
+                    "partStart": {
+                        "x": 372.49999999999994,
+                        "y": -330.00000000000006
+                    },
+                    "partStartAngleRadians": 0.014980476546538802,
+                    "partThrough": {
+                        "x": 346.29888273016485,
+                        "y": -259.38808872986243
+                    },
+                    "pickMode": "best",
+                    "radius": 112.81715401091475,
+                    "scanDirection": "normal_positive",
+                    "startAngleRadians": 3.156573130136332,
+                    "transition": "light_to_dark",
+                    "type": "edge_arc",
+                    "useSubpixel": true
+                },
+                {
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "endAngleRadians": 6.059480030076783,
+                    "id": "arc_4",
+                    "imageCenter": {
+                        "x": 1003.5,
+                        "y": 400.1666666666667
+                    },
+                    "imageEnd": {
+                        "x": 1035,
+                        "y": 393
+                    },
+                    "imageStart": {
+                        "x": 1012,
+                        "y": 369
+                    },
+                    "imageThrough": {
+                        "x": 1026.823807579381,
+                        "y": 377.814684403093
+                    },
+                    "innerBand": 20,
+                    "outerBand": 20,
+                    "partCenter": {
+                        "x": -37.99999999999998,
+                        "y": 197.83333333333331
+                    },
+                    "partEnd": {
+                        "x": -69.49999999999997,
+                        "y": 205
+                    },
+                    "partEndAngleRadians": 2.9178873764869895,
+                    "partStart": {
+                        "x": -46.49999999999997,
+                        "y": 229
+                    },
+                    "partStartAngleRadians": 1.8370483759458216,
+                    "partThrough": {
+                        "x": -61.323807579381054,
+                        "y": 220.185315596907
+                    },
+                    "pickMode": "best",
+                    "radius": 32.30497037780893,
+                    "scanDirection": "normal_positive",
+                    "startAngleRadians": 4.9786410295356145,
+                    "transition": "dark_to_light",
+                    "type": "edge_arc",
+                    "useSubpixel": true
+                },
+                {
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "endAngleRadians": 1.4876550949064553,
+                    "id": "arc_5",
+                    "imageCenter": {
+                        "x": 1010,
+                        "y": 793
+                    },
+                    "imageEnd": {
+                        "x": 1012,
+                        "y": 817
+                    },
+                    "imageStart": {
+                        "x": 1034,
+                        "y": 791
+                    },
+                    "imageThrough": {
+                        "x": 1028.3847763108502,
+                        "y": 808.5563491861041
+                    },
+                    "innerBand": 20,
+                    "outerBand": 20,
+                    "partCenter": {
+                        "x": -44.50000000000002,
+                        "y": -195
+                    },
+                    "partEnd": {
+                        "x": -46.50000000000003,
+                        "y": -219
+                    },
+                    "partEndAngleRadians": 4.6292477484962475,
+                    "partStart": {
+                        "x": -68.50000000000003,
+                        "y": -193
+                    },
+                    "partStartAngleRadians": 3.058451421701352,
+                    "partThrough": {
+                        "x": -62.88477631085018,
+                        "y": -210.55634918610406
+                    },
+                    "pickMode": "first",
+                    "radius": 24.08318915758459,
+                    "scanDirection": "normal_positive",
+                    "startAngleRadians": 6.200044075291145,
+                    "transition": "dark_to_light",
+                    "type": "edge_arc",
+                    "useSubpixel": true
+                }
+            ],
+            "constructed": [
+                {
+                    "enabled": true,
+                    "id": "constructed_1",
+                    "sourceAId": "line_3",
+                    "sourceBId": "line_4",
+                    "type": "midline_between_lines"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_2",
+                    "sourceAId": "line_5",
+                    "sourceBId": "line_6",
+                    "type": "midline_between_lines"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_3",
+                    "sourceAId": "line_7",
+                    "sourceBId": "line_8",
+                    "type": "midline_between_lines"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_4",
+                    "sourceAId": "line_16",
+                    "sourceBId": "line_15",
+                    "type": "midline_between_lines"
+                },
+                {
+                    "enabled": true,
+                    "id": "constructed_5",
+                    "sourceAId": "line_19",
+                    "sourceBId": "line_20",
+                    "type": "midline_between_lines"
+                }
+            ],
+            "enabled": true,
+            "guideReferenceSize": {
+                "height": 1080,
+                "width": 1920
+            },
+            "lines": [
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_1",
+                    "partEnd": {
+                        "x": 468.6864406779661,
+                        "y": 231.4939759036144
+                    },
+                    "partStart": {
+                        "x": 609.7033898305085,
+                        "y": 231.4939759036144
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_2",
+                    "partEnd": {
+                        "x": 611.1782334384859,
+                        "y": -217.29411764705884
+                    },
+                    "partStart": {
+                        "x": 470.3580441640379,
+                        "y": -217.29411764705884
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_3",
+                    "partEnd": {
+                        "x": 455.5548159749413,
+                        "y": 331.69519832985384
+                    },
+                    "partStart": {
+                        "x": 455.6694915254237,
+                        "y": 248.8433734939759
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_4",
+                    "partEnd": {
+                        "x": 455.00951487536855,
+                        "y": -228.45714285714286
+                    },
+                    "partStart": {
+                        "x": 455.52412221924413,
+                        "y": -331.31428571428563
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_5",
+                    "partEnd": {
+                        "x": 770.2353224254091,
+                        "y": 221.78563283922458
+                    },
+                    "partStart": {
+                        "x": 770.2353224254091,
+                        "y": 164.5222348916761
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "dark_to_light",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_6",
+                    "partEnd": {
+                        "x": 770.2353224254091,
+                        "y": -156.89167616875713
+                    },
+                    "partStart": {
+                        "x": 771.4672762271415,
+                        "y": -214.7708095781072
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "dark_to_light",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_7",
+                    "partEnd": {
+                        "x": 628.5606352261791,
+                        "y": -156.27594070695554
+                    },
+                    "partStart": {
+                        "x": 628.5606352261791,
+                        "y": -216.0022805017105
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_8",
+                    "partEnd": {
+                        "x": 627.7083007047768,
+                        "y": 223.72025052192058
+                    },
+                    "partStart": {
+                        "x": 628.4600626468284,
+                        "y": 160.3382045929018
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_9",
+                    "partEnd": {
+                        "x": 633.4000000000001,
+                        "y": 156.34536368684056
+                    },
+                    "partStart": {
+                        "x": 765.7,
+                        "y": 156.64519711271507
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_10",
+                    "partEnd": {
+                        "x": 765.4925191696278,
+                        "y": -148.91924227318063
+                    },
+                    "partStart": {
+                        "x": 632.9920516177297,
+                        "y": -148.20139581256248
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_11",
+                    "partEnd": {
+                        "x": 380.3219441770935,
+                        "y": 338.1596351197263
+                    },
+                    "partStart": {
+                        "x": 449.3113570741098,
+                        "y": 338.1596351197263
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_12",
+                    "partEnd": {
+                        "x": 448.7840845333831,
+                        "y": -337.35393818544384
+                    },
+                    "partStart": {
+                        "x": 380.55891153918077,
+                        "y": -336.99501495513476
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_13",
+                    "partEnd": {
+                        "x": -39.40919097413311,
+                        "y": 229.5542521994135
+                    },
+                    "partStart": {
+                        "x": 231.1026417171162,
+                        "y": 231.6656891495601
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_14",
+                    "partEnd": {
+                        "x": 162.26612127045243,
+                        "y": -220.92816419612316
+                    },
+                    "partStart": {
+                        "x": -41.00625601539937,
+                        "y": -220.92816419612313
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_15",
+                    "partEnd": {
+                        "x": -69.72723022255467,
+                        "y": 169.44566301096705
+                    },
+                    "partStart": {
+                        "x": -70.08631008041877,
+                        "y": 199.23629112662013
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_16",
+                    "partEnd": {
+                        "x": -68.81641791044788,
+                        "y": -193.2871287128712
+                    },
+                    "partStart": {
+                        "x": -68.81641791044787,
+                        "y": -160.06223479490802
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_17",
+                    "partEnd": {
+                        "x": -235.5023201856147,
+                        "y": 165.86641929499078
+                    },
+                    "partStart": {
+                        "x": -76.84042553191487,
+                        "y": 166.31905465288037
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_18",
+                    "partEnd": {
+                        "x": -77.44268605645858,
+                        "y": -158.49265078560575
+                    },
+                    "partStart": {
+                        "x": -234.0209580838323,
+                        "y": -157.94526102382153
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_19",
+                    "partEnd": {
+                        "x": -241.76882873224326,
+                        "y": 95.0285714285715
+                    },
+                    "partStart": {
+                        "x": -242.28343607611893,
+                        "y": 158.28571428571436
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_20",
+                    "partEnd": {
+                        "x": -241.43082605775683,
+                        "y": -148.9319538400318
+                    },
+                    "partStart": {
+                        "x": -241.4308260577568,
+                        "y": -81.45881416633503
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_21",
+                    "partEnd": {
+                        "x": -296.8774345198119,
+                        "y": 84.00079586152017
+                    },
+                    "partStart": {
+                        "x": -249.16756212222958,
+                        "y": 84.43056108237172
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_22",
+                    "partEnd": {
+                        "x": -245.31728071815974,
+                        "y": -74.62213359920244
+                    },
+                    "partStart": {
+                        "x": -297.7429399663363,
+                        "y": -74.98105682951152
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_23",
+                    "partEnd": {
+                        "x": -844.3740284106138,
+                        "y": 84.22857142857161
+                    },
+                    "partStart": {
+                        "x": -803.205440900563,
+                        "y": 84.2285714285716
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_24",
+                    "partEnd": {
+                        "x": -904.0684803001875,
+                        "y": 39.48571428571449
+                    },
+                    "partStart": {
+                        "x": -847.9762798177433,
+                        "y": 81.65714285714306
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_25",
+                    "partEnd": {
+                        "x": -906.1269096756901,
+                        "y": -25.314285714285585
+                    },
+                    "partStart": {
+                        "x": -906.1269096756901,
+                        "y": 34.34285714285726
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_26",
+                    "partEnd": {
+                        "x": -850.5493165371215,
+                        "y": -71.08571428571408
+                    },
+                    "partStart": {
+                        "x": -903.0392656124363,
+                        "y": -30.457142857142696
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                },
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "image",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_27",
+                    "imageEnd": {
+                        "x": 1765.617796837309,
+                        "y": 673.1999999999999
+                    },
+                    "imageStart": {
+                        "x": 1807.3009916912356,
+                        "y": 672.6857142857142
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                }
+            ]
+        },
+        "measurements": {
+            "enabled": true,
+            "items": [
+                {
+                    "alias": "Diametro sopra testa",
+                    "enabled": true,
+                    "hasMax": true,
+                    "hasMin": true,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_1",
+                    "max": 20.8,
+                    "min": 20.4,
+                    "nominal": 20.6,
+                    "samplePixels": 449.7881167950774,
+                    "sampleValue": 0,
+                    "sourceAId": "line_1",
+                    "sourceBId": "line_2",
+                    "type": "line_line_distance",
+                    "unit": "mm"
+                },
+                {
+                    "alias": "Dimametro gola",
+                    "enabled": true,
+                    "hasMax": true,
+                    "hasMin": true,
+                    "hasNominal": true,
+                    "hasSampleScale": false,
+                    "id": "measurement_2",
+                    "max": 14.1,
+                    "min": 14,
+                    "nominal": 14,
+                    "samplePixels": 305.94739013073627,
+                    "sampleValue": 0,
+                    "sourceAId": "line_9",
+                    "sourceBId": "line_10",
+                    "type": "line_line_distance",
+                    "unit": "mm"
+                },
+                {
+                    "alias": "Diametro corpo",
+                    "enabled": true,
+                    "hasMax": true,
+                    "hasMin": true,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_3",
+                    "max": 21,
+                    "min": 20.5,
+                    "nominal": 20.75,
+                    "samplePixels": 450.170773130924,
+                    "sampleValue": 0,
+                    "sourceAId": "line_14",
+                    "sourceBId": "line_13",
+                    "type": "line_line_distance",
+                    "unit": "mm"
+                },
+                {
+                    "alias": "Diametro gambo",
+                    "enabled": true,
+                    "hasMax": true,
+                    "hasMin": true,
+                    "hasNominal": true,
+                    "hasSampleScale": false,
+                    "id": "measurement_4",
+                    "max": 15,
+                    "min": 14.8,
+                    "nominal": 14.9,
+                    "samplePixels": 324.3052939116836,
+                    "sampleValue": 0,
+                    "sourceAId": "line_18",
+                    "sourceBId": "line_17",
+                    "type": "line_line_distance",
+                    "unit": "mm"
+                },
+                {
+                    "alias": "Diametro punta",
+                    "enabled": true,
+                    "hasMax": true,
+                    "hasMin": true,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_5",
+                    "max": 7.4,
+                    "min": 7.2,
+                    "nominal": 7.300000000000001,
+                    "samplePixels": 158.1508708861219,
+                    "sampleValue": 0,
+                    "sourceAId": "line_23",
+                    "sourceBId": "line_27",
+                    "type": "line_line_distance",
+                    "unit": "mm"
+                },
+                {
+                    "alias": "Altezza 1",
+                    "enabled": true,
+                    "hasMax": true,
+                    "hasMin": true,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_6",
+                    "label": {
+                        "custom": true,
+                        "x": 1442.7118644067796,
+                        "y": 1010.6024096385541
+                    },
+                    "max": 14.5,
+                    "min": 14.45,
+                    "nominal": 14.475,
+                    "samplePixels": 314.89540264314803,
+                    "sampleValue": 0,
+                    "sourceAId": "line_3_midline_line_4",
+                    "sourceBId": "line_5_midline_line_6",
+                    "type": "line_line_distance",
+                    "unit": "mm"
+                },
+                {
+                    "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_7",
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 172.37645631955593,
+                    "sampleValue": 0,
+                    "sourceAId": "line_3_midline_line_4",
+                    "sourceBId": "line_7_midline_line_8",
+                    "type": "line_line_distance",
+                    "unit": "px"
+                },
+                {
+                    "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_8",
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 142.53002411392856,
+                    "sampleValue": 0,
+                    "sourceAId": "line_7_midline_line_8",
+                    "sourceBId": "line_5_midline_line_6",
+                    "type": "line_line_distance",
+                    "unit": "px"
+                },
+                {
+                    "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_9",
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 525.1702252015444,
+                    "sampleValue": 0,
+                    "sourceAId": "line_3_midline_line_4",
+                    "sourceBId": "line_16_midline_line_15",
+                    "type": "line_line_distance",
+                    "unit": "px"
+                },
+                {
+                    "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_10",
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 697.6587147845978,
+                    "sampleValue": 0,
+                    "sourceAId": "line_3_midline_line_4",
+                    "sourceBId": "line_19_midline_line_20",
+                    "type": "line_line_distance",
+                    "unit": "px"
+                }
+            ]
+        },
+        "surfaceLocalization": {
+            "aoes": {
+                "massPca": {
+                    "id": "massPca",
+                    "label": "massPca",
+                    "searchRoi": {
+                        "height": 788,
+                        "width": 1723,
+                        "x": 171,
+                        "y": 193
+                    }
+                }
+            },
+            "enabled": true,
+            "method": "massPca",
+            "threshold": {
+                "max": 80,
+                "min": 0,
+                "referencePositiveHalfPlane": true
+            }
+        },
+        "threadInspection": {
+            "coordinateSpace": "part",
+            "enabled": true,
+            "extractionRoi": {
+                "image": {
+                    "height": 244,
+                    "width": 554,
+                    "x": 1243,
+                    "y": 470
+                },
+                "part": {
+                    "height": 244,
+                    "width": 553,
+                    "x": -831,
+                    "y": -115
+                }
+            },
+            "filter": {
+                "maxSpeckAreaPx": 0,
+                "minSpeckAreaPx": 6,
+                "morphOpenRadius": 2,
+                "outlierRejectSigma": 2.5,
+                "profileSmoothRadius": 3,
+                "thresholdMax": 80,
+                "thresholdMin": 0
+            },
+            "measurements": {
+                "major": {
+                    "enabled": true,
+                    "hasMax": true,
+                    "hasMin": true,
+                    "max": 9.27,
+                    "min": 9.18
+                },
+                "minor": {
+                    "enabled": true,
+                    "hasMax": true,
+                    "hasMin": true,
+                    "max": 7.495,
+                    "min": 7.48
+                },
+                "phase": {
+                    "enabled": true,
+                    "hasMax": true,
+                    "hasMin": true,
+                    "max": 3,
+                    "min": 0
+                },
+                "pitch": {
+                    "enabled": true,
+                    "hasMax": true,
+                    "hasMin": true,
+                    "max": 2.1,
+                    "min": 2
+                },
+                "pitchDiameter": {
+                }
+            }
+        }
+    }
+}
+

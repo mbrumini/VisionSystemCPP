@@ -1,0 +1,26 @@
+Titolo: Misura distanza linea-linea
+Area: Misure
+Parole chiave: distanza linea linea, larghezza, spessore, due bordi, parallele, quota tra bordi
+
+La distanza linea-linea misura la distanza tra due linee.
+
+Quando usarla:
+- larghezza di un pezzo;
+- spessore;
+- distanza tra due bordi paralleli;
+- larghezza di una cava;
+- distanza tra due guide o pareti.
+
+Geometrie necessarie:
+- due linee valide;
+- meglio se le linee sono stabili e coerenti con il riferimento del disegno.
+
+Procedura:
+1. Configurare edge linea sul primo bordo.
+2. Configurare edge linea sul secondo bordo.
+3. Verificare che entrambe le linee siano trovate in Setup.
+4. Creare la misura linea-linea.
+5. Validare su campioni OK/NOK.
+
+Attenzione:
+Se le linee non sono parallele, chiarire se serve distanza media, distanza perpendicolare o angolo.

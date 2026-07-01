@@ -1,0 +1,19 @@
+Titolo: Checklist illuminazione
+Area: Illuminazione
+Parole chiave: checklist, luce, verifica, setup
+
+Checklist rapida prima di programmare un articolo.
+
+1. Il bordo o difetto da controllare e' visibile?
+2. Ci sono riflessi saturi?
+3. La luce cambia tra un pezzo e l'altro?
+4. La camera usa esposizione o gain automatici?
+5. Il pezzo si muove o ruota causando ombre diverse?
+6. La zona di misura e' sempre illuminata?
+7. Il campione rappresenta i pezzi reali?
+8. Le immagini test coprono variazioni di lotto e posizione?
+
+Decisione:
+- Per profili netti: valutare retroilluminazione.
+- Per superfici: valutare diffusa o radente.
+- Per AI: usare luce coerente con il dataset.

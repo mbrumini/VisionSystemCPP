@@ -1,0 +1,18 @@
+Titolo: Misura ortogonalita
+Area: Misure
+Parole chiave: ortogonalita, squadro, angolo, due linee, 90 gradi
+
+L'ortogonalita' controlla se due linee sono vicine a 90 gradi.
+
+Geometrie necessarie:
+- due linee valide.
+
+Procedura:
+1. Trovare le due linee con edge stabile.
+2. Creare misura angolo linea-linea.
+3. Impostare nominale 90 gradi.
+4. Applicare tolleranza angolare.
+
+Attenzione:
+Se la posa pezzo ruota ma entrambe le linee ruotano insieme, l'angolo resta valido.
+Se una sola linea dipende da un riflesso, la misura diventa instabile.

@@ -1,0 +1,28 @@
+Titolo: Illuminazione per controlli AI
+Area: Illuminazione / AI
+Parole chiave: AI, modello, dataset, luce, generalizzazione, training
+
+Nei controlli AI l'illuminazione deve essere coerente con il dataset usato per addestrare il modello.
+Un modello puo' fallire se la luce in produzione e' diversa da quella vista in training.
+
+Quando e' critica:
+- classificazione OK/NOK;
+- difetti visivi variabili;
+- superfici con riflessi;
+- modelli addestrati con poche immagini.
+
+Consigli pratici:
+- raccogliere dataset con la stessa illuminazione della macchina;
+- includere variazioni reali accettabili di luce e posizione;
+- evitare immagini troppo scure o saturate;
+- non cambiare lampade, esposizione o gain dopo training senza rivalidare;
+- salvare casi incerti per migliorare il dataset.
+
+Sintomi di illuminazione sbagliata:
+- confidenza bassa;
+- falsi NOK su pezzi buoni;
+- difetti reali non riconosciuti;
+- risultati diversi tra turno, lotto o ambiente.
+
+Regola:
+Per AI, la luce non deve solo far vedere il difetto all'operatore: deve essere coerente con cio' che il modello ha imparato.

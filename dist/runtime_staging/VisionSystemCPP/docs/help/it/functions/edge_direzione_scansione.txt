@@ -1,0 +1,15 @@
+Titolo: Direzione scansione edge
+Area: Rilevamento edge
+Parole chiave: direzione scansione, edge, transizione, first, last
+
+La direzione di scansione decide quale bordo viene incontrato prima.
+Se la direzione e' sbagliata, first e last possono scegliere il bordo opposto.
+
+Controlli:
+1. Guardare verso quale lato scansiona il tool.
+2. Verificare se il bordo corretto e' il primo o l'ultimo.
+3. Impostare transizione coerente con chiaro-scuro o scuro-chiaro.
+4. Se ci sono piu' bordi, ridurre la fascia.
+
+Regola:
+Quando un edge salta tra due bordi, controllare direzione e pick mode prima di cambiare misura.

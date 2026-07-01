@@ -1,0 +1,26 @@
+Titolo: Illuminazione radente
+Area: Illuminazione / Superficie
+Parole chiave: luce radente, graffi, rilievi, ammaccature, superficie
+
+La luce radente illumina il pezzo con un angolo basso.
+Serve a evidenziare rilievi, graffi, incisioni e ammaccature.
+
+Quando usarla:
+- ricerca graffi;
+- difetti bassi o poco contrastati;
+- incisioni;
+- superficie dove serve vedere micro-rilievi.
+
+Vantaggi:
+- aumenta contrasto dei difetti superficiali;
+- evidenzia bordi deboli;
+- utile su metallo e plastica satinata.
+
+Limiti:
+- puo' creare ombre forti;
+- puo' aumentare falsi difetti;
+- e' sensibile a rotazione e posizione pezzo;
+- richiede validazione su molti campioni.
+
+Regola:
+Usare luce radente per difetti di superficie, non per misure dimensionali di profilo se crea ombre instabili.

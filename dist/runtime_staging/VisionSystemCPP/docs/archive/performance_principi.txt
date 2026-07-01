@@ -1,0 +1,57 @@
+PERFORMANCE - PRINCIPI GUIDA
+
+Caratteristica principale
+La velocita' di esecuzione e' un requisito centrale del progetto.
+Ogni scelta architetturale, GUI inclusa, deve rispettare questo vincolo.
+
+Regole generali
+- La GUI non deve bloccare acquisizione e processing.
+- Il processing non deve dipendere dal frame rate della GUI.
+- Le immagini reali arriveranno dalle telecamere e potranno pesare da circa 3-4 MB fino a 50 MB o piu'.
+- La pipeline di acquisizione e processing deve mantenere disponibili i frame originali quando servono misure o analisi.
+- La GUI deve usare versioni ridimensionate, preview o thumbnail, non lavorare sempre sull'immagine piena.
+- Evitare copie inutili di cv::Mat.
+- Evitare conversioni immagine ripetute se il frame non e' cambiato.
+- Separare dati di lavoro da dati di visualizzazione.
+- Misurare sempre tempi di acquisizione, processing, visualizzazione e ciclo totale.
+
+GUI e performance
+La GUI serve per sviluppo, test e operatore, ma non deve diventare il collo di bottiglia.
+
+Decisioni iniziali:
+- creare una cartella di immagini placeholder per testare la GUI prima delle camere reali;
+- i placeholder devono simulare anche immagini pesanti, per verificare ridimensionamento e comportamento GUI;
+- aggiornare miniature a frequenza controllata;
+- usare immagini ridotte per la griglia;
+- usare preview ridimensionata anche per la camera selezionata, salvo richiesta esplicita di zoom/ispezione;
+- aggiornare la camera selezionata piu' spesso delle miniature, se necessario;
+- mantenere comandi e pannelli semplici;
+- non fare processing pesante nel thread GUI.
+
+Ridimensionamento GUI
+Per visualizzare immagini da telecamere reali:
+- generare thumbnail per la griglia;
+- generare preview per la camera selezionata;
+- mantenere separato il frame originale dalla preview;
+- aggiornare la preview solo quando arriva un nuovo frame o cambia la dimensione del widget;
+- evitare resize continui ad ogni repaint della GUI;
+- misurare il tempo di resize/conversione cv::Mat -> QImage.
+
+Threading futuro
+Quando il progetto passa a camere reali:
+- acquisizione separata dalla GUI;
+- processing separato dalla GUI;
+- comunicazione tra thread tramite code o snapshot controllati;
+- GUI aggiornata con ultimo frame disponibile, senza aspettare il processing.
+
+Acquisizione Vimba X
+Quando verra' integrato Vimba X:
+- preallocare buffer quando possibile;
+- evitare copie inutili dal buffer SDK a cv::Mat;
+- convertire pixel format solo se serve al processing o alla GUI;
+- misurare timeout, tempo grab e tempo conversione;
+- una camera in timeout non deve bloccare le altre;
+- la GUI deve ricevere solo preview o snapshot controllati.
+
+Principio pratico
+Se una scelta rende la GUI piu' bella ma rallenta acquisizione o processing, quella scelta va evitata o resa opzionale.

@@ -1,0 +1,53 @@
+{
+    "cameraId": "CAM02",
+    "tools": {
+        "geometries": {
+            "circles": [
+                {
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "circle_1",
+                    "innerBand": 20,
+                    "outerBand": 20,
+                    "partCenter": {
+                        "x": 355,
+                        "y": 240
+                    },
+                    "pickMode": "first",
+                    "radius": 33,
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_circle",
+                    "useSubpixel": true
+                }
+            ],
+            "enabled": true
+        },
+        "surfaceLocalization": {
+            "aoes": {
+                "massPca": {
+                    "id": "massPca",
+                    "label": "massPca",
+                    "searchRoi": {
+                        "height": 255,
+                        "width": 378,
+                        "x": 131,
+                        "y": 114
+                    }
+                }
+            },
+            "enabled": true,
+            "exclusionRects": [
+            ],
+            "method": "massPca",
+            "threshold": {
+                "max": 80,
+                "min": 0,
+                "pcaResolveAmbiguity": true
+            }
+        }
+    }
+}

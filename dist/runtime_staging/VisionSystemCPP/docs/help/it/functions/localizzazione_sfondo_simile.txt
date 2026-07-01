@@ -1,0 +1,18 @@
+Titolo: Sfondo simile al pezzo
+Area: Localizzazione / Illuminazione
+Parole chiave: sfondo simile, basso contrasto, localizzazione, silhouette
+
+Se sfondo e pezzo hanno livelli simili, la localizzazione diventa fragile.
+
+Sintomi:
+- contorno incompleto;
+- soglia che prende parti dello sfondo;
+- centro pezzo variabile;
+- edge spostati dopo la posa.
+
+Soluzioni:
+1. Aumentare contrasto tra pezzo e sfondo.
+2. Usare retroilluminazione se serve silhouette.
+3. Cambiare sfondo o luce.
+4. Restringere area ricerca.
+5. Usare esclusioni su zone confuse.

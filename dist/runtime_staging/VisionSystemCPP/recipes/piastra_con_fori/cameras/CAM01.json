@@ -1,0 +1,33 @@
+{
+    "cameraId": "CAM01",
+    "tools": {
+        "surfaceLocalization": {
+            "aoes": {
+                "massPca": {
+                    "id": "massPca",
+                    "label": "massPca",
+                    "searchRoi": {
+                        "height": 461,
+                        "width": 629,
+                        "x": 6,
+                        "y": 11
+                    }
+                }
+            },
+            "enabled": true,
+            "exclusionRects": [
+            ],
+            "method": "massPca",
+            "searchRoi": {
+                "height": 461,
+                "width": 629,
+                "x": 6,
+                "y": 11
+            },
+            "threshold": {
+                "max": 80,
+                "min": 0
+            }
+        }
+    }
+}

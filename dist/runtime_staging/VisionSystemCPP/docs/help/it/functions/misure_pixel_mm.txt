@@ -1,0 +1,19 @@
+Titolo: Misure in pixel e millimetri
+Area: Misure
+Parole chiave: pixel, millimetri, conversione, calibrazione
+
+Le misure geometriche nascono in pixel perche' vengono calcolate sull'immagine.
+Con una calibrazione valida possono essere convertite in millimetri.
+
+Pixel:
+- utile per debug;
+- sempre disponibile;
+- dipende dalla risoluzione.
+
+Millimetri:
+- utile per produzione;
+- richiede calibrazione;
+- confrontabile con disegno tecnico.
+
+Controllo:
+Se una misura reale sembra sbagliata, verificare prima la calibrazione pixel/mm.

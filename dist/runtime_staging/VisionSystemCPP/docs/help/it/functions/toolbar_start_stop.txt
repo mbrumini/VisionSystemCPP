@@ -1,0 +1,15 @@
+Titolo: Comandi Start e Stop
+Area: toolbar principale
+Parole chiave: start, stop, macchina, acquisizione, ciclo
+
+Start avvia la macchina o la simulazione secondo la camera selezionata e la configurazione corrente.
+Stop ferma il ciclo di acquisizione o simulazione.
+
+Uso tipico:
+1. Selezionare la camera o entrare in Setup.
+2. Verificare che campione, immagini test e strumenti siano configurati.
+3. Premere Start per scorrere i pezzi o le immagini.
+4. Premere Stop per fermare il ciclo.
+
+Nota operatore:
+Durante Start, l'immagine e gli overlay servono a verificare se localizzazione, edge e misure vengono aggiornati correttamente.

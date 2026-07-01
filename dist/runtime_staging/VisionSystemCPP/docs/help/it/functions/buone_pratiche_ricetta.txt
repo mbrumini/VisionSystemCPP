@@ -1,0 +1,17 @@
+Titolo: Buone pratiche ricetta
+Area: Ricette
+Parole chiave: ricetta robusta, programmazione, validazione
+
+Una ricetta robusta funziona su molti pezzi, non solo sul campione.
+
+Buone pratiche:
+- usare localizzazione stabile;
+- preferire edge su bordi netti;
+- evitare fasce troppo larghe;
+- usare esclusioni solo dove servono;
+- creare misure da geometrie affidabili;
+- validare con immagini test;
+- salvare versioni funzionanti della ricetta.
+
+Regola:
+Ogni parametro deve avere un motivo. Se non serve, tenerlo semplice.

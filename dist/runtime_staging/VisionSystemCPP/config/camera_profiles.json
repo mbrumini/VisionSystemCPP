@@ -1,0 +1,172 @@
+{
+    "profiles": [
+        {
+            "id": "file_simulated",
+            "backend": "file",
+            "vendor": "VisionSystemCPP",
+            "family": "File",
+            "transport": "Filesystem",
+            "features": {
+                "softwareTrigger": true,
+                "hardwareTrigger": false,
+                "continuousAcquisition": false
+            }
+        },
+        {
+            "id": "opencv_usb_generic",
+            "backend": "opencv_usb",
+            "vendor": "Generic",
+            "family": "USB",
+            "transport": "USB",
+            "features": {
+                "softwareTrigger": true,
+                "hardwareTrigger": false,
+                "continuousAcquisition": true
+            },
+            "limits": {
+                "gainMin": 0,
+                "gainMax": 255
+            }
+        },
+        {
+            "id": "allied_vimbax_generic",
+            "backend": "vimbax",
+            "vendor": "Allied Vision",
+            "family": "Generic",
+            "match": {
+                "vendorContains": "Allied Vision"
+            },
+            "features": {
+                "softwareTrigger": true,
+                "hardwareTrigger": true,
+                "continuousAcquisition": true
+            },
+            "limits": {
+                "exposureUsMin": 10,
+                "exposureUsMax": 60000000,
+                "gainMin": 0,
+                "gainMax": 24
+            },
+            "commands": {
+                "exposure": "ExposureTime",
+                "gain": "Gain",
+                "triggerMode": "TriggerMode",
+                "triggerSource": "TriggerSource",
+                "softwareTrigger": "TriggerSoftware"
+            }
+        },
+        {
+            "id": "allied_manta_gige",
+            "backend": "vimbax",
+            "vendor": "Allied Vision",
+            "family": "Manta",
+            "transport": "GigE",
+            "match": {
+                "vendorContains": "Allied Vision",
+                "modelContains": "Manta"
+            },
+            "features": {
+                "softwareTrigger": true,
+                "hardwareTrigger": true,
+                "continuousAcquisition": true,
+                "packetSize": true,
+                "packetDelay": true
+            },
+            "limits": {
+                "exposureUsMin": 10,
+                "exposureUsMax": 60000000,
+                "gainMin": 0,
+                "gainMax": 24
+            },
+            "commands": {
+                "exposure": "ExposureTime",
+                "gain": "Gain",
+                "triggerMode": "TriggerMode",
+                "triggerSource": "TriggerSource",
+                "softwareTrigger": "TriggerSoftware",
+                "packetSize": "GevSCPSPacketSize",
+                "packetDelay": "GevSCPD"
+            }
+        },
+        {
+            "id": "allied_alvium_usb",
+            "backend": "vimbax",
+            "vendor": "Allied Vision",
+            "family": "Alvium",
+            "transport": "USB3",
+            "match": {
+                "vendorContains": "Allied Vision",
+                "modelContains": "Alvium",
+                "interfaceContains": "USB"
+            },
+            "features": {
+                "softwareTrigger": true,
+                "hardwareTrigger": true,
+                "continuousAcquisition": true,
+                "packetSize": false,
+                "packetDelay": false
+            },
+            "limits": {
+                "exposureUsMin": 10,
+                "exposureUsMax": 60000000,
+                "gainMin": 0,
+                "gainMax": 24
+            },
+            "commands": {
+                "exposure": "ExposureTime",
+                "gain": "Gain",
+                "triggerMode": "TriggerMode",
+                "triggerSource": "TriggerSource",
+                "softwareTrigger": "TriggerSoftware",
+                "defaultHardwareTriggerLine": "Line3"
+            }
+        },
+        {
+            "id": "svs_vistek_gige_generic",
+            "backend": "svs",
+            "vendor": "SVS-Vistek",
+            "family": "Generic",
+            "transport": "GigE",
+            "match": {
+                "vendorContains": "SVS"
+            },
+            "features": {
+                "softwareTrigger": true,
+                "hardwareTrigger": true,
+                "continuousAcquisition": true,
+                "packetSize": true,
+                "packetDelay": true
+            },
+            "limits": {
+                "exposureUsMin": 10,
+                "exposureUsMax": 60000000,
+                "gainMin": 0,
+                "gainMax": 18
+            },
+            "commands": {
+                "exposure": "ExposureTime",
+                "gain": "Gain",
+                "triggerMode": "TriggerMode",
+                "triggerSource": "TriggerSource",
+                "softwareTrigger": "TriggerSoftware"
+            }
+        },
+        {
+            "id": "opto_engineering_generic",
+            "backend": "generic_industrial",
+            "vendor": "Opto Engineering",
+            "family": "Generic",
+            "features": {
+                "softwareTrigger": true,
+                "hardwareTrigger": true,
+                "continuousAcquisition": true
+            },
+            "limits": {
+                "exposureUsMin": 10,
+                "exposureUsMax": 1000000,
+                "gainMin": 0,
+                "gainMax": 24
+            }
+        }
+    ]
+}

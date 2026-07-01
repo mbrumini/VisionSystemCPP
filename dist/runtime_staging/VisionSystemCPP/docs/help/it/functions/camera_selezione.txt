@@ -1,0 +1,15 @@
+Titolo: Selezione camera
+Area: Camere
+Parole chiave: camera, selezione, miniatura, CAM, vista griglia
+
+La selezione camera decide quale immagine e quali strumenti vengono mostrati.
+Ogni camera ha una ricetta, un profilo e una sorgente immagini.
+
+Uso tipico:
+1. Aprire la vista griglia o usare la barra camere in basso.
+2. Cliccare sulla camera desiderata.
+3. Verificare che il titolo mostri il codice camera corretto, per esempio CAM03.
+4. Entrare in Setup o negli strumenti della camera.
+
+Nota:
+Se si modifica una camera sbagliata, i parametri vengono salvati nella ricetta di quella camera.

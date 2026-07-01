@@ -1,0 +1,19 @@
+Titolo: Edge linea instabile
+Area: Rilevamento edge / Diagnostica
+Parole chiave: linea instabile, edge linea, bordo rettilineo, riflessi
+
+Una linea edge instabile rende instabili distanze, angoli e geometrie costruite.
+
+Cause comuni:
+- bordo poco contrastato;
+- fascia che include texture o riflessi;
+- pochi punti validi;
+- localizzazione instabile;
+- pezzo fuori fuoco.
+
+Controlli:
+1. Verificare punti usati dalla linea.
+2. Ridurre la fascia sul bordo reale.
+3. Bloccare luce, esposizione e gain.
+4. Usare esclusioni su disturbi.
+5. Se il bordo e' curvo, non forzare una linea.

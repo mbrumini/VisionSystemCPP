@@ -1,0 +1,15 @@
+Titolo: Overlay mancante
+Area: Diagnostica
+Parole chiave: overlay mancante, grafica, risultato presente
+
+Se una grafica non si vede, non significa sempre che il controllo sia fallito.
+Bisogna distinguere tra risultato runtime e disegno overlay.
+
+Controlli:
+1. Aprire Risultati frame.
+2. Verificare se geometria o misura risultano disponibili.
+3. Se disponibili, il problema puo' essere di visualizzazione.
+4. Se non disponibili, il problema e' nel rilevamento o nelle sorgenti.
+
+Nota:
+Il popup Risultati frame serve proprio a separare problema grafico da problema di controllo.

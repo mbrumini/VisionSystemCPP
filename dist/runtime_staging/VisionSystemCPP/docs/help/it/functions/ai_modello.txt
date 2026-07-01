@@ -1,0 +1,18 @@
+Titolo: Modello AI
+Area: AI
+Parole chiave: AI, modello, inferenza, classi, confidenza
+
+Il modello AI usa un modello addestrato per classificare o segmentare immagini.
+Serve quando regole geometriche o soglie non bastano.
+
+Comandi principali:
+- seleziona modello;
+- carica modello;
+- mappa classi;
+- test inferenza.
+
+Controlli:
+Verificare confidenza minima, classi OK/NOK e immagini di prova.
+
+Nota:
+Il modello AI dipende fortemente dal dataset usato per l'addestramento.

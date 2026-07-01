@@ -1,0 +1,18 @@
+Titolo: Tolleranza con limiti asimmetrici
+Area: Tolleranze
+Parole chiave: tolleranza asimmetrica, limite superiore, limite inferiore
+
+Una tolleranza asimmetrica ha margini diversi sopra e sotto il nominale.
+
+Quando usarla:
+- il disegno ha + e - diversi;
+- un errore in una direzione e' piu' critico;
+- il processo produttivo tende da un lato.
+
+Controlli:
+1. Inserire nominale corretto.
+2. Verificare limite alto e basso.
+3. Testare campioni vicino a entrambi i limiti.
+
+Regola:
+Non trasformare una tolleranza asimmetrica in simmetrica per comodita'.

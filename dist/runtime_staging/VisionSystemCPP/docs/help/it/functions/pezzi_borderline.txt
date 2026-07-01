@@ -1,0 +1,19 @@
+Titolo: Pezzi borderline
+Area: Produzione / Tolleranze
+Parole chiave: borderline, limite, tolleranza, validazione
+
+I pezzi borderline sono vicini al limite di tolleranza.
+Sono fondamentali per validare una misura.
+
+Perche' servono:
+- verificano la precisione della misura;
+- mostrano se OK/NOK e' troppo aggressivo;
+- aiutano a scegliere tolleranze realistiche;
+- evidenziano instabilita' di edge.
+
+Uso pratico:
+Provare piu' volte lo stesso pezzo borderline.
+Se cambia giudizio senza motivo, controllare illuminazione, meccanica e edge.
+
+Regola:
+Un sistema buono deve essere stabile proprio sui pezzi vicino al limite.

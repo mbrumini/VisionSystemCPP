@@ -1,0 +1,21 @@
+Titolo: Rotazione localizzazione instabile
+Area: Localizzazione / Diagnostica
+Parole chiave: rotazione instabile, angolo pezzo, posa, localizzazione
+
+Una rotazione instabile sposta edge e misure anche se il centro sembra corretto.
+
+Cause comuni:
+- riferimento simmetrico;
+- area ricerca troppo ampia;
+- contrasto debole su un lato;
+- riflessi che cambiano;
+- pezzo appoggiato male.
+
+Controlli:
+1. Usare un riferimento che distingua l'angolo.
+2. Evitare zone simmetriche o ripetitive.
+3. Mascherare dettagli non utili.
+4. Controllare battuta meccanica.
+
+Regola:
+Se il pezzo e' simmetrico, la visione puo' non distinguere l'orientamento senza un riferimento aggiuntivo.

@@ -1,0 +1,20 @@
+Titolo: Immagine satura
+Area: Diagnostica / Illuminazione
+Parole chiave: saturazione, immagine bianca, riflesso, esposizione
+
+La saturazione cancella dettagli e rende gli edge poco affidabili.
+
+Sintomi:
+- zone bianche senza texture;
+- bordo che sparisce;
+- riflessi che cambiano tra frame;
+- AI che vede falsi difetti.
+
+Controlli:
+1. Ridurre esposizione o intensita' luce.
+2. Abbassare gain.
+3. Usare luce diffusa o coassiale su pezzi riflettenti.
+4. Cambiare angolo luce se il riflesso e' diretto in camera.
+
+Regola:
+Un bordo saturo non e' un bordo stabile.

@@ -1,0 +1,25 @@
+Titolo: Localizzare un pezzo difficile
+Area: Setup / Localizzazione / Diagnostica
+Parole chiave: localizzare pezzo difficile, localizzazione difficile, pezzo instabile, posa instabile, riflessi, area ricerca, esclusioni
+
+Un pezzo difficile da localizzare va affrontato prima su immagine, luce e riferimenti, poi sui parametri.
+Non partire dagli edge o dalle misure: se la posa non e' stabile, tutto il resto rincorre il problema.
+
+Controlli pratici:
+1. Verificare che il riferimento usato per la posa sia sempre visibile.
+2. Stringere l'area di ricerca senza tagliare le posizioni reali del pezzo.
+3. Usare esclusioni rosse su riflessi, scritte, sfondo o dettagli che non definiscono la posa.
+4. Rendere piu' stabile il contrasto con luce, esposizione e gain bloccati.
+5. Se il pezzo e' lucido, usare diffusa o coassiale; se il riferimento e' un rilievo, valutare radente solo se l'ombra resta stabile.
+6. Controllare la meccanica: battuta, appoggio, vibrazioni e ripetibilita' di ingresso pezzo.
+7. Testare su piu' pezzi, non solo sul campione bello.
+
+Quando cambiare strategia:
+- se il contorno esterno e' netto, usare localizzazione su profilo o soglia;
+- se il pezzo ha texture o riferimenti sulla faccia, usare localizzazione grigi/superficie;
+- se alcune zone confondono sempre il calcolo, mascherarle invece di allargare la soglia;
+- se la posa cambia troppo, migliorare il riferimento meccanico prima della ricetta.
+
+Risposta attesa:
+Per un pezzo difficile, guidare l'operatore su area ricerca, esclusioni, illuminazione, contrasto e meccanica.
+Non proporre subito una camera specifica se non e' chiaro che quella camera vede il riferimento utile.

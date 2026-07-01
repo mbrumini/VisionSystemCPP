@@ -1,0 +1,16 @@
+Titolo: Camera e calibrazione
+Area: Camera / Calibrazione
+Parole chiave: camera, calibrazione, pixel mm, scala, distorsione
+
+La calibrazione collega pixel e millimetri.
+Se la calibrazione non e' corretta, le misure possono essere ripetibili ma sbagliate.
+
+Controlli:
+1. Verificare pixel/mm sulla camera usata.
+2. Controllare che la lente non sia stata cambiata.
+3. Verificare distanza camera-pezzo.
+4. Controllare distorsione se si misura lontano dal centro immagine.
+5. Validare con pezzo master o campione certificato.
+
+Regola:
+Non correggere una misura sbagliata cambiando tolleranze se prima non e' chiara la calibrazione.

@@ -1,0 +1,24 @@
+Titolo: Training segmentazione AI
+Area: AI / Segmentazione / Training
+Parole chiave: segmentazione, training, YOLO segmentation, maschere, modello attivo
+
+Il training segmentazione AI addestra un modello a trovare aree nell'immagine, non solo a scegliere una classe.
+Serve quando bisogna misurare posizione, area, forma o orientamento di un difetto o di una zona del pezzo.
+
+Flusso previsto:
+1. Creare le feature di segmentazione.
+2. Acquisire immagini rappresentative.
+3. Disegnare maschere corrette con il labeling.
+4. Preparare il dataset YOLO segmentation.
+5. Avviare il training con parametri controllabili.
+6. Confrontare modello nuovo e modello attivo prima di promuovere il nuovo.
+
+Controlli:
+- numero immagini per feature;
+- qualita' maschere;
+- varieta' luce, posizione e lotti;
+- risultati su immagini di validazione.
+
+Regola:
+La segmentazione richiede maschere buone. Poche immagini con maschere sbagliate possono essere peggio di nessun training.
+

@@ -1,0 +1,16 @@
+Titolo: Log eventi
+Area: Sistema
+Parole chiave: log, eventi, diagnostica, messaggi
+
+Il log eventi mostra messaggi operativi e diagnostici.
+Serve per capire cosa sta facendo il sistema e per leggere eventuali errori.
+
+Messaggi utili:
+- localizzazione trovata o non trovata;
+- edge trovato o fallito;
+- misura creata o non disponibile;
+- salvataggio ricetta riuscito o fallito;
+- errori di immagine o cartella.
+
+Consiglio:
+Quando un comando non produce il risultato atteso, guardare prima il log eventi.

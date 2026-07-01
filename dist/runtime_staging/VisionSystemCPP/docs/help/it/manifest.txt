@@ -1,0 +1,64 @@
+Manifest help italiano per indicizzazione Ollama
+
+Formato consigliato:
+- Ogni file in functions/ contiene una funzione o un gruppo comando.
+- I campi "Titolo", "Area" e "Parole chiave" sono pensati per ricerca semantica e recupero contesto.
+- I testi sono brevi per essere usati come chunk indipendenti.
+
+Categorie principali:
+- Setup e acquisizione campione.
+- Camera e trigger acquisizione.
+- Localizzazione e maschere.
+- Edge e geometrie.
+- Misure e tolleranze.
+- Illuminazione, ottica e meccanica.
+- Diagnostica e buone pratiche.
+- AI classificazione, segmentazione e anomaly detection.
+
+Schede misura principali:
+- functions/misure.txt
+- functions/misura_lunghezza_larghezza.txt
+- functions/misura_larghezza_bordo_bordo_superficie.txt
+- functions/misura_distanza_punto_punto.txt
+- functions/misura_distanza_punto_linea.txt
+- functions/misura_distanza_linea_linea.txt
+- functions/misura_diametro_cerchio.txt
+- functions/misura_diametro_arco.txt
+- functions/misura_label_trascinabile.txt
+- functions/misura_angolo_linea_linea.txt
+- functions/misura_interasse_fori.txt
+- functions/misura_spessore.txt
+- functions/misura_altezza_gradino.txt
+- functions/misura_posizione_foro.txt
+- functions/misura_cava_sede.txt
+- functions/misura_parallelismo.txt
+- functions/misura_ortogonalita.txt
+- functions/misura_concentricita_2d.txt
+- functions/misura_raggio_arco.txt
+- functions/misure_superficiali.txt
+- functions/misura_diametro_superficie.txt
+- functions/misura_distanza_fori_superficie.txt
+- functions/misura_foro_bordo_superficie.txt
+- functions/misure_superficiali_errori_comuni.txt
+
+Schede operative aggiunte da prove macchina:
+- functions/workflow_campione_riferimento_setup.txt
+- functions/camera_vimba_trigger_software.txt
+- functions/edge_arco_maniglie.txt
+- functions/geometria_centro_cerchio_arco.txt
+
+Schede AI principali:
+- functions/ai_modello.txt
+- functions/ai_classificazione_training.txt
+- functions/ai_classificazione_inferenza.txt
+- functions/ai_segmentazione_feature.txt
+- functions/ai_segmentazione_labeling.txt
+- functions/ai_segmentazione_training.txt
+- functions/ai_anomaly_training.txt
+- functions/ai_dataset_sbilanciato.txt
+- functions/ai_falsi_negativi.txt
+- functions/ai_falsi_positivi.txt
+- functions/ai_soglia_confidenza.txt
+
+Nota:
+L'indice operativo completo e' in index.txt.

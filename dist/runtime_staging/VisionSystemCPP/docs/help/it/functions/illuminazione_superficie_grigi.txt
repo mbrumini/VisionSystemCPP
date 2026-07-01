@@ -1,0 +1,37 @@
+Titolo: Illuminazione per superficie grigi
+Area: Illuminazione
+Parole chiave: superficie, grigi, texture, metallo, riflessi, graffi
+
+Nei controlli superficie grigi l'obiettivo e' far emergere difetti o riferimenti senza saturare l'immagine.
+La superficie puo' avere texture, riflessi e variazioni di materiale.
+
+Quando usare illuminazione grigi:
+- localizzazione su superfici non binarie;
+- controllo graffi, macchie, ammaccature;
+- pezzi metallici o satinati;
+- riferimenti visibili come variazioni di intensita'.
+
+Consigli pratici:
+- usare luce diffusa per ridurre riflessi se si cerca forma generale;
+- usare luce diretta, diffusa, coassiale o anulare quando si devono vedere bordi o diametri sulla faccia del pezzo;
+- usare luce radente per evidenziare graffi o rilievi;
+- evitare saturazione bianca su metallo lucido;
+- bloccare esposizione e gain;
+- controllare che la texture non venga scambiata per edge.
+
+Diametri su superficie:
+Se il diametro e' un foro, una sede, una tasca o un bordo circolare visibile dall'alto, non partire dalla retroilluminazione.
+Partire da una luce diretta controllata e scegliere il tipo di luce in base al materiale:
+- diffusa per ridurre riflessi;
+- coassiale per dettagli piani;
+- anulare per bordi circolari visibili da piu' direzioni;
+- radente solo se il bordo e' un rilievo o una incisione.
+
+Sintomi di illuminazione sbagliata:
+- macchie false;
+- difetti che spariscono ruotando il pezzo;
+- localizzazione che segue un riflesso invece del pezzo;
+- soglia instabile tra immagini.
+
+Regola:
+Per superficie grigi, scegliere la luce in base al difetto o riferimento da vedere, non solo in base alla luminosita' generale.

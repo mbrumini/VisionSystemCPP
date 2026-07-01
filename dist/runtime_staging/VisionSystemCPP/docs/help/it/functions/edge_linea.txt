@@ -1,0 +1,16 @@
+Titolo: Edge linea
+Area: Rilevamento edge
+Parole chiave: linea, edge, bordo rettilineo, fascia
+
+La linea edge cerca un bordo rettilineo dentro una fascia di scansione.
+La linea trovata puo' essere usata per misure, intersezioni e riferimenti.
+
+Procedura:
+1. Selezionare Linea.
+2. Disegnare la linea guida o ROI.
+3. Impostare larghezza fascia, sensibilita' e transizione.
+4. Premere Prova geometria.
+5. Verificare il risultato su immagini test.
+
+Nota:
+La fascia deve coprire il possibile movimento del bordo senza includere troppi disturbi.

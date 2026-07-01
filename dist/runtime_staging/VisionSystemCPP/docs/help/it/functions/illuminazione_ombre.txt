@@ -1,0 +1,17 @@
+Titolo: Ombre nell'immagine
+Area: Illuminazione / Diagnostica
+Parole chiave: ombre, luce, bordo falso, superficie
+
+Le ombre possono creare bordi falsi o spostare il bordo apparente.
+
+Sintomi:
+- edge che segue una zona scura;
+- misura diversa se il pezzo si alza o ruota;
+- difetti falsi vicino a rilievi;
+- localizzazione che cambia con la posa.
+
+Controlli:
+1. Cambiare angolo luce.
+2. Usare diffusa se serve ridurre ombre.
+3. Bloccare appoggio meccanico.
+4. Evitare radente se la quota e' dimensionale e non di rilievo.

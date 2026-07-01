@@ -1,0 +1,25 @@
+Titolo: Esposizione e gain
+Area: Illuminazione / Camera
+Parole chiave: esposizione, gain, luminosita, rumore, saturazione
+
+Esposizione e gain controllano la luminosita' dell'immagine.
+Devono essere stabili durante la produzione.
+
+Esposizione alta:
+- immagine piu' luminosa;
+- rischio mosso o saturazione;
+- puo' allargare bordi luminosi.
+
+Gain alto:
+- immagine piu' luminosa;
+- aumenta rumore;
+- puo' disturbare edge e AI.
+
+Consigli:
+- preferire piu' luce reale e meno gain;
+- evitare zone bruciate;
+- bloccare parametri automatici se causano variazioni;
+- verificare su pezzi chiari e scuri.
+
+Regola:
+Se l'immagine cambia luminosita' da sola, localizzazione e misure possono diventare instabili.

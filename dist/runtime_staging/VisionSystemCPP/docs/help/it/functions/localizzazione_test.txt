@@ -1,0 +1,13 @@
+Titolo: Test localizzazione
+Area: Setup / Localizzazione
+Parole chiave: test, localizzazione, posa pezzo, centro, assi
+
+Test localizzazione esegue il rilevamento della posa del pezzo sull'immagine corrente.
+Il risultato produce centro pezzo, angolo e assi di riferimento.
+
+Perche' e' importante:
+Gli edge programmati in coordinate pezzo seguono la posa localizzata.
+Se la posa e' sbagliata, anche edge e misure possono spostarsi.
+
+Controllo visivo:
+Verificare che centro e assi siano coerenti con il pezzo reale.

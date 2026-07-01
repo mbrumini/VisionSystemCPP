@@ -1,0 +1,76 @@
+{
+    "cameraId": "CAM11",
+    "tools": {
+        "geometries": {
+            "circles": [
+                {
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "circle_1",
+                    "innerBand": 20,
+                    "outerBand": 20,
+                    "partCenter": {
+                        "x": 3.6946691214202474,
+                        "y": -5.572840277890123
+                    },
+                    "pickMode": "first",
+                    "radius": 306,
+                    "transition": "light_to_dark",
+                    "type": "edge_circle",
+                    "useSubpixel": true
+                }
+            ],
+            "enabled": true
+        },
+        "surfaceLocalization": {
+            "annulus": {
+                "innerCircle": {
+                    "centerX": 1276,
+                    "centerY": 684,
+                    "radius": 275
+                },
+                "outerCircle": {
+                    "centerX": 1276,
+                    "centerY": 684,
+                    "radius": 336
+                }
+            },
+            "edge": {
+                "band": {
+                    "inner": 33,
+                    "outer": 28
+                },
+                "circle": {
+                    "centerX": 1276,
+                    "centerY": 684,
+                    "radius": 308
+                },
+                "sensitivity": 201
+            },
+            "enabled": true,
+            "exclusionRects": [
+                {
+                    "height": 47,
+                    "width": 71,
+                    "x": 1492,
+                    "y": 855
+                },
+                {
+                    "height": 70,
+                    "width": 76,
+                    "x": 989,
+                    "y": 853
+                }
+            ],
+            "method": "edge",
+            "threshold": {
+                "max": 186,
+                "min": 0,
+                "value": 186
+            }
+        }
+    }
+}

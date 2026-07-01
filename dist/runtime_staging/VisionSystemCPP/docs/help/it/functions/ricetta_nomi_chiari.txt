@@ -1,0 +1,21 @@
+Titolo: Nomi chiari in ricetta
+Area: Ricette / Buone pratiche
+Parole chiave: nomi geometrie, nomi misure, ricetta chiara
+
+Nomi chiari rendono la ricetta piu' facile da capire, correggere e validare.
+
+Esempi utili:
+- linea_bordo_sx;
+- linea_bordo_dx;
+- centro_foro_alto;
+- misura_larghezza_cava;
+- diametro_sede_superiore.
+
+Evitare:
+- punto1, punto2 senza significato;
+- misura_test;
+- nomi duplicati;
+- abbreviazioni incomprensibili.
+
+Regola:
+Un nome deve spiegare cosa rappresenta, non solo che tipo di tool e'.

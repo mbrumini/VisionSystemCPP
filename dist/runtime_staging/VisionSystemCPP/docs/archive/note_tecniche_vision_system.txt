@@ -1,0 +1,122 @@
+NOTE TECNICHE - VISION SYSTEM C++
+
+Scelte attuali
+- Linguaggio: C++20.
+- Build system: CMake.
+- IDE: Visual Studio.
+- Dipendenze: vcpkg.
+- Libreria visione: OpenCV.
+- SDK camere reali preferito: Allied Vision Vimba X.
+- GUI principale: Qt 6 Widgets.
+- Vincolo principale: velocita' di esecuzione.
+- Formato configurazione: JSON.
+- Libreria JSON prevista: nlohmann/json.
+- Triplet vcpkg usato: x64-windows.
+- vcpkg attivo per questo progetto: D:\dev\vcpkg.
+
+Struttura corrente
+- src/main.cpp
+- src/camera/ICamera.h
+- src/camera/FileCamera.h
+- src/camera/FileCamera.cpp
+- src/processing/ImageProcessor.h
+- src/processing/ImageProcessor.cpp
+- src/utils/Timer.h
+- data/images/
+- config/cameras.json
+- gui_layout.txt
+- gui_tecnologia.txt
+- performance_principi.txt
+- camera_sdk_vimba.txt
+
+Comandi utili
+Configurare:
+cmake --preset x64-release
+
+Compilare:
+cmake --build --preset x64-release
+
+Eseguibile:
+build\Release\VisionSystemCPP.exe
+
+Note operative
+- Per ora usare immagini da data/images.
+- La finestra OpenCV avanza con un tasto qualsiasi.
+- ESC chiude il programma.
+- Il tempo ciclo stampato include lettura frame, processing e imshow, ma non l'attesa di waitKey.
+- La GUI deve essere trattata come strumento di test, ma non deve rallentare la pipeline.
+- Le immagini reali arriveranno da telecamere e potranno pesare da circa 3-4 MB fino a 50 MB o piu'.
+- La GUI deve visualizzare immagini ridimensionate, lasciando i frame originali alla pipeline di processing.
+
+Vincolo multi-camera
+- Il progetto deve nascere per supportare X telecamere.
+- Ogni telecamera deve essere trattata come una pipeline indipendente.
+- Non assumere mai una sola camera globale nel design.
+- Evitare variabili globali condivise tra camere.
+- Ogni camera deve avere nome/id stabile.
+- Ogni frame deve sapere da quale camera arriva.
+- Ogni risultato deve sapere da quale camera arriva.
+- Errori, ritardi o assenza frame di una camera non devono fermare automaticamente le altre.
+- Il numero di camere deve essere dinamico e derivare dalla configurazione.
+- Il codice deve usare una lista dinamica di camera, non array fissi tipo cameras[4].
+- Si puo' definire un maxCameras come limite di sicurezza, non come vincolo progettuale.
+- Il file config/cameras.json contiene 16 slot camera, da CAM01 a CAM16.
+- Ogni slot camera ha exists ed enabled.
+- exists indica se la camera e' presente nella macchina/configurazione.
+- enabled indica se la camera presente deve essere usata dal software.
+
+Cose da non complicare subito
+- Niente camere reali nella prima fase.
+- Niente thread complessi fino a quando la pipeline per singola camera non e' chiara.
+- Niente PLC fino a quando non esiste un Result stabile.
+- OpenCV imshow resta solo per test provvisori.
+
+Dubbi aperti
+- Definire cosa significa OK/NOK sulla prima immagine campione.
+- Capire quali misure servono davvero: area, posizione, dimensioni, difetti, colore, presenza/assenza.
+- Decidere come salvare immagini e log dei pezzi NOK.
+
+Decisione configurazione
+- Usare JSON per la configurazione principale.
+- Preferire JSON per leggibilita', compattezza e gestione naturale di liste e oggetti.
+- Usare nlohmann/json in C++.
+- File iniziale: config/cameras.json.
+- XML non viene scelto come formato principale.
+- XML resta possibile solo se richiesto da sistemi esterni, standard aziendali o integrazioni obbligate.
+
+Decisione profili camera
+- Il campo camera.type indica la sorgente, non il tipo di controllo.
+- Esempi di camera.type: file, vimba.
+- Il tipo di controllo viene definito nel processingProfile.
+- Ogni processingProfile usa imageMode e inspectionTypes.
+- imageMode puo' essere bw o grayscale.
+- inspectionTypes puo' contenere dimensional, measurement, surface, ai.
+- Sono supportate combinazioni, per esempio surface + measurement + ai sulla stessa camera grayscale.
+- Ogni processingProfile contiene anche guiTools.
+- guiTools definisce quali strumenti mostrare nel pannello destro della GUI quando quella camera e' selezionata.
+- La GUI non deve mostrare tutti i tool per tutte le camere.
+
+Decisione GUI
+- GUI principale con Qt 6 Widgets.
+- Finestra principale fullscreen.
+- Layout con area immagini a sinistra e pannello comandi a destra.
+- Immagini OpenCV convertite da cv::Mat a QImage.
+- OpenCV HighGUI solo per test rapidi.
+- Dear ImGui eventualmente solo per debug/tool interni futuri.
+- wxWidgets non scelto come framework principale.
+
+Decisione performance
+- La velocita' di esecuzione e' una caratteristica principale del progetto.
+- Acquisizione, processing e GUI devono restare separabili.
+- La GUI deve mostrare thumbnail/preview ridimensionate.
+- Il frame originale non deve essere ridimensionato o perso solo per esigenze GUI.
+- Evitare copie e conversioni immagine inutili.
+- Evitare resize e conversioni cv::Mat -> QImage ad ogni repaint.
+- Misurare sempre i tempi delle parti principali.
+
+Decisione SDK camere
+- Per camere reali preferire Allied Vision Vimba X.
+- Implementare una futura VimbaCamera dietro l'interfaccia ICamera.
+- FileCamera resta la simulazione da cartella.
+- Nel JSON usare type=file per simulazione e type=vimba per camera reale.
+- L'integrazione Vimba deve evitare copie inutili e rispettare il vincolo performance.

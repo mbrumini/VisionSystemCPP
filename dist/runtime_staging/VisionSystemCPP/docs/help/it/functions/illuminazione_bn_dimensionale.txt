@@ -1,0 +1,28 @@
+Titolo: Illuminazione per controlli BN dimensionali
+Area: Illuminazione
+Parole chiave: BN, bianco nero, dimensionale, silhouette, retroilluminazione, edge
+
+Nei controlli BN dimensionali l'obiettivo e' ottenere bordi netti e ripetibili.
+La misura dipende dalla stabilita' del bordo, non dalla bellezza dell'immagine.
+
+Quando usare illuminazione BN:
+- controllo profili e quote esterne;
+- pezzo scuro su sfondo chiaro o viceversa;
+- ricerca di linee, punti e contorni netti;
+- localizzazione per soglia.
+
+Consigli pratici:
+- preferire contrasto forte tra pezzo e sfondo;
+- evitare riflessi sul bordo;
+- usare retroilluminazione se serve una silhouette pulita;
+- mantenere esposizione stabile;
+- evitare zone bruciate che allargano o stringono il profilo.
+
+Sintomi di illuminazione sbagliata:
+- bordo che cambia spessore;
+- localizzazione instabile;
+- quote che variano anche con pezzo fermo;
+- soglia che funziona su un pezzo ma non su un altro.
+
+Regola:
+Per il dimensionale BN, prima rendere stabile il bordo, poi regolare edge e misure.

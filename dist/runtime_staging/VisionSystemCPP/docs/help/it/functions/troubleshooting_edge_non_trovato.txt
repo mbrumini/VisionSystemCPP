@@ -1,0 +1,23 @@
+Titolo: Edge non trovato
+Area: Diagnostica
+Parole chiave: edge non trovato, problema, troubleshooting, bordo
+
+Se un edge non viene trovato su alcuni pezzi, controllare in questo ordine.
+
+1. Localizzazione:
+Verificare che centro e assi pezzo siano corretti.
+
+2. Fascia:
+Controllare che il bordo reale cada dentro la fascia di ricerca.
+
+3. Transizione:
+Verificare chiaro/scuro o scuro/chiaro.
+
+4. Sensibilita':
+Aumentare se il bordo e' debole, diminuire se prende rumore.
+
+5. Pick mode:
+Cambiare first/best/last se ci sono piu' bordi nella stessa fascia.
+
+6. Esclusioni:
+Controllare che una maschera rossa non copra una zona utile.

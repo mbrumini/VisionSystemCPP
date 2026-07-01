@@ -1,0 +1,132 @@
+{
+    "cameraId": "CAM03",
+    "tools": {
+        "geometries": {
+            "circles": [
+                {
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 2,
+                    "edgeSensitivity": 56,
+                    "edgeStatisticalFilter": 1,
+                    "enabled": true,
+                    "id": "circle_1",
+                    "innerBand": 20,
+                    "outerBand": 20,
+                    "partCenter": {
+                        "x": -9.452643784417432,
+                        "y": 1.339826409866646
+                    },
+                    "pickMode": "first",
+                    "radius": 304,
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_circle",
+                    "useSubpixel": true
+                }
+            ],
+            "enabled": true,
+            "lines": [
+                {
+                    "bandHalfWidth": 47,
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 73,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_1",
+                    "partEnd": {
+                        "x": -338.63352162495664,
+                        "y": 241.39116953631492
+                    },
+                    "partStart": {
+                        "x": -944.8557438471789,
+                        "y": 234.0658683314956
+                    },
+                    "pickMode": "best",
+                    "scanDirection": "normal_negative",
+                    "transition": "dark_to_light",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                }
+            ],
+            "points": [
+                {
+                    "coordinateSpace": "part",
+                    "edgeSensitivity": 220,
+                    "enabled": true,
+                    "id": "point_1",
+                    "partEnd": {
+                        "x": 452.46162585271736,
+                        "y": 294.8743942436564
+                    },
+                    "partStart": {
+                        "x": 440.2394036304952,
+                        "y": 97.09126171353591
+                    },
+                    "pickMode": "best",
+                    "transition": "light_to_dark",
+                    "type": "edge_point",
+                    "useSubpixel": true
+                }
+            ]
+        },
+        "measurements": {
+            "enabled": true,
+            "items": [
+                {
+                    "enabled": true,
+                    "id": "measurement_1",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_1",
+                    "type": "point_line_distance"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_2",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_1",
+                    "type": "point_line_distance"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_3",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_1",
+                    "type": "point_line_distance"
+                },
+                {
+                    "enabled": true,
+                    "id": "measurement_4",
+                    "sourceAId": "point_1",
+                    "sourceBId": "line_1",
+                    "type": "point_line_distance"
+                }
+            ]
+        },
+        "surfaceLocalization": {
+            "edge": {
+                "band": {
+                    "inner": 65,
+                    "outer": 53
+                },
+                "circle": {
+                    "centerX": 1288,
+                    "centerY": 667,
+                    "radius": 309
+                },
+                "fitMaxError": 4,
+                "sensitivity": 188
+            },
+            "enabled": true,
+            "exclusionRects": [
+            ],
+            "method": "edge",
+            "searchRoi": {
+                "height": 761,
+                "width": 753,
+                "x": 962,
+                "y": 316
+            }
+        }
+    }
+}

@@ -1,0 +1,16 @@
+Titolo: Acquisisci campione
+Area: Setup
+Parole chiave: campione, immagine campione, acquisisci, riferimento
+
+Acquisisci campione salva l'immagine corrente come immagine di riferimento della camera.
+Il campione serve per programmare localizzazione, edge, geometrie e misure dell'articolo.
+
+Procedura:
+1. Posizionare un pezzo buono e rappresentativo.
+2. Selezionare la camera.
+3. Entrare in Setup.
+4. Premere Acquisisci campione.
+5. Usare il campione per programmare localizzazione ed edge.
+
+Consiglio:
+Il campione deve essere stabile, ben illuminato e simile ai pezzi reali di produzione.

@@ -1,0 +1,63 @@
+CAMERA SDK - VIMBA X
+
+Decisione
+Per le camere reali il candidato preferito e' Allied Vision Vimba X.
+
+Motivazione
+Vimba X e' adatto al progetto perche':
+- e' pensato per machine vision industriale;
+- fornisce API C e C++;
+- e' GenICam/GenTL compliant;
+- puo' lavorare con camere GenICam-compliant e transport layer compatibili;
+- supporta scenari multi-camera;
+- include viewer, esempi, strumenti e camera simulator;
+- si integra bene con una astrazione ICamera.
+
+Architettura prevista
+ICamera resta l'interfaccia comune.
+
+Implementazioni:
+- FileCamera: simulazione da cartella immagini;
+- VimbaCamera: camera reale tramite Vimba X.
+
+Esempio:
+ICamera
+- FileCamera
+- VimbaCamera
+
+Configurazione JSON
+Per test iniziali:
+type=file
+folder=data/images/cam01
+
+Per camera reale:
+type=vimba
+serial=...
+processingProfile=profile_cam01
+
+Esempio logico:
+{
+  "id": "CAM01",
+  "displayName": "Camera 1",
+  "exists": true,
+  "enabled": true,
+  "type": "vimba",
+  "serial": "12345678",
+  "processingProfile": "profile_cam01"
+}
+
+Performance
+L'integrazione Vimba X deve rispettare il vincolo principale di velocita'.
+
+Regole:
+- acquisizione separata dalla GUI;
+- evitare copie inutili dei buffer immagine;
+- convertire pixel format solo quando serve;
+- preallocare buffer quando possibile;
+- misurare tempi di acquisizione;
+- misurare tempi di conversione;
+- mantenere preview GUI separata dal frame originale;
+- non bloccare le altre camere se una camera Vimba ha errore o timeout.
+
+Nota
+Il vecchio nome "Vimba" va inteso come Vimba X per il nuovo sviluppo, salvo vincoli specifici di camera o installazione.

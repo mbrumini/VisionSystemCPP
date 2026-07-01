@@ -1,0 +1,16 @@
+Titolo: Posizionamento pezzo
+Area: Meccanica / Setup
+Parole chiave: posizionamento, battuta, riferimento, pezzo, ripetibilita
+
+Il posizionamento pezzo determina quanto deve lavorare la localizzazione.
+Una buona battuta meccanica rende la ricetta piu' semplice e robusta.
+
+Buone pratiche:
+- usare riferimenti meccanici ripetibili;
+- evitare pezzi inclinati o sollevati;
+- controllare giochi e sporco sulle battute;
+- verificare tutti i formati reali;
+- non affidare tutto alla visione se la meccanica e' instabile.
+
+Nota:
+La localizzazione corregge spostamenti ragionevoli, non problemi meccanici fuori controllo.

@@ -1,0 +1,18 @@
+Titolo: Camera esposizione e gain
+Area: Camera / Illuminazione
+Parole chiave: esposizione, gain, camera, luminosita, rumore
+
+Esposizione e gain influenzano stabilita' di localizzazione, edge e AI.
+
+Esposizione:
+- aumenta luce raccolta;
+- se troppo alta crea mosso o saturazione;
+- se variabile cambia il contrasto tra frame.
+
+Gain:
+- aumenta luminosita' apparente;
+- se alto aggiunge rumore;
+- puo' far saltare edge deboli.
+
+Regola:
+Per misure e localizzazione, bloccare esposizione e gain dopo aver trovato una luce stabile.

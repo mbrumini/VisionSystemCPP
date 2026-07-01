@@ -1,0 +1,19 @@
+Titolo: Pezzi lucidi
+Area: Illuminazione / Materiali
+Parole chiave: lucido, riflesso, metallo, saturazione
+
+I pezzi lucidi sono difficili perche' riflettono luce e ambiente.
+Un riflesso puo' sembrare bordo, difetto o area bianca saturata.
+
+Consigli:
+- usare luce diffusa o dome;
+- evitare riflessi diretti in camera;
+- bloccare esposizione;
+- usare esclusioni rosse su riflessi inevitabili;
+- validare con pezzi ruotati e lotti diversi.
+
+Quando usare radente:
+Solo se serve evidenziare graffi o rilievi, accettando piu' sensibilita' a posizione e riflessi.
+
+Regola:
+Su lucido, controllare prima riflessi e saturazione, poi parametri software.

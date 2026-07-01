@@ -1,0 +1,21 @@
+Titolo: Dataset AI sbilanciato
+Area: AI / Dataset / Diagnostica
+Parole chiave: dataset sbilanciato, AI, classi, falsi ok, falsi nok
+
+Un dataset AI sbilanciato contiene troppi esempi di una classe e pochi dell'altra.
+Il modello puo' imparare a rispondere sempre con la classe piu' frequente.
+
+Sintomi:
+- molti falsi OK su difetti rari;
+- molti falsi NOK su pezzi buoni diversi dal campione;
+- confidenza alta ma decisione sbagliata;
+- comportamento buono in test e fragile in produzione.
+
+Controlli:
+1. Contare immagini OK e NOK per classe.
+2. Verificare che ogni difetto importante abbia esempi reali.
+3. Includere variazioni di luce, posizione, lotto e superficie.
+4. Separare campioni di validazione non usati nel training.
+
+Regola:
+Prima di cambiare soglia, controllare se il dataset rappresenta davvero la produzione.

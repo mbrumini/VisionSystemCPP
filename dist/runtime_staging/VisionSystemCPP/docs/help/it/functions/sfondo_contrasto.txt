@@ -1,0 +1,19 @@
+Titolo: Sfondo e contrasto
+Area: Illuminazione / Setup
+Parole chiave: sfondo, contrasto, background, localizzazione
+
+Lo sfondo influenza localizzazione ed edge.
+Uno sfondo sbagliato puo' confondere soglie e bordi.
+
+Buone pratiche:
+- usare sfondo uniforme;
+- scegliere colore opposto al pezzo quando possibile;
+- evitare texture;
+- evitare riflessi;
+- tenere lo sfondo pulito.
+
+Per BN dimensionale:
+Lo sfondo deve creare contrasto netto.
+
+Per trasparenti:
+Lo sfondo deve essere controllato per evitare bordi falsi.

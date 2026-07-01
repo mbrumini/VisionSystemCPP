@@ -1,0 +1,16 @@
+Titolo: Edge punto
+Area: Rilevamento edge
+Parole chiave: punto, edge, scansione, bordo
+
+Il punto edge cerca un bordo lungo una linea di scansione.
+Il risultato e' un punto immagine usato per misure o geometrie costruite.
+
+Procedura:
+1. Entrare in Rilevamento edge.
+2. Selezionare Punto.
+3. Disegnare la scansione.
+4. Regolare sensibilita', transizione e scelta edge.
+5. Provare su piu' frame.
+
+Uso tipico:
+Misure punto-punto, punto-linea o costruzioni geometriche.

@@ -1,0 +1,15 @@
+Titolo: Frame non aggiornato
+Area: Diagnostica / Acquisizione
+Parole chiave: frame fermo, immagine non aggiornata, acquisizione, camera
+
+Un frame non aggiornato puo' far sembrare stabile un controllo che in realta' non sta acquisendo.
+
+Controlli:
+1. Verificare stato Start/Stop.
+2. Controllare sorgente camera o file.
+3. Verificare intervallo frame.
+4. Guardare contatore frame o tempo scansione.
+5. Controllare pending jobs se il sistema e' in ritardo.
+
+Regola:
+Prima di valutare edge e misure, assicurarsi che l'immagine cambi davvero quando cambia il pezzo.

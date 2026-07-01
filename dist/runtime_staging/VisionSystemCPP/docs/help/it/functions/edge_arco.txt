@@ -1,0 +1,15 @@
+Titolo: Edge arco
+Area: Rilevamento edge
+Parole chiave: arco, bordo curvo, cerchio parziale, fascia
+
+L'arco edge cerca un tratto curvo parziale.
+E' utile quando il bordo circolare non e' completo o quando interessa solo una porzione.
+
+Procedura:
+1. Selezionare Arco.
+2. Impostare centro, punto iniziale e punto finale.
+3. Regolare fascia e sensibilita'.
+4. Provare il rilevamento.
+
+Nota:
+Usare archi quando parti del cerchio sono nascoste, disturbate o non affidabili.

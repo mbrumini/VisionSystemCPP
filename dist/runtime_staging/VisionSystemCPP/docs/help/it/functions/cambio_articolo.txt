@@ -1,0 +1,16 @@
+Titolo: Cambio articolo
+Area: Produzione / Ricette
+Parole chiave: cambio articolo, cambio formato, ricetta, setup
+
+Il cambio articolo richiede caricare la ricetta corretta e verificare la camera.
+
+Checklist:
+1. Selezionare ricetta articolo.
+2. Verificare camera e profilo.
+3. Controllare immagine campione.
+4. Provare localizzazione.
+5. Scorrere qualche immagine test o pezzo reale.
+6. Verificare misure e tolleranze.
+
+Attenzione:
+Non modificare una ricetta di produzione senza duplicarla o fare backup se la modifica e' sperimentale.

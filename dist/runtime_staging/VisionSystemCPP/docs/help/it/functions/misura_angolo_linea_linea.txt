@@ -1,0 +1,24 @@
+Titolo: Misura angolo linea-linea
+Area: Misure
+Parole chiave: angolo, inclinazione, due linee, orientamento, parallelismo
+
+La misura angolo linea-linea calcola l'angolo tra due linee.
+
+Quando usarla:
+- controllo inclinazione;
+- controllo ortogonalita';
+- verifica parallelismo indiretto;
+- controllo orientamento pezzo o feature.
+
+Geometrie necessarie:
+- due linee valide.
+
+Procedura:
+1. Configurare le due linee con edge stabile.
+2. Verificare in Setup che entrambe siano trovate.
+3. Creare misura angolo linea-linea.
+4. Impostare tolleranza in gradi.
+
+Attenzione:
+Se una linea e' molto corta, l'angolo puo' essere rumoroso.
+Allungare la ROI o migliorare contrasto bordo.

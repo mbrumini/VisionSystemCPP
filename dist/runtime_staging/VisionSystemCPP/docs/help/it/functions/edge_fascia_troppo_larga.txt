@@ -1,0 +1,18 @@
+Titolo: Fascia edge troppo larga
+Area: Rilevamento edge / Diagnostica
+Parole chiave: fascia larga, edge instabile, bordo multiplo, rumore
+
+Una fascia troppo larga include bordi e disturbi non necessari.
+Il tool puo' scegliere un bordo diverso da frame a frame.
+
+Sintomi:
+- punto che salta;
+- linea inclinata in modo variabile;
+- cerchio con diametro instabile;
+- pick mode che sembra non bastare.
+
+Soluzione:
+Ridurre la fascia intorno al bordo reale e usare esclusioni se ci sono disturbi inevitabili.
+
+Regola:
+La fascia deve contenere il bordo utile, non tutta la zona interessante.

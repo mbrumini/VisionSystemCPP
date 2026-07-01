@@ -1,0 +1,15 @@
+Titolo: Importa campione
+Area: Setup
+Parole chiave: importa, campione, immagine, riferimento
+
+Importa campione assegna un file immagine esistente come campione della camera.
+E' utile quando il campione arriva da una cartella, da una prova precedente o da un archivio.
+
+Procedura:
+1. Entrare in Setup.
+2. Premere Importa campione.
+3. Scegliere il file immagine.
+4. Verificare che l'immagine venga visualizzata correttamente.
+
+Nota:
+Il campione non e' una sequenza test. E' l'immagine principale usata per programmare l'articolo.

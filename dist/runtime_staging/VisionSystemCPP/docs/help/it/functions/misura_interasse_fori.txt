@@ -1,0 +1,25 @@
+Titolo: Misura interasse fori
+Area: Misure / Superficie
+Parole chiave: interasse, distanza fori, centro centro, fori, cerchi, superficie
+
+L'interasse fori e' la distanza tra i centri di due fori.
+
+Geometrie necessarie:
+- cerchio foro A;
+- cerchio foro B;
+- centri dei due cerchi.
+
+Illuminazione:
+- usare luce diretta se i fori sono sulla faccia del pezzo;
+- usare anulare se il bordo foro risponde bene;
+- usare diffusa/coassiale su materiali riflettenti;
+- usare retroilluminazione solo se i fori sono passanti e il profilo in silhouette e' quello da misurare.
+
+Procedura:
+1. Rilevare i due cerchi.
+2. Verificare che i centri siano stabili.
+3. Creare distanza punto-punto tra i centri.
+4. Validare su pezzo master.
+
+Regola:
+Per interasse, la stabilita' del centro foro conta piu' del diametro visualmente bello.

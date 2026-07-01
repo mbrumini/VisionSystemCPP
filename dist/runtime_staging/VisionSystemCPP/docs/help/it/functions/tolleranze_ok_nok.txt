@@ -1,0 +1,17 @@
+Titolo: Giudizio OK/NOK
+Area: Tolleranze
+Parole chiave: OK, NOK, giudizio, tolleranza, scarto
+
+Il giudizio OK/NOK trasforma una misura in esito di controllo.
+Una misura e' OK quando rientra nei limiti impostati.
+E' NOK quando supera minimo o massimo consentito.
+
+Esempio:
+Nominale 50.000 mm.
+Tolleranza minima 49.900 mm.
+Tolleranza massima 50.100 mm.
+Misura 50.050 mm: OK.
+Misura 50.200 mm: NOK.
+
+Nota:
+Prima di usare OK/NOK in produzione, provare con pezzi buoni e pezzi fuori tolleranza.

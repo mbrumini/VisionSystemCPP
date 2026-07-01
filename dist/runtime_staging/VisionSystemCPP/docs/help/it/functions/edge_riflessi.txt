@@ -1,0 +1,16 @@
+Titolo: Edge disturbato da riflessi
+Area: Rilevamento edge / Illuminazione
+Parole chiave: edge riflesso, riflessi, riflesso, linea edge riflesso, superficie lucida, bordo falso
+
+Un riflesso puo' sembrare un bordo piu' forte del bordo reale.
+Il sistema puo' seguirlo se cade dentro la fascia di ricerca.
+
+Controlli:
+1. Guardare se il punto o la linea segue una zona brillante.
+2. Cambiare luce o angolo.
+3. Usare luce diffusa o coassiale su pezzi lucidi.
+4. Ridurre fascia e mascherare riflessi inevitabili.
+5. Validare su pezzi con riflessi diversi.
+
+Regola:
+Non aumentare sensibilita' se il problema e' un riflesso piu' forte del bordo.

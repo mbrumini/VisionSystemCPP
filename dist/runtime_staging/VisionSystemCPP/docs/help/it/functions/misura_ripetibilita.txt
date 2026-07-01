@@ -1,0 +1,14 @@
+Titolo: Ripetibilita misura
+Area: Misure / Validazione
+Parole chiave: ripetibilita, misura stabile, scarto, sigma
+
+La ripetibilita indica quanto una misura resta stabile ripetendo lo stesso controllo.
+
+Controlli:
+1. Acquisire piu' frame dello stesso pezzo.
+2. Riposizionare il pezzo e riprovare.
+3. Confrontare variazione con tolleranza.
+4. Separare variazione di localizzazione, edge e calibrazione.
+
+Regola:
+Una misura deve avere variazione molto piu' piccola della tolleranza disponibile.

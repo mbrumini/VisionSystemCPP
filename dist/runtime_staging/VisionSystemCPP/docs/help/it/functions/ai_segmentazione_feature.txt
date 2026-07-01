@@ -1,0 +1,23 @@
+Titolo: Feature segmentazione AI
+Area: AI / Segmentazione / Dataset
+Parole chiave: segmentazione, feature, maschera, immagini, label
+
+Le feature di segmentazione AI definiscono le aree che il modello deve trovare nell'immagine.
+Ogni feature ha cartelle dedicate per immagini, maschere e label.
+
+Struttura prevista:
+- raw: immagini grezze di segmentazione;
+- images: immagini usate per una feature;
+- masks: maschere disegnate o generate;
+- labels: file di label per training YOLO segmentation.
+
+Esempi di feature:
+- graffio;
+- bordo danneggiato;
+- area sporca;
+- bava;
+- zona mancante.
+
+Regola:
+Creare feature separate solo quando servono decisioni o misure diverse. Troppe feature simili rendono il dataset piu' fragile.
+

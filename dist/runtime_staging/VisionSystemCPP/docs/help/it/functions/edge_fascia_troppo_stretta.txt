@@ -1,0 +1,19 @@
+Titolo: Fascia edge troppo stretta
+Area: Rilevamento edge / Diagnostica
+Parole chiave: fascia stretta, edge non trovato, bordo fuori fascia
+
+Una fascia troppo stretta puo' perdere il bordo quando il pezzo si sposta o ruota.
+
+Sintomi:
+- edge trovato sul campione ma non sui test;
+- misura disponibile solo su alcuni frame;
+- overlay vicino al bordo ma risultato assente.
+
+Controlli:
+1. Verificare localizzazione.
+2. Guardare piu' frame in Setup.
+3. Allargare quanto basta per contenere la variazione reale.
+4. Evitare di includere bordi secondari.
+
+Regola:
+Prima stabilizzare la posa, poi scegliere la fascia minima robusta.

@@ -1,0 +1,14 @@
+Titolo: Area ricerca localizzazione
+Area: Setup / Localizzazione
+Parole chiave: localizzazione, ROI, AOE, area ricerca, pezzo
+
+L'area di ricerca limita la zona in cui il sistema cerca il pezzo.
+Serve a rendere la localizzazione piu' stabile e veloce.
+
+Procedura:
+1. Entrare nel tool di localizzazione o Setup.
+2. Disegnare l'area di ricerca intorno alla zona dove si trova il pezzo.
+3. Testare la localizzazione.
+
+Consiglio:
+L'area deve contenere il pezzo in tutte le posizioni previste, ma evitare zone inutili dello sfondo.

@@ -1,0 +1,24 @@
+Titolo: Camera Vimba e trigger software
+Area: Camera
+Parole chiave: Vimba, Vimba X, Allied Vision, trigger software, grab, start, frame
+
+Le camere Vimba possono richiedere trigger software anche quando la camera viene vista correttamente da Vimba X.
+
+Sintomi:
+- la camera viene letta da Vimba X ma l'app non riceve immagini;
+- premendo Start non arriva nessun frame;
+- arrivano pochi frame e poi il grab si ferma;
+- il flusso USB funziona ma Vimba no.
+
+Controlli:
+1. Verificare tipo camera nel JSON: Vimba deve usare il runtime Vimba.
+2. Verificare seriale/device id.
+3. Verificare trigger source e trigger mode.
+4. Se la camera e' in software trigger, inviare trigger a ogni richiesta frame.
+5. Controllare log frame index e stato runtime.
+
+Regola pratica:
+Se Vimba X vede la camera ma l'app non grabba, non pensare subito a un problema hardware. Prima controllare trigger software e ciclo di acquisizione.
+
+Nota:
+USB e Vimba possono avere runtime diversi, ma devono produrre lo stesso risultato lato app: immagine corrente aggiornata, sample salvabile, overlay coerente.

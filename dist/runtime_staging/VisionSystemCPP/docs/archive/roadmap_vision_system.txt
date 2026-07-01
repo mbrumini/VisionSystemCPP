@@ -1,0 +1,142 @@
+ROADMAP - VISION SYSTEM C++
+
+Obiettivo generale
+Costruire un sistema di visione industriale in C++ con OpenCV, partendo da immagini su disco ma progettando da subito l'ambiente per supportare X telecamere indipendenti.
+
+Vincolo principale
+Il sistema deve supportare piu' telecamere indipendenti tra loro.
+Ogni camera deve poter avere:
+- sorgente propria;
+- configurazione propria;
+- stato proprio;
+- acquisizione propria;
+- processing proprio;
+- risultati propri;
+- log e diagnostica propri.
+
+Una camera che si ferma, rallenta o va in errore non deve bloccare automaticamente le altre, deve però dare un allarme per un
+problema che non permette di continuare a lavorare.
+
+Numero camere
+Il numero di camere deve essere dinamico e letto da configurazione.
+Non fissare nel codice un numero rigido di camere.
+Prevedere solo un limite massimo di sicurezza, utile per evitare configurazioni errate o non sostenibili.
+Il file iniziale contiene 16 slot camera, da CAM01 a CAM16.
+Ogni slot ha exists ed enabled per distinguere camera assente, camera presente ma disabilitata e camera attiva.
+
+Stato attuale
+- Progetto C++20 configurato con CMake.
+- OpenCV collegato tramite vcpkg.
+- FileCamera legge immagini da data/images.
+- ImageProcessor esegue un primo processing minimale.
+- Timer misura il tempo ciclo.
+- Build Release funzionante.
+
+Prossimi passi brevi
+1. Definire CameraContext: nome camera, configurazione, stato, sorgente, posizione in macchina univoca, processing e statistiche.
+2. Aggiungere Frame con dati immagine, timestamp, indice frame e nome sorgente.
+3. Aggiungere FrameQueue per ogni camera.
+4. Separare acquisizione e processing per camera.
+5. Aggiungere Logger minimale con prefisso camera.
+6. Leggere configurazione multi-camera da config/cameras.json.
+7. Inserire prima GUI Qt di test per visualizzare camere, selezione e tool dedicati.
+
+Primo algoritmo utile
+- Caricare immagine campione.
+- Convertire in grayscale.
+- Applicare blur leggero se serve.
+- Applicare soglia o edge detection.
+- Trovare contorni.
+- Disegnare bounding box.
+- Stampare misure base: area, bounding rect, centro.
+- Preparare un risultato OK/NOK provvisorio.
+
+Priorita' per camere BW
+- Prima delle misure dimensionali vere serve localizzare il pezzo.
+- La localizzazione deve trovare il pezzo nell'immagine, calcolare il centro di massa e definire gli assi X/Y del pezzo.
+- Le misure successive devono potersi appoggiare a questo sistema di riferimento, non solo alle coordinate pixel assolute.
+- Il tool GUI previsto sara' "Localizzazione", ma prima di renderlo operativo bisogna definire bene ricette, configurazioni e salvataggio dei tool per ogni camera.
+
+Ricette e configurazioni tool
+- Definire una directory `recipes/` separata dal codice sorgente.
+- Ogni ricetta deve descrivere il setup operativo della macchina o del prodotto.
+- Ogni camera deve avere una propria configurazione tool dentro la ricetta.
+- Le impostazioni dei tool non devono essere hardcoded nel codice: soglie, ROI, parametri di localizzazione, tolleranze e tool attivi devono essere salvati in file configurabili.
+- Prevedere una ricetta attiva selezionabile dal programma.
+- Separare la configurazione hardware/sorgente camera (`config/cameras.json`) dalla configurazione di processo/prodotto (`recipes/...`).
+- Il JSON delle camere dice quali camere esistono e quale profilo generale usano; la ricetta dice come ispezionare il prodotto su ciascuna camera.
+- Prima implementazione suggerita:
+  - `recipes/default/recipe.json` per metadati ricetta;
+  - `recipes/default/cameras/CAM01.json` ... `CAM16.json` per tool e parametri specifici camera;
+  - eventuale `recipes/default/assets/` per immagini di riferimento, maschere, template o modelli.
+
+Architettura desiderata
+Camera 1: ICamera -> FrameQueue -> ImageProcessor -> Result -> Logger/Output
+Camera 2: ICamera -> FrameQueue -> ImageProcessor -> Result -> Logger/Output
+Camera X: ICamera -> FrameQueue -> ImageProcessor -> Result -> Logger/Output
+
+Ogni pipeline camera deve essere indipendente.
+
+In futuro
+- Thread separati per acquisizione e processing.
+- Interfaccia verso PLC.
+- Salvataggio immagini NOK.
+- Integrazione camere reali tramite Vimba X.
+
+Formato configurazione
+La configurazione principale sara' in JSON.
+File iniziale previsto: config/cameras.json.
+XML resta una possibilita' solo se richiesto da software esterni, standard aziendali o integrazioni specifiche.
+
+Profili di controllo
+Le camere devono supportare profili diversi:
+- BW dimensionali;
+- grayscale misurazione;
+- grayscale superficiali;
+- grayscale AI;
+- grayscale con combinazione di superficiali, misure e AI.
+
+Nel JSON il tipo sorgente camera resta separato dal profilo di controllo.
+Il profilo di controllo deve indicare anche i tool GUI da mostrare quando la camera e' selezionata.
+
+GUI prevista
+- tecnologia principale: Qt 6 Widgets;
+- finestra fullscreen;
+- barra superiore/menu operativo con accesso a ricette, configurazioni, lingua e funzioni generali;
+- area immagini a sinistra;
+- pannello comandi a destra;
+- griglia miniature o camera selezionata grande;
+- click su miniatura per selezionare camera;
+- pannello destro con comandi generali e tool dedicati alla camera selezionata.
+- GUI anticipata come strumento di sviluppo e collaudo.
+
+Traduzioni e testi GUI
+- Non lasciare i testi della GUI sparsi e hardcoded nei widget quando diventano stabili.
+- Prevedere file JSON dedicati alle traduzioni, per esempio `translations/it.json`, `translations/en.json`, `translations/de.json`.
+- I widget devono usare chiavi testo stabili, non stringhe ripetute in molti punti.
+- Il cambio lingua deve essere disponibile dalla GUI, idealmente nel menu in alto.
+- La lingua selezionata deve essere salvata nella configurazione utente o di sistema.
+- Prima fase accettabile: testi hardcoded solo per prototipo rapido.
+- Seconda fase: introdurre `TranslationManager` o componente equivalente che carica JSON e fornisce le stringhe ai widget.
+- Anche i nomi dei tool e dei placeholder devono passare dal sistema traduzioni quando iniziano a essere definitivi.
+
+Menu superiore previsto
+- Ricette: seleziona ricetta attiva, crea/duplica/importa/esporta ricetta.
+- Configurazioni: camere, percorsi, parametri sistema, diagnostica.
+- Lingua: selezione lingua GUI.
+- Sistema: start/stop/reset, reload configurazione, uscita controllata.
+- Il menu superiore deve convivere con il pannello destro: il pannello destro resta operativo sulla camera selezionata, il menu superiore gestisce funzioni globali.
+
+Regola pratica
+Prima rendere chiaro e misurabile il flusso con immagini da cartella. Solo dopo passare alle camere reali.
+
+Linee guida di manutenzione
+- Separare le variabili e i parametri condivisi in file dedicati, preferibilmente tramite configurazione JSON o classi di configurazione dedicate.
+- Evitare file sorgente enormi: ogni parte del programma deve stare in moduli/file specifici e manutenibili.
+- Dividere la GUI in widget dedicati, la configurazione in classi dedicate, la camera in astrazioni dedicate e il processing in componenti propri.
+- Usare variabili globali solo quando sono davvero necessarie; per valori fissi preferire costanti in header dedicati, per valori modificabili preferire configurazione esterna.
+
+SDK camere reali
+SDK preferito: Allied Vision Vimba X.
+Astrazione prevista: VimbaCamera implementa ICamera.
+Nel JSON il tipo sorgente sara' type=vimba per camere reali.

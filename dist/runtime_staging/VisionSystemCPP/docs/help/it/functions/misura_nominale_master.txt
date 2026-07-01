@@ -1,0 +1,14 @@
+Titolo: Nominale da pezzo master
+Area: Misure / Validazione
+Parole chiave: nominale, pezzo master, misura attesa, riferimento
+
+Il nominale puo' essere ricavato dal disegno o verificato con un pezzo master.
+
+Buone pratiche:
+1. Usare il disegno come riferimento principale.
+2. Misurare il pezzo master con strumento esterno se serve.
+3. Confrontare valore Vision con valore atteso.
+4. Non usare un pezzo qualsiasi come master.
+
+Regola:
+Il pezzo master serve a verificare il sistema, non a nascondere una calibrazione sbagliata.

@@ -1,0 +1,19 @@
+Titolo: Camera fuori fuoco
+Area: Camera / Ottica / Diagnostica
+Parole chiave: fuori fuoco, camera, bordo largo, edge instabile
+
+Una camera fuori fuoco rende i bordi larghi e poco ripetibili.
+Il sistema puo' ancora trovare un edge, ma la posizione puo' oscillare.
+
+Sintomi:
+- bordo morbido;
+- edge che cambia posizione;
+- diametri variabili;
+- AI meno sicura;
+- difetti piccoli non visibili.
+
+Controlli:
+1. Guardare il bordo reale nell'immagine.
+2. Verificare che la messa a fuoco sia stabile su tutto il campo.
+3. Controllare vibrazioni e distanza pezzo-camera.
+4. Rifare test su campione master.

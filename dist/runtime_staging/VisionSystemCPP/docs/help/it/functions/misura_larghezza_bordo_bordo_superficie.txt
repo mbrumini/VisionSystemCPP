@@ -1,0 +1,37 @@
+Titolo: Misura larghezza superficiale bordo-bordo
+Area: Misure / Superficie
+Parole chiave: larghezza superficiale, bordo bordo, due bordi, superficie, cava, sede, linea linea, luce diretta
+
+La larghezza superficiale bordo-bordo misura la distanza tra due bordi visibili sulla faccia del pezzo.
+Non e' una misura foro-bordo.
+
+Quando usarla:
+- larghezza di una cava;
+- larghezza di una sede;
+- distanza tra due spalle visibili dall'alto;
+- distanza tra due incisioni o riferimenti lineari superficiali;
+- larghezza di una zona lavorata sulla superficie.
+
+Geometrie necessarie:
+- linea sul primo bordo;
+- linea sul secondo bordo;
+- misura distanza linea-linea.
+
+Illuminazione:
+- usare luce diretta se i bordi sono sulla faccia del pezzo;
+- usare diffusa se il materiale riflette;
+- usare coassiale se i bordi sono differenze di riflettanza su piano;
+- usare radente solo se i bordi si vedono come rilievo/incisione e l'ombra resta stabile.
+
+Procedura:
+1. Stabilizzare la localizzazione.
+2. Rendere visibili entrambi i bordi.
+3. Configurare un edge linea sul primo bordo.
+4. Configurare un edge linea sul secondo bordo.
+5. Verificare in Setup che entrambe le linee siano trovate.
+6. Creare una misura distanza linea-linea.
+7. Validare su piu' pezzi e campione master.
+
+Regola:
+Se l'operatore dice bordo-bordo, non proporre foro-bordo.
+Usare linee e distanza linea-linea, salvo che i bordi siano curvi o richiedano geometrie costruite.

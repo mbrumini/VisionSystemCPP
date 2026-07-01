@@ -1,0 +1,14 @@
+Titolo: Ripristino backup ricetta
+Area: Ricette / Backup
+Parole chiave: ripristino backup, restore, ricetta, recupero
+
+Il ripristino di una ricetta serve quando una modifica peggiora il controllo o quando si deve tornare a una versione validata.
+
+Prima di ripristinare:
+1. Salvare una copia dello stato attuale se contiene prove utili.
+2. Annotare perche' si torna indietro.
+3. Verificare che il backup appartenga allo stesso articolo.
+4. Dopo il ripristino, testare localizzazione, edge, misure e tolleranze.
+
+Regola:
+Un backup ripristinato non e' automaticamente pronto per produzione: va ricontrollato su pezzo master e campioni OK/NOK.

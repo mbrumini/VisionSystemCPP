@@ -1,0 +1,16 @@
+Titolo: Validazione edge su test
+Area: Setup / Rilevamento edge
+Parole chiave: validazione edge, immagini test, setup, robustezza
+
+Un edge programmato sul campione deve essere provato sulle immagini test.
+Il campione serve a configurare, ma i test mostrano la robustezza.
+
+Procedura:
+1. Salvare edge sul campione.
+2. Scorrere immagini test.
+3. Controllare trovato/non trovato.
+4. Guardare se il bordo scelto e' sempre quello corretto.
+5. Correggere fascia, transizione o luce se il risultato cambia.
+
+Regola:
+Un edge che funziona solo sul campione non e' ancora pronto per produzione.

@@ -1,0 +1,15 @@
+Titolo: Campioni borderline in produzione
+Area: Produzione / Validazione
+Parole chiave: borderline, limite tolleranza, campioni, validazione
+
+I campioni borderline sono pezzi vicini al limite OK/NOK.
+Servono per capire se il controllo e' davvero robusto.
+
+Uso:
+- verificare tolleranze;
+- controllare ripetibilita';
+- valutare falsi OK/NOK;
+- validare AI o misure dimensionali.
+
+Regola:
+Se un borderline cambia giudizio senza motivo, controllare stabilita' misura prima di cambiare limite.

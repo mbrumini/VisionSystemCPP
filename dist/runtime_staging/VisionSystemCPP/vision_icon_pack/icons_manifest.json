@@ -1,0 +1,482 @@
+[
+  {
+    "key": "start",
+    "desc": "avvia live/test",
+    "cat": "Comandi Base"
+  },
+  {
+    "key": "stop",
+    "desc": "stop",
+    "cat": "Comandi Base"
+  },
+  {
+    "key": "reload",
+    "desc": "aggiorna/ricalcola",
+    "cat": "Comandi Base"
+  },
+  {
+    "key": "save",
+    "desc": "salva",
+    "cat": "Comandi Base"
+  },
+  {
+    "key": "back",
+    "desc": "indietro",
+    "cat": "Comandi Base"
+  },
+  {
+    "key": "new",
+    "desc": "nuovo elemento",
+    "cat": "Comandi Base"
+  },
+  {
+    "key": "delete",
+    "desc": "elimina",
+    "cat": "Comandi Base"
+  },
+  {
+    "key": "fullscreen",
+    "desc": "schermo intero",
+    "cat": "Comandi Base"
+  },
+  {
+    "key": "grid",
+    "desc": "vista griglia",
+    "cat": "Comandi Base"
+  },
+  {
+    "key": "help",
+    "desc": "aiuto",
+    "cat": "Comandi Base"
+  },
+  {
+    "key": "configure",
+    "desc": "configura",
+    "cat": "Comandi Base"
+  },
+  {
+    "key": "setup",
+    "desc": "configurazione sistema",
+    "cat": "Setup E Camera"
+  },
+  {
+    "key": "camera",
+    "desc": "camera",
+    "cat": "Setup E Camera"
+  },
+  {
+    "key": "acquireSample",
+    "desc": "acquisisci immagine/campione",
+    "cat": "Setup E Camera"
+  },
+  {
+    "key": "assignSampleImage",
+    "desc": "assegna immagine campione",
+    "cat": "Setup E Camera"
+  },
+  {
+    "key": "assignTestImages",
+    "desc": "assegna immagini test",
+    "cat": "Setup E Camera"
+  },
+  {
+    "key": "assignImageFolder",
+    "desc": "assegna cartella immagini",
+    "cat": "Setup E Camera"
+  },
+  {
+    "key": "nextFrame",
+    "desc": "prossimo frame",
+    "cat": "Setup E Camera"
+  },
+  {
+    "key": "saveSample",
+    "desc": "salva campione",
+    "cat": "Setup E Camera"
+  },
+  {
+    "key": "localization",
+    "desc": "localizzazione pezzo",
+    "cat": "Localizzazione / Superficie"
+  },
+  {
+    "key": "surfaceLocalization",
+    "desc": "localizzazione da superficie",
+    "cat": "Localizzazione / Superficie"
+  },
+  {
+    "key": "surfaceThreshold",
+    "desc": "soglia superficie",
+    "cat": "Localizzazione / Superficie"
+  },
+  {
+    "key": "surfaceEdge",
+    "desc": "edge superficie",
+    "cat": "Localizzazione / Superficie"
+  },
+  {
+    "key": "surfaceCircleThreshold",
+    "desc": "cerchio da soglia",
+    "cat": "Localizzazione / Superficie"
+  },
+  {
+    "key": "surfaceCircleEdge",
+    "desc": "cerchio da edge",
+    "cat": "Localizzazione / Superficie"
+  },
+  {
+    "key": "surfacePca",
+    "desc": "PCA / asse principale",
+    "cat": "Localizzazione / Superficie"
+  },
+  {
+    "key": "surfaceModel",
+    "desc": "modello superficie",
+    "cat": "Localizzazione / Superficie"
+  },
+  {
+    "key": "surfaceSearchRoi",
+    "desc": "ROI ricerca",
+    "cat": "Localizzazione / Superficie"
+  },
+  {
+    "key": "surfaceAddExclusion",
+    "desc": "aggiungi esclusione",
+    "cat": "Localizzazione / Superficie"
+  },
+  {
+    "key": "surfaceClearExclusions",
+    "desc": "cancella esclusioni",
+    "cat": "Localizzazione / Superficie"
+  },
+  {
+    "key": "surfaceDefects",
+    "desc": "difetti superficie",
+    "cat": "Localizzazione / Superficie"
+  },
+  {
+    "key": "geometries",
+    "desc": "gruppo geometrie",
+    "cat": "Geometrie Rilevate"
+  },
+  {
+    "key": "pointGeometry",
+    "desc": "punto",
+    "cat": "Geometrie Rilevate"
+  },
+  {
+    "key": "lineGeometry",
+    "desc": "linea",
+    "cat": "Geometrie Rilevate"
+  },
+  {
+    "key": "circleGeometry",
+    "desc": "cerchio",
+    "cat": "Geometrie Rilevate"
+  },
+  {
+    "key": "arcGeometry",
+    "desc": "arco",
+    "cat": "Geometrie Rilevate"
+  },
+  {
+    "key": "edgeGeometry",
+    "desc": "edge generico",
+    "cat": "Geometrie Rilevate"
+  },
+  {
+    "key": "contourGeometry",
+    "desc": "contorno",
+    "cat": "Geometrie Rilevate"
+  },
+  {
+    "key": "polygon",
+    "desc": "poligono",
+    "cat": "Geometrie Rilevate"
+  },
+  {
+    "key": "roi",
+    "desc": "ROI",
+    "cat": "Geometrie Rilevate"
+  },
+  {
+    "key": "area",
+    "desc": "area",
+    "cat": "Geometrie Rilevate"
+  },
+  {
+    "key": "constructedGeometries",
+    "desc": "gruppo geometrie costruite",
+    "cat": "Geometrie Costruite"
+  },
+  {
+    "key": "lineLineIntersection",
+    "desc": "intersezione linea-linea",
+    "cat": "Geometrie Costruite"
+  },
+  {
+    "key": "lineCircleIntersection",
+    "desc": "intersezione linea-cerchio",
+    "cat": "Geometrie Costruite"
+  },
+  {
+    "key": "circleCircleIntersection",
+    "desc": "intersezione cerchio-cerchio",
+    "cat": "Geometrie Costruite"
+  },
+  {
+    "key": "circleCenter",
+    "desc": "centro cerchio",
+    "cat": "Geometrie Costruite"
+  },
+  {
+    "key": "midpoint",
+    "desc": "punto medio",
+    "cat": "Geometrie Costruite"
+  },
+  {
+    "key": "offsetLine",
+    "desc": "linea offset",
+    "cat": "Geometrie Costruite"
+  },
+  {
+    "key": "angleBisector",
+    "desc": "bisettrice",
+    "cat": "Geometrie Costruite"
+  },
+  {
+    "key": "tangentLine",
+    "desc": "tangente",
+    "cat": "Geometrie Costruite"
+  },
+  {
+    "key": "projectPoint",
+    "desc": "proiezione punto",
+    "cat": "Geometrie Costruite"
+  },
+  {
+    "key": "measurements",
+    "desc": "gruppo misure",
+    "cat": "Misure"
+  },
+  {
+    "key": "dimensions",
+    "desc": "quote/dimensioni",
+    "cat": "Misure"
+  },
+  {
+    "key": "distance",
+    "desc": "distanza generica",
+    "cat": "Misure"
+  },
+  {
+    "key": "length",
+    "desc": "lunghezza",
+    "cat": "Misure"
+  },
+  {
+    "key": "pointPointDistance",
+    "desc": "distanza punto-punto",
+    "cat": "Misure"
+  },
+  {
+    "key": "pointLineDistance",
+    "desc": "distanza punto-linea",
+    "cat": "Misure"
+  },
+  {
+    "key": "lineLineDistance",
+    "desc": "distanza linea-linea",
+    "cat": "Misure"
+  },
+  {
+    "key": "diameter",
+    "desc": "diametro",
+    "cat": "Misure"
+  },
+  {
+    "key": "radius",
+    "desc": "raggio",
+    "cat": "Misure"
+  },
+  {
+    "key": "circleDiameterMeasure",
+    "desc": "misura diametro cerchio",
+    "cat": "Misure"
+  },
+  {
+    "key": "angle",
+    "desc": "angolo generico",
+    "cat": "Misure"
+  },
+  {
+    "key": "lineLineAngle",
+    "desc": "angolo linea-linea",
+    "cat": "Misure"
+  },
+  {
+    "key": "threadInspection",
+    "desc": "controllo filetto",
+    "cat": "Misure"
+  },
+  {
+    "key": "threadExtractionRoi",
+    "desc": "ROI filetto",
+    "cat": "Misure"
+  },
+  {
+    "key": "testThreadExtraction",
+    "desc": "test estrazione filetto",
+    "cat": "Misure"
+  },
+  {
+    "key": "tolerances",
+    "desc": "gruppo tolleranze",
+    "cat": "Tolleranze"
+  },
+  {
+    "key": "nominal",
+    "desc": "nominale",
+    "cat": "Tolleranze"
+  },
+  {
+    "key": "minTolerance",
+    "desc": "minimo",
+    "cat": "Tolleranze"
+  },
+  {
+    "key": "maxTolerance",
+    "desc": "massimo",
+    "cat": "Tolleranze"
+  },
+  {
+    "key": "okNokRule",
+    "desc": "regola OK/NOK",
+    "cat": "Tolleranze"
+  },
+  {
+    "key": "confidence",
+    "desc": "confidenza/sicurezza",
+    "cat": "Tolleranze"
+  },
+  {
+    "key": "ai",
+    "desc": "gruppo AI",
+    "cat": "AI / Modelli"
+  },
+  {
+    "key": "aiModel",
+    "desc": "modello AI",
+    "cat": "AI / Modelli"
+  },
+  {
+    "key": "aiClassification",
+    "desc": "classificazione",
+    "cat": "AI / Modelli"
+  },
+  {
+    "key": "aiLocalization",
+    "desc": "localizzazione AI",
+    "cat": "AI / Modelli"
+  },
+  {
+    "key": "aiAnomaly",
+    "desc": "anomalia",
+    "cat": "AI / Modelli"
+  },
+  {
+    "key": "aiSegmentation",
+    "desc": "segmentazione",
+    "cat": "AI / Modelli"
+  },
+  {
+    "key": "aiTrain",
+    "desc": "training",
+    "cat": "AI / Modelli"
+  },
+  {
+    "key": "classes",
+    "desc": "classi",
+    "cat": "AI / Modelli"
+  },
+  {
+    "key": "datasetCapture",
+    "desc": "dataset",
+    "cat": "AI / Modelli"
+  },
+  {
+    "key": "previewModel",
+    "desc": "anteprima modello",
+    "cat": "AI / Modelli"
+  },
+  {
+    "key": "acquireModel",
+    "desc": "acquisisci modello",
+    "cat": "AI / Modelli"
+  },
+  {
+    "key": "testShapeModel",
+    "desc": "test shape model",
+    "cat": "AI / Modelli"
+  },
+  {
+    "key": "testTemplateModel",
+    "desc": "test template model",
+    "cat": "AI / Modelli"
+  },
+  {
+    "key": "threshold",
+    "desc": "soglia",
+    "cat": "Diagnostica / Parametri"
+  },
+  {
+    "key": "contrast",
+    "desc": "contrasto",
+    "cat": "Diagnostica / Parametri"
+  },
+  {
+    "key": "lighting",
+    "desc": "luce",
+    "cat": "Diagnostica / Parametri"
+  },
+  {
+    "key": "calibration",
+    "desc": "calibrazione",
+    "cat": "Diagnostica / Parametri"
+  },
+  {
+    "key": "defectMap",
+    "desc": "mappa difetti",
+    "cat": "Diagnostica / Parametri"
+  },
+  {
+    "key": "testGeometry",
+    "desc": "test geometria",
+    "cat": "Diagnostica / Parametri"
+  },
+  {
+    "key": "testLocalization",
+    "desc": "test localizzazione",
+    "cat": "Diagnostica / Parametri"
+  },
+  {
+    "key": "testStrategy",
+    "desc": "test strategia",
+    "cat": "Diagnostica / Parametri"
+  },
+  {
+    "key": "clear",
+    "desc": "pulisci generico",
+    "cat": "Diagnostica / Parametri"
+  },
+  {
+    "key": "clearRoi",
+    "desc": "cancella ROI",
+    "cat": "Diagnostica / Parametri"
+  },
+  {
+    "key": "clearPolygon",
+    "desc": "cancella poligono",
+    "cat": "Diagnostica / Parametri"
+  }
+]

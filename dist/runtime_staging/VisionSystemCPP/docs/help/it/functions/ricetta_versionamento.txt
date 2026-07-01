@@ -1,0 +1,15 @@
+Titolo: Versionamento ricetta
+Area: Ricette / Produzione
+Parole chiave: versione ricetta, modifiche, storico, validazione
+
+Il versionamento aiuta a sapere quale ricetta e' stata usata in produzione.
+
+Buone pratiche:
+1. Annotare modifiche importanti.
+2. Fare backup prima di cambiare tool critici.
+3. Validare nuova versione su OK/NOK.
+4. Conservare versione precedente funzionante.
+5. Non modificare in produzione senza motivo tracciato.
+
+Regola:
+Una ricetta senza storico rende difficile capire quando e perche' e' cambiato un controllo.

@@ -1,0 +1,41 @@
+Titolo: Misura lunghezza e larghezza
+Area: Misure
+Parole chiave: lunghezza, larghezza, altezza, distanza, quota lineare, profilo, bordo, punto punto, linea linea
+
+Una richiesta come "devo fare una lunghezza" e' incompleta.
+Prima bisogna capire quale riferimento definisce la lunghezza.
+
+Casi tipici:
+- lunghezza esterna del pezzo;
+- larghezza o altezza su profilo BN;
+- distanza tra due bordi;
+- distanza tra due punti;
+- distanza tra foro e bordo;
+- lunghezza di una cava o sede sulla superficie.
+
+Geometrie possibili:
+- due punti se la quota e' tra estremi puntuali;
+- due linee se la quota e' tra bordi paralleli;
+- punto-linea se si misura una distanza perpendicolare;
+- cerchi e centri se la quota parte da fori o sedi;
+- geometrie costruite se serve un riferimento teorico.
+
+Scelta camera:
+- per lunghezze di profilo esterno o silhouette usare una camera dimensionale BN, se disponibile;
+- per lunghezze su faccia del pezzo, cave, sedi, incisioni o riferimenti superficiali usare camera grigi/misura/superficie;
+- non scegliere una camera solo perche' ha il tool misure: verificare che veda il riferimento.
+
+Illuminazione:
+- profilo esterno: contrasto BN o retroilluminazione se adatta;
+- superficie: luce diretta, diffusa, coassiale o anulare in base al materiale;
+- rilievi/incisioni: radente solo se crea un bordo stabile.
+
+Procedura:
+1. Chiedere quale lunghezza serve e tra quali riferimenti.
+2. Scegliere camera e luce in base al riferimento.
+3. Configurare edge o geometrie.
+4. Creare la misura corretta.
+5. Verificare in Setup su piu' pezzi.
+
+Regola:
+Se l'operatore chiede solo "una lunghezza", chiedere prima se e' profilo esterno, distanza tra bordi, foro-bordo o quota su superficie.

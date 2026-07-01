@@ -1,0 +1,171 @@
+ARCHITETTURA MULTI-CAMERA
+
+Idea base
+Il sistema non deve essere pensato come "un programma con una camera", ma come un contenitore di pipeline camera.
+Ogni pipeline camera e' autonoma e puo' funzionare, rallentare, fermarsi o andare in errore senza bloccare le altre.
+
+Unita' logica: CameraContext
+Ogni camera deve avere un proprio contesto operativo.
+
+CameraContext contiene idealmente:
+- cameraId: identificativo stabile, per esempio CAM01.
+- displayName: nome leggibile.
+- camera: implementazione ICamera usata dalla sorgente.
+- processor: ImageProcessor dedicato.
+- frameQueue: coda dei frame di quella camera.
+- lastResult: ultimo risultato prodotto.
+- status: stato camera.
+- statistics: contatori e tempi.
+- config: parametri specifici della camera.
+
+Stati camera possibili
+- Disabled: configurata ma non attiva.
+- Starting: apertura sorgente in corso.
+- Running: acquisizione e processing attivi.
+- NoFrame: sorgente aperta ma senza frame validi.
+- Error: errore camera o processing.
+- Stopped: fermata manualmente o a fine ciclo.
+
+Pipeline per ogni camera
+1. Acquisizione
+   ICamera legge un frame dalla sorgente reale o simulata.
+   Implementazioni previste:
+   - FileCamera per simulazione da cartella;
+   - VimbaCamera per camere reali tramite Vimba X.
+
+2. Normalizzazione frame
+   Il frame viene impacchettato con metadata:
+   - cameraId;
+   - frameIndex;
+   - timestamp;
+   - immagine cv::Mat;
+   - nome sorgente o filename, quando disponibile.
+
+3. Processing
+   ImageProcessor elabora il frame della singola camera.
+   Il processing dipende dal profilo assegnato alla camera.
+
+4. Risultato
+   Il processing produce un Result con:
+   - cameraId;
+   - frameIndex;
+   - esito OK/NOK/Unknown;
+   - tempo processing;
+   - misure principali;
+   - eventuale immagine diagnostica.
+
+5. Output
+   Il risultato viene mandato a log, visualizzazione, salvataggio o PLC.
+
+Regola di indipendenza
+- Ogni camera ha oggetti propri.
+- Ogni camera ha configurazione propria.
+- Ogni camera ha contatori propri.
+- Ogni camera ha errori propri.
+- Ogni camera puo' essere abilitata o disabilitata singolarmente.
+
+Numero di telecamere
+Il numero di telecamere deve essere dinamico e letto da configurazione.
+Il codice non deve essere vincolato a un numero fisso come 2, 4 o 8 camere.
+
+Scelta preferita:
+- usare una lista dinamica di CameraContext;
+- creare una pipeline per ogni camera abilitata in configurazione;
+- mantenere un limite massimo solo come protezione tecnica.
+
+Esempio:
+- cameras.size() dipende dal file di configurazione;
+- maxCameras puo' essere 16 o 32 per evitare configurazioni accidentali o non sostenibili;
+- il limite non deve cambiare il modello architetturale, serve solo come guardrail.
+
+Slot camera
+Per ora il file di configurazione contiene 16 slot camera, da CAM01 a CAM16.
+Ogni slot ha due flag distinti:
+- exists: indica se quella camera esiste nella macchina o nella configurazione reale;
+- enabled: indica se quella camera deve essere usata dal software.
+
+Interpretazione:
+- exists=false: lo slot non rappresenta una camera presente; il software la ignora.
+- exists=true, enabled=false: la camera esiste ma viene lasciata spenta/disabilitata.
+- exists=true, enabled=true: la camera esiste e deve partecipare al ciclo.
+
+Threading futuro
+Prima fase:
+- ciclo singolo che scorre tutte le camere configurate.
+- sufficiente per validare struttura e dati.
+
+Seconda fase:
+- un thread di acquisizione per camera.
+- un thread di processing per camera, oppure un pool controllato.
+- code separate per ogni camera.
+
+Configurazione futura
+Formato scelto: JSON.
+File iniziale: config/cameras.json.
+Libreria C++ prevista: nlohmann/json.
+
+Motivazione:
+- piu' leggibile e compatto di XML;
+- naturale per liste di camere e oggetti annidati;
+- semplice da modificare a mano;
+- facile da integrare in C++ con nlohmann/json.
+
+XML resta una opzione solo se richiesto da vincoli esterni.
+
+Tipologie di controllo camera
+Non usare il campo type della camera per indicare il controllo visivo.
+Il campo type indica la sorgente, per esempio file o vimba.
+Il tipo di controllo sta nel processingProfile.
+
+Ogni processingProfile deve distinguere:
+- imageMode: bw oppure grayscale;
+- inspectionTypes: lista dei controlli attivi.
+- guiTools: lista dei tool da mostrare nella GUI quando la camera e' selezionata.
+
+Tipologie iniziali:
+- BW dimensionali: imageMode=bw, inspectionTypes=[dimensional].
+- Grayscale misurazione: imageMode=grayscale, inspectionTypes=[measurement].
+- Grayscale superficiali: imageMode=grayscale, inspectionTypes=[surface].
+- Grayscale AI: imageMode=grayscale, inspectionTypes=[ai].
+
+Caso combinato:
+- Una camera grayscale puo' avere inspectionTypes=[surface, measurement, ai].
+- In questo modo la stessa camera puo' fare controlli superficiali, misure e AI senza creare un tipo speciale rigido.
+
+Relazione con GUI
+La GUI non deve mostrare tutti i tool sempre.
+Quando l'operatore seleziona una camera, il pannello destro deve leggere il processingProfile associato alla camera e mostrare solo i guiTools previsti.
+
+Esempi:
+- dimensional: dimensions, threshold, calibration, roi, tolerances.
+- measurement: measurements, threshold, calibration, roi, tolerances.
+- surface: surfaceDefects, lighting, contrast, roi, defectMap.
+- ai: aiModel, confidence, classes, roi, datasetCapture.
+- surface + measurement + ai: combinazione dei tool necessari.
+
+Esempio logico:
+
+CAM01
+- type: file
+- folder: data/images/cam01
+- enabled: true
+- processingProfile: profile_cam01
+
+CAM02
+- type: file
+- folder: data/images/cam02
+- enabled: true
+- processingProfile: profile_cam02
+
+CAM03
+- type: vimba
+- serial: ...
+- enabled: false
+- processingProfile: profile_cam03
+
+SDK camere reali
+Il candidato preferito per le camere reali e' Vimba X.
+VimbaCamera dovra' implementare ICamera e nascondere i dettagli SDK al resto del sistema.
+
+Principio pratico
+Anche quando testiamo con una sola immagine, il codice deve gia' sapere che quella immagine appartiene a una camera.

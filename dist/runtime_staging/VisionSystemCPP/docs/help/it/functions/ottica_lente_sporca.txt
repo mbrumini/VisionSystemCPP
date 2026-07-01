@@ -1,0 +1,20 @@
+Titolo: Lente sporca
+Area: Ottica / Manutenzione
+Parole chiave: lente sporca, polvere, olio, alone, immagine
+
+Una lente sporca puo' creare aloni, perdita di contrasto e falsi difetti.
+
+Sintomi:
+- macchia sempre nella stessa zona immagine;
+- contrasto basso;
+- riflessi strani;
+- AI o surface che segnalano difetti fissi.
+
+Controlli:
+1. Pulire lente e protezione.
+2. Controllare illuminatore.
+3. Acquisire immagine senza pezzo se possibile.
+4. Verificare se la macchia resta ferma mentre il pezzo cambia.
+
+Regola:
+Se il difetto resta nella stessa posizione immagine, sospettare ottica o camera.

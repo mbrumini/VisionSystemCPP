@@ -1,0 +1,18 @@
+Titolo: AI falsi positivi
+Area: AI / Diagnostica
+Parole chiave: falso positivo, AI, falso NOK, pezzo buono scartato
+
+Un falso positivo avviene quando un pezzo buono viene classificato come difettoso.
+
+Cause comuni:
+- sporco o olio scambiato per difetto;
+- riflessi non presenti nel dataset;
+- classe OK troppo povera;
+- soglia troppo severa;
+- campo inquadrato o luce cambiati.
+
+Controlli:
+1. Confrontare immagine falso NOK con immagini OK del dataset.
+2. Verificare se il problema segue il pezzo, la camera o la luce.
+3. Aggiungere esempi OK reali se la variazione e' accettabile.
+4. Non abbassare la soglia senza validare su NOK reali.

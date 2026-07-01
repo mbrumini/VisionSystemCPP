@@ -1,0 +1,16 @@
+Titolo: Edge cerchio
+Area: Rilevamento edge
+Parole chiave: cerchio, diametro, bordo circolare, fascia anulare
+
+Il cerchio edge cerca un bordo circolare dentro una fascia anulare.
+Serve per diametri, centri, intersezioni e riferimenti circolari.
+
+Procedura:
+1. Selezionare Cerchio.
+2. Impostare il cerchio guida, spesso con 3 punti.
+3. Regolare fascia interna/esterna, sensibilita' e transizione.
+4. Provare il rilevamento.
+5. Verificare su piu' pezzi in Setup.
+
+Diagnosi:
+Se il cerchio non si vede in Setup, aprire Risultati frame per verificare se e' stato trovato.

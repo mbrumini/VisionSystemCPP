@@ -1,0 +1,14 @@
+Titolo: Prestazioni aree di ricerca
+Area: Prestazioni / Setup
+Parole chiave: area ricerca, prestazioni, tempo scansione, ROI
+
+Aree di ricerca troppo grandi aumentano tempo scansione e rischio di falsi rilevamenti.
+
+Buone pratiche:
+- limitare la ricerca alla zona utile;
+- lasciare margine per lo spostamento reale del pezzo;
+- evitare sfondo inutile;
+- usare localizzazione per spostare gli edge col pezzo.
+
+Regola:
+Una ROI grande non e' piu' robusta se include disturbi e rallenta il controllo.

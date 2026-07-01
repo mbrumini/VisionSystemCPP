@@ -1,0 +1,15 @@
+Titolo: Calibrazione pixel/mm
+Area: Calibrazione
+Parole chiave: calibrazione, pixel mm, scala, misura reale
+
+La calibrazione pixel/mm permette di convertire misure da pixel a millimetri.
+Senza calibrazione, le misure sono espresse in pixel.
+
+Flusso tipico:
+1. Acquisire immagine con riferimento noto.
+2. Misurare una distanza nota in pixel.
+3. Inserire il valore reale in millimetri.
+4. Salvare la calibrazione.
+
+Nota:
+La calibrazione dipende da camera, ottica, distanza e risoluzione. Se cambia uno di questi elementi, va verificata.

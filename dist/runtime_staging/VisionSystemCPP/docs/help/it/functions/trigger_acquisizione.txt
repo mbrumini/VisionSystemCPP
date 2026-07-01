@@ -1,0 +1,22 @@
+Titolo: Trigger acquisizione
+Area: Camera / Produzione
+Parole chiave: trigger, acquisizione, sincronizzazione, frame
+
+Il trigger decide quando viene acquisita l'immagine.
+Se il trigger e' fuori tempo, il pezzo puo' essere mosso o non nella posizione corretta.
+
+Sintomi:
+- pezzo tagliato;
+- immagine mossa;
+- posizione variabile;
+- edge trovati solo a volte;
+- difetti sfocati.
+
+Controlli:
+- sincronizzazione con macchina;
+- ritardo trigger;
+- tempo esposizione;
+- stabilita' pezzo al momento dello scatto.
+
+Regola:
+Acquisire quando pezzo, camera e luce sono stabili.

@@ -1,0 +1,15 @@
+Titolo: Immagine troppo buia
+Area: Diagnostica / Illuminazione
+Parole chiave: immagine buia, esposizione, gain, luce debole
+
+Un'immagine troppo buia riduce contrasto e rende instabili edge, localizzazione e AI.
+
+Controlli:
+1. Verificare illuminatore acceso.
+2. Aumentare luce prima di aumentare gain.
+3. Controllare esposizione.
+4. Verificare ottica, diaframma e sporco.
+5. Guardare se il bordo utile e' separato dallo sfondo.
+
+Regola:
+Un'immagine piu' chiara non basta: serve contrasto stabile sul riferimento giusto.

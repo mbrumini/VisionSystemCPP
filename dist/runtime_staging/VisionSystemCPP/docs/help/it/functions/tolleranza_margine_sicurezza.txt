@@ -1,0 +1,19 @@
+Titolo: Margine di sicurezza tolleranza
+Area: Tolleranze / Produzione
+Parole chiave: margine sicurezza, tolleranza, ripetibilita, borderline
+
+Il margine di sicurezza separa la variabilita' del sistema dal limite di tolleranza.
+
+Perche' serve:
+- evitare giudizi che cambiano su pezzi borderline;
+- capire se la misura e' abbastanza ripetibile;
+- prevenire falsi OK/NOK.
+
+Controlli:
+1. Misurare ripetibilita'.
+2. Confrontare variazione con tolleranza.
+3. Testare pezzi vicini al limite.
+4. Se il margine e' piccolo, migliorare misura o riferimento.
+
+Regola:
+Una misura che oscilla quanto la tolleranza non e' affidabile.

@@ -1,0 +1,18 @@
+Titolo: Confidenza AI
+Area: AI
+Parole chiave: confidenza, soglia warning, soglia scarto, AI
+
+La confidenza indica quanto il modello AI e' sicuro del risultato.
+Una confidenza bassa non significa sempre NOK, ma indica incertezza.
+
+Parametri:
+- confidenza minima;
+- soglia warning;
+- soglia scarto.
+
+Uso pratico:
+Se la confidenza e' alta, il risultato e' piu' affidabile.
+Se e' bassa, puo' servire revisione, piu' immagini o un modello migliore.
+
+Nota:
+Le soglie vanno scelte con prove reali, non solo su pochi campioni.

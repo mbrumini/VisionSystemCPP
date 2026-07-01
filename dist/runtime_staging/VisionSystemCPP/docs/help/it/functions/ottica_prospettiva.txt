@@ -1,0 +1,17 @@
+Titolo: Prospettiva e inclinazione
+Area: Ottica / Misure
+Parole chiave: prospettiva, inclinazione, camera non perpendicolare, misura
+
+Se camera e pezzo non sono ben allineati, le misure possono cambiare con la posizione nel campo.
+
+Sintomi:
+- stessa quota diversa a sinistra e destra;
+- cerchi che appaiono ellissi;
+- misure diverse se il pezzo si sposta;
+- calibrazione buona solo al centro.
+
+Controlli:
+1. Verificare perpendicolarita' camera-pezzo.
+2. Controllare distorsione lente.
+3. Usare calibrazione adatta.
+4. Tenere la misura nella zona piu' stabile del campo.

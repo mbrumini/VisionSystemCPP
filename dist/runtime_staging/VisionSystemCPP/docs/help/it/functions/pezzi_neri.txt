@@ -1,0 +1,22 @@
+Titolo: Pezzi neri o scuri
+Area: Illuminazione / Materiali
+Parole chiave: nero, scuro, basso contrasto, edge
+
+I pezzi neri assorbono luce e possono perdere dettagli.
+Serve creare contrasto senza aumentare troppo il rumore.
+
+Consigli:
+- usare luce piu' intensa ma non saturare sfondo;
+- preferire retroilluminazione per profili;
+- evitare gain alto;
+- usare luce radente se serve vedere incisioni o rilievi;
+- verificare esposizione su tutta l'immagine.
+
+Sintomi:
+- bordo poco visibile;
+- texture rumorosa;
+- edge che non trova;
+- AI con confidenza bassa.
+
+Regola:
+Per pezzi scuri, aumentare qualita' della luce prima del gain.

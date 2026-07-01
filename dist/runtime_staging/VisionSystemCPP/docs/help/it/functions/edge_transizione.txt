@@ -1,0 +1,19 @@
+Titolo: Transizione edge chiaro/scuro
+Area: Rilevamento edge
+Parole chiave: transizione, chiaro scuro, scuro chiaro, bordo
+
+La transizione indica il verso del cambio di luminosita' da cercare.
+
+Light to dark:
+Il sistema cerca un passaggio da zona chiara a zona scura.
+
+Dark to light:
+Il sistema cerca un passaggio da zona scura a zona chiara.
+
+Quando cambiarla:
+- se il bordo e' presente ma non viene trovato;
+- se il sistema prende il bordo opposto;
+- se cambi illuminazione o materiale.
+
+Consiglio:
+Osservare il verso di scansione e la zona attraversata. La transizione deve corrispondere al bordo reale lungo quella scansione.

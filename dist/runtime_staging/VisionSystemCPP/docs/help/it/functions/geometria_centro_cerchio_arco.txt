@@ -1,0 +1,26 @@
+Titolo: Centro cerchio o arco come punto costruito
+Area: Geometrie calcolate
+Parole chiave: centro, cerchio, arco, punto costruito, interasse, distanza centri
+
+Il centro di un cerchio o di un arco puo' diventare una geometria punto costruita.
+
+Quando serve:
+- misurare la distanza tra due fori;
+- misurare la distanza tra due sedi circolari parziali;
+- misurare tra il centro di un arco e una linea;
+- creare interassi;
+- usare un riferimento teorico stabile.
+
+Flusso consigliato:
+1. Rilevare cerchio o arco.
+2. Creare punto costruito dal centro.
+3. Usare le misure punto-punto, punto-linea o altre misure standard.
+
+Vantaggio:
+Non serve creare una misura speciale per ogni caso. Si costruisce prima il riferimento geometrico e poi si misura tra riferimenti.
+
+Esempio:
+Per una lunghezza tra i centri di due archi, creare due punti costruiti dai centri degli archi e poi usare misura distanza punto-punto.
+
+Regola:
+Se la quota sul disegno parte da un centro teorico, creare prima il centro come geometria costruita.

@@ -1,0 +1,21 @@
+Titolo: Stabilita' meccanica
+Area: Meccanica
+Parole chiave: stabilita, vibrazioni, supporto, camera, illuminatore
+
+La visione funziona bene solo se camera, luce e pezzo sono meccanicamente stabili.
+
+Problemi tipici:
+- camera che vibra;
+- illuminatore non fissato;
+- pezzo che non appoggia sempre uguale;
+- supporto camera flessibile;
+- cavi che tirano la camera.
+
+Sintomi:
+- immagine che si sposta;
+- edge validi solo a volte;
+- misure variabili;
+- fuoco che cambia.
+
+Regola:
+Prima di cercare una soluzione software, verificare che meccanica e posizionamento siano ripetibili.

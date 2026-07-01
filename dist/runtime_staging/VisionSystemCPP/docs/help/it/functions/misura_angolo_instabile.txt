@@ -1,0 +1,21 @@
+Titolo: Misura angolo instabile
+Area: Misure / Diagnostica
+Parole chiave: angolo instabile, misura angolo, linee instabili
+
+Una misura angolo dipende dalla stabilita' delle linee sorgente.
+
+Cause comuni:
+- una linea segue un riflesso;
+- tratto linea troppo corto;
+- bordo poco contrastato;
+- localizzazione variabile;
+- linee quasi parallele o poco definite.
+
+Controlli:
+1. Verificare ogni linea separatamente.
+2. Aumentare tratto utile solo se il bordo e' reale.
+3. Escludere disturbi.
+4. Validare su piu' frame.
+
+Regola:
+Prima correggere le linee, poi la misura angolo.

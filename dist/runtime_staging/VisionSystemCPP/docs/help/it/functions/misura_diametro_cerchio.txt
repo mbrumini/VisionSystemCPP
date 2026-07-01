@@ -1,0 +1,29 @@
+Titolo: Misura diametro cerchio
+Area: Misure
+Parole chiave: diametro, cerchio, foro, esterno, interno, sede, raggio
+
+La misura diametro cerchio usa una geometria cerchio trovata dagli edge o costruita.
+
+Quando usarla:
+- diametro esterno;
+- diametro interno;
+- foro;
+- sede circolare;
+- impronta o riferimento circolare.
+
+Geometrie necessarie:
+- un cerchio valido.
+
+Scelta luce:
+- profilo esterno: BN o retroilluminazione se serve silhouette;
+- foro/sede su superficie: luce diretta, diffusa, coassiale o anulare;
+- incisione circolare: valutare radente solo se produce bordo stabile.
+
+Procedura:
+1. Configurare edge cerchio.
+2. Controllare che il cerchio sia trovato in Setup.
+3. Creare misura diametro cerchio.
+4. Verificare ripetibilita' su piu' pezzi.
+
+Regola:
+Non creare la misura diametro prima che il cerchio sia stabile.

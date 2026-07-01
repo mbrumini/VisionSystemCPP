@@ -1,0 +1,19 @@
+Titolo: Differenza tra campione e immagini test
+Area: Setup
+Parole chiave: campione, test, immagini, riferimento, validazione
+
+Il campione e' l'immagine principale usata per programmare l'articolo.
+Le immagini test sono una sequenza di pezzi usata per verificare che la ricetta sia robusta.
+
+Campione:
+- serve per disegnare localizzazione, edge e misure;
+- deve essere un pezzo buono e rappresentativo;
+- non deve cambiare continuamente.
+
+Immagini test:
+- servono per provare la ricetta su molti pezzi;
+- si scorrono con Frame successivo o Start;
+- aiutano a trovare problemi di stabilita'.
+
+Regola:
+Programmare sul campione, validare sulle immagini test.

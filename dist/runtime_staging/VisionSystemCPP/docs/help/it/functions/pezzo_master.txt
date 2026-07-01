@@ -1,0 +1,20 @@
+Titolo: Pezzo master
+Area: Produzione / Validazione
+Parole chiave: pezzo master, riferimento, validazione, controllo periodico
+
+Il pezzo master e' un pezzo noto usato per verificare la ricetta nel tempo.
+
+Uso:
+- controllare misure note;
+- verificare che la camera non sia cambiata;
+- confermare illuminazione e fuoco;
+- validare dopo manutenzione.
+
+Buone pratiche:
+- conservarlo protetto;
+- marcarlo chiaramente;
+- usare sempre la stessa posizione;
+- registrare valori attesi.
+
+Regola:
+Se il pezzo master cambia misura, controllare sistema, ottica, luce e meccanica prima della produzione.

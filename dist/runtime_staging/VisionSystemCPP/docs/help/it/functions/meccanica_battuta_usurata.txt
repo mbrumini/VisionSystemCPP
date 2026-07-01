@@ -1,0 +1,21 @@
+Titolo: Battuta meccanica usurata
+Area: Meccanica / Diagnostica
+Parole chiave: battuta usurata, meccanica, ripetibilita, pezzo
+
+Una battuta usurata o sporca cambia la posizione reale del pezzo.
+La localizzazione puo' correggere spostamenti moderati, non instabilita' meccanica fuori controllo.
+
+Sintomi:
+- pezzo inclinato diversamente;
+- localizzazione sempre al limite;
+- misure che cambiano a gruppi;
+- differenze tra turno e turno.
+
+Controlli:
+1. Pulire battute e appoggi.
+2. Verificare giochi.
+3. Controllare usura.
+4. Testare pezzo master in piu' posizioni.
+
+Regola:
+Non compensare con software una battuta meccanica non ripetibile.

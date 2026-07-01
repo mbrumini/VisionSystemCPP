@@ -1,0 +1,19 @@
+Titolo: Localizzazione profilo BN
+Area: Localizzazione / BN
+Parole chiave: localizzazione BN, profilo, silhouette, soglia
+
+La localizzazione profilo BN usa contrasto netto tra pezzo e sfondo.
+
+Quando usarla:
+- contorno esterno stabile;
+- retroilluminazione o sfondo ad alto contrasto;
+- pezzo con forma distinguibile.
+
+Controlli:
+1. Contorno visibile e non saturo.
+2. Sfondo pulito.
+3. Area ricerca corretta.
+4. Soglia stabile su piu' pezzi.
+
+Regola:
+Usare BN per profilo o silhouette, non per dettagli sulla faccia del pezzo.

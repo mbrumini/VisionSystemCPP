@@ -1,0 +1,14 @@
+Titolo: Risultati frame
+Area: Setup
+Parole chiave: risultati, popup, diagnostica, misure, edge
+
+Risultati frame apre un popup diagnostico non modale.
+Il popup mostra, per il frame corrente, quali geometrie sono state trovate e quali misure sono disponibili.
+
+Contenuto:
+- Geometrie: trovato / non trovato.
+- Misure: valore in pixel o gradi, oppure non disponibile.
+
+Quando usarlo:
+Usarlo quando l'overlay non basta o quando si vuole capire perche' una misura manca.
+La finestra puo' restare aperta mentre si scorre con Frame successivo o Start.

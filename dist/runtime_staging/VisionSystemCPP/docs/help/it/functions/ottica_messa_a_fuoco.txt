@@ -1,0 +1,22 @@
+Titolo: Messa a fuoco
+Area: Ottica
+Parole chiave: fuoco, nitidezza, bordo, ottica, camera
+
+La messa a fuoco influenza direttamente edge, misure e AI.
+Un bordo fuori fuoco diventa largo e instabile.
+
+Sintomi di fuoco sbagliato:
+- bordo morbido;
+- edge che cambia posizione;
+- misure poco ripetibili;
+- testo o marcature poco leggibili;
+- AI con confidenza bassa.
+
+Consigli:
+- mettere a fuoco sul piano reale del pezzo;
+- bloccare meccanicamente la ghiera;
+- verificare fuoco al centro e ai bordi immagine;
+- controllare dopo urti, manutenzione o cambio formato.
+
+Regola:
+Prima di correggere sensibilita' edge, verificare che il bordo sia nitido.

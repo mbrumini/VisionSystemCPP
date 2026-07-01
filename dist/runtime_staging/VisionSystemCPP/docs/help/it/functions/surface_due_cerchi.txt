@@ -1,0 +1,14 @@
+Titolo: Localizzazione due cerchi
+Area: Localizzazione superficie
+Parole chiave: due cerchi, asse, posa, strategia
+
+La strategia due cerchi usa due riferimenti circolari per definire origine e orientamento del pezzo.
+E' utile quando sul pezzo ci sono due feature circolari stabili.
+
+Vantaggi:
+- definisce un asse tra i due cerchi;
+- puo' essere piu' robusta di una soglia generica;
+- segue rotazioni e traslazioni del pezzo.
+
+Prerequisiti:
+I due cerchi devono essere visibili, rilevabili e stabili su tutti i pezzi.

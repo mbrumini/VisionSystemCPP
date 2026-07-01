@@ -1,0 +1,22 @@
+Titolo: Errori comuni nelle misure superficiali
+Area: Diagnostica / Superficie
+Parole chiave: misure superficiali, errori, riflessi, texture, retroilluminazione, superficie, edge instabile
+
+Errori comuni:
+- usare retroilluminazione per una quota che dipende dalla faccia superiore;
+- inseguire un riflesso invece di un bordo reale;
+- usare luce radente per una misura dimensionale quando crea ombre variabili;
+- non bloccare esposizione e gain;
+- misurare su texture invece che su un riferimento geometrico;
+- creare una misura prima di avere geometrie sorgenti stabili.
+
+Controlli pratici:
+1. Chiedersi se la quota e' su superficie o su profilo esterno.
+2. Verificare che il riferimento si veda su piu' pezzi.
+3. Aprire Risultati frame e controllare geometrie trovate/non trovate.
+4. Se il valore cambia, guardare prima edge e illuminazione.
+5. Validare su pezzo master e immagini test.
+
+Regola:
+Per misure superficiali, la luce deve rendere stabile il riferimento sulla faccia del pezzo.
+La retroilluminazione serve solo quando la quota si misura sul profilo.

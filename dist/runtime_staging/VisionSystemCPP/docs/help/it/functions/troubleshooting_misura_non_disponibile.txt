@@ -1,0 +1,19 @@
+Titolo: Misura non disponibile
+Area: Diagnostica
+Parole chiave: misura non disponibile, quota, sorgente, geometria mancante
+
+Una misura diventa non disponibile quando non trova le geometrie sorgenti necessarie.
+
+Esempi:
+- Diametro cerchio: serve un cerchio trovato.
+- Distanza punto-linea: servono un punto e una linea trovati.
+- Angolo linea-linea: servono due linee valide.
+
+Controlli:
+1. Aprire Risultati frame.
+2. Verificare quali geometrie sono Non trovata.
+3. Correggere localizzazione o edge.
+4. Riprovare su piu' frame.
+
+Nota:
+La misura non disponibile non e' sempre un errore della misura; spesso e' un problema della geometria sorgente.

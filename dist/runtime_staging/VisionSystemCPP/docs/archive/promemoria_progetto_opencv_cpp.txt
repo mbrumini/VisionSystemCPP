@@ -1,0 +1,73 @@
+PROMEMORIA - NUOVO PROGETTO OPENCV C++
+
+Obiettivo:
+Creare un progetto C++ base con OpenCV su Windows, usando Visual Studio, CMake e vcpkg.
+
+Stato attuale:
+- Visual Studio è presente.
+- È stato selezionato il carico di lavoro:
+  "Sviluppo di applicazioni desktop con C++"
+- Nei componenti risultano presenti:
+  - MSVC
+  - Windows SDK
+  - Strumenti CMake C++ per Windows
+
+Prossimo passo:
+1. Lasciare finire installazione/aggiornamento di Visual Studio.
+2. Dopo il riavvio/apertura di Visual Studio, verificare da terminale:
+
+   cmake --version
+   git --version
+
+3. Se Git non è presente, installarlo.
+4. Installare vcpkg in C:\dev\vcpkg
+5. Installare OpenCV con vcpkg.
+6. Creare il primo progetto C++ minimale.
+7. Test iniziale:
+   - leggere una immagine da disco
+   - mostrarla con cv::imshow()
+   - misurare il tempo ciclo
+
+Struttura progetto desiderata:
+
+VisionSystemCPP/
+|
+|-- CMakeLists.txt
+|
+|-- src/
+|   |-- main.cpp
+|   |
+|   |-- camera/
+|   |   |-- ICamera.h
+|   |   |-- FileCamera.h
+|   |   |-- FileCamera.cpp
+|   |
+|   |-- processing/
+|   |   |-- ImageProcessor.h
+|   |   |-- ImageProcessor.cpp
+|   |
+|   |-- pipeline/
+|   |   |-- Frame.h
+|   |   |-- FrameQueue.h
+|   |
+|   |-- utils/
+|       |-- Timer.h
+|       |-- Logger.h
+|
+|-- data/
+|   |-- images/
+|
+|-- config/
+    |-- cameras.json
+
+Scelta tecnica:
+- C++20
+- OpenCV
+- CMake
+- vcpkg
+- Visual Studio su Windows
+
+Nota importante:
+Per ora niente camere reali.
+Prima si testa OpenCV con immagini da cartella.
+Poi si passa a multi-camera, SDK/GenTL/CTI e comunicazione PLC.

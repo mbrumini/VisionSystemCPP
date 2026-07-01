@@ -1,0 +1,21 @@
+Titolo: Localizzazione grigi
+Area: Localizzazione superficie
+Parole chiave: grigi, superficie, localizzazione, annulus, contorno
+
+La localizzazione grigi cerca il riferimento pezzo su immagini non bianco/nero.
+Puo' usare soglia, bordo, PCA o strategie dedicate.
+
+Uso tipico:
+- pezzi con texture;
+- superfici metalliche;
+- immagini dove la soglia bianco/nero non basta.
+
+Controlli importanti:
+- area ricerca;
+- esclusioni rosse;
+- cerchi guida;
+- soglia;
+- sensibilita' bordo.
+
+Obiettivo:
+Produrre una posa pezzo stabile per edge e misure successive.

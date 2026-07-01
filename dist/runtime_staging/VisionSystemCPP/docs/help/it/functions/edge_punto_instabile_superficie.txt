@@ -1,0 +1,24 @@
+Titolo: Punto edge instabile su superficie
+Area: Rilevamento edge / Superficie / Diagnostica
+Parole chiave: punto instabile, punto che si muove, edge punto, bordo instabile, superficie, riflesso, texture, sensibilita
+
+Un punto edge che continua a muoversi su una superficie di solito sta prendendo un bordo non ripetibile, un riflesso o una texture invece del riferimento reale.
+Non assumere che sia un foro: se l'operatore parla solo di punto su edge, ragionare su edge punto, scansione, luce e contrasto.
+
+Controlli pratici:
+1. Verificare in Setup che la localizzazione sia stabile: se la posa si muove, anche il punto si muove.
+2. Controllare che la linea di scansione attraversi sempre lo stesso bordo reale.
+3. Ridurre o spostare la fascia/linea di scansione per evitare texture, graffi o riflessi vicini.
+4. Impostare la transizione corretta, chiaro-scuro o scuro-chiaro.
+5. Regolare la sensibilita': troppo alta prende rumore, troppo bassa salta il bordo.
+6. Provare first/best/last se nella scansione ci sono piu' cambi di intensita'.
+7. Bloccare esposizione e gain.
+8. Cambiare illuminazione: diffusa o coassiale se il punto segue riflessi; radente solo se il bordo e' un rilievo stabile.
+
+Se il punto continua a oscillare:
+- usare una linea edge e poi costruire un punto da quella geometria;
+- usare una geometria costruita piu' robusta invece di un singolo punto rumoroso;
+- scegliere un riferimento piu' netto sulla superficie.
+
+Regola:
+Parlare di fori, cerchi o centri solo se l'operatore cita un foro, un cerchio o una sede circolare.

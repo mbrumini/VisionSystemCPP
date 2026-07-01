@@ -1,0 +1,21 @@
+Titolo: Localizzazione con riferimento superficie
+Area: Localizzazione / Superficie
+Parole chiave: riferimento superficie, localizzazione grigi, texture, marcatura
+
+Quando il profilo esterno non basta, si puo' localizzare usando riferimenti visibili sulla faccia del pezzo.
+
+Esempi:
+- incisioni;
+- marcature;
+- sedi;
+- texture stabile;
+- riferimenti geometrici in grigio.
+
+Controlli:
+1. Riferimento sempre visibile.
+2. Luce stabile sulla faccia.
+3. Esclusioni su riflessi e scritte non utili.
+4. Area ricerca non troppo ampia.
+
+Regola:
+Non usare una texture casuale come riferimento di posa se cambia tra lotti.
