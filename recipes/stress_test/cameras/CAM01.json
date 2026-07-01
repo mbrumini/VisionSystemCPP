@@ -779,6 +779,7 @@
             "enabled": true,
             "items": [
                 {
+                    "criterion": "average",
                     "enabled": true,
                     "hasMax": false,
                     "hasMin": false,
@@ -801,6 +802,7 @@
                     "unit": "px"
                 },
                 {
+                    "criterion": "average",
                     "enabled": true,
                     "hasMax": false,
                     "hasMin": false,
@@ -823,6 +825,7 @@
                     "unit": "px"
                 },
                 {
+                    "criterion": "average",
                     "enabled": true,
                     "hasMax": false,
                     "hasMin": false,
@@ -845,6 +848,7 @@
                     "unit": "px"
                 },
                 {
+                    "criterion": "average",
                     "enabled": true,
                     "hasMax": false,
                     "hasMin": false,
@@ -867,6 +871,7 @@
                     "unit": "px"
                 },
                 {
+                    "criterion": "average",
                     "enabled": true,
                     "hasMax": false,
                     "hasMin": false,
@@ -889,6 +894,7 @@
                     "unit": "px"
                 },
                 {
+                    "criterion": "average",
                     "enabled": true,
                     "hasMax": false,
                     "hasMin": false,
@@ -911,6 +917,7 @@
                     "unit": "px"
                 },
                 {
+                    "criterion": "average",
                     "enabled": true,
                     "hasMax": false,
                     "hasMin": false,
@@ -933,6 +940,7 @@
                     "unit": "px"
                 },
                 {
+                    "criterion": "average",
                     "enabled": true,
                     "hasMax": false,
                     "hasMin": false,
@@ -955,6 +963,7 @@
                     "unit": "px"
                 },
                 {
+                    "criterion": "average",
                     "enabled": true,
                     "hasMax": false,
                     "hasMin": false,
@@ -977,6 +986,7 @@
                     "unit": "px"
                 },
                 {
+                    "criterion": "average",
                     "enabled": true,
                     "hasMax": false,
                     "hasMin": false,
@@ -999,6 +1009,7 @@
                     "unit": "px"
                 },
                 {
+                    "criterion": "average",
                     "enabled": true,
                     "hasMax": false,
                     "hasMin": false,
@@ -1021,6 +1032,7 @@
                     "unit": "px"
                 },
                 {
+                    "criterion": "average",
                     "enabled": true,
                     "hasMax": false,
                     "hasMin": false,
@@ -1043,6 +1055,7 @@
                     "unit": "px"
                 },
                 {
+                    "criterion": "average",
                     "enabled": true,
                     "hasMax": false,
                     "hasMin": false,
@@ -1065,6 +1078,7 @@
                     "unit": "deg"
                 },
                 {
+                    "criterion": "average",
                     "enabled": true,
                     "hasMax": false,
                     "hasMin": false,
@@ -1086,6 +1100,7 @@
                     "unit": "px"
                 },
                 {
+                    "criterion": "average",
                     "enabled": true,
                     "hasMax": false,
                     "hasMin": false,
@@ -1107,6 +1122,7 @@
                     "unit": "px"
                 },
                 {
+                    "criterion": "average",
                     "enabled": true,
                     "hasMax": false,
                     "hasMin": false,
@@ -1129,6 +1145,7 @@
                     "unit": "px"
                 },
                 {
+                    "criterion": "average",
                     "enabled": true,
                     "hasMax": false,
                     "hasMin": false,
@@ -1148,6 +1165,24 @@
                     "sourceAId": "line_26_x_line_25",
                     "sourceBId": "line_25_x_line_24",
                     "type": "point_point_distance",
+                    "unit": "px"
+                },
+                {
+                    "criterion": "min",
+                    "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_18",
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 450.5246887439955,
+                    "sampleValue": 0,
+                    "sourceAId": "line_1",
+                    "sourceBId": "line_29",
+                    "type": "line_line_distance",
                     "unit": "px"
                 }
             ]

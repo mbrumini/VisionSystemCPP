@@ -50,13 +50,13 @@ if ([string]::IsNullOrWhiteSpace($OutputDir)) {
 }
 $OutputDir = [System.IO.Path]::GetFullPath($OutputDir)
 
-$versionPath = Join-Path $projectRoot "VERSION.txt"
-$version = if (Test-Path $versionPath) { (Get-Content $versionPath -Raw).Trim() } else { "0.0.0" }
-
 if (-not $SkipBuild) {
   Write-Step "Build Release"
   & cmake --build --preset x64-release
 }
+
+$versionPath = Join-Path $projectRoot "VERSION.txt"
+$version = if (Test-Path $versionPath) { (Get-Content $versionPath -Raw).Trim() } else { "0.0.0" }
 
 Write-Step "Creazione runtime demo"
 $buildRuntime = Join-Path $PSScriptRoot "Build-RuntimePackage.ps1"
@@ -92,6 +92,7 @@ if ($NoRunAfterInstall) {
 $iss = @"
 #define AppVersion "$version"
 #define PackageRoot "$(Escape-Iss $packageRoot)"
+#define AppIconFile "$(Escape-Iss (Join-Path $projectRoot "resources\app_icon.ico"))"
 
 [Setup]
 AppId={{7B2A5690-A781-40A2-92C9-273318C86C3D}
@@ -110,6 +111,8 @@ ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
 PrivilegesRequired=admin
 UninstallDisplayName=$AppName
+UninstallDisplayIcon={app}\VisionSystemCPP.exe
+SetupIconFile={#AppIconFile}
 SetupLogging=yes
 
 [Languages]
@@ -118,7 +121,8 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "installpython"; Description: "Installa ambiente Python per classificazione AI (richiede Python 3.11)"; GroupDescription: "Componenti aggiuntivi:"; Flags: checkedonce
+Name: "installai_cpu"; Description: "Installa VisionAI CPU completo (Python 3.11, PyTorch CPU, Ultralytics - richiede internet)"; GroupDescription: "Componenti AI opzionali:"; Flags: unchecked exclusive
+Name: "installai_gpu"; Description: "Installa VisionAI GPU completo (NVIDIA/CUDA, PyTorch CUDA, Ultralytics - richiede internet)"; GroupDescription: "Componenti AI opzionali:"; Flags: unchecked exclusive
 Name: "installollama"; Description: "Configura assistente help locale con Ollama"; GroupDescription: "Componenti aggiuntivi:"; Flags: unchecked
 
 [Files]
@@ -131,12 +135,13 @@ Name: "{app}\data"
 Name: "{app}\logs"
 
 [Icons]
-Name: "{group}\VisionSystemCPP"; Filename: "{app}\VisionSystemCPP.exe"; WorkingDir: "{app}"
+Name: "{group}\VisionSystemCPP"; Filename: "{app}\VisionSystemCPP.exe"; WorkingDir: "{app}"; IconFilename: "{app}\VisionSystemCPP.exe"
 Name: "{group}\Disinstalla VisionSystemCPP"; Filename: "{app}\Uninstall_Runtime.bat"; WorkingDir: "{app}"
-Name: "{autodesktop}\VisionSystemCPP"; Filename: "{app}\VisionSystemCPP.exe"; WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{autodesktop}\VisionSystemCPP"; Filename: "{app}\VisionSystemCPP.exe"; WorkingDir: "{app}"; IconFilename: "{app}\VisionSystemCPP.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installer\Install-Runtime.ps1"" -InstallDir ""{app}"" -SetupPythonOnly"; StatusMsg: "Configurazione dell'ambiente Python AI..."; Tasks: installpython; Flags: runhidden waituntilterminated
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installer\Install-VisionAI.ps1"" -Profile CPU -InstallDir ""{app}"""; StatusMsg: "Download e configurazione VisionAI CPU..."; Tasks: installai_cpu; Flags: runhidden waituntilterminated
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installer\Install-VisionAI.ps1"" -Profile GPU -InstallDir ""{app}"""; StatusMsg: "Download e configurazione VisionAI GPU..."; Tasks: installai_gpu; Flags: runhidden waituntilterminated
 Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installer\Install-Runtime.ps1"" -InstallDir ""{app}"" -SetupPythonOnly -SkipPython -InstallOllamaModel"; StatusMsg: "Configurazione dell'assistente Ollama..."; Tasks: installollama; Flags: runhidden waituntilterminated
 Filename: "{app}\VisionSystemCPP.exe"; Description: "Avvia VisionSystemCPP"; WorkingDir: "{app}"; Flags: $runFlags
 

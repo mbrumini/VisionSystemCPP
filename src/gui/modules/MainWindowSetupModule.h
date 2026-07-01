@@ -50,6 +50,7 @@ public:
   void showAiLocalizationPanel(const CameraConfig& camera);
   void showAiLocalizationTrainingPanel(const CameraConfig& camera);
   void advanceAiLocalizationLabeling();
+  void handleAiLocalizationBox(const QRect& box);
   void handleAiLocalizationPolygon(const QVector<QPoint>& polygon);
   void showAiClassificationPanel(const CameraConfig& camera);
   void showAiClassificationTrainingPanel(const CameraConfig& camera);

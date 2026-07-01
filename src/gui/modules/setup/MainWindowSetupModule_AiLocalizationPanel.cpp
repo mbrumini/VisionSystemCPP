@@ -17,6 +17,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QPolygon>
 #include <QProcess>
 #include <QPushButton>
 #include <QSpinBox>
@@ -161,9 +162,10 @@ void MainWindowSetupModule::showAiLocalizationPanel(const CameraConfig& camera)
   auto* polygonLayout = new QGridLayout(polygonControls);
   polygonLayout->setContentsMargins(0, 0, 0, 0);
   polygonLayout->setSpacing(6);
-  m_aiLocalizationPieceButton = makeButton("Disegna / modifica Pezzo");
+  m_aiLocalizationPieceButton = makeButton("Disegna / modifica box Pezzo");
   m_aiLocalizationReferenceButton = makeButton("Aggiungi riferimento orientamento");
   m_aiLocalizationFinishButton = makeButton("Termina immagine e continua");
+  m_aiLocalizationPieceButton->setToolTip("Trascina una box attorno al pezzo: verra' salvata come label AI.");
   m_aiLocalizationPieceButton->setEnabled(false);
   m_aiLocalizationReferenceButton->setEnabled(false);
   m_aiLocalizationFinishButton->setEnabled(false);
@@ -180,6 +182,15 @@ void MainWindowSetupModule::showAiLocalizationPanel(const CameraConfig& camera)
   polygonLayout->addWidget(m_aiLocalizationReferenceButton, 0, 1);
   polygonLayout->addWidget(m_aiLocalizationFinishButton, 1, 0, 1, 2);
   layout->addWidget(polygonControls);
+
+  // Se c'è già una sessione di labeling attiva per questa camera, ripristina
+  // lo stato dell'immagine corrente e ri-abilita i pulsanti di disegno.
+  if (m_aiLocalizationLabelingIndex >= 0 &&
+      m_aiLocalizationLabelingCamera.id == camera.id &&
+      !m_aiLocalizationLabelingImages.isEmpty())
+  {
+    loadAiLocalizationLabelingImage(m_aiLocalizationLabelingIndex);
+  }
 
   auto* paths = new QLabel(
     QString("raw: %1\nmasks: %2\ndataset: %3\nmodels: %4")
@@ -524,12 +535,51 @@ void MainWindowSetupModule::beginAiLocalizationPolygon(int classId)
         break;
       }
     }
+
+    largeImage()->setPolygonDrawingEnabled(false);
+    largeImage()->clearSearchPolygon();
+    if (editablePolygon.size() >= 3)
+    {
+      largeImage()->setRoi(QPolygon(editablePolygon).boundingRect().normalized());
+    }
+    else
+    {
+      largeImage()->clearRoi();
+    }
+    largeImage()->setRoiDrawingEnabled(true);
+    log("Labeling AI: disegna o modifica la box Pezzo.");
+    return;
   }
   largeImage()->setSearchPolygon(editablePolygon);
-  largeImage()->setPolygonDrawingEnabled(editablePolygon.size() < 3);
-  log(classId == 0
-    ? "Labeling AI: disegna la sagoma Pezzo."
-    : "Labeling AI: aggiungi un riferimento orientamento.");
+  largeImage()->setPolygonDrawingEnabled(true);
+  log("Labeling AI: aggiungi un riferimento orientamento.");
+}
+
+void MainWindowSetupModule::handleAiLocalizationBox(const QRect& box)
+{
+  if (selectedImagePath().isEmpty())
+  {
+    return;
+  }
+
+  const QRect normalized = box.normalized();
+  if (normalized.width() < 2 || normalized.height() < 2)
+  {
+    log("Labeling AI: box Pezzo troppo piccola.");
+    return;
+  }
+
+  QVector<QPoint> polygon;
+  polygon.append(normalized.topLeft());
+  polygon.append(normalized.topRight());
+  polygon.append(normalized.bottomRight());
+  polygon.append(normalized.bottomLeft());
+
+  m_aiLocalizationActiveClassId = 0;
+  handleAiLocalizationPolygon(polygon);
+  largeImage()->setRoi(normalized);
+  // Lascia il ROI drawing attivo: l'utente può continuare a
+  // modificare la box senza dover ri-premere il pulsante.
 }
 
 void MainWindowSetupModule::handleAiLocalizationPolygon(const QVector<QPoint>& polygon)

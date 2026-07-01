@@ -111,8 +111,13 @@ try {
     )
   }
   else {
+    Write-Host "Rimuovo eventuali pacchetti PyTorch CPU prima del profilo GPU..."
     Invoke-Checked -Program $venvPython -Arguments @(
-      "-m", "pip", "install", "--upgrade",
+      "-m", "pip", "uninstall", "-y",
+      "torch", "torchvision", "torchaudio"
+    )
+    Invoke-Checked -Program $venvPython -Arguments @(
+      "-m", "pip", "install", "--upgrade", "--force-reinstall",
       "torch", "torchvision", "torchaudio",
       "--index-url", $TorchGpuIndexUrl
     )

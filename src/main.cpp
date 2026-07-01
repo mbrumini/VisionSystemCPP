@@ -1,6 +1,7 @@
 #include "gui/MainWindow.h"
 
 #include <QApplication>
+#include <QIcon>
 #include <QProxyStyle>
 
 class HmiProxyStyle : public QProxyStyle
@@ -28,6 +29,7 @@ public:
 int main(int argc, char* argv[])
 {
   QApplication app(argc, argv);
+  app.setWindowIcon(QIcon(":/icons/app_icon.ico"));
   app.setStyle(new HmiProxyStyle(app.style()));
   app.setStyleSheet(
     "QToolTip{"

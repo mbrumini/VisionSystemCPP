@@ -59,7 +59,7 @@ void MainWindowSurfaceModule::showTwoCirclesLocalizationPanel(const CameraConfig
   layout->addWidget(note);
 
   // --- Group Circle A ---
-  auto* groupA = new QGroupBox(tr("surfaceCircleA") + " (circle_a)", panel);
+  auto* groupA = new QGroupBox(tr("labels.surfaceCircleA") + " (circle_a)", panel);
   auto* layoutA = new QVBoxLayout(groupA);
   layoutA->setContentsMargins(8, 8, 8, 8);
   layoutA->setSpacing(6);
@@ -92,7 +92,7 @@ void MainWindowSurfaceModule::showTwoCirclesLocalizationPanel(const CameraConfig
   layout->addWidget(groupA);
 
   // --- Group Circle B ---
-  auto* groupB = new QGroupBox(tr("surfaceCircleB") + " (circle_b)", panel);
+  auto* groupB = new QGroupBox(tr("labels.surfaceCircleB") + " (circle_b)", panel);
   auto* layoutB = new QVBoxLayout(groupB);
   layoutB->setContentsMargins(8, 8, 8, 8);
   layoutB->setSpacing(6);

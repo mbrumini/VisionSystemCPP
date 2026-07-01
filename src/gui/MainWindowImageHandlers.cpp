@@ -14,6 +14,12 @@
 void MainWindow::setupLargeImageHandlers()
 {
   m_largeImage->setRoiChangedHandler([this](const QRect& roi) {
+    if (m_activeDrawingRecipe == MainWindowActiveDrawingRecipe::AiLocalization)
+    {
+      m_setup.handleAiLocalizationBox(roi);
+      return;
+    }
+
     if (m_selectedCameraId.isEmpty())
     {
       return;
@@ -117,7 +123,7 @@ void MainWindow::setupLargeImageHandlers()
                 .arg(roi.height()));
   });
   m_largeImage->setPolygonChangedHandler([this](const QVector<QPoint>& polygon) {
-    if (m_selectedCameraId.isEmpty() || polygon.size() < 3)
+    if (polygon.size() < 3)
     {
       return;
     }
@@ -125,6 +131,11 @@ void MainWindow::setupLargeImageHandlers()
     if (m_activeDrawingRecipe == MainWindowActiveDrawingRecipe::AiLocalization)
     {
       m_setup.handleAiLocalizationPolygon(polygon);
+      return;
+    }
+
+    if (m_selectedCameraId.isEmpty())
+    {
       return;
     }
 

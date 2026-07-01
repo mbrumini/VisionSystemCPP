@@ -5,6 +5,7 @@
 #include <QDir>
 #include <QFile>
 #include <QJsonDocument>
+#include <QJsonObject>
 
 namespace
 {
@@ -12,6 +13,80 @@ QString translationPath(const QString& languageCode)
 {
   const QString fileName = "translations/" + languageCode + ".json";
   return RecipeJsonUtils::appPath(fileName);
+}
+
+QJsonObject fallbackMenuTranslations(const QString& languageCode)
+{
+  QJsonObject menu;
+  QJsonObject commands;
+
+  if (languageCode == "en")
+  {
+    menu["recipes"] = "Recipes";
+    menu["selectRecipe"] = "Select recipe";
+    menu["newRecipe"] = "New recipe";
+    menu["duplicateRecipe"] = "Duplicate recipe";
+    menu["deleteRecipe"] = "Delete recipe";
+    menu["importRecipe"] = "Import recipe";
+    menu["exportRecipe"] = "Export recipe";
+    menu["configurations"] = "Configurations";
+    menu["cameras"] = "Cameras";
+    menu["access"] = "Access";
+    menu["configureCameras"] = "Configure cameras";
+    menu["calibrateCheckerboard"] = "Calibrate checkerboard";
+    menu["paths"] = "Paths";
+    menu["diagnostics"] = "Diagnostics";
+    menu["language"] = "Language";
+    menu["help"] = "Help";
+    menu["system"] = "System";
+
+    commands["start"] = "Start";
+    commands["stop"] = "Stop";
+    commands["reloadConfig"] = "Reload config";
+    commands["gridView"] = "Grid view";
+    commands["toggleFullScreen"] = "Fullscreen / window";
+    commands["setMaxThreads"] = "Set max threads";
+    commands["help"] = "Help";
+    commands["exit"] = "Exit";
+    commands["showSetupDetails"] = "Show setup details";
+    commands["enableDetailedLog"] = "Enable detailed log";
+  }
+  else
+  {
+    menu["recipes"] = "Ricette";
+    menu["selectRecipe"] = "Seleziona ricetta";
+    menu["newRecipe"] = "Nuova ricetta";
+    menu["duplicateRecipe"] = "Duplica ricetta";
+    menu["deleteRecipe"] = "Elimina ricetta";
+    menu["importRecipe"] = "Importa ricetta";
+    menu["exportRecipe"] = "Esporta ricetta";
+    menu["configurations"] = "Configurazioni";
+    menu["cameras"] = "Camere";
+    menu["access"] = "Accesso";
+    menu["configureCameras"] = "Configura telecamere";
+    menu["calibrateCheckerboard"] = "Calibra checkerboard";
+    menu["paths"] = "Percorsi";
+    menu["diagnostics"] = "Diagnostica";
+    menu["language"] = "Lingua";
+    menu["help"] = "Aiuto";
+    menu["system"] = "Sistema";
+
+    commands["start"] = "Avvia";
+    commands["stop"] = "Stop";
+    commands["reloadConfig"] = "Ricarica configurazione";
+    commands["gridView"] = "Vista griglia";
+    commands["toggleFullScreen"] = "Schermo intero / finestra";
+    commands["setMaxThreads"] = "Imposta thread massimi";
+    commands["help"] = "Aiuto";
+    commands["exit"] = "Esci";
+    commands["showSetupDetails"] = "Mostra dettagli setup";
+    commands["enableDetailedLog"] = "Attiva log dettagliato";
+  }
+
+  QJsonObject root;
+  root["menu"] = menu;
+  root["commands"] = commands;
+  return root;
 }
 }
 
@@ -26,7 +101,9 @@ bool TranslationManager::loadLanguage(const QString& languageCode, QString* erro
       *errorMessage = "Impossibile aprire file traduzione: " + languageCode;
     }
 
-    return false;
+    m_languageCode = languageCode;
+    m_root = fallbackMenuTranslations(languageCode);
+    return true;
   }
 
   QJsonParseError parseError;
@@ -39,7 +116,9 @@ bool TranslationManager::loadLanguage(const QString& languageCode, QString* erro
       *errorMessage = "File traduzione non valido: " + parseError.errorString();
     }
 
-    return false;
+    m_languageCode = languageCode;
+    m_root = fallbackMenuTranslations(languageCode);
+    return true;
   }
 
   m_languageCode = languageCode;
@@ -54,22 +133,23 @@ QString TranslationManager::languageCode() const
 
 QString TranslationManager::text(const QString& key) const
 {
-  QJsonValue value = m_root;
+  QJsonObject object = m_root;
 
   for (const QString& part : key.split('.'))
   {
+    const QJsonValue value = object.value(part);
+    if (value.isString())
+    {
+      return value.toString();
+    }
+
     if (!value.isObject())
     {
       return key;
     }
 
-    value = value.toObject().value(part);
+    object = value.toObject();
   }
 
-  if (!value.isString())
-  {
-    return key;
-  }
-
-  return value.toString();
+  return key;
 }

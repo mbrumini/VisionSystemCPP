@@ -24,6 +24,15 @@ void ImageViewWidget::keyPressEvent(QKeyEvent* event)
       update();
       return;
     }
+
+    // Backspace / Delete: rimuove l'ultimo punto aggiunto (undo punto)
+    if ((event->key() == Qt::Key_Backspace || event->key() == Qt::Key_Delete) &&
+        !m_pendingPolygon.isEmpty())
+    {
+      m_pendingPolygon.removeLast();
+      update();
+      return;
+    }
   }
 
   if ((event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace) &&

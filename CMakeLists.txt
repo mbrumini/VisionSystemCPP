@@ -519,3 +519,13 @@ add_custom_command(TARGET VisionSystemCPP POST_BUILD
         "${CMAKE_SOURCE_DIR}/ollama/vision-help"
         "$<TARGET_FILE_DIR:VisionSystemCPP>/ollama/vision-help"
 )
+
+# Copia l'exe nella cartella dist/ della root del progetto dopo ogni build
+add_custom_command(TARGET VisionSystemCPP POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+        "${CMAKE_SOURCE_DIR}/dist"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "$<TARGET_FILE:VisionSystemCPP>"
+        "${CMAKE_SOURCE_DIR}/dist/$<TARGET_FILE_NAME:VisionSystemCPP>"
+    COMMENT "Copiando exe in dist/"
+)

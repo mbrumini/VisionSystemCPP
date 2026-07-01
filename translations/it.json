@@ -138,6 +138,7 @@
     "geometryLineBand": "Fascia linea",
     "recipe": "Ricetta",
     "recipeName": "Nome ricetta",
+    "nominal": "Nominale",
     "max": "su massimo",
     "threshold": "Soglia",
     "localizationMethod": "Metodo",
@@ -634,6 +635,6 @@
     "measurementNoPointSources": "Nessun punto disponibile. Crea punti edge, geometria costruita (centri, intersezioni) o cerchi/archi rilevati.",
     "measurementNoPointSourcesUseLines": "Nessun punto su questa camera. Hai solo linee: usa Distanza linea-linea oppure aggiungi punti/geometria costruita.",
     "measurementNoLineSources": "Servono almeno due linee rilevate o costruite per questa misura.",
-    "measurementNoArcSources": "Servono almeno due archi rilevati per questa misura.",
+    "measurementNoArcSources": "Servono almeno due archi rilevati per questa misura."
   }
 }
