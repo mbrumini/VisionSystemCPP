@@ -12,6 +12,8 @@ struct SurfaceThresholdSettings
   bool resolveAmbiguity = false;
   bool hasReferenceHalfPlane = false;
   bool referencePositiveHalfPlane = false;
+  bool hasReferenceArea = false;
+  double referenceArea = 0.0;
 
   bool hasReferenceHalfPlaneSign() const
   {

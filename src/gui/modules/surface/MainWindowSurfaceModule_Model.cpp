@@ -249,7 +249,7 @@ bool MainWindowSurfaceModule::localizePoseOnSample(const CameraConfig& camera)
 bool MainWindowSurfaceModule::ensureMassPcaReferenceFromSample(const CameraConfig& camera)
 {
   const SurfaceDefectSettings recipeSettings = recipes().loadSurfaceDefectSettings(camera.id);
-  if (recipeSettings.hasReferenceHalfPlane)
+  if (recipeSettings.hasReferenceHalfPlane && recipeSettings.hasReferenceArea)
   {
     return true;
   }
@@ -282,9 +282,10 @@ bool MainWindowSurfaceModule::ensureMassPcaReferenceFromSample(const CameraConfi
   }
 
   QString error;
-  return recipes().saveSurfaceDefectAxisReference(
+  return recipes().saveSurfaceDefectMassPcaReference(
     camera.id,
     result.localization.referencePositiveHalfPlane,
+    result.totalArea,
     &error);
 }
 

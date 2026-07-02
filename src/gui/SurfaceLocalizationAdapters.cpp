@@ -53,6 +53,11 @@ SurfaceThresholdSettings thresholdSettingsFromRecipe(const SurfaceDefectSettings
     settings.hasReferenceHalfPlane = true;
     settings.referencePositiveHalfPlane = recipeSettings.referencePositiveHalfPlane;
   }
+  if (recipeSettings.hasReferenceArea)
+  {
+    settings.hasReferenceArea = true;
+    settings.referenceArea = recipeSettings.referenceArea;
+  }
   return settings;
 }
 }

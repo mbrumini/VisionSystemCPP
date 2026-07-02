@@ -102,7 +102,7 @@ void MainWindowSurfaceModule::testSurfaceAnnulusLocalization(const CameraConfig&
   context().incPendingJobs(__pendingCameraId_testSurfaceAnnulus);
   runAsyncTask(decltype(job)(job), window(), [this, camera, annulus, exclusionRects, liveMode, __pendingCameraId_testSurfaceAnnulus, setupFrameIndex](const SurfaceDefectResult& result) {
     auto __dec_guard = std::shared_ptr<void>(nullptr, [this, __pendingCameraId_testSurfaceAnnulus](void*) { context().decPendingJobs(__pendingCameraId_testSurfaceAnnulus); });
-    if (*context().setupCameraId == camera.id && cameraRuntime()[camera.id].frameIndex() != setupFrameIndex)
+    if (!liveMode && *context().setupCameraId == camera.id && cameraRuntime()[camera.id].frameIndex() != setupFrameIndex)
     {
       return;
     }
@@ -271,11 +271,17 @@ void MainWindowSurfaceModule::testSurfaceLocalization(const CameraConfig& camera
   };
 
   const QString __pendingCameraId_testSurfaceLocalization = camera.id;
+  const int setupFrameIndex = cameraRuntime()[camera.id].frameIndex();
   context().incPendingJobs(__pendingCameraId_testSurfaceLocalization);
-  runAsyncTask(decltype(job)(job), window(), [this, camera, roi, searchPolygon, exclusionRects, thresholdSettings, usingSampleImage, liveMode, __pendingCameraId_testSurfaceLocalization](const SurfaceDefectResult& result) {
+  runAsyncTask(decltype(job)(job), window(), [this, camera, roi, searchPolygon, exclusionRects, thresholdSettings, usingSampleImage, liveMode, __pendingCameraId_testSurfaceLocalization, setupFrameIndex](const SurfaceDefectResult& result) {
     auto __dec_guard = std::shared_ptr<void>(nullptr, [this, __pendingCameraId_testSurfaceLocalization](void*) { context().decPendingJobs(__pendingCameraId_testSurfaceLocalization); });
     const bool runMode = context().machineRunning != nullptr && *context().machineRunning;
     const bool liveDisplayMode = runMode || liveMode;
+    if (!liveDisplayMode && *context().setupCameraId == camera.id && cameraRuntime()[camera.id].frameIndex() != setupFrameIndex)
+    {
+      return;
+    }
+
     const bool updateView =
       camera.id == selectedCameraId() &&
       *context().activeDrawingRecipe != MainWindowActiveDrawingRecipe::Geometry;
@@ -341,15 +347,24 @@ void MainWindowSurfaceModule::testSurfaceLocalization(const CameraConfig& camera
       context().lastSurfaceLocalizationResults->insert(camera.id, result.localization);
       cameraRuntime()[camera.id].setCurrentPose(context().imaging->partPoseFromSurfaceReference(camera, result.localization));
       syncThreadExtractionRoiOverlay(camera);
+      if (updateView && context().geometry)
+      {
+        GeometryOverlay overlay;
+        context().geometry->appendCurrentPartPoseOverlay(camera, overlay);
+        largeImage()->setGeometryOverlay(overlay);
+      }
       if (isSetupCameraActive(camera.id))
       {
         context().setup->refreshSetupGeometryResults(camera);
         return;
       }
 
-      GeometryOverlay overlay;
-      context().geometry->appendCurrentPartPoseOverlay(camera, overlay);
-      largeImage()->setGeometryOverlay(overlay);
+      if (context().geometry)
+      {
+        GeometryOverlay overlay;
+        context().geometry->appendCurrentPartPoseOverlay(camera, overlay);
+        largeImage()->setGeometryOverlay(overlay);
+      }
     }
     else
     {
@@ -556,7 +571,7 @@ void MainWindowSurfaceModule::testSurfaceEdgePcaLocalization(const CameraConfig&
   context().incPendingJobs(__pendingCameraId_testSurfaceEdgePca);
   runAsyncTask(decltype(job)(job), window(), [this, camera, roi, searchPolygon, exclusionRects, liveMode, __pendingCameraId_testSurfaceEdgePca, setupFrameIndex](const SurfaceDefectResult& result) {
     auto __dec_guard = std::shared_ptr<void>(nullptr, [this, __pendingCameraId_testSurfaceEdgePca](void*) { context().decPendingJobs(__pendingCameraId_testSurfaceEdgePca); });
-    if (*context().setupCameraId == camera.id && cameraRuntime()[camera.id].frameIndex() != setupFrameIndex)
+    if (!liveMode && *context().setupCameraId == camera.id && cameraRuntime()[camera.id].frameIndex() != setupFrameIndex)
     {
       return;
     }

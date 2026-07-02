@@ -275,6 +275,12 @@ SurfaceDefectSettings RecipeManager::loadSurfaceDefectSettings(const QString& ca
     settings.hasReferenceHalfPlane = true;
     settings.referencePositiveHalfPlane = threshold.value("referencePositiveHalfPlane").toBool();
   }
+  const double referenceArea = threshold.value("referenceArea").toDouble(0.0);
+  if (referenceArea > 0.0)
+  {
+    settings.hasReferenceArea = true;
+    settings.referenceArea = referenceArea;
+  }
   return settings;
 }
 
@@ -585,6 +591,36 @@ bool RecipeManager::saveSurfaceDefectAxisReference(const QString& cameraId, bool
   QJsonObject threshold = surfaceLocalization.value("threshold").toObject();
   threshold.remove("referenceAngleDegrees");
   threshold["referencePositiveHalfPlane"] = positiveHalfPlane;
+  surfaceLocalization["threshold"] = threshold;
+  tools["surfaceLocalization"] = surfaceLocalization;
+  root["tools"] = tools;
+
+  return saveJsonObject(path, root, errorMessage);
+}
+
+bool RecipeManager::saveSurfaceDefectMassPcaReference(
+  const QString& cameraId,
+  bool positiveHalfPlane,
+  double area,
+  QString* errorMessage) const
+{
+  const QString path = cameraRecipePath(cameraId);
+  QJsonObject root;
+  loadJsonObject(path, root);
+
+  root["cameraId"] = cameraId;
+
+  QJsonObject tools = root.value("tools").toObject();
+  QJsonObject surfaceLocalization = tools.value("surfaceLocalization").toObject();
+  surfaceLocalization["enabled"] = true;
+
+  QJsonObject threshold = surfaceLocalization.value("threshold").toObject();
+  threshold.remove("referenceAngleDegrees");
+  threshold["referencePositiveHalfPlane"] = positiveHalfPlane;
+  if (area > 0.0)
+  {
+    threshold["referenceArea"] = area;
+  }
   surfaceLocalization["threshold"] = threshold;
   tools["surfaceLocalization"] = surfaceLocalization;
   root["tools"] = tools;

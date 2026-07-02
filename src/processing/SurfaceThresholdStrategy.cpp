@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace
 {
@@ -28,7 +29,10 @@ struct ThresholdMaskAnalysis
   bool valid = false;
 };
 
-ThresholdMaskAnalysis analyzeLargestComponent(const cv::Mat& mask, const cv::Rect& roi)
+ThresholdMaskAnalysis analyzeLargestComponent(
+  const cv::Mat& mask,
+  const cv::Rect& roi,
+  const SurfaceThresholdSettings& settings)
 {
   ThresholdMaskAnalysis analysis;
 
@@ -40,14 +44,63 @@ ThresholdMaskAnalysis analyzeLargestComponent(const cv::Mat& mask, const cv::Rec
 
   int bestLabel = -1;
   int bestPixelArea = 0;
+  double bestScore = std::numeric_limits<double>::max();
+  int fallbackLabel = -1;
+  int fallbackPixelArea = 0;
+  const int borderMargin = std::max(2, static_cast<int>(std::round(0.01 * std::max(roi.width, roi.height))));
   for (int label = 1; label < componentCount; ++label)
   {
     const int pixelArea = stats.at<int>(label, cv::CC_STAT_AREA);
-    if (pixelArea > bestPixelArea)
+    if (pixelArea > fallbackPixelArea)
     {
+      fallbackPixelArea = pixelArea;
+      fallbackLabel = label;
+    }
+
+    const cv::Rect localBounds(
+      stats.at<int>(label, cv::CC_STAT_LEFT),
+      stats.at<int>(label, cv::CC_STAT_TOP),
+      stats.at<int>(label, cv::CC_STAT_WIDTH),
+      stats.at<int>(label, cv::CC_STAT_HEIGHT));
+    const bool touchesSearchBorder =
+      localBounds.x <= borderMargin ||
+      localBounds.y <= borderMargin ||
+      localBounds.br().x >= mask.cols - borderMargin ||
+      localBounds.br().y >= mask.rows - borderMargin;
+    const bool spansSearchArea =
+      localBounds.width > 0.95 * mask.cols &&
+      localBounds.height > 0.95 * mask.rows;
+    double score = -static_cast<double>(pixelArea);
+    if (settings.hasReferenceArea && settings.referenceArea > 1.0)
+    {
+      score = std::abs(std::log(static_cast<double>(pixelArea) / settings.referenceArea));
+    }
+    if (touchesSearchBorder)
+    {
+      score += settings.hasReferenceArea ? 2.0 : 1000000000.0;
+    }
+    if (spansSearchArea)
+    {
+      score += settings.hasReferenceArea ? 4.0 : 1000000000.0;
+    }
+
+    if (!settings.hasReferenceArea && (touchesSearchBorder || spansSearchArea))
+    {
+      continue;
+    }
+
+    if (score < bestScore)
+    {
+      bestScore = score;
       bestPixelArea = pixelArea;
       bestLabel = label;
     }
+  }
+
+  if (bestLabel < 0)
+  {
+    bestLabel = fallbackLabel;
+    bestPixelArea = fallbackPixelArea;
   }
 
   if (bestLabel < 0 || bestPixelArea <= 0)
@@ -115,6 +168,55 @@ ThresholdMaskAnalysis analyzeLargestComponent(const cv::Mat& mask, const cv::Rec
   return analysis;
 }
 
+void drawMassPcaDiagnostics(
+  cv::Mat& image,
+  const ThresholdMaskAnalysis& analysis,
+  const cv::Rect& roi,
+  bool drawContours)
+{
+  if (image.empty() || analysis.componentMask.empty())
+  {
+    return;
+  }
+
+  cv::Mat imageRoi = image(roi);
+  cv::Mat tinted = imageRoi.clone();
+  tinted.setTo(cv::Scalar(24, 92, 24), analysis.componentMask);
+  cv::addWeighted(tinted, 0.24, imageRoi, 0.76, 0.0, imageRoi);
+
+  if (!drawContours)
+  {
+    return;
+  }
+
+  if (!analysis.pcaContour.empty())
+  {
+    drawStyledContour(image, analysis.pcaContour, cv::Scalar(94, 197, 34));
+  }
+
+  std::vector<std::vector<cv::Point>> contours;
+  std::vector<cv::Vec4i> hierarchy;
+  cv::findContours(analysis.componentMask.clone(), contours, hierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
+  for (int i = 0; i < static_cast<int>(contours.size()); ++i)
+  {
+    if (i >= static_cast<int>(hierarchy.size()) || hierarchy[i][3] < 0)
+    {
+      continue;
+    }
+
+    for (cv::Point& point : contours[i])
+    {
+      point.x += roi.x;
+      point.y += roi.y;
+    }
+
+    const std::vector<cv::Point> smoothed = smoothSurfaceContour(contours[i], 3);
+    cv::drawContours(image, std::vector<std::vector<cv::Point>>{smoothed}, -1, cv::Scalar(16, 20, 16), 4, cv::LINE_AA);
+    cv::drawContours(image, std::vector<std::vector<cv::Point>>{smoothed}, -1, cv::Scalar(0, 165, 255), 2, cv::LINE_AA);
+    drawStyledContour(image, smoothed, cv::Scalar(0, 165, 255));
+  }
+}
+
 void applyThresholdLocalization(
   SurfaceDefectResult& result,
   const cv::Mat& mask,
@@ -123,7 +225,7 @@ void applyThresholdLocalization(
   bool createDiagnosticImage,
   bool drawContours)
 {
-  const ThresholdMaskAnalysis analysis = analyzeLargestComponent(mask, roi);
+  const ThresholdMaskAnalysis analysis = analyzeLargestComponent(mask, roi, settings);
   if (!analysis.valid)
   {
     return;
@@ -139,7 +241,7 @@ void applyThresholdLocalization(
 
   if (createDiagnosticImage)
   {
-    drawSurfaceBlobs(result.diagnosticImage, result.blobs, drawContours);
+    drawMassPcaDiagnostics(result.diagnosticImage, analysis, roi, drawContours);
   }
 
   result.localization.found = true;

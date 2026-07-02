@@ -309,18 +309,19 @@ void MainWindowSetupModule::processCurrentCameraFrame(const CameraConfig& camera
 
   if (annulus.method == "massPca")
   {
-    if (recipes().loadSurfaceDefectRoi(camera.id, roi))
-    {
-      log(QString("pipeline surface mass pca begin: %1 roi=%2,%3 %4x%5")
-            .arg(camera.id)
-            .arg(roi.x())
-            .arg(roi.y())
-            .arg(roi.width())
-            .arg(roi.height()));
-      context().surface->testSurfaceLocalization(camera);
-      return;
-    }
-    log(QString("pipeline surface mass pca missing roi: %1").arg(camera.id));
+    const bool hasRoi = recipes().loadSurfaceDefectRoi(camera.id, roi);
+    const QVector<QPoint> polygon = recipes().loadSurfaceDefectPolygon(camera.id);
+    log(hasRoi
+          ? QString("pipeline surface mass pca begin: %1 roi=%2,%3 %4x%5")
+              .arg(camera.id)
+              .arg(roi.x())
+              .arg(roi.y())
+              .arg(roi.width())
+              .arg(roi.height())
+          : QString("pipeline surface mass pca begin: %1 polygonPoints=%2")
+              .arg(camera.id)
+              .arg(polygon.size()));
+    context().surface->testSurfaceLocalization(camera);
     return;
   }
 
@@ -519,10 +520,7 @@ void MainWindowSetupModule::refreshPoseForCurrentFrame(const CameraConfig& camer
 
   if (annulus.method == "massPca")
   {
-    if (recipes().loadSurfaceDefectRoi(camera.id, roi))
-    {
-      context().surface->testSurfaceLocalization(camera);
-    }
+    context().surface->testSurfaceLocalization(camera);
     return;
   }
 

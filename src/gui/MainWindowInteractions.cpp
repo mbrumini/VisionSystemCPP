@@ -769,6 +769,14 @@ void MainWindow::processNextSimulatorFrame(const CameraConfig& camera)
           m_selectedPreview = m_imaging.matToPixmap(displayImage);
           m_largeImage->setImage(m_selectedPreview);
         }
+        if (result.localization.found)
+        {
+          m_geometry.showRuntimeGeometryOverlay(camera);
+        }
+        else
+        {
+          m_largeImage->clearGeometryOverlay();
+        }
 
         QRect displayRoi;
         if (completedRuntime.currentSimulatorFrame().strategyId == "massPca" ||

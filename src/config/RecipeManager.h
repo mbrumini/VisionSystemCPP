@@ -27,6 +27,8 @@ struct SurfaceDefectSettings
   bool pcaResolveAmbiguity = false;
   bool hasReferenceHalfPlane = false;
   bool referencePositiveHalfPlane = false;
+  bool hasReferenceArea = false;
+  double referenceArea = 0.0;
 };
 
 struct RecipeRotatedRoi
@@ -305,6 +307,7 @@ public:
   bool saveSurfaceDefectThreshold(const QString& cameraId, int minValue, int maxValue, QString* errorMessage = nullptr) const;
   bool saveSurfaceDefectPcaResolveAmbiguity(const QString& cameraId, bool resolve, QString* errorMessage = nullptr) const;
   bool saveSurfaceDefectAxisReference(const QString& cameraId, bool positiveHalfPlane, QString* errorMessage = nullptr) const;
+  bool saveSurfaceDefectMassPcaReference(const QString& cameraId, bool positiveHalfPlane, double area, QString* errorMessage = nullptr) const;
   bool addSurfaceDefectExclusionRect(const QString& cameraId, const QRect& rect, QString* errorMessage = nullptr) const;
   bool saveSurfaceDefectExclusionRects(const QString& cameraId, const QVector<QRect>& rects, QString* errorMessage = nullptr) const;
   bool clearSurfaceDefectExclusionRects(const QString& cameraId, QString* errorMessage = nullptr) const;
