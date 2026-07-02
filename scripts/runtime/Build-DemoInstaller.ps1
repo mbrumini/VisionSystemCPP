@@ -6,7 +6,8 @@ param(
   [string]$Publisher = "VisionSystemCPP",
   [switch]$IncludeRecipes,
   [switch]$SkipBuild,
-  [switch]$NoRunAfterInstall
+  [switch]$NoRunAfterInstall,
+  [switch]$SilentDefaults
 )
 
 $ErrorActionPreference = "Stop"
@@ -67,6 +68,19 @@ function Escape-Iss($Text) {
   return $Text.Replace("\", "\\").Replace('"', '""')
 }
 
+function Expand-IssTemplate {
+  param(
+    [Parameter(Mandatory = $true)][string]$TemplatePath,
+    [Parameter(Mandatory = $true)][hashtable]$Values
+  )
+
+  $content = Get-Content -Raw -Encoding UTF8 $TemplatePath
+  foreach ($key in $Values.Keys) {
+    $content = $content.Replace("{{$key}}", [string]$Values[$key])
+  }
+  return $content
+}
+
 $projectRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 if ([string]::IsNullOrWhiteSpace($OutputDir)) {
   $OutputDir = Join-Path $projectRoot "dist"
@@ -115,66 +129,24 @@ $runFlags = "nowait postinstall skipifsilent"
 if ($NoRunAfterInstall) {
   $runFlags += " unchecked"
 }
+if ($SilentDefaults) {
+  $runFlags = "nowait skipifsilent unchecked"
+}
 
-$iss = @"
-#define AppVersion "$version"
-#define PackageRoot "$(Escape-Iss $packageRoot)"
-#define AppIconFile "$(Escape-Iss (Join-Path $projectRoot "resources\app_icon.ico"))"
-
-[Setup]
-AppId={{7B2A5690-A781-40A2-92C9-273318C86C3D}
-AppName=$AppName
-AppVersion={#AppVersion}
-AppPublisher=$Publisher
-DefaultDirName=C:\VisionSystemCPP
-DefaultGroupName=VisionSystemCPP
-DisableProgramGroupPage=yes
-OutputDir=$(Escape-Iss $OutputDir)
-OutputBaseFilename=$setupBaseName
-Compression=lzma2
-SolidCompression=yes
-WizardStyle=modern
-ArchitecturesAllowed=x64
-ArchitecturesInstallIn64BitMode=x64
-PrivilegesRequired=admin
-UninstallDisplayName=$AppName
-UninstallDisplayIcon={app}\VisionSystemCPP.exe
-SetupIconFile={#AppIconFile}
-SetupLogging=yes
-
-[Languages]
-Name: "italian"; MessagesFile: "compiler:Languages\Italian.isl"
-Name: "english"; MessagesFile: "compiler:Default.isl"
-
-[Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "installai_cpu"; Description: "Installa VisionAI CPU completo (Python 3.11, PyTorch CPU, Ultralytics - richiede internet)"; GroupDescription: "Componenti AI opzionali:"; Flags: unchecked exclusive
-Name: "installai_gpu"; Description: "Installa VisionAI GPU completo (NVIDIA/CUDA, PyTorch CUDA, Ultralytics - richiede internet)"; GroupDescription: "Componenti AI opzionali:"; Flags: unchecked exclusive
-Name: "installollama"; Description: "Configura assistente help locale con Ollama"; GroupDescription: "Componenti aggiuntivi:"; Flags: unchecked
-
-[Files]
-Source: "{#PackageRoot}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "images,dataset,datasets,training,train,models,*.gguf,*.pt,*.onnx,*.bmp,*.jpg,*.jpeg,*.tif,*.tiff,*.webp"
-
-[Dirs]
-Name: "{app}\config"
-Name: "{app}\recipes"
-Name: "{app}\data"
-Name: "{app}\logs"
-
-[Icons]
-Name: "{group}\VisionSystemCPP"; Filename: "{app}\VisionSystemCPP.exe"; WorkingDir: "{app}"; IconFilename: "{app}\VisionSystemCPP.exe"
-Name: "{group}\Disinstalla VisionSystemCPP"; Filename: "{app}\Uninstall_Runtime.bat"; WorkingDir: "{app}"
-Name: "{autodesktop}\VisionSystemCPP"; Filename: "{app}\VisionSystemCPP.exe"; WorkingDir: "{app}"; IconFilename: "{app}\VisionSystemCPP.exe"; Tasks: desktopicon
-
-[Run]
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installer\Install-VisionAI.ps1"" -Profile CPU -InstallDir ""{app}"""; StatusMsg: "Download e configurazione VisionAI CPU..."; Tasks: installai_cpu; Flags: runhidden waituntilterminated
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installer\Install-VisionAI.ps1"" -Profile GPU -InstallDir ""{app}"""; StatusMsg: "Download e configurazione VisionAI GPU..."; Tasks: installai_gpu; Flags: runhidden waituntilterminated
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installer\Install-Runtime.ps1"" -InstallDir ""{app}"" -SetupPythonOnly -SkipPython -InstallOllamaModel"; StatusMsg: "Configurazione dell'assistente Ollama..."; Tasks: installollama; Flags: runhidden waituntilterminated
-Filename: "{app}\VisionSystemCPP.exe"; Description: "Avvia VisionSystemCPP"; WorkingDir: "{app}"; Flags: $runFlags
-
-[UninstallRun]
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installer\Uninstall-Runtime.ps1"" -InstallDir ""{app}"" -Quiet"; RunOnceId: "VisionSystemCPPUninstallRuntime"; Flags: runhidden waituntilterminated
-"@
+$templatePath = Join-Path $PSScriptRoot "installer\VisionSystemCPP_Demo.iss.template"
+if (-not (Test-Path $templatePath)) {
+  throw "Template Inno Setup non trovato: $templatePath"
+}
+$iss = Expand-IssTemplate -TemplatePath $templatePath -Values @{
+  APP_VERSION = $version
+  PACKAGE_ROOT = Escape-Iss $packageRoot
+  APP_ICON_FILE = Escape-Iss (Join-Path $projectRoot "resources\app_icon.ico")
+  APP_NAME = $AppName
+  PUBLISHER = $Publisher
+  OUTPUT_DIR = Escape-Iss $OutputDir
+  SETUP_BASE_NAME = $setupBaseName
+  RUN_FLAGS = $runFlags
+}
 
 $iss | Set-Content -Encoding UTF8 $issPath
 
@@ -208,3 +180,4 @@ Write-Host "Installer demo creato:" -ForegroundColor Green
 Write-Host $installerPath
 Write-Host "SHA256:"
 Write-Host "$installerPath.sha256.txt"
+exit 0

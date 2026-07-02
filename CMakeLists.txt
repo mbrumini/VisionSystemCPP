@@ -196,6 +196,7 @@ add_executable(VisionSystemCPP
     src/gui/modules/surface/MainWindowSurfaceModule_LocalizationToolEdgePca.cpp
     src/gui/modules/surface/MainWindowSurfaceModule_LocalizationToolModel.cpp
     src/gui/modules/surface/MainWindowSurfaceModule_LocalizationToolPlanned.cpp
+    src/gui/modules/surface/MainWindowSurfaceModule_ToolPanelHelpers.cpp
     src/gui/modules/surface/MainWindowSurfaceModule_Runtime.cpp
     src/gui/modules/surface/MainWindowSurfaceModule_Model.cpp
     src/gui/modules/setup/SetupResultsDialog.h

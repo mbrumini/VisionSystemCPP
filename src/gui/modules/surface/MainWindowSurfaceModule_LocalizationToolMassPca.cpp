@@ -1,14 +1,11 @@
 #include "gui/modules/MainWindowSurfaceModule.h"
-#include "gui/modules/MainWindowContext.h"
 
 #include "gui/SurfaceLocalizationStrategies.h"
-#include "gui/TouchIconButton.h"
 
 #include <QCheckBox>
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QLabel>
-#include <QPushButton>
 #include <QSlider>
 #include <QVBoxLayout>
 
@@ -21,46 +18,11 @@ void MainWindowSurfaceModule::showMassPcaLocalizationPanel(const CameraConfig& c
     return;
   }
 
-  context().clearToolPanel();
-
   const SurfaceDefectSettings settings = recipes().loadSurfaceDefectSettings(camera.id);
   const SurfaceLocalizationStrategyDefinition strategy = SurfaceLocalizationStrategies::strategy("massPca", translations());
-  auto* panel = new QWidget(toolsContainer());
-  auto* layout = new QVBoxLayout(panel);
-  layout->setContentsMargins(0, 0, 0, 0);
-  layout->setSpacing(6);
-
-  auto* title = new QLabel(strategy.label + " | " + QString("%1 %2").arg(tr("labels.camera")).arg(camera.slot), panel);
-  title->setObjectName("toolPanelTitle");
-  title->setWordWrap(true);
-  layout->addWidget(title);
-
-  auto* note = new QLabel(strategy.note, panel);
-  note->setObjectName("toolPanelNote");
-  note->setWordWrap(true);
-  layout->addWidget(note);
-
-  auto* buttons = new QWidget(panel);
-  auto* buttonsLayout = new QGridLayout(buttons);
-  buttonsLayout->setContentsMargins(0, 0, 0, 0);
-  buttonsLayout->setSpacing(6);
-
-  auto* roiButton = createTouchIconButton("surfaceSearchRoi", tr("actions.surfaceSearchRoi"), buttons);
-  auto* polygonButton = createTouchIconButton("polygon", tr("actions.polygon"), buttons);
-  auto* maskButton = createTouchIconButton("surfaceAddExclusion", tr("actions.surfaceAddExclusion"), buttons);
-  auto* clearLocalizationButton = createTouchIconButton("clear", tr("actions.clearLocalization"), buttons);
-  auto* testButton = createTouchIconButton("testStrategy", tr("actions.testStrategy"), buttons);
-  QObject::connect(roiButton, &QPushButton::clicked, window(), [this, camera]() { activateSurfaceDefectRoiDrawing(camera); });
-  QObject::connect(polygonButton, &QPushButton::clicked, window(), [this, camera]() { activateSurfaceDefectPolygonDrawing(camera); });
-  QObject::connect(maskButton, &QPushButton::clicked, window(), [this, camera]() { activateSurfaceDefectExclusionDrawing(camera); });
-  QObject::connect(clearLocalizationButton, &QPushButton::clicked, window(), [this, camera]() { clearSurfaceLocalization(camera); });
-  QObject::connect(testButton, &QPushButton::clicked, window(), [this, camera]() { testSurfaceLocalization(camera); });
-  buttonsLayout->addWidget(roiButton, 0, 0);
-  buttonsLayout->addWidget(polygonButton, 0, 1);
-  buttonsLayout->addWidget(maskButton, 1, 0, 1, 2);
-  buttonsLayout->addWidget(clearLocalizationButton, 2, 0, 1, 2);
-  buttonsLayout->addWidget(testButton, 3, 0, 1, 2);
-  layout->addWidget(buttons);
+  QVBoxLayout* layout = nullptr;
+  auto* panel = createSurfaceLocalizationToolPanel(camera, strategy, &layout);
+  addSurfaceDefectAoeButtons(camera, layout, [this, camera]() { testSurfaceLocalization(camera); });
 
   auto* thresholdBox = new QGroupBox(tr("labels.threshold"), panel);
   auto* thresholdLayout = new QGridLayout(thresholdBox);
@@ -123,13 +85,7 @@ void MainWindowSurfaceModule::showMassPcaLocalizationPanel(const CameraConfig& c
   });
   layout->addWidget(resolveBox);
 
-  auto* backButton = createTouchIconButton("back", tr("groups.localizationStrategies"), panel);
-  QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() {
-    context().showLocalizationStrategyList(camera);
-    log(tr("log.backToCameraTools") + ": " + camera.id);
-  });
-  layout->addWidget(backButton);
-  layout->addStretch(1);
+  addSurfaceLocalizationBackButton(camera, layout);
 
   toolsLayout()->addWidget(panel);
   log(tr("log.toolPanel") + ": " + strategy.label);

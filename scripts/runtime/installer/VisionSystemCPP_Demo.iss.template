@@ -1,24 +1,24 @@
-﻿#define AppVersion "0.1047"
-#define PackageRoot "D:\\dev\\VisionSystemCPP\\dist\\runtime_staging\\VisionSystemCPP"
-#define AppIconFile "D:\\dev\\VisionSystemCPP\\resources\\app_icon.ico"
+#define AppVersion "{{APP_VERSION}}"
+#define PackageRoot "{{PACKAGE_ROOT}}"
+#define AppIconFile "{{APP_ICON_FILE}}"
 
 [Setup]
 AppId={{7B2A5690-A781-40A2-92C9-273318C86C3D}
-AppName=VisionSystemCPP Demo
+AppName={{APP_NAME}}
 AppVersion={#AppVersion}
-AppPublisher=VisionSystemCPP
+AppPublisher={{PUBLISHER}}
 DefaultDirName=C:\VisionSystemCPP
 DefaultGroupName=VisionSystemCPP
 DisableProgramGroupPage=yes
-OutputDir=D:\\dev\\VisionSystemCPP\\dist
-OutputBaseFilename=VisionSystemCPP-demo-setup-0.1047
+OutputDir={{OUTPUT_DIR}}
+OutputBaseFilename={{SETUP_BASE_NAME}}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=admin
-UninstallDisplayName=VisionSystemCPP Demo
+UninstallDisplayName={{APP_NAME}}
 UninstallDisplayIcon={app}\VisionSystemCPP.exe
 SetupIconFile={#AppIconFile}
 SetupLogging=yes
@@ -55,8 +55,7 @@ Name: "{autodesktop}\VisionSystemCPP"; Filename: "{app}\VisionSystemCPP.exe"; Wo
 Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installer\Install-VisionAI.ps1"" -Profile CPU -InstallDir ""{app}"""; StatusMsg: "Download e configurazione VisionAI CPU..."; Tasks: installai_cpu; Flags: runhidden waituntilterminated
 Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installer\Install-VisionAI.ps1"" -Profile GPU -InstallDir ""{app}"""; StatusMsg: "Download e configurazione VisionAI GPU..."; Tasks: installai_gpu; Flags: runhidden waituntilterminated
 Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installer\Install-Runtime.ps1"" -InstallDir ""{app}"" -SetupPythonOnly -SkipPython -InstallOllamaModel"; StatusMsg: "Configurazione dell'assistente Ollama..."; Tasks: installollama; Flags: runhidden waituntilterminated
-Filename: "{app}\VisionSystemCPP.exe"; Description: "Avvia VisionSystemCPP"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent unchecked
+Filename: "{app}\VisionSystemCPP.exe"; Description: "Avvia VisionSystemCPP"; WorkingDir: "{app}"; Flags: {{RUN_FLAGS}}
 
 [UninstallRun]
 Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installer\Uninstall-Runtime.ps1"" -InstallDir ""{app}"" -Quiet"; RunOnceId: "VisionSystemCPPUninstallRuntime"; Flags: runhidden waituntilterminated
-

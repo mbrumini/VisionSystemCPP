@@ -75,6 +75,23 @@ Se Inno Setup non e' installato, lo zip runtime resta comunque utilizzabile:
 Per creare l'installer .exe installare Inno Setup 6 sul PC sviluppo e rilanciare
 Build_Demo_Installer.bat.
 
+Installazione automatica/silenziosa:
+
+dist\VisionSystemCPP-demo-setup-<versione>.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+
+Per installare anche componenti opzionali via task Inno Setup:
+
+dist\VisionSystemCPP-demo-setup-<versione>.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /TASKS="desktopicon,installai_cpu"
+
+Task disponibili:
+- desktopicon
+- noai
+- installai_cpu
+- installai_gpu
+- installollama
+
+Nota: i task AI/Ollama possono richiedere internet e aumentare molto il tempo di installazione.
+
 VALIDAZIONE PACCHETTO
 ---------------------
 Prima di consegnare una demo, validare il runtime:

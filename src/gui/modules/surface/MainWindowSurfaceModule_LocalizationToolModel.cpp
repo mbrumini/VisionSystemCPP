@@ -1,5 +1,4 @@
 #include "gui/modules/MainWindowSurfaceModule.h"
-#include "gui/modules/MainWindowContext.h"
 
 #include "gui/SurfaceLocalizationStrategies.h"
 #include "gui/TouchIconButton.h"
@@ -23,23 +22,9 @@ void MainWindowSurfaceModule::showModelLocalizationPanel(const CameraConfig& cam
     return;
   }
 
-  context().clearToolPanel();
-
   const SurfaceLocalizationStrategyDefinition strategy = SurfaceLocalizationStrategies::strategy("model", translations());
-  auto* panel = new QWidget(toolsContainer());
-  auto* layout = new QVBoxLayout(panel);
-  layout->setContentsMargins(0, 0, 0, 0);
-  layout->setSpacing(6);
-
-  auto* title = new QLabel(strategy.label + " | " + QString("%1 %2").arg(tr("labels.camera")).arg(camera.slot), panel);
-  title->setObjectName("toolPanelTitle");
-  title->setWordWrap(true);
-  layout->addWidget(title);
-
-  auto* note = new QLabel(strategy.note, panel);
-  note->setObjectName("toolPanelNote");
-  note->setWordWrap(true);
-  layout->addWidget(note);
+  QVBoxLayout* layout = nullptr;
+  auto* panel = createSurfaceLocalizationToolPanel(camera, strategy, &layout);
 
   auto* buttons = new QWidget(panel);
   auto* buttonsLayout = new QGridLayout(buttons);
@@ -194,13 +179,7 @@ void MainWindowSurfaceModule::showModelLocalizationPanel(const CameraConfig& cam
 
   layout->addWidget(modelBox);
 
-  auto* backButton = createTouchIconButton("back", tr("groups.localizationStrategies"), panel);
-  QObject::connect(backButton, &QPushButton::clicked, window(), [this, camera]() {
-    context().showLocalizationStrategyList(camera);
-    log(tr("log.backToCameraTools") + ": " + camera.id);
-  });
-  layout->addWidget(backButton);
-  layout->addStretch(1);
+  addSurfaceLocalizationBackButton(camera, layout);
 
   toolsLayout()->addWidget(panel);
   log(tr("log.toolPanel") + ": " + strategy.label);

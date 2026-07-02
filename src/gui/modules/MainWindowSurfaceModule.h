@@ -3,10 +3,14 @@
 #include "gui/modules/MainWindowModuleBase.h"
 #include "processing/SurfaceDefectProcessor.h"
 
+#include <functional>
 #include <QString>
 
 class CameraConfig;
+class QVBoxLayout;
+class QWidget;
 struct SurfaceAnnulusLocalizationConfig;
+struct SurfaceLocalizationStrategyDefinition;
 
 class MainWindowSurfaceModule : public MainWindowModuleBase
 {
@@ -81,6 +85,16 @@ private:
   void showModelLocalizationPanel(const CameraConfig& camera);
   void showPlannedLocalizationPanel(const CameraConfig& camera, const QString& strategyId);
   void showStoredSurfaceDefectAoe(const CameraConfig& camera);
+  QWidget* createSurfaceLocalizationToolPanel(
+    const CameraConfig& camera,
+    const SurfaceLocalizationStrategyDefinition& strategy,
+    QVBoxLayout** layout);
+  void addSurfaceDefectAoeButtons(
+    const CameraConfig& camera,
+    QVBoxLayout* layout,
+    const std::function<void()>& testAction,
+    bool includeMaskButton = true);
+  void addSurfaceLocalizationBackButton(const CameraConfig& camera, QVBoxLayout* layout);
 
   CircleTarget m_circleTarget = CircleTarget::None;
 };
