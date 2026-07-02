@@ -16,6 +16,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLabel>
+#include <QEventLoop>
 #include <QProcess>
 #include <QUuid>
 
@@ -66,6 +67,30 @@ void MainWindowSetupModule::runAiLocalizationInference(const CameraConfig& camer
     [this, effectiveCamera](const AiLocalizationFrameResult& result) {
       applyAiLocalizationInferenceResult(effectiveCamera, result);
     });
+}
+
+bool MainWindowSetupModule::runAiLocalizationInferenceSync(const CameraConfig& camera, const cv::Mat& frame)
+{
+  if (frame.empty())
+  {
+    return false;
+  }
+
+  const CameraConfig effectiveCamera = currentConfiguredCamera(config(), camera);
+  bool success = false;
+  QEventLoop loop;
+
+  runAiLocalizationInferenceFrame(
+    effectiveCamera,
+    frame,
+    [&success, &loop, this, effectiveCamera](const AiLocalizationFrameResult& result) {
+      applyAiLocalizationInferenceResult(effectiveCamera, result);
+      success = result.found && result.error.isEmpty();
+      loop.quit();
+    });
+
+  loop.exec();
+  return success;
 }
 
 void MainWindowSetupModule::runAiLocalizationInferenceFrame(
@@ -398,6 +423,7 @@ void MainWindowSetupModule::applyAiLocalizationInferenceResult(
       m_aiLocalizationInferenceResultLabel->setText(message);
     }
     log("Localizzazione AI: " + message);
+    refreshSetupGeometryResults(camera);
     return;
   }
 
@@ -449,4 +475,5 @@ void MainWindowSetupModule::applyAiLocalizationInferenceResult(
     .arg(result.confidence, 0, 'f', 4)
     .arg(result.elapsedMs, 0, 'f', 1)
     .arg(result.hasOrientationReference ? "reference" : "pca"));
+  refreshSetupGeometryResults(camera);
 }

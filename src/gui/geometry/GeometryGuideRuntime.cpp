@@ -135,4 +135,65 @@ void syncPartGuidesFromImage(const PartPose& pose,
     ArcGuideMath::syncArcPartAngles(arc);
   }
 }
+
+void forceSyncPartGuidesFromImage(const PartPose& pose,
+                                 QVector<GeometryLineRuntimeConfig>& lines,
+                                 QVector<GeometryPointRuntimeConfig>& points,
+                                 QVector<GeometryCircleRuntimeConfig>& circles,
+                                 QVector<GeometryArcRuntimeConfig>& arcs)
+{
+  if (!pose.valid)
+  {
+    return;
+  }
+
+  for (GeometryLineRuntimeConfig& line : lines)
+  {
+    if (line.anchorInImageSpace || !line.hasImageLine)
+    {
+      continue;
+    }
+    line.partStart = imageToPart(pose, line.imageStart);
+    line.partEnd = imageToPart(pose, line.imageEnd);
+    line.hasLine = true;
+  }
+
+  for (GeometryPointRuntimeConfig& point : points)
+  {
+    if (point.anchorInImageSpace || !point.hasImageGuide)
+    {
+      continue;
+    }
+    point.partStart = imageToPart(pose, point.imageStart);
+    point.partEnd = imageToPart(pose, point.imageEnd);
+    point.hasGuide = true;
+  }
+
+  for (GeometryCircleRuntimeConfig& circle : circles)
+  {
+    if (circle.anchorInImageSpace || !circle.hasImageCircle)
+    {
+      continue;
+    }
+    circle.partCenter = imageToPart(pose, circle.imageCenter);
+    circle.hasCircle = true;
+  }
+
+  for (GeometryArcRuntimeConfig& arc : arcs)
+  {
+    if (arc.anchorInImageSpace || !arc.hasImageArc)
+    {
+      continue;
+    }
+    arc.partCenter = imageToPart(pose, arc.imageCenter);
+    arc.partStart = imageToPart(pose, arc.imageStart);
+    arc.partEnd = imageToPart(pose, arc.imageEnd);
+    if (arc.hasImageThrough)
+    {
+      arc.partThrough = imageToPart(pose, arc.imageThrough);
+    }
+    arc.hasArc = true;
+    ArcGuideMath::syncArcPartAngles(arc);
+  }
+}
 }

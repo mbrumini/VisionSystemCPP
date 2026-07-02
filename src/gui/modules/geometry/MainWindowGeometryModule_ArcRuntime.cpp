@@ -454,7 +454,7 @@ void MainWindowGeometryModule::testGeometryArc(const CameraConfig& camera)
   QVector<GeometryPointRuntimeConfig> points;
   QVector<GeometryCircleRuntimeConfig> circles;
   QVector<GeometryArcRuntimeConfig> arcs = {arcConfig};
-  GeometryGuideRuntime::syncPartGuidesFromImage(resolvedPose, lines, points, circles, arcs);
+  GeometryGuideRuntime::forceSyncPartGuidesFromImage(resolvedPose, lines, points, circles, arcs);
   arcConfig = arcs.first();
 
   QString imageError;

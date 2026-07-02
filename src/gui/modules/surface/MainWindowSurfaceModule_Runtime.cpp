@@ -166,7 +166,7 @@ void MainWindowSurfaceModule::testSurfaceAnnulusLocalization(const CameraConfig&
           qRound(result.localization.radius)
         });
       }
-      if (context().setup)
+      if (isSetupCameraActive(camera.id))
       {
         context().setup->refreshSetupGeometryResults(camera);
         return;
@@ -217,11 +217,7 @@ void MainWindowSurfaceModule::testSurfaceLocalization(const CameraConfig& camera
   QRect roi;
   const QVector<QPoint> searchPolygon = recipes().loadSurfaceDefectPolygon(camera.id);
   const bool hasPolygon = searchPolygon.size() >= 3;
-  if (!recipes().loadSurfaceDefectRoi(camera.id, roi) && !hasPolygon)
-  {
-    log(tr("log.surfaceRoiMissing") + ": " + camera.id);
-    return;
-  }
+  recipes().loadSurfaceDefectRoi(camera.id, roi);
   if (!roi.isValid() && hasPolygon)
   {
     roi = QPolygon(searchPolygon).boundingRect().normalized();
@@ -345,7 +341,7 @@ void MainWindowSurfaceModule::testSurfaceLocalization(const CameraConfig& camera
       context().lastSurfaceLocalizationResults->insert(camera.id, result.localization);
       cameraRuntime()[camera.id].setCurrentPose(context().imaging->partPoseFromSurfaceReference(camera, result.localization));
       syncThreadExtractionRoiOverlay(camera);
-      if (context().setup)
+      if (isSetupCameraActive(camera.id))
       {
         context().setup->refreshSetupGeometryResults(camera);
         return;
@@ -465,15 +461,19 @@ void MainWindowSurfaceModule::testSurfaceLocalizationStrategy(const CameraConfig
     cameraRuntime()[camera.id].setCurrentPose(
       context().imaging->partPoseFromSurfaceReference(camera, reference));
     syncThreadExtractionRoiOverlay(camera);
-    if (context().setup)
+    if (isSetupCameraActive(camera.id))
     {
       context().setup->refreshSetupGeometryResults(camera);
+      return;
     }
 
     if (updateView)
     {
       GeometryOverlay overlay;
-      context().geometry->appendCurrentPartPoseOverlay(camera, overlay);
+      if (context().geometry)
+      {
+        context().geometry->appendCurrentPartPoseOverlay(camera, overlay);
+      }
       largeImage()->setGeometryOverlay(overlay);
     }
 
@@ -497,11 +497,7 @@ void MainWindowSurfaceModule::testSurfaceEdgePcaLocalization(const CameraConfig&
   QRect roi;
   const QVector<QPoint> searchPolygon = recipes().loadSurfaceDefectPolygon(camera.id);
   const bool hasPolygon = searchPolygon.size() >= 3;
-  if (!recipes().loadSurfaceDefectRoi(camera.id, roi) && !hasPolygon)
-  {
-    log(tr("log.surfaceRoiMissing") + ": " + camera.id);
-    return;
-  }
+  recipes().loadSurfaceDefectRoi(camera.id, roi);
   if (!roi.isValid() && hasPolygon)
   {
     roi = QPolygon(searchPolygon).boundingRect().normalized();
@@ -519,7 +515,10 @@ void MainWindowSurfaceModule::testSurfaceEdgePcaLocalization(const CameraConfig&
   const SurfaceDefectSettings recipeSettings = recipes().loadSurfaceDefectSettings(camera.id);
   const QVector<QRect> exclusionRects = recipes().loadSurfaceDefectExclusionRects(camera.id);
 
-  const cv::Rect searchRect(0, 0, input.cols, input.rows);
+  const cv::Rect fullSearchRect(0, 0, input.cols, input.rows);
+  const cv::Rect searchRect = roi.isValid()
+    ? (cv::Rect(roi.x(), roi.y(), roi.width(), roi.height()) & fullSearchRect)
+    : fullSearchRect;
   const std::vector<cv::Point> cvSearchPolygon = toCvPoints(searchPolygon);
   const bool useSearchPolygon = hasPolygon;
   const bool resolveAmbiguity =
@@ -618,13 +617,17 @@ void MainWindowSurfaceModule::testSurfaceEdgePcaLocalization(const CameraConfig&
     context().lastSurfaceLocalizationResults->insert(camera.id, result.localization);
     cameraRuntime()[camera.id].setCurrentPose(context().imaging->partPoseFromSurfaceReference(camera, result.localization));
     syncThreadExtractionRoiOverlay(camera);
-    if (context().setup)
+    if (isSetupCameraActive(camera.id))
     {
       context().setup->refreshSetupGeometryResults(camera);
+      return;
     }
 
     GeometryOverlay overlay;
-    context().geometry->appendCurrentPartPoseOverlay(camera, overlay);
+    if (context().geometry)
+    {
+      context().geometry->appendCurrentPartPoseOverlay(camera, overlay);
+    }
     if (updateView)
     {
       largeImage()->setGeometryOverlay(overlay);

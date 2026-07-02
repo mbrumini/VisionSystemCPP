@@ -242,7 +242,7 @@ void MainWindowRecipeModule::setActiveRecipe(const QString& recipeId)
   ensureRecipeCameraFolders();
   applyRecipeAcquisitionSettings();
   refreshSelectedCameraRecipeData();
-  if (!selectedCameraId().isEmpty() && context().setup)
+  if (!selectedCameraId().isEmpty() && isSetupCameraActive(selectedCameraId()) && context().setup)
   {
     context().setup->refreshSetupGeometryResults(selectedCamera());
   }

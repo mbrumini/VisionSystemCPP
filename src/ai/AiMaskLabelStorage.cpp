@@ -10,6 +10,25 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 
+namespace
+{
+QSize imageSizeFromPath(const QString& imagePath)
+{
+  const QImage source(imagePath);
+  if (!source.isNull())
+  {
+    return source.size();
+  }
+
+  const cv::Mat cvSource = cv::imread(imagePath.toStdString(), cv::IMREAD_UNCHANGED);
+  if (cvSource.empty())
+  {
+    return {};
+  }
+  return QSize(cvSource.cols, cvSource.rows);
+}
+}
+
 QString AiMaskLabelStorage::yoloSegmentationLine(
   const QVector<QPoint>& polygon,
   const QSize& imageSize,
@@ -58,8 +77,8 @@ bool AiMaskLabelStorage::savePolygons(
   AiMaskLabelPaths* savedPaths,
   QString* errorMessage)
 {
-  const QImage source(sourceImagePath);
-  if (source.isNull())
+  const QSize sourceSize = imageSizeFromPath(sourceImagePath);
+  if (sourceSize.isEmpty())
   {
     if (errorMessage)
     {
@@ -97,7 +116,7 @@ bool AiMaskLabelStorage::savePolygons(
   const QString maskPath = QDir(masksDirectory).filePath(stem + ".png");
   const QString labelPath = QDir(labelsDirectory).filePath(stem + ".txt");
 
-  cv::Mat mask = cv::Mat::zeros(source.height(), source.width(), CV_8UC1);
+  cv::Mat mask = cv::Mat::zeros(sourceSize.height(), sourceSize.width(), CV_8UC1);
   for (const AiSegmentationPolygon& polygon : polygons)
   {
     if (polygon.points.size() < 3)
@@ -109,8 +128,8 @@ bool AiMaskLabelStorage::savePolygons(
     for (const QPoint& point : polygon.points)
     {
       cvPolygon.emplace_back(
-        qBound(0, point.x(), source.width() - 1),
-        qBound(0, point.y(), source.height() - 1));
+        qBound(0, point.x(), sourceSize.width() - 1),
+        qBound(0, point.y(), sourceSize.height() - 1));
     }
     const int value = polygon.classId == 0 ? 255 : 128;
     cv::fillPoly(mask, std::vector<std::vector<cv::Point>>{cvPolygon}, cv::Scalar(value));
@@ -137,7 +156,7 @@ bool AiMaskLabelStorage::savePolygons(
   for (const AiSegmentationPolygon& polygon : polygons)
   {
     const QString line = yoloSegmentationLine(
-      polygon.points, source.size(), polygon.classId);
+      polygon.points, sourceSize, polygon.classId);
     if (!line.isEmpty())
     {
       stream << line << '\n';
@@ -174,8 +193,8 @@ QVector<AiSegmentationPolygon> AiMaskLabelStorage::loadPolygons(
   const QString& labelsDirectory,
   QString* errorMessage)
 {
-  const QImage source(sourceImagePath);
-  if (source.isNull())
+  const QSize sourceSize = imageSizeFromPath(sourceImagePath);
+  if (sourceSize.isEmpty())
   {
     return {};
   }
@@ -232,8 +251,8 @@ QVector<AiSegmentationPolygon> AiMaskLabelStorage::loadPolygons(
         return {};
       }
       polygon.points.append({
-        qBound(0, qRound(x * source.width()), source.width() - 1),
-        qBound(0, qRound(y * source.height()), source.height() - 1)
+        qBound(0, qRound(x * sourceSize.width()), sourceSize.width() - 1),
+        qBound(0, qRound(y * sourceSize.height()), sourceSize.height() - 1)
       });
     }
     polygons.append(polygon);

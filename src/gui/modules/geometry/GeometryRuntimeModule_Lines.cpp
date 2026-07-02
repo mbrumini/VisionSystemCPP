@@ -253,7 +253,7 @@ void MainWindowGeometryModule::testGeometryLine(const CameraConfig& camera)
   QVector<GeometryPointRuntimeConfig> points;
   QVector<GeometryCircleRuntimeConfig> circles;
   QVector<GeometryArcRuntimeConfig> arcs;
-  GeometryGuideRuntime::syncPartGuidesFromImage(resolvedPose, lines, points, circles, arcs);
+  GeometryGuideRuntime::forceSyncPartGuidesFromImage(resolvedPose, lines, points, circles, arcs);
   lineConfig = lines.first();
 
   QString imageError;

@@ -206,7 +206,18 @@ void MainWindowGeometryModule::testConfiguredGeometryLines(const CameraConfig& c
     guideReferenceSize(camera.id),
     !runMode && showGeometryView,
     !runMode && updateView && showGeometryView);
-  const ConfiguredGeometryDetectOutput result = detectConfiguredGeometries(detectInput);
+
+  ConfiguredGeometryDetectOutput result;
+  try
+  {
+    result = detectConfiguredGeometries(detectInput);
+  }
+  catch (const cv::Exception& exception)
+  {
+    log(QString("geometry detection failed: %1 %2").arg(camera.id, QString::fromStdString(exception.what())));
+    return;
+  }
+
   applyConfiguredGeometryDetectionResult(camera, result);
 
   GeometryOverlay detectedOverlay = result.guideOverlay;

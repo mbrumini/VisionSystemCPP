@@ -237,6 +237,8 @@
     "aiNote": "Choose the AI workflow to configure for this camera.",
     "aiClassificationNote": "Acquire raw images to label later, or press a class to save the current frame already labeled. Prepare dataset creates train/val; Training runs YOLO on GPU.",
     "aiLocalizationNote": "Single class: Part. Acquire dedicated raw images; masks, dataset preparation, training and centroid inference will be added in the next steps.",
+    "aiLocalizationEnabled": "Use AI for automatic localization",
+    "aiLocalizationEnabledHint": "When disabled, AI models remain saved but the pipeline uses the classic strategy selected in gray localization.",
     "aiToolPlanned": "Page prepared: labels, dataset and dedicated training will be configured here for this AI type.",
     "aiClassName": "Class name"
   },

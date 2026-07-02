@@ -39,6 +39,35 @@ QString RecipeManager::cameraAiLocalizationRawImagesPath(const QString& cameraId
   return cameraImagesPath(cameraId, "ai/localization_segmentation/raw");
 }
 
+bool RecipeManager::loadAiLocalizationEnabled(const QString& cameraId) const
+{
+  QJsonObject root;
+  loadJsonObject(cameraRecipePath(cameraId), root);
+
+  return root.value("tools").toObject()
+    .value("aiLocalization").toObject()
+    .value("enabled").toBool(true);
+}
+
+bool RecipeManager::saveAiLocalizationEnabled(
+  const QString& cameraId,
+  bool enabled,
+  QString* errorMessage) const
+{
+  const QString path = cameraRecipePath(cameraId);
+  QJsonObject root;
+  loadJsonObject(path, root);
+  root["cameraId"] = cameraId;
+
+  QJsonObject tools = root.value("tools").toObject();
+  QJsonObject ai = tools.value("aiLocalization").toObject();
+  ai["enabled"] = enabled;
+  tools["aiLocalization"] = ai;
+  root["tools"] = tools;
+
+  return saveJsonObject(path, root, errorMessage);
+}
+
 QString RecipeManager::cameraAiClassificationClassImagesPath(
   const QString& cameraId,
   const AiClassificationClassConfig& classConfig) const

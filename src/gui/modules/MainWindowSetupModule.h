@@ -77,11 +77,13 @@ public:
     const CameraConfig& camera,
     const cv::Mat& frame,
     std::function<void(const AiLocalizationFrameResult&)> callback);
+  bool runAiLocalizationInferenceSync(const CameraConfig& camera, const cv::Mat& frame);
 
 private:
   void startAiLocalizationLabeling(const CameraConfig& camera);
   void loadAiLocalizationLabelingImage(int index);
   void updateAiLocalizationLabelingStatus();
+  void updateAiLocalizationLabelingControls();
   void beginAiLocalizationPolygon(int classId);
   void finishAiLocalizationLabelingImage();
   void updateAiLocalizationPolygonOverlay();
@@ -152,6 +154,7 @@ private:
   QPointer<QLabel> m_aiLocalizationLabelingStatus;
   QPointer<QPushButton> m_aiLocalizationPreviousButton;
   QPointer<QPushButton> m_aiLocalizationNextButton;
+  QPointer<QPushButton> m_aiLocalizationTrainingButton;
   QPointer<QPushButton> m_aiLocalizationPieceButton;
   QPointer<QPushButton> m_aiLocalizationReferenceButton;
   QPointer<QPushButton> m_aiLocalizationFinishButton;
@@ -161,4 +164,5 @@ private:
   bool m_aiClassificationCaptureToClass = false;
   AiClassificationClassConfig m_aiClassificationCaptureClass;
   QHash<QString, bool> m_cameraGrabInProgress;
+  QHash<QString, bool> m_setupGeometryRefreshInProgress;
 };

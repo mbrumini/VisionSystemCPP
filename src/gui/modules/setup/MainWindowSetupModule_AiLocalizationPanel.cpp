@@ -4,15 +4,19 @@
 #include "ai/AiMaskLabelStorage.h"
 #include "gui/modules/MainWindowCameraConfigModule.h"
 #include "gui/modules/MainWindowContext.h"
+#include "gui/modules/MainWindowImagingModule.h"
 #include "gui/geometry/GeometryOverlay.h"
 #include "gui/modules/setup/AiLocalizationPaths.h"
 #include "gui/modules/setup/AiPythonRuntime.h"
 #include "gui/modules/setup/AiTrainingGraph.h"
 
+#include <opencv2/imgcodecs.hpp>
+
 #include <QDesktopServices>
 #include <QDir>
 #include <QFileInfo>
 #include <QGridLayout>
+#include <QCheckBox>
 #include <QDoubleSpinBox>
 #include <QLabel>
 #include <QLineEdit>
@@ -51,6 +55,20 @@ void MainWindowSetupModule::showAiLocalizationPanel(const CameraConfig& camera)
   note->setObjectName("toolPanelNote");
   note->setWordWrap(true);
   layout->addWidget(note);
+
+  auto* enabledBox = new QCheckBox(tr("labels.aiLocalizationEnabled"), panel);
+  enabledBox->setChecked(recipes().loadAiLocalizationEnabled(camera.id));
+  enabledBox->setToolTip(tr("labels.aiLocalizationEnabledHint"));
+  QObject::connect(enabledBox, &QCheckBox::toggled, window(), [this, camera](bool checked) {
+    QString error;
+    if (!recipes().saveAiLocalizationEnabled(camera.id, checked, &error))
+    {
+      log(error);
+      return;
+    }
+    log(QString("%1: %2").arg(tr("labels.aiLocalizationEnabled")).arg(checked ? "ON" : "OFF"));
+  });
+  layout->addWidget(enabledBox);
 
   auto* steps = new QWidget(panel);
   auto* grid = new QGridLayout(steps);
@@ -102,16 +120,16 @@ void MainWindowSetupModule::showAiLocalizationPanel(const CameraConfig& camera)
   });
   grid->addWidget(labeling, 1, 0);
 
-  auto* training = makeButton(tr("actions.trainAiModel"));
-  training->setEnabled(labeledCount >= 2);
-  training->setToolTip(
+  m_aiLocalizationTrainingButton = makeButton(tr("actions.trainAiModel"));
+  m_aiLocalizationTrainingButton->setEnabled(labeledCount >= 2);
+  m_aiLocalizationTrainingButton->setToolTip(
     labeledCount >= 2
       ? QString("Avvia YOLO segmentation usando %1 immagini etichettate.").arg(labeledCount)
       : "Servono almeno 2 immagini etichettate.");
-  QObject::connect(training, &QPushButton::clicked, window(), [this, camera]() {
+  QObject::connect(m_aiLocalizationTrainingButton, &QPushButton::clicked, window(), [this, camera]() {
     showAiLocalizationTrainingPanel(camera);
   });
-  grid->addWidget(training, 1, 1);
+  grid->addWidget(m_aiLocalizationTrainingButton, 1, 1);
 
   auto* inference = makeButton(tr("actions.runInference"));
   const QString localizationModelPath = aiNewestLocalizationModelPath(recipes(), camera.id);
@@ -438,6 +456,13 @@ void MainWindowSetupModule::startAiLocalizationLabeling(const CameraConfig& came
 {
   const QFileInfoList rawImages = QDir(aiLocalizationRawPath(recipes(), camera.id)).entryInfoList(
     RecipeJsonUtils::imageNameFilters(), QDir::Files, QDir::Name);
+  if (rawImages.isEmpty())
+  {
+    log("Labeling AI: nessuna immagine raw trovata per " + camera.id);
+    updateAiLocalizationLabelingControls();
+    return;
+  }
+
   m_aiLocalizationLabelingCamera = camera;
   m_aiLocalizationLabelingImages.clear();
   int firstUnlabeled = -1;
@@ -453,8 +478,13 @@ void MainWindowSetupModule::startAiLocalizationLabeling(const CameraConfig& came
   }
   if (m_aiLocalizationLabelingImages.isEmpty())
   {
+    log("Labeling AI: elenco immagini vuoto per " + camera.id);
+    updateAiLocalizationLabelingControls();
     return;
   }
+  log(QString("Labeling AI: avvio lotto %1, immagini=%2")
+    .arg(camera.id)
+    .arg(m_aiLocalizationLabelingImages.size()));
   loadAiLocalizationLabelingImage(firstUnlabeled >= 0 ? firstUnlabeled : 0);
 }
 
@@ -468,7 +498,17 @@ void MainWindowSetupModule::loadAiLocalizationLabelingImage(int index)
   selectedPreview() = QPixmap(rawPath);
   if (selectedPreview().isNull())
   {
-    log(tr("log.imageMissing") + ": " + rawPath);
+    const cv::Mat rawImage = cv::imread(rawPath.toStdString(), cv::IMREAD_UNCHANGED);
+    if (!rawImage.empty() && context().imaging)
+    {
+      selectedPreview() = context().imaging->matToPixmap(rawImage);
+      log("Labeling AI: immagine raw caricata con OpenCV: " + rawPath);
+    }
+  }
+  if (selectedPreview().isNull())
+  {
+    log("Labeling AI: immagine non caricabile, pulsanti disegno disabilitati: " + rawPath);
+    updateAiLocalizationLabelingControls();
     return;
   }
   m_aiLocalizationLabelingIndex = index;
@@ -496,25 +536,18 @@ void MainWindowSetupModule::loadAiLocalizationLabelingImage(int index)
       .arg(tr("actions.labelPieceMasks"), QFileInfo(rawPath).fileName()));
   }
   updateAiLocalizationPolygonOverlay();
-  if (m_aiLocalizationPieceButton)
-  {
-    m_aiLocalizationPieceButton->setEnabled(true);
-  }
-  if (m_aiLocalizationReferenceButton)
-  {
-    m_aiLocalizationReferenceButton->setEnabled(true);
-  }
-  if (m_aiLocalizationFinishButton)
-  {
-    m_aiLocalizationFinishButton->setEnabled(
-      std::any_of(
-        m_aiLocalizationPolygons.cbegin(),
-        m_aiLocalizationPolygons.cend(),
-        [](const AiSegmentationPolygon& polygon) {
-          return polygon.classId == 0 && polygon.points.size() >= 3;
-        }));
-  }
+  updateAiLocalizationLabelingControls();
   updateAiLocalizationLabelingStatus();
+  const bool hasPiece = std::any_of(
+    m_aiLocalizationPolygons.cbegin(),
+    m_aiLocalizationPolygons.cend(),
+    [](const AiSegmentationPolygon& polygon) {
+      return polygon.classId == 0 && polygon.points.size() >= 3;
+    });
+  if (!hasPiece)
+  {
+    beginAiLocalizationPolygon(0);
+  }
 }
 
 void MainWindowSetupModule::beginAiLocalizationPolygon(int classId)
@@ -547,11 +580,29 @@ void MainWindowSetupModule::beginAiLocalizationPolygon(int classId)
       largeImage()->clearRoi();
     }
     largeImage()->setRoiDrawingEnabled(true);
+    largeImage()->setFocus();
+    if (m_aiLocalizationPieceButton)
+    {
+      m_aiLocalizationPieceButton->setChecked(true);
+    }
+    if (m_aiLocalizationReferenceButton)
+    {
+      m_aiLocalizationReferenceButton->setChecked(false);
+    }
     log("Labeling AI: disegna o modifica la box Pezzo.");
     return;
   }
   largeImage()->setSearchPolygon(editablePolygon);
   largeImage()->setPolygonDrawingEnabled(true);
+  largeImage()->setFocus();
+  if (m_aiLocalizationPieceButton)
+  {
+    m_aiLocalizationPieceButton->setChecked(false);
+  }
+  if (m_aiLocalizationReferenceButton)
+  {
+    m_aiLocalizationReferenceButton->setChecked(true);
+  }
   log("Labeling AI: aggiungi un riferimento orientamento.");
 }
 
@@ -625,6 +676,15 @@ void MainWindowSetupModule::handleAiLocalizationPolygon(const QVector<QPoint>& p
   }
   largeImage()->clearSearchPolygon();
   largeImage()->setPolygonDrawingEnabled(false);
+  largeImage()->setRoiDrawingEnabled(m_aiLocalizationActiveClassId == 0);
+  if (m_aiLocalizationPieceButton)
+  {
+    m_aiLocalizationPieceButton->setChecked(m_aiLocalizationActiveClassId == 0);
+  }
+  if (m_aiLocalizationReferenceButton)
+  {
+    m_aiLocalizationReferenceButton->setChecked(false);
+  }
   updateAiLocalizationPolygonOverlay();
   updateAiLocalizationLabelingStatus();
   if (m_aiLocalizationFinishButton)
@@ -735,5 +795,52 @@ void MainWindowSetupModule::updateAiLocalizationLabelingStatus()
     m_aiLocalizationNextButton->setEnabled(
       m_aiLocalizationLabelingIndex >= 0 &&
       m_aiLocalizationLabelingIndex + 1 < m_aiLocalizationLabelingImages.size());
+  }
+  if (m_aiLocalizationTrainingButton)
+  {
+    m_aiLocalizationTrainingButton->setEnabled(labeledCount >= 2);
+    m_aiLocalizationTrainingButton->setToolTip(
+      labeledCount >= 2
+        ? QString("Avvia YOLO segmentation usando %1 immagini etichettate.").arg(labeledCount)
+        : "Servono almeno 2 immagini etichettate.");
+  }
+  updateAiLocalizationLabelingControls();
+}
+
+void MainWindowSetupModule::updateAiLocalizationLabelingControls()
+{
+  const bool hasLoadedImage =
+    m_aiLocalizationLabelingIndex >= 0 &&
+    m_aiLocalizationLabelingIndex < m_aiLocalizationLabelingImages.size() &&
+    !selectedPreview().isNull() &&
+    !selectedImagePath().isEmpty();
+  const bool hasPiece = std::any_of(
+    m_aiLocalizationPolygons.cbegin(),
+    m_aiLocalizationPolygons.cend(),
+    [](const AiSegmentationPolygon& polygon) {
+      return polygon.classId == 0 && polygon.points.size() >= 3;
+    });
+
+  if (m_aiLocalizationPieceButton)
+  {
+    m_aiLocalizationPieceButton->setCheckable(true);
+    m_aiLocalizationPieceButton->setEnabled(hasLoadedImage);
+    m_aiLocalizationPieceButton->setToolTip(
+      hasLoadedImage
+        ? "Trascina una box attorno al pezzo: verra' salvata come label AI."
+        : "Premi 'Etichetta maschere pezzo' e carica prima un'immagine raw valida.");
+  }
+  if (m_aiLocalizationReferenceButton)
+  {
+    m_aiLocalizationReferenceButton->setCheckable(true);
+    m_aiLocalizationReferenceButton->setEnabled(hasLoadedImage);
+    m_aiLocalizationReferenceButton->setToolTip(
+      hasPiece
+        ? "Disegna un poligono sul riferimento interno di orientamento."
+        : "Disegna un poligono sul riferimento interno di orientamento. Consigliato dopo la box Pezzo.");
+  }
+  if (m_aiLocalizationFinishButton)
+  {
+    m_aiLocalizationFinishButton->setEnabled(hasLoadedImage && hasPiece);
   }
 }

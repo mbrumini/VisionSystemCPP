@@ -66,7 +66,10 @@ void MainWindowSetupModule::showCameraSetupPanel(const CameraConfig& camera)
     // The frame interval is machine/acquisition setup, not recipe data: keep it
     // with the camera so USB/Vimba live grab cadence survives restart.
     runtime.setIntervalMs(camera.acquisition.frameIntervalMs);
-    context().geometry->restoreCleanGeometryImage(camera);
+    if (context().geometry)
+    {
+      context().geometry->restoreCleanGeometryImage(camera);
+    }
   }
   CameraSetupPanelTexts texts;
   texts.title = QString("%1 | %2").arg(tr("tools.setup"), camera.id);
@@ -151,7 +154,13 @@ void MainWindowSetupModule::showCameraSetupPanel(const CameraConfig& camera)
     largeImage()->clearRoi();
   }
 
-  refreshSetupGeometryResults(camera);
+  QTimer::singleShot(0, window(), [this, camera]() {
+    if (!isSetupCameraActive(camera.id))
+    {
+      return;
+    }
+    refreshSetupGeometryResults(camera);
+  });
 }
 
 void MainWindowSetupModule::showToolPanel(const CameraConfig& camera, const QString& toolId)

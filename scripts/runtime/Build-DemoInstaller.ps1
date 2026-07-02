@@ -40,6 +40,29 @@ function Find-Iscc {
   return $null
 }
 
+function Find-Cmake {
+  $fromPath = Get-Command cmake.exe -ErrorAction SilentlyContinue
+  if ($fromPath) {
+    return $fromPath.Source
+  }
+
+  $candidates = @(
+    "C:\Program Files\CMake\bin\cmake.exe",
+    "C:\Program Files (x86)\CMake\bin\cmake.exe",
+    "C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe",
+    "C:\Program Files\Microsoft Visual Studio\2022\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe",
+    "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe",
+    "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe",
+    "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
+  )
+  foreach ($candidate in $candidates) {
+    if (Test-Path $candidate) {
+      return $candidate
+    }
+  }
+  return $null
+}
+
 function Escape-Iss($Text) {
   return $Text.Replace("\", "\\").Replace('"', '""')
 }
@@ -52,7 +75,11 @@ $OutputDir = [System.IO.Path]::GetFullPath($OutputDir)
 
 if (-not $SkipBuild) {
   Write-Step "Build Release"
-  & cmake --build --preset x64-release
+  $cmake = Find-Cmake
+  if (-not $cmake) {
+    throw "CMake non trovato. Installa CMake o Visual Studio con il componente CMake."
+  }
+  & $cmake --build --preset x64-release --target VisionSystemCPP
 }
 
 $versionPath = Join-Path $projectRoot "VERSION.txt"

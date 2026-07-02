@@ -10,12 +10,16 @@
 #include "gui/modules/MainWindowSurfaceModule.h"
 #include "gui/modules/MainWindowCameraConfigModule.h"
 #include "gui/modules/setup/SetupCameraResolver.h"
+#include "gui/modules/setup/AiLocalizationPaths.h"
 #include "util/AsyncExecutor.h"
+#include <QFileInfo>
 
 #include <QElapsedTimer>
 #include <QTimer>
 
 #include <opencv2/core.hpp>
+
+#include <exception>
 
 void MainWindowSetupModule::startCameraSimulation(
   const CameraConfig& camera,
@@ -267,6 +271,33 @@ void MainWindowSetupModule::processCurrentCameraFrame(const CameraConfig& camera
     return;
   }
 
+  const QString modelPath = aiNewestLocalizationModelPath(recipes(), camera.id);
+  if (recipes().loadAiLocalizationEnabled(camera.id) &&
+      !modelPath.isEmpty() &&
+      QFileInfo::exists(modelPath))
+  {
+    const cv::Mat frame = cameraRuntime()[camera.id].currentFrame();
+    if (!frame.empty())
+    {
+      log(QString("pipeline surface AI localization begin: %1").arg(camera.id));
+      if (context().incPendingJobs)
+      {
+        context().incPendingJobs(camera.id);
+      }
+      runAiLocalizationInferenceFrame(
+        camera,
+        frame,
+        [this, camera](const AiLocalizationFrameResult& result) {
+          applyAiLocalizationInferenceResult(camera, result);
+          if (context().decPendingJobs)
+          {
+            context().decPendingJobs(camera.id);
+          }
+        });
+      return;
+    }
+  }
+
   const SurfaceAnnulusLocalizationConfig annulus = recipes().loadSurfaceAnnulusLocalization(camera.id);
   QRect roi;
   if (annulus.method == "two_circles_axis")
@@ -295,13 +326,8 @@ void MainWindowSetupModule::processCurrentCameraFrame(const CameraConfig& camera
 
   if (annulus.method == "edgePca")
   {
-    if (recipes().loadSurfaceDefectRoi(camera.id, roi) || recipes().loadSurfaceDefectPolygon(camera.id).size() >= 3)
-    {
-      log(QString("pipeline surface edge pca begin: %1 method=%2").arg(camera.id, annulus.method));
-      context().surface->testSurfaceEdgePcaLocalization(camera);
-      return;
-    }
-    log(QString("pipeline surface edge pca missing area: %1").arg(camera.id));
+    log(QString("pipeline surface edge pca begin: %1 method=%2").arg(camera.id, annulus.method));
+    context().surface->testSurfaceEdgePcaLocalization(camera);
     return;
   }
 
@@ -346,12 +372,8 @@ void MainWindowSetupModule::processCurrentCameraFrame(const CameraConfig& camera
 void MainWindowSetupModule::refreshSetupGeometryResults(const CameraConfig& camera,
                                                         std::function<void()> onComplete)
 {
-  if (!context().geometry)
+  if (m_setupGeometryRefreshInProgress.value(camera.id, false))
   {
-    if (context().refreshThreadProfileOverlay)
-    {
-      context().refreshThreadProfileOverlay(camera);
-    }
     if (onComplete)
     {
       onComplete();
@@ -359,48 +381,110 @@ void MainWindowSetupModule::refreshSetupGeometryResults(const CameraConfig& came
     return;
   }
 
-  const auto finishGeometryPipeline = [this, camera, onComplete = std::move(onComplete)]() {
-    if (context().constructedGeometry)
-    {
-      context().constructedGeometry->rebuildConstructedGeometryRecipe(camera);
-    }
-    if (context().measurement)
-    {
-      context().measurement->rebuildMeasurementRecipe(camera);
-      if (camera.id == selectedCamera().id)
-      {
-        GeometryOverlay overlay = largeImage()->geometryOverlay();
-        context().measurement->appendMeasurementOverlay(camera, overlay);
-        largeImage()->setGeometryOverlay(overlay);
-      }
-    }
-    if (context().refreshThreadProfileOverlay)
-    {
-      context().refreshThreadProfileOverlay(camera);
-    }
-    if (context().updateMeasurementStatistics)
-    {
-      context().updateMeasurementStatistics(camera.id);
-    }
-    if (onComplete)
-    {
-      onComplete();
-    }
-    else if (camera.id == selectedCamera().id && context().updateMeasurementResults)
-    {
-      context().updateMeasurementResults();
-    }
+  struct RefreshGuard
+  {
+    QHash<QString, bool>& flags;
+    QString cameraId;
+    ~RefreshGuard() { flags[cameraId] = false; }
   };
+  m_setupGeometryRefreshInProgress[camera.id] = true;
+  const RefreshGuard refreshGuard{m_setupGeometryRefreshInProgress, camera.id};
 
-  const bool machineMode = context().machineRunning != nullptr && *context().machineRunning;
-  if (machineMode)
+  try
   {
-    context().geometry->testConfiguredGeometryLinesAsync(camera, std::move(finishGeometryPipeline));
-    return;
-  }
+    if (!context().geometry)
+    {
+      if (context().refreshThreadProfileOverlay)
+      {
+        context().refreshThreadProfileOverlay(camera);
+      }
+      if (onComplete)
+      {
+        onComplete();
+      }
+      return;
+    }
 
-  context().geometry->testConfiguredGeometryLines(camera);
-  finishGeometryPipeline();
+    const auto finishGeometryPipeline = [this, camera, onComplete = std::move(onComplete)]() {
+      try
+      {
+        if (context().constructedGeometry)
+        {
+          context().constructedGeometry->rebuildConstructedGeometryRecipe(camera);
+        }
+        if (context().measurement)
+        {
+          context().measurement->rebuildMeasurementRecipe(camera);
+          if (camera.id == selectedCamera().id && largeImage())
+          {
+            GeometryOverlay overlay = largeImage()->geometryOverlay();
+            context().measurement->appendMeasurementOverlay(camera, overlay);
+            largeImage()->setGeometryOverlay(overlay);
+          }
+        }
+        if (context().refreshThreadProfileOverlay)
+        {
+          context().refreshThreadProfileOverlay(camera);
+        }
+        if (context().updateMeasurementStatistics)
+        {
+          context().updateMeasurementStatistics(camera.id);
+        }
+        if (onComplete)
+        {
+          onComplete();
+        }
+        else if (camera.id == selectedCamera().id && context().updateMeasurementResults)
+        {
+          context().updateMeasurementResults();
+        }
+      }
+      catch (const cv::Exception& exception)
+      {
+        log(QString("setup geometry pipeline failed: %1 %2")
+              .arg(camera.id, QString::fromStdString(exception.what())));
+        if (onComplete)
+        {
+          onComplete();
+        }
+      }
+      catch (const std::exception& exception)
+      {
+        log(QString("setup geometry pipeline failed: %1 %2").arg(camera.id, exception.what()));
+        if (onComplete)
+        {
+          onComplete();
+        }
+      }
+    };
+
+    const bool machineMode = context().machineRunning != nullptr && *context().machineRunning;
+    if (machineMode)
+    {
+      context().geometry->testConfiguredGeometryLinesAsync(camera, std::move(finishGeometryPipeline));
+      return;
+    }
+
+    context().geometry->testConfiguredGeometryLines(camera);
+    finishGeometryPipeline();
+  }
+  catch (const cv::Exception& exception)
+  {
+    log(QString("setup geometry refresh failed: %1 %2")
+          .arg(camera.id, QString::fromStdString(exception.what())));
+    if (onComplete)
+    {
+      onComplete();
+    }
+  }
+  catch (const std::exception& exception)
+  {
+    log(QString("setup geometry refresh failed: %1 %2").arg(camera.id, exception.what()));
+    if (onComplete)
+    {
+      onComplete();
+    }
+  }
 }
 
 
@@ -413,6 +497,15 @@ void MainWindowSetupModule::refreshPoseForCurrentFrame(const CameraConfig& camer
 
   if (!MainWindowCameraProfile::isGrayscaleLocalization(camera, config()))
   {
+    return;
+  }
+
+  const QString modelPath = aiNewestLocalizationModelPath(recipes(), camera.id);
+  if (recipes().loadAiLocalizationEnabled(camera.id) &&
+      !modelPath.isEmpty() &&
+      QFileInfo::exists(modelPath))
+  {
+    runAiLocalizationInference(camera);
     return;
   }
 
@@ -435,10 +528,7 @@ void MainWindowSetupModule::refreshPoseForCurrentFrame(const CameraConfig& camer
 
   if (annulus.method == "edgePca")
   {
-    if (recipes().loadSurfaceDefectRoi(camera.id, roi) || recipes().loadSurfaceDefectPolygon(camera.id).size() >= 3)
-    {
-      context().surface->testSurfaceEdgePcaLocalization(camera);
-    }
+    context().surface->testSurfaceEdgePcaLocalization(camera);
     return;
   }
 

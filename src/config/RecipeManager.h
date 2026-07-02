@@ -378,6 +378,8 @@ public:
   QString cameraAiRawImagesPath(const QString& cameraId) const;
   QString cameraAiClassificationRawImagesPath(const QString& cameraId) const;
   QString cameraAiLocalizationRawImagesPath(const QString& cameraId) const;
+  bool loadAiLocalizationEnabled(const QString& cameraId) const;
+  bool saveAiLocalizationEnabled(const QString& cameraId, bool enabled, QString* errorMessage = nullptr) const;
   QString cameraAiClassificationClassImagesPath(const QString& cameraId, const AiClassificationClassConfig& classConfig) const;
   QString cameraAiSegmentationRawImagesPath(const QString& cameraId) const;
   QString cameraAiSegmentationFeatureImagesPath(const QString& cameraId, const AiSegmentationFeatureConfig& featureConfig) const;

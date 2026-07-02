@@ -71,6 +71,13 @@ protected:
     }
   }
 
+  bool isSetupCameraActive(const QString& cameraId) const
+  {
+    return m_context.setupCameraId &&
+           !m_context.setupCameraId->isEmpty() &&
+           *m_context.setupCameraId == cameraId;
+  }
+
 private:
   MainWindowContext& m_context;
 };

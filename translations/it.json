@@ -237,6 +237,8 @@
     "aiNote": "Scegli il tipo di AI da configurare per questa camera.",
     "aiClassificationNote": "Acquisisci raw per etichettare dopo, oppure premi una classe per salvare il frame corrente gia' etichettato. Prepara dataset crea train/val; Training lancia YOLO su GPU.",
     "aiLocalizationNote": "Una sola classe: Pezzo. Acquisisci immagini raw dedicate; nei prossimi passaggi aggiungeremo maschere, preparazione dataset, training e inferenza del centroide.",
+    "aiLocalizationEnabled": "Usa AI per localizzazione automatica",
+    "aiLocalizationEnabledHint": "Se disattivata, i modelli AI restano salvati ma la pipeline usa la strategia classica scelta nella localizzazione grigi.",
     "aiToolPlanned": "Pagina predisposta: qui configureremo label, dataset e training dedicati per questo tipo di AI.",
     "aiClassName": "Nome classe"
   },

@@ -359,6 +359,7 @@ add_executable(VisionSystemCPP
     src/util/ProductionThroughputTracker.cpp
     src/utils/Timer.h
     resources/icons.qrc
+    resources/app_icon.rc
 )
 
 target_link_libraries(VisionSystemCPP PRIVATE

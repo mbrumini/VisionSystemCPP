@@ -196,6 +196,22 @@ void MainWindowGeometryModule::restoreCleanGeometryImage(const CameraConfig& cam
   largeImage()->clearGeometryPoints();
   largeImage()->clearGeometryLines();
   largeImage()->clearGeometryOverlay();
+
+  loadGeometryLinesRecipe(camera);
+  loadGeometryPointRecipe(camera);
+  loadGeometryCirclesRecipe(camera);
+  loadGeometryArcsRecipe(camera);
+
+  const PartPose& pose = cameraRuntime()[camera.id].currentPose();
+  if (pose.valid)
+  {
+    GeometryGuideRuntime::forceSyncPartGuidesFromImage(
+      pose,
+      m_lineConfigs[camera.id],
+      m_pointConfigs[camera.id],
+      m_circleConfigs[camera.id],
+      m_arcConfigs[camera.id]);
+  }
 }
 
 void MainWindowGeometryModule::showRuntimeGeometryOverlay(const CameraConfig& camera)

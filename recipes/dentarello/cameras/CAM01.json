@@ -1,0 +1,217 @@
+{
+    "acquisition": {
+        "autoExposure": false,
+        "autoGain": false,
+        "autoWhiteBalance": true,
+        "exposure": 1000,
+        "frameIntervalMs": 500,
+        "gain": 14.5
+    },
+    "cameraId": "CAM01",
+    "tools": {
+        "geometries": {
+            "circles": [
+                {
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 0,
+                    "edgeSensitivity": 153,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "circle_1",
+                    "imageCenter": {
+                        "x": 879,
+                        "y": 563
+                    },
+                    "innerBand": 20,
+                    "outerBand": 20,
+                    "partCenter": {
+                        "x": 3.525819484265207,
+                        "y": -7.938434578641787
+                    },
+                    "pickMode": "first",
+                    "radius": 220.07268892374506,
+                    "scanDirection": "normal_positive",
+                    "transition": "dark_to_light",
+                    "type": "edge_circle",
+                    "useSubpixel": true
+                },
+                {
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 0,
+                    "edgeSensitivity": 153,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "circle_2",
+                    "imageCenter": {
+                        "x": 912,
+                        "y": 712
+                    },
+                    "innerBand": 20,
+                    "outerBand": 20,
+                    "partCenter": {
+                        "x": -144.9523422644984,
+                        "y": -24.90671081947025
+                    },
+                    "pickMode": "first",
+                    "radius": 23.884061632295523,
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_circle",
+                    "useSubpixel": true
+                },
+                {
+                    "coordinateSpace": "part",
+                    "edgeCleanupDerivative": 0,
+                    "edgeSensitivity": 153,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "circle_3",
+                    "imageCenter": {
+                        "x": 736,
+                        "y": 519
+                    },
+                    "innerBand": 20,
+                    "outerBand": 20,
+                    "partCenter": {
+                        "x": 93.30000131562805,
+                        "y": -131.06947759028154
+                    },
+                    "pickMode": "first",
+                    "radius": 23.875267615743695,
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_circle",
+                    "useSubpixel": true
+                }
+            ],
+            "enabled": true,
+            "guideReferenceSize": {
+                "height": 1216,
+                "width": 1936
+            },
+            "lines": [
+                {
+                    "bandHalfWidth": 20,
+                    "coordinateSpace": "image",
+                    "edgeCleanupDerivative": 12,
+                    "edgeSensitivity": 60,
+                    "edgeStatisticalFilter": 0,
+                    "enabled": true,
+                    "id": "line_1",
+                    "imageEnd": {
+                        "x": 1061.5074829931973,
+                        "y": 500.35733622089873
+                    },
+                    "imageStart": {
+                        "x": 1010.473469387755,
+                        "y": 511.54953979426097
+                    },
+                    "pickMode": "first",
+                    "scanDirection": "normal_positive",
+                    "transition": "light_to_dark",
+                    "type": "edge_line",
+                    "useSubpixel": true
+                }
+            ]
+        },
+        "measurements": {
+            "enabled": true,
+            "items": [
+                {
+                    "criterion": "average",
+                    "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_1",
+                    "label": {
+                        "custom": true,
+                        "x": 1135.5384615384617,
+                        "y": 296.9208250166334
+                    },
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 47.72323317887251,
+                    "sampleValue": 0,
+                    "sourceAId": "circle_1",
+                    "type": "circle_diameter",
+                    "unit": "px"
+                },
+                {
+                    "criterion": "average",
+                    "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_2",
+                    "label": {
+                        "custom": true,
+                        "x": 1134.7290969899666,
+                        "y": 331.7099135063207
+                    },
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 47.79547325696071,
+                    "sampleValue": 0,
+                    "sourceAId": "circle_3",
+                    "type": "circle_diameter",
+                    "unit": "px"
+                },
+                {
+                    "criterion": "average",
+                    "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_3",
+                    "label": {
+                        "custom": true,
+                        "x": 1137.9665551839464,
+                        "y": 372.97139055222885
+                    },
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 47.77010972032228,
+                    "sampleValue": 0,
+                    "sourceAId": "circle_2",
+                    "type": "circle_diameter",
+                    "unit": "px"
+                },
+                {
+                    "criterion": "average",
+                    "enabled": true,
+                    "hasMax": false,
+                    "hasMin": false,
+                    "hasNominal": false,
+                    "hasSampleScale": false,
+                    "id": "measurement_4",
+                    "label": {
+                        "custom": true,
+                        "x": 1129.0635451505018,
+                        "y": 265.3679308050565
+                    },
+                    "max": 0,
+                    "min": 0,
+                    "nominal": 0,
+                    "samplePixels": 439.987329296877,
+                    "sampleValue": 0,
+                    "sourceAId": "circle_1",
+                    "type": "circle_diameter",
+                    "unit": "px"
+                }
+            ]
+        },
+        "surfaceLocalization": {
+            "enabled": true,
+            "exclusionRects": [
+            ],
+            "method": "model"
+        }
+    }
+}

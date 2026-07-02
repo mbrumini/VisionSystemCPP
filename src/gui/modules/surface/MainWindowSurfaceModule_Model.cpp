@@ -4,6 +4,7 @@
 #include "gui/modules/MainWindowGeometryModule.h"
 #include "gui/modules/MainWindowSetupModule.h"
 #include "gui/modules/MainWindowContext.h"
+#include "gui/modules/setup/AiLocalizationPaths.h"
 
 #include "gui/ImagePrimitives.h"
 
@@ -146,12 +147,26 @@ bool MainWindowSurfaceModule::localizePoseOnSample(const CameraConfig& camera)
     return false;
   }
 
+  const QString modelPath = aiNewestLocalizationModelPath(recipes(), camera.id);
+  if (recipes().loadAiLocalizationEnabled(camera.id) &&
+      !modelPath.isEmpty() &&
+      QFileInfo::exists(modelPath) &&
+      context().setup)
+  {
+    return context().setup->runAiLocalizationInferenceSync(camera, input);
+  }
+
   const SurfaceAnnulusLocalizationConfig annulus = recipes().loadSurfaceAnnulusLocalization(camera.id);
   const SurfaceDefectSettings recipeSettings = recipes().loadSurfaceDefectSettings(camera.id);
   const QVector<QRect> exclusionRects = recipes().loadSurfaceDefectExclusionRects(camera.id);
   const QVector<QPoint> searchPolygon = recipes().loadSurfaceDefectPolygon(camera.id);
   const bool hasPolygon = searchPolygon.size() >= 3;
+  QRect configuredRoi;
+  recipes().loadSurfaceDefectRoi(camera.id, configuredRoi);
   const cv::Rect fullSearchRect(0, 0, input.cols, input.rows);
+  const cv::Rect edgePcaSearchRect = configuredRoi.isValid()
+    ? (toCvRect(configuredRoi) & fullSearchRect)
+    : fullSearchRect;
   const std::vector<cv::Point> cvSearchPolygon = toCvPoints(searchPolygon);
   const bool resolveAmbiguity = annulus.pcaResolveAmbiguity || recipeSettings.pcaResolveAmbiguity;
   SurfaceDefectProcessor processor;
@@ -178,7 +193,7 @@ bool MainWindowSurfaceModule::localizePoseOnSample(const CameraConfig& camera)
     {
       result = processor.locateByEdgePca(
         input,
-        fullSearchRect,
+        edgePcaSearchRect,
         toCvRects(exclusionRects),
         annulus.edgeSensitivity,
         resolveAmbiguity,
@@ -212,7 +227,7 @@ bool MainWindowSurfaceModule::localizePoseOnSample(const CameraConfig& camera)
     {
       result = processor.locateByEdgePca(
         input,
-        fullSearchRect,
+        edgePcaSearchRect,
         toCvRects(exclusionRects),
         annulus.edgeSensitivity,
         resolveAmbiguity,
@@ -372,6 +387,21 @@ bool MainWindowSurfaceModule::restoreSurfaceModelPoseFromSample(const CameraConf
   if (!MainWindowCameraProfile::isGrayscaleLocalization(camera, config()))
   {
     return false;
+  }
+
+  const QString modelPath = aiNewestLocalizationModelPath(recipes(), camera.id);
+  if (recipes().loadAiLocalizationEnabled(camera.id) &&
+      !modelPath.isEmpty() &&
+      QFileInfo::exists(modelPath) &&
+      context().setup)
+  {
+    QString imageError;
+    const cv::Mat input = context().imaging->sampleInputImage(camera, &imageError);
+    if (input.empty())
+    {
+      return false;
+    }
+    return context().setup->runAiLocalizationInferenceSync(camera, input);
   }
 
   const SurfaceModelConfig model = recipes().loadSurfaceModel(camera.id);
@@ -545,7 +575,7 @@ void MainWindowSurfaceModule::testSurfaceShapeModel(const CameraConfig& camera)
     context().lastSurfaceLocalizationResults->insert(camera.id, result.localization);
     cameraRuntime()[camera.id].setCurrentPose(context().imaging->partPoseFromSurfaceReference(camera, result.localization));
     syncThreadExtractionRoiOverlay(camera);
-    if (context().setup)
+    if (isSetupCameraActive(camera.id))
     {
       context().setup->refreshSetupGeometryResults(camera);
       return;
@@ -641,7 +671,7 @@ void MainWindowSurfaceModule::testSurfaceTemplateModel(const CameraConfig& camer
     context().lastSurfaceLocalizationResults->insert(camera.id, result.localization);
     cameraRuntime()[camera.id].setCurrentPose(context().imaging->partPoseFromSurfaceReference(camera, result.localization));
     syncThreadExtractionRoiOverlay(camera);
-    if (context().setup)
+    if (isSetupCameraActive(camera.id))
     {
       context().setup->refreshSetupGeometryResults(camera);
       return;

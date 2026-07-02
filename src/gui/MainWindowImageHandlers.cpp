@@ -745,6 +745,10 @@ void MainWindow::setupLargeImageHandlers()
                   .arg(roi.size.width(), 0, 'f', 1)
                   .arg(roi.size.height(), 0, 'f', 1)
                   .arg(roi.angleDegrees, 0, 'f', 1));
+      if (m_recipeManager.loadSurfaceAnnulusLocalization(m_selectedCameraId).method == "edgePca")
+      {
+        m_surface.testSurfaceEdgePcaLocalization(m_selectedCamera);
+      }
       return;
     }
 

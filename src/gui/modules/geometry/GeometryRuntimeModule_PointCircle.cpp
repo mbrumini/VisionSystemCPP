@@ -284,7 +284,7 @@ void MainWindowGeometryModule::testGeometryCircle(const CameraConfig& camera)
   QVector<GeometryLineRuntimeConfig> lines;
   QVector<GeometryPointRuntimeConfig> points;
   QVector<GeometryArcRuntimeConfig> arcs;
-  GeometryGuideRuntime::syncPartGuidesFromImage(resolvedPose, lines, points, circles, arcs);
+  GeometryGuideRuntime::forceSyncPartGuidesFromImage(resolvedPose, lines, points, circles, arcs);
   circleConfig = circles.first();
 
   QString imageError;
@@ -641,7 +641,7 @@ void MainWindowGeometryModule::testGeometryPoint(const CameraConfig& camera)
   QVector<GeometryLineRuntimeConfig> lines;
   QVector<GeometryCircleRuntimeConfig> circles;
   QVector<GeometryArcRuntimeConfig> arcs;
-  GeometryGuideRuntime::syncPartGuidesFromImage(resolvedPose, lines, points, circles, arcs);
+  GeometryGuideRuntime::forceSyncPartGuidesFromImage(resolvedPose, lines, points, circles, arcs);
   pointConfig = points.first();
 
   QString imageError;

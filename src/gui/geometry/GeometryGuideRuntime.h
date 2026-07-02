@@ -37,4 +37,10 @@ void syncPartGuidesFromImage(const PartPose& pose,
                              QVector<GeometryPointRuntimeConfig>& points,
                              QVector<GeometryCircleRuntimeConfig>& circles,
                              QVector<GeometryArcRuntimeConfig>& arcs);
+
+void forceSyncPartGuidesFromImage(const PartPose& pose,
+                                 QVector<GeometryLineRuntimeConfig>& lines,
+                                 QVector<GeometryPointRuntimeConfig>& points,
+                                 QVector<GeometryCircleRuntimeConfig>& circles,
+                                 QVector<GeometryArcRuntimeConfig>& arcs);
 }

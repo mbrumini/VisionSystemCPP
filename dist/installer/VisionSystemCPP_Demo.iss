@@ -1,6 +1,6 @@
-﻿#define AppVersion "0.1019"
-#define PackageRoot "D:\\dev\\VisionSystemCPP\\dist\\runtime_staging\\VisionSystemCPP"
-#define AppIconFile "D:\\dev\\VisionSystemCPP\\resources\\app_icon.ico"
+﻿#define AppVersion "0.1034"
+#define PackageRoot "E:\\VisionSystemCPP\\dist\\runtime_staging\\VisionSystemCPP"
+#define AppIconFile "E:\\VisionSystemCPP\\resources\\app_icon.ico"
 
 [Setup]
 AppId={{7B2A5690-A781-40A2-92C9-273318C86C3D}
@@ -10,8 +10,8 @@ AppPublisher=VisionSystemCPP
 DefaultDirName=C:\VisionSystemCPP
 DefaultGroupName=VisionSystemCPP
 DisableProgramGroupPage=yes
-OutputDir=D:\\dev\\VisionSystemCPP\\dist
-OutputBaseFilename=VisionSystemCPP-demo-setup-0.1019
+OutputDir=E:\\VisionSystemCPP\\dist
+OutputBaseFilename=VisionSystemCPP-demo-setup-0.1034
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
